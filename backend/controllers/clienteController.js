@@ -1,0 +1,67 @@
+const Cliente = require('../models/Cliente');
+
+exports.getClientes = async (req, res) => {
+    try {
+        console.log('Obteniendo lista de clientes');
+        const clientes = await Cliente.find().sort({ createdAt: -1 });
+        console.log(`${clientes.length} clientes encontrados`);
+        res.json(clientes);
+    } catch (error) {
+        console.error('Error al obtener clientes:', error);
+        res.status(500).json({ message: 'Error al obtener clientes' });
+    }
+};
+
+exports.getClienteById = async (req, res) => {
+    try {
+        const cliente = await Cliente.findById(req.params.id);
+        if (!cliente) {
+            return res.status(404).json({ message: 'Cliente no encontrado' });
+        }
+        res.json(cliente);
+    } catch (error) {
+        console.error('Error al obtener cliente:', error);
+        res.status(500).json({ message: 'Error al obtener cliente' });
+    }
+};
+
+exports.createCliente = async (req, res) => {
+    try {
+        const nuevoCliente = new Cliente(req.body);
+        await nuevoCliente.save();
+        res.status(201).json(nuevoCliente);
+    } catch (error) {
+        console.error('Error al crear cliente:', error);
+        res.status(500).json({ message: 'Error al crear cliente' });
+    }
+};
+
+exports.updateCliente = async (req, res) => {
+    try {
+        const cliente = await Cliente.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        if (!cliente) {
+            return res.status(404).json({ message: 'Cliente no encontrado' });
+        }
+        res.json(cliente);
+    } catch (error) {
+        console.error('Error al actualizar cliente:', error);
+        res.status(500).json({ message: 'Error al actualizar cliente' });
+    }
+};
+
+exports.deleteCliente = async (req, res) => {
+    try {
+        const cliente = await Cliente.findByIdAndDelete(req.params.id);
+        if (!cliente) {
+            return res.status(404).json({ message: 'Cliente no encontrado' });
+        }
+        res.json({ message: 'Cliente eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error al eliminar cliente:', error);
+        res.status(500).json({ message: 'Error al eliminar cliente' });
+    }
+};

@@ -1,0 +1,4 @@
+origen,destino,fecha,tarifa,cliente,dt,demoras,operativos,estadias,cobrado,paletas
+Buenos Aires,Rosario,2024-03-20,150000,Cliente A,2024-03-20-A1,5000,3000,2000,false,2
+Córdoba,Mendoza,2024-03-21,180000,Cliente B,2024-03-21-B1,0,4000,0,true,4
+La Plata,Mar del Plata,2024-03-22,130000,Cliente C,2024-03-22-C1,2000,0,3000,false,3

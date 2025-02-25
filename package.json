@@ -1,0 +1,14 @@
+{
+  "name": "sistema-gestion-sites",
+  "version": "1.0.0",
+  "description": "Sistema de gestión de sites y tramos",
+  "scripts": {
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "start": "cd backend && npm start",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\"",
+    "build": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
