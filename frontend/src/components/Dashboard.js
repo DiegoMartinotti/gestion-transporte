@@ -1,85 +1,69 @@
-import React, { useState } from 'react';
-import { 
-  Button, 
-  Container, 
-  Typography, 
-  Box,
-  AppBar,
-  Toolbar,
-  IconButton
-} from '@mui/material';
-import { Logout as LogoutIcon } from '@mui/icons-material';
-import EnhancedTable from './EnhancedTable';
+import React from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Box, Container, Grid, Paper, Typography } from '@mui/material';
+import {
+  People as PeopleIcon,
+  LocalShipping as LocalShippingIcon,
+} from '@mui/icons-material';
+import ViajesManager from './ViajesManager';
 import ClientesManager from './ClientesManager';
-import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
-  const [currentView, setCurrentView] = useState(null);
-  const { logout } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-  };
+  const menuItems = [
+    {
+      title: 'Gestión de Clientes',
+      description: 'Administrar clientes, sites y tarifarios',
+      icon: <PeopleIcon sx={{ fontSize: 40 }} />,
+      path: 'clientes'  // Sin slash inicial
+    },
+    {
+      title: 'Gestión de Viajes',
+      description: 'Administrar viajes y seguimiento',
+      icon: <LocalShippingIcon sx={{ fontSize: 40 }} />,
+      path: 'viajes'  // Sin slash inicial
+    }
+  ];
 
   return (
-    <>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Panel de Control
-          </Typography>
-          <IconButton 
-            color="inherit" 
-            onClick={handleLogout}
-            title="Cerrar sesión"
-          >
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      <Container>
-        {!currentView ? (
-          <Box 
-            display="flex" 
-            flexDirection="column" 
-            alignItems="center" 
-            gap={3} 
-            mt={5}
-          >
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={() => setCurrentView('viajes')}
-              fullWidth
-              style={{ maxWidth: 300 }}
-            >
-              Gestionar Viajes
-            </Button>
-            <Button 
-              variant="contained" 
-              color="secondary" 
-              onClick={() => setCurrentView('clientes')}
-              fullWidth
-              style={{ maxWidth: 300 }}
-            >
-              Gestionar Clientes
-            </Button>
-          </Box>
-        ) : (
-          <Box mt={3}>
-            <Button 
-              variant="outlined" 
-              onClick={() => setCurrentView(null)}
-              style={{ marginBottom: 20 }}
-            >
-              Volver al Panel
-            </Button>
-            {currentView === 'viajes' ? <EnhancedTable /> : <ClientesManager />}
-          </Box>
-        )}
-      </Container>
-    </>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Routes>
+        <Route path="clientes" element={<ClientesManager />} />
+        <Route path="viajes" element={<ViajesManager />} />
+        <Route index element={
+          <Grid container spacing={3}>
+            {menuItems.map((item, index) => (
+              <Grid item xs={12} md={6} key={index}>
+                <Paper
+                  sx={{
+                    p: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }}
+                  onClick={() => navigate(item.path)}
+                >
+                  <Box sx={{ color: 'primary.main', mb: 2 }}>
+                    {item.icon}
+                  </Box>
+                  <Typography variant="h6" gutterBottom>
+                    {item.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" align="center">
+                    {item.description}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        } />
+      </Routes>
+    </Container>
   );
 };
 

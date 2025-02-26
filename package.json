@@ -1,12 +1,12 @@
 {
-  "name": "sistema-gestion-sites",
+  "name": "mi-proyecto",
   "version": "1.0.0",
-  "description": "Sistema de gestión de sites y tramos",
+  "description": "Sistema de Gestión de Sites",
   "scripts": {
-    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "start": "cd backend && npm start",
-    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\"",
-    "build": "cd frontend && npm run build"
+    "start": "cd frontend && npm start",
+    "server": "cd backend && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run start\"",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

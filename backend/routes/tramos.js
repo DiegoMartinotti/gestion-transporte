@@ -3,7 +3,51 @@ const router = express.Router();
 const Tramo = require('../models/Tramo');
 const verifyToken = require('../middleware/verifyToken');
 const Site = require('../models/Site');
-const Cliente = require('../models/Cliente'); // Agregar esta línea
+const Cliente = require('../models/Cliente');
+const tramoController = require('../controllers/tramoController');
+
+// Middleware para debugging de solicitudes grandes
+router.use('/bulk', (req, res, next) => {
+    console.log('Recibiendo solicitud bulk import:');
+    console.log('- Headers:', req.headers);
+    console.log('- Cliente:', req.body?.cliente);
+    console.log('- Cantidad tramos:', req.body?.tramos?.length || 0);
+    
+    if (!req.body || !req.body.tramos) {
+        console.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
+        console.error('Content-Type:', req.headers['content-type']);
+        console.error('Content-Length:', req.headers['content-length']);
+        return res.status(400).json({
+            success: false,
+            message: 'Datos de solicitud vacíos o inválidos',
+            debug: {
+                contentType: req.headers['content-type'],
+                contentLength: req.headers['content-length'],
+                bodyEmpty: !req.body,
+                tramosEmpty: !req.body?.tramos
+            }
+        });
+    }
+    
+    next();
+});
+
+// Middleware para verificar el tipo de tramo
+router.use(async (req, res, next) => {
+    if (['POST', 'PUT'].includes(req.method) && req.body.tipo) {
+        // Normalizar el tipo a mayúsculas
+        req.body.tipo = req.body.tipo.toUpperCase();
+        
+        // Verificar que es un tipo válido
+        if (!['TRMC', 'TRMI'].includes(req.body.tipo)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El tipo de tramo debe ser TRMC o TRMI'
+            });
+        }
+    }
+    next();
+});
 
 // IMPORTANTE: Primero las rutas específicas
 // Obtener tramos vigentes a una fecha determinada
@@ -27,15 +71,29 @@ router.get('/vigentes/:fecha', verifyToken, async (req, res) => {
   }
 });
 
-// Obtener tramos por cliente
+// Mejorar la ruta para obtener tramos por cliente
 router.get('/cliente/:cliente', verifyToken, async (req, res) => {
   try {
+    console.log('Buscando tramos para cliente:', req.params.cliente);
+    
     const tramos = await Tramo.find({ cliente: req.params.cliente })
       .populate('origen', 'Site location')
       .populate('destino', 'Site location');
-    res.json(tramos);
+    
+    console.log(`Se encontraron ${tramos.length} tramos para el cliente ${req.params.cliente}`);
+    
+    // Devolver en formato esperado por el frontend
+    res.json({
+      success: true,
+      data: tramos
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al obtener tramos por cliente:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      error: error.toString()
+    });
   }
 });
 
@@ -101,42 +159,224 @@ router.post('/', verifyToken, async (req, res) => {
     if (error.code === 11000) {
       res.status(400).json({ error: 'Ya existe un tramo con esas características' });
     } else {
-      res.status(400).json({ error: error.message }); // Corregido el status400 por status(400)
+      res.status(400).json({ error: error.message });
     }
   }
 });
 
-// Añadir una ruta para importar múltiples tramos a la vez
+// Mejorada la ruta bulk para manejar errores mejor
 router.post('/bulk', verifyToken, async (req, res) => {
-  try {
-    const { tramos } = req.body;
-    if (!Array.isArray(tramos)) {
-      return res.status(400).json({ error: 'Se espera un array de tramos' });
-    }
-
-    const results = {
-      exitosos: 0,
-      errores: []
-    };
-
-    for (const tramoData of tramos) {
-      try {
-        const tramo = new Tramo(tramoData);
-        await tramo.save();
-        results.exitosos++;
-      } catch (error) {
-        results.errores.push({
-          origen: tramoData.origen,
-          destino: tramoData.destino,
-          error: error.message
+    try {
+        console.log('Bulk import - Headers:', {
+            contentType: req.headers['content-type'],
+            contentLength: req.headers['content-length'],
+            authorization: req.headers['authorization'] ? 'Presente' : 'Ausente'
         });
-      }
-    }
 
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: 'Error en la importación masiva de tramos' });
-  }
+        // Validar formato de la solicitud
+        if (!req.body) {
+            console.error('Cuerpo de la solicitud nulo o indefinido');
+            return res.status(400).json({
+                success: false,
+                message: 'El cuerpo de la solicitud está vacío'
+            });
+        }
+
+        const { cliente, tramos } = req.body;
+        
+        console.log('Datos recibidos en bulk import:', {
+            clientePresente: !!cliente,
+            tramosPresente: !!tramos,
+            tipoTramos: typeof tramos,
+            tramosLength: tramos?.length || 0
+        });
+
+        if (!cliente) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cliente no especificado'
+            });
+        }
+
+        if (!tramos || !Array.isArray(tramos)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Formato de tramos inválido',
+                debug: {
+                    tramosType: typeof tramos,
+                    isArray: Array.isArray(tramos)
+                }
+            });
+        }
+
+        // Llamar al controlador para procesar los tramos
+        await tramoController.bulkCreateTramos(req, res);
+    } catch (error) {
+        console.error('Error no controlado en bulk import:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error en la importación masiva de tramos',
+            error: error.message
+        });
+    }
+});
+
+// Nueva ruta para diagnóstico de duplicados
+router.post('/diagnostico-tipos', verifyToken, async (req, res) => {
+    try {
+        const { cliente, origen, destino, metodoCalculo } = req.body;
+        
+        if (!cliente) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cliente es requerido para el diagnóstico'
+            });
+        }
+
+        // Construir la consulta base
+        const baseQuery = { cliente };
+        
+        // Añadir filtros opcionales
+        if (origen) baseQuery.origen = origen;
+        if (destino) baseQuery.destino = destino;
+        if (metodoCalculo) baseQuery.metodoCalculo = metodoCalculo;
+
+        // Buscar todos los tramos que coincidan con los criterios
+        const tramos = await Tramo.find(baseQuery)
+            .populate('origen', 'Site')
+            .populate('destino', 'Site')
+            .lean();
+
+        console.log(`Encontrados ${tramos.length} tramos para diagnóstico con filtros:`, baseQuery);
+
+        // Analizar los tramos por tipo
+        const analisis = {
+            totalTramos: tramos.length,
+            porTipo: {
+                TRMC: tramos.filter(t => t.tipo === 'TRMC').length,
+                TRMI: tramos.filter(t => t.tipo === 'TRMI').length,
+                otros: tramos.filter(t => !['TRMC', 'TRMI'].includes(t.tipo)).length,
+                nulos: tramos.filter(t => !t.tipo).length
+            },
+            tramosSinTipoNormalizado: tramos.filter(t => t.tipo && t.tipo !== 'TRMC' && t.tipo !== 'TRMI').map(t => ({
+                _id: t._id,
+                origen: t.origen?.Site,
+                destino: t.destino?.Site,
+                tipo: t.tipo
+            })),
+            posiblesConflictos: []
+        };
+
+        // Encontrar pares de tramos que podrían estar en conflicto
+        // (mismo origen-destino pero diferentes tipos)
+        const rutasUnicas = {};
+        
+        tramos.forEach(tramo => {
+            const rutaKey = `${tramo.origen._id}-${tramo.destino._id}-${tramo.metodoCalculo}`;
+            if (!rutasUnicas[rutaKey]) {
+                rutasUnicas[rutaKey] = [];
+            }
+            rutasUnicas[rutaKey].push(tramo);
+        });
+
+        // Identificar rutas con múltiples tipos
+        for (const ruta in rutasUnicas) {
+            const tramosRuta = rutasUnicas[ruta];
+            if (tramosRuta.length > 1) {
+                // Verificar si hay diferentes tipos en esta ruta
+                const tiposEnRuta = new Set(tramosRuta.map(t => t.tipo));
+                if (tiposEnRuta.size > 1) {
+                    analisis.posiblesConflictos.push({
+                        ruta: ruta,
+                        origen: tramosRuta[0].origen?.Site,
+                        destino: tramosRuta[0].destino?.Site,
+                        tipos: Array.from(tiposEnRuta),
+                        tramos: tramosRuta.map(t => ({
+                            _id: t._id,
+                            tipo: t.tipo,
+                            vigenciaDesde: t.vigenciaDesde,
+                            vigenciaHasta: t.vigenciaHasta,
+                            valor: t.valor
+                        }))
+                    });
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            analisis
+        });
+    } catch (error) {
+        console.error('Error en diagnóstico de tipos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error realizando el diagnóstico',
+            error: error.message
+        });
+    }
+});
+
+// Nuevo endpoint para corregir tipos de tramos
+router.post('/corregir-tipos', verifyToken, async (req, res) => {
+    try {
+        const { tramoIds, nuevoTipo } = req.body;
+        
+        if (!tramoIds || !Array.isArray(tramoIds) || tramoIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Se requieren IDs de tramos para corregir'
+            });
+        }
+        
+        if (!nuevoTipo || !['TRMC', 'TRMI'].includes(nuevoTipo)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El nuevo tipo debe ser TRMC o TRMI'
+            });
+        }
+        
+        const resultados = {
+            procesados: tramoIds.length,
+            actualizados: 0,
+            errores: []
+        };
+        
+        for (const id of tramoIds) {
+            try {
+                const tramo = await Tramo.findById(id);
+                if (tramo) {
+                    const tipoAnterior = tramo.tipo;
+                    tramo.tipo = nuevoTipo;
+                    await tramo.save();
+                    resultados.actualizados++;
+                    console.log(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
+                } else {
+                    resultados.errores.push({
+                        id,
+                        error: 'Tramo no encontrado'
+                    });
+                }
+            } catch (error) {
+                resultados.errores.push({
+                    id,
+                    error: error.message
+                });
+            }
+        }
+        
+        res.json({
+            success: true,
+            resultados
+        });
+    } catch (error) {
+        console.error('Error corrigiendo tipos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error corrigiendo tipos',
+            error: error.message
+        });
+    }
 });
 
 // Actualizar tramo
@@ -192,5 +432,11 @@ router.delete('/:id', verifyToken, async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// Ruta para verificar posibles duplicados
+router.post('/verificarDuplicados', verifyToken, tramoController.verificarPosiblesDuplicados);
+
+// Ruta para actualización masiva de vigencias
+router.post('/updateVigenciaMasiva', verifyToken, tramoController.updateVigenciaMasiva);
 
 module.exports = router;
