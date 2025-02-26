@@ -35,9 +35,24 @@ app.use((req, res, next) => {
     next();
 });
 
-// Parsers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Aumentar el límite ANTES de todas las rutas y después de CORS
+app.use(express.json({
+    limit: '50mb',
+    verify: (req, res, buf) => {
+        try {
+            JSON.parse(buf);
+        } catch (e) {
+            console.error('Error al analizar JSON en verify:', e.message);
+            throw new Error('JSON inválido');
+        }
+    }
+}));
+app.use(express.urlencoded({
+    extended: true,
+    limit: '50mb',
+    parameterLimit: 50000
+}));
+
 app.use(cookieParser());
 
 // Security headers
@@ -80,6 +95,19 @@ app.use((err, req, res, next) => {
         message: err.message || 'Error interno del servidor',
         details: process.env.NODE_ENV === 'development' ? err : undefined
     });
+});
+
+// Manejar errores de JSON inválido
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.error('Error al analizar JSON:', err);
+        return res.status(400).json({
+            success: false,
+            message: 'JSON inválido',
+            error: err.message
+        });
+    }
+    next(err);
 });
 
 // Log mejorado para debugging

@@ -11,6 +11,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
+import Checkbox from '@mui/material/Checkbox';
 
 // Configurar dayjs para usar español
 dayjs.locale('es');
@@ -38,6 +39,12 @@ const TramoManager = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedTramo, setSelectedTramo] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
+  const [selectedTramos, setSelectedTramos] = useState([]);
+  const [isVigenciaMasivaOpen, setIsVigenciaMasivaOpen] = useState(false);
+  const [vigenciaMasiva, setVigenciaMasiva] = useState({
+    vigenciaDesde: dayjs(),
+    vigenciaHasta: dayjs().add(1, 'year')
+  });
 
   useEffect(() => {
     fetchTramos();
@@ -152,25 +159,105 @@ const TramoManager = () => {
     return site ? site.Site : 'Desconocido';
   };
 
+  const handleRowSelect = (tramoId) => {
+    setSelectedTramos(prev => {
+      if (prev.includes(tramoId)) {
+        return prev.filter(id => id !== tramoId);
+      } else {
+        return [...prev, tramoId];
+      }
+    });
+  };
+
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedTramos(tramos.map(t => t._id));
+    } else {
+      setSelectedTramos([]);
+    }
+  };
+
+  const handleVigenciaMasivaOpen = () => {
+    if (selectedTramos.length === 0) {
+      setErrorMessage('Debe seleccionar al menos un tramo para actualizar');
+      return;
+    }
+    setIsVigenciaMasivaOpen(true);
+  };
+
+  const handleVigenciaMasivaClose = () => {
+    setIsVigenciaMasivaOpen(false);
+  };
+
+  const handleVigenciaMasivaChange = (name, date) => {
+    setVigenciaMasiva(prev => ({
+      ...prev,
+      [name]: date
+    }));
+  };
+
+  const handleVigenciaMasivaSubmit = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.post(`${API_URL}/tramos/updateVigenciaMasiva`, {
+        tramosIds: selectedTramos,
+        vigenciaDesde: vigenciaMasiva.vigenciaDesde.toISOString(),
+        vigenciaHasta: vigenciaMasiva.vigenciaHasta.toISOString()
+      });
+
+      if (response.data.conflictos && response.data.conflictos.length > 0) {
+        setErrorMessage(`Se actualizaron ${response.data.actualizados.length} tramos. ${response.data.conflictos.length} tramos tienen conflictos de fechas.`);
+      } else {
+        setSuccessMessage(`Se actualizaron ${response.data.actualizados.length} tramos correctamente`);
+      }
+
+      setIsVigenciaMasivaOpen(false);
+      setSelectedTramos([]);
+      fetchTramos();
+    } catch (error) {
+      setErrorMessage('Error al actualizar las vigencias: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5" component="h2">
           Gestión de Tramos
         </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={() => handleOpenModal()}
-        >
-          Agregar nuevo tramo
-        </Button>
+        <Box>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            onClick={handleVigenciaMasivaOpen}
+            disabled={selectedTramos.length === 0}
+            sx={{ mr: 2 }}
+          >
+            Actualizar vigencias ({selectedTramos.length})
+          </Button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => handleOpenModal()}
+          >
+            Agregar nuevo tramo
+          </Button>
+        </Box>
       </Box>
 
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={selectedTramos.length === tramos.length}
+                  indeterminate={selectedTramos.length > 0 && selectedTramos.length < tramos.length}
+                  onChange={handleSelectAll}
+                />
+              </TableCell>
               <TableCell>Origen</TableCell>
               <TableCell>Destino</TableCell>
               <TableCell>Cliente</TableCell>
@@ -184,7 +271,16 @@ const TramoManager = () => {
           </TableHead>
           <TableBody>
             {tramos.map((tramo) => (
-              <TableRow key={tramo._id}>
+              <TableRow 
+                key={tramo._id}
+                selected={selectedTramos.includes(tramo._id)}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedTramos.includes(tramo._id)}
+                    onChange={() => handleRowSelect(tramo._id)}
+                  />
+                </TableCell>
                 <TableCell>{getSiteName(tramo.origen)}</TableCell>
                 <TableCell>{getSiteName(tramo.destino)}</TableCell>
                 <TableCell>{tramo.cliente}</TableCell>
@@ -342,6 +438,58 @@ const TramoManager = () => {
             disabled={isLoading}
           >
             {isLoading ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Actualización Masiva de Vigencias */}
+      <Dialog 
+        open={isVigenciaMasivaOpen} 
+        onClose={handleVigenciaMasivaClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Actualizar Vigencias ({selectedTramos.length} tramos)
+        </DialogTitle>
+        <DialogContent>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <Alert severity="info">
+                  Esta acción actualizará la vigencia de todos los tramos seleccionados.
+                  Se validará que no haya conflictos con otros tramos existentes.
+                </Alert>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <DatePicker
+                  label="Vigencia desde"
+                  value={vigenciaMasiva.vigenciaDesde}
+                  onChange={(date) => handleVigenciaMasivaChange('vigenciaDesde', date)}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <DatePicker
+                  label="Vigencia hasta"
+                  value={vigenciaMasiva.vigenciaHasta}
+                  onChange={(date) => handleVigenciaMasivaChange('vigenciaHasta', date)}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </Grid>
+            </Grid>
+          </LocalizationProvider>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleVigenciaMasivaClose} color="secondary">
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleVigenciaMasivaSubmit} 
+            color="primary"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Actualizando...' : 'Actualizar Vigencias'}
           </Button>
         </DialogActions>
       </Dialog>

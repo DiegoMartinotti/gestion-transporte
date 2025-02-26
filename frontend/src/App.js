@@ -9,7 +9,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login'; // Asegúrate de que la ruta sea correcta
 import Dashboard from './components/Dashboard';
-import Tarifario from './components/Tarifario';
 import Navbar from './components/Navbar';
 import { Box, Container } from '@mui/material';
 
@@ -44,7 +43,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route 
-            path="/" 
+            path="/*" 
             element={
               <ProtectedRoute>
                 <AuthenticatedLayout>
@@ -53,17 +52,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/tarifario" 
-            element={
-              <ProtectedRoute>
-                <AuthenticatedLayout>
-                  <Tarifario />
-                </AuthenticatedLayout>
-              </ProtectedRoute>
-            } 
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
