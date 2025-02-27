@@ -7,35 +7,18 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Middleware de logging mejorado
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    if (['POST', 'PUT'].includes(req.method)) {
-        console.log('Headers:', req.headers);
-        console.log('Body:', req.body);
-    }
-    next();
-});
-
-// CORS antes que otras middlewares
-app.use(cors({
-    origin: 'http://localhost:3000', // String en lugar de array
+// CORS Configuration - Must be first
+const corsOptions = {
+    origin: 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Access-Control-Allow-Origin']
-}));
+};
 
-// Middleware adicional para headers CORS
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    next();
-});
+app.use(cors(corsOptions));
 
-// Aumentar el límite ANTES de todas las rutas y después de CORS
+// Body parsing middleware
 app.use(express.json({
     limit: '50mb',
     verify: (req, res, buf) => {
@@ -47,6 +30,7 @@ app.use(express.json({
         }
     }
 }));
+
 app.use(express.urlencoded({
     extended: true,
     limit: '50mb',
@@ -63,32 +47,40 @@ app.use((req, res, next) => {
     next();
 });
 
+// Improved request logging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    if (['POST', 'PUT'].includes(req.method)) {
+        console.log('Headers:', req.headers);
+        console.log('Body:', req.body);
+    }
+    next();
+});
+
 // Test endpoint
 app.get('/api/test', (req, res) => {
     res.json({ message: 'API funcionando correctamente' });
 });
 
-// Rutas
+// Routes
 const authRouter = require('./routes/auth');
 const apiRoutes = require('./routes/index');
-const proxyRouter = require('./routes/proxy'); // Agregar importación del proxyRouter
+const proxyRouter = require('./routes/proxy');
 
-// Rutas públicas
+// Public routes
 app.use('/api/auth', authRouter);
+app.use('/api/proxy', proxyRouter);
 
-// Agregar el proxyRouter antes de las rutas protegidas
-app.use('/api/proxy', proxyRouter); // Mover esta línea antes del middleware de autenticación
-
-// Rutas protegidas
+// Protected routes
 app.use('/api', apiRoutes);
 
-// Middleware para rutas no encontradas
+// 404 handler
 app.use((req, res) => {
     console.log('Ruta no encontrada:', req.path);
     res.status(404).json({ message: 'Ruta no encontrada' });
 });
 
-// Middleware de error
+// Error handlers
 app.use((err, req, res, next) => {
     console.error('Error:', err);
     res.status(err.status || 500).json({ 
@@ -97,7 +89,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Manejar errores de JSON inválido
+// JSON parse error handler
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
         console.error('Error al analizar JSON:', err);
@@ -108,14 +100,6 @@ app.use((err, req, res, next) => {
         });
     }
     next(err);
-});
-
-// Log mejorado para debugging
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log('Headers:', req.headers);
-    if (req.query) console.log('Query:', req.query);
-    next();
 });
 
 async function startServer() {

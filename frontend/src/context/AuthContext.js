@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -12,93 +13,94 @@ export const AuthContext = createContext(null);
 const setAuthToken = (token) => {
     if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        localStorage.setItem('token', token);
     } else {
         delete axios.defaults.headers.common['Authorization'];
+        localStorage.removeItem('token');
     }
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
-  const fetchUserData = useCallback(async (token) => {
-    try {
-      const response = await axios.get('/api/auth/me');
-      setUser(response.data.user);
-    } catch (error) {
-      console.error('Error al obtener datos del usuario:', error);
-      logout();
-    }
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setAuthToken(token);
-      setIsAuthenticated(true);
-      fetchUserData(token);
-    }
-    setLoading(false);
-  }, [fetchUserData]);
-
-  const login = async (email, password) => {
-    try {
-        if (!email || !password) {
-            throw new Error('Email y contraseña son requeridos');
+    const fetchUserData = useCallback(async (token) => {
+        if (!token) return;
+        try {
+            const response = await axios.get('/api/auth/me', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if (response.data.success && response.data.user) {
+                setUser(response.data.user);
+                setIsAuthenticated(true);
+            }
+        } catch (error) {
+            console.error('Error al obtener datos del usuario:', error);
+            setAuthToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+            navigate('/login');
         }
+    }, [navigate]);
 
-        console.log('Enviando datos de login:', { email, password });
-        
-        const response = await axios({
-            method: 'POST',
-            url: '/api/auth/login',
-            data: { email, password },
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            withCredentials: true
-        });
-        
-        console.log('Respuesta del servidor:', response.data);
-        
-        if (response.data && response.data.token) {
-            const token = response.data.token;
-            localStorage.setItem('token', token);
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
             setAuthToken(token);
-            setUser(response.data.user);
-            setIsAuthenticated(true);
-            return true;
+            fetchUserData(token);
         }
-        return false;
-    } catch (error) {
-        console.error('Error en login:', error.message);
-        console.error('Detalles de la respuesta:', error.response?.data);
-        throw new Error(error.response?.data?.message || 'Error al iniciar sesión');
-    }
-  };
+        setLoading(false);
+    }, [fetchUserData]);
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    setIsAuthenticated(false);
-  };
+    const login = async (token) => {
+        try {
+            if (!token) {
+                throw new Error('Token no proporcionado');
+            }
 
-  if (loading) {
-    return null; // O un componente de loading
-  }
+            setAuthToken(token);
+            await fetchUserData(token);
+            navigate('/');
+            return true;
+        } catch (error) {
+            console.error('Error en login:', error);
+            setAuthToken(null);
+            setIsAuthenticated(false);
+            setUser(null);
+            throw error;
+        }
+    };
 
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+    const logout = useCallback(() => {
+        setAuthToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        navigate('/login');
+    }, [navigate]);
+
+    const value = {
+        user,
+        isAuthenticated,
+        login,
+        logout,
+        loading
+    };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  }
-  return context;
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+    }
+    return context;
 };

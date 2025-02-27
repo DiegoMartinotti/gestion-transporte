@@ -10,7 +10,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login'; // Asegúrate de que la ruta sea correcta
 import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
-import { Box, Container } from '@mui/material';
+import { Box, Container, CssBaseline } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import { theme } from './theme/theme';
 
 // Componente de protección de rutas
 const ProtectedRoute = ({ children }) => {
@@ -36,25 +38,40 @@ const AuthenticatedLayout = ({ children }) => {
   );
 };
 
+const AppContent = () => {
+  return (
+    <Box sx={{ 
+      minHeight: '100vh',
+      bgcolor: 'background.default',
+      color: 'text.primary'
+    }}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/*" 
+          element={
+            <ProtectedRoute>
+              <AuthenticatedLayout>
+                <Dashboard />
+              </AuthenticatedLayout>
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
+    </Box>
+  );
+};
+
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route 
-            path="/*" 
-            element={
-              <ProtectedRoute>
-                <AuthenticatedLayout>
-                  <Dashboard />
-                </AuthenticatedLayout>
-              </ProtectedRoute>
-            } 
-          />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <Router>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
 }
 
