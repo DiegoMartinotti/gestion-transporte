@@ -5,6 +5,7 @@ const verifyToken = require('../middleware/verifyToken');
 const Site = require('../models/Site');
 const Cliente = require('../models/Cliente');
 const tramoController = require('../controllers/tramoController');
+const auth = require('../middleware/auth');
 
 // Middleware para debugging de solicitudes grandes
 router.use('/bulk', (req, res, next) => {
@@ -113,56 +114,127 @@ router.get('/:id', verifyToken, async (req, res) => {
 });
 
 // Después las rutas genéricas
-// Obtener todos los tramos
-router.get('/', verifyToken, async (req, res) => {
-  try {
-    // Usar populate para incluir datos completos de origen y destino
-    const tramos = await Tramo.find()
-      .populate('origen')
-      .populate('destino');
-    res.json(tramos);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+/**
+ * @swagger
+ * /api/tramos:
+ *   get:
+ *     tags:
+ *       - Tramos
+ *     summary: Lista todos los tramos
+ *     description: Obtiene una lista paginada de tramos con opción de filtrado
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Elementos por página
+ *       - in: query
+ *         name: cliente
+ *         schema:
+ *           type: string
+ *         description: ID del cliente para filtrar
+ *       - in: query
+ *         name: tipo
+ *         schema:
+ *           type: string
+ *           enum: [TRMC, TMRI]
+ *         description: Tipo de tramo
+ *     responses:
+ *       200:
+ *         description: Lista de tramos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Tramo'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/', auth, tramoController.getAllTramos);
 
 // Crear nuevo tramo
-router.post('/', verifyToken, async (req, res) => {
-  try {
-    // Verificar que el cliente existe
-    const clienteExiste = await Cliente.findOne({ Cliente: req.body.cliente });
-    if (!clienteExiste) {
-      return res.status(400).json({ error: 'El cliente especificado no existe' });
-    }
-
-    // Verificar que el origen y destino existen
-    const origenExiste = await Site.findById(req.body.origen);
-    const destinoExiste = await Site.findById(req.body.destino);
-    
-    if (!origenExiste) {
-      return res.status(400).json({ error: 'El site de origen no existe' });
-    }
-    
-    if (!destinoExiste) {
-      return res.status(400).json({ error: 'El site de destino no existe' });
-    }
-    
-    const nuevoTramo = new Tramo(req.body);
-    const tramoGuardado = await nuevoTramo.save();
-    
-    // Poblar los campos de origen y destino antes de enviar la respuesta
-    await tramoGuardado.populate('origen');
-    await tramoGuardado.populate('destino');
-    
-    res.status(201).json(tramoGuardado);
-  } catch (error) {
-    if (error.code === 11000) {
-      res.status(400).json({ error: 'Ya existe un tramo con esas características' });
-    } else {
-      res.status(400).json({ error: error.message });
-    }
-  }
-});
+/**
+ * @swagger
+ * /api/tramos:
+ *   post:
+ *     tags:
+ *       - Tramos
+ *     summary: Crea un nuevo tramo
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - origen
+ *               - destino
+ *               - tipo
+ *               - cliente
+ *               - vigenciaDesde
+ *               - vigenciaHasta
+ *               - metodoCalculo
+ *             properties:
+ *               origen:
+ *                 type: string
+ *                 description: ID del sitio de origen
+ *               destino:
+ *                 type: string
+ *                 description: ID del sitio de destino
+ *               tipo:
+ *                 type: string
+ *                 enum: [TRMC, TMRI]
+ *               cliente:
+ *                 type: string
+ *                 description: ID del cliente
+ *               vigenciaDesde:
+ *                 type: string
+ *                 format: date-time
+ *               vigenciaHasta:
+ *                 type: string
+ *                 format: date-time
+ *               metodoCalculo:
+ *                 type: string
+ *                 enum: [Palet, Kilometro, Fijo]
+ *               valorPeaje:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Tramo creado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Tramo'
+ *       400:
+ *         description: Datos inválidos
+ *       409:
+ *         description: Conflicto con tramos existentes
+ */
+router.post('/', auth, tramoController.createTramo);
 
 // Mejorada la ruta bulk para manejar errores mejor
 router.post('/bulk', verifyToken, async (req, res) => {
@@ -380,64 +452,113 @@ router.post('/corregir-tipos', verifyToken, async (req, res) => {
 });
 
 // Actualizar tramo
-router.put('/:id', verifyToken, async (req, res) => {
-  try {
-    // Verificar que el cliente existe si se está actualizando
-    if (req.body.cliente) {
-      const clienteExiste = await Cliente.findOne({ Cliente: req.body.cliente });
-      if (!clienteExiste) {
-        return res.status(400).json({ error: 'El cliente especificado no existe' });
-      }
-    }
-
-    // Si se actualiza origen o destino, verificar que existen
-    if (req.body.origen) {
-      const origenExiste = await Site.findById(req.body.origen);
-      if (!origenExiste) {
-        return res.status(400).json({ error: 'El site de origen no existe' });
-      }
-    }
-    
-    if (req.body.destino) {
-      const destinoExiste = await Site.findById(req.body.destino);
-      if (!destinoExiste) {
-        return res.status(400).json({ error: 'El site de destino no existe' });
-      }
-    }
-
-    const tramoActualizado = await Tramo.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('origen').populate('destino');
-    
-    if (!tramoActualizado) {
-      return res.status(404).json({ error: 'Tramo no encontrado' });
-    }
-    res.json(tramoActualizado);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+/**
+ * @swagger
+ * /api/tramos/{id}:
+ *   put:
+ *     tags:
+ *       - Tramos
+ *     summary: Actualiza un tramo existente
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Tramo'
+ *     responses:
+ *       200:
+ *         description: Tramo actualizado
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ *       409:
+ *         description: Conflicto con otros tramos
+ */
+router.put('/:id', auth, tramoController.updateTramo);
 
 // Eliminar tramo
-router.delete('/:id', verifyToken, async (req, res) => {
-  try {
-    const tramoEliminado = await Tramo.findByIdAndDelete(req.params.id);
-    if (!tramoEliminado) {
-      return res.status(404).json({ error: 'Tramo no encontrado' });
-    }
-    res.json({ mensaje: 'Tramo eliminado correctamente' });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+/**
+ * @swagger
+ * /api/tramos/{id}:
+ *   delete:
+ *     tags:
+ *       - Tramos
+ *     summary: Elimina un tramo
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Tramo eliminado exitosamente
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.delete('/:id', auth, tramoController.deleteTramo);
 
 // Ruta para verificar posibles duplicados
 router.post('/verificarDuplicados', verifyToken, tramoController.verificarPosiblesDuplicados);
 
 // Ruta para actualización masiva de vigencias
-router.post('/updateVigenciaMasiva', verifyToken, tramoController.updateVigenciaMasiva);
+/**
+ * @swagger
+ * /api/tramos/updateVigenciaMasiva:
+ *   post:
+ *     tags:
+ *       - Tramos
+ *     summary: Actualiza la vigencia de múltiples tramos
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tramosIds
+ *               - vigenciaDesde
+ *               - vigenciaHasta
+ *             properties:
+ *               tramosIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Lista de IDs de tramos a actualizar
+ *               vigenciaDesde:
+ *                 type: string
+ *                 format: date-time
+ *               vigenciaHasta:
+ *                 type: string
+ *                 format: date-time
+ *     responses:
+ *       200:
+ *         description: Resultado de la actualización masiva
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 actualizados:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 conflictos:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       tramoId:
+ *                         type: string
+ *                       mensaje:
+ *                         type: string
+ */
+router.post('/updateVigenciaMasiva', auth, tramoController.updateVigenciaMasiva);
 
 // Ruta para calcular tarifa
 router.post('/calcular-tarifa', verifyToken, tramoController.calcularTarifa);

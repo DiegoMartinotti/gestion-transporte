@@ -8,15 +8,11 @@ exports.login = async (req, res) => {
         
         const { email, password } = req.body;
 
-        // Validación más detallada
         if (!email || !password) {
             console.log('Faltan campos:', { email: !!email, password: !!password });
             return res.status(400).json({ 
-                message: 'Email y contraseña son requeridos',
-                details: {
-                    email: !email ? 'Email es requerido' : null,
-                    password: !password ? 'Contraseña es requerida' : null
-                }
+                success: false,
+                error: 'Email y contraseña son requeridos'
             });
         }
 
@@ -24,16 +20,16 @@ exports.login = async (req, res) => {
         if (!usuario) {
             console.log('Usuario no encontrado:', email);
             return res.status(401).json({ 
-                message: 'Credenciales inválidas',
-                details: 'Usuario no encontrado'
+                success: false,
+                error: 'Credenciales inválidas'
             });
         }
 
         const isMatch = await bcrypt.compare(password, usuario.password);
         if (!isMatch) {
             return res.status(401).json({ 
-                message: 'Credenciales inválidas',
-                details: 'Contraseña incorrecta'
+                success: false,
+                error: 'Credenciales inválidas'
             });
         }
 
@@ -70,8 +66,8 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.error('Error en login:', error);
         res.status(500).json({ 
-            message: 'Error en el servidor',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            success: false,
+            error: 'Error en el servidor'
         });
     }
 };

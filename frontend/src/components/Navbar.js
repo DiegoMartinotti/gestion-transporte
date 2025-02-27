@@ -7,13 +7,16 @@ import {
   IconButton, 
   Box,
   Menu,
-  MenuItem
+  MenuItem,
+  useTheme,
+  alpha
 } from '@mui/material';
 import { 
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   ListAlt as ListAltIcon,
-  ExitToApp as LogoutIcon
+  ExitToApp as LogoutIcon,
+  AccountCircle as AccountCircleIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +25,7 @@ const Navbar = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = React.useState(null);
+  const theme = useTheme();
   
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -43,22 +47,34 @@ const Navbar = () => {
   };
 
   return (
-    <AppBar position="static">
+    <AppBar 
+      position="static" 
+      elevation={0}
+      sx={{
+        borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+      }}
+    >
       <Toolbar>
         <IconButton
           edge="start"
           color="inherit"
           aria-label="menu"
           onClick={handleMenu}
-          sx={{ mr: 2 }}
+          sx={{ 
+            mr: 2,
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.common.white, 0.1),
+            }
+          }}
         >
           <MenuIcon />
         </IconButton>
+
         <Menu
           id="menu-appbar"
           anchorEl={anchorEl}
           anchorOrigin={{
-            vertical: 'top',
+            vertical: 'bottom',
             horizontal: 'left',
           }}
           keepMounted
@@ -68,32 +84,86 @@ const Navbar = () => {
           }}
           open={Boolean(anchorEl)}
           onClose={handleClose}
+          PaperProps={{
+            elevation: 3,
+            sx: {
+              mt: 1,
+              background: theme.palette.background.paper,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            }
+          }}
         >
-          <MenuItem onClick={() => handleNavigate('/')} sx={{ display: 'flex', alignItems: 'center' }}>
-            <DashboardIcon fontSize="small" sx={{ mr: 1 }} />
+          <MenuItem 
+            onClick={() => handleNavigate('/')} 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              gap: 1,
+              minWidth: 200,
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              }
+            }}
+          >
+            <DashboardIcon fontSize="small" />
             Dashboard
           </MenuItem>
-          <MenuItem onClick={() => handleNavigate('/tarifario')} sx={{ display: 'flex', alignItems: 'center' }}>
-            <ListAltIcon fontSize="small" sx={{ mr: 1 }} />
+          <MenuItem 
+            onClick={() => handleNavigate('/tarifario')} 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              gap: 1,
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              }
+            }}
+          >
+            <ListAltIcon fontSize="small" />
             Tarifario
           </MenuItem>
         </Menu>
-        
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            flexGrow: 1,
+            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: 'bold'
+          }}
+        >
           Mi Proyecto
         </Typography>
         
         {user && (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ mr: 2 }}>
-              {user.username || user.email}
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              px: 2, 
+              py: 0.5, 
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.common.white, 0.1),
+            }}>
+              <AccountCircleIcon sx={{ mr: 1, fontSize: 20 }} />
+              <Typography variant="body2">
+                {user.username || user.email}
+              </Typography>
+            </Box>
             <Button 
               color="inherit" 
               onClick={handleLogout}
               startIcon={<LogoutIcon />}
+              sx={{
+                borderRadius: 2,
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.common.white, 0.1),
+                }
+              }}
             >
-              Logout
+              Salir
             </Button>
           </Box>
         )}
