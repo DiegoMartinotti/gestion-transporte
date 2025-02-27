@@ -33,6 +33,15 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
         onClose();
     };
 
+    // Función para convertir números con formato español/europeo (coma decimal) a formato válido para JavaScript
+    const parseSpanishNumber = (value) => {
+        if (!value) return 0;
+        
+        // Reemplazar coma por punto para el separador decimal
+        const normalizedValue = String(value).replace(',', '.');
+        return parseFloat(normalizedValue) || 0;
+    };
+
     const handlePaste = (event) => {
         event.preventDefault();
         const pastedData = event.clipboardData.getData('text');
@@ -46,8 +55,10 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
             const destino = parts[1];
             const tipo = parts[2];
             const metodo = parts[3];
-            const valor = parseFloat(parts[4]) || 0;
-            const peaje = parseFloat(parts[5]) || 0;
+            
+            // Usar parseSpanishNumber para manejar correctamente los números con coma decimal
+            const valor = parseSpanishNumber(parts[4]);
+            const peaje = parseSpanishNumber(parts[5]);
             
             // Si vienen fechas en el formato, las usamos
             let fechaDesde = vigencia.desde;
@@ -347,6 +358,14 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
         }
     };
 
+    // Añadir función para formatear valores con dos decimales, usando coma como separador decimal para mostrar
+    const formatCurrency = (value) => {
+        if (value === undefined || value === null) return '$0,00';
+        
+        // Formatear con dos decimales y usar coma como separador decimal para mostrar
+        return `$${parseFloat(value).toFixed(2).replace('.', ',')}`;
+    };
+
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
             <DialogTitle>Importar Tramos</DialogTitle>
@@ -446,8 +465,8 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                                     <TableCell>{row.destinoNombre}</TableCell>
                                     <TableCell>{row.tipo}</TableCell>
                                     <TableCell>{row.metodoCalculo}</TableCell>
-                                    <TableCell>${row.valor}</TableCell>
-                                    <TableCell>${row.valorPeaje}</TableCell>
+                                    <TableCell>{formatCurrency(row.valor)}</TableCell>
+                                    <TableCell>{formatCurrency(row.valorPeaje)}</TableCell>
                                     <TableCell>
                                         {formatVigencia(vigencia.desde, vigencia.hasta)}
                                     </TableCell>
@@ -510,7 +529,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                                                                                 Vigencia: {dup.tramoExistente.vigenciaDesde} - {dup.tramoExistente.vigenciaHasta}
                                                                             </Typography>
                                                                             <Typography variant="body2">
-                                                                                Valor: ${dup.tramoExistente.valor}, Peaje: ${dup.tramoExistente.valorPeaje}
+                                                                                Valor: {formatCurrency(dup.tramoExistente.valor)}, Peaje: {formatCurrency(dup.tramoExistente.valorPeaje)}
                                                                             </Typography>
                                                                         </React.Fragment>
                                                                     }

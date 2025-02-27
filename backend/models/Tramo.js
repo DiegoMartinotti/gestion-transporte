@@ -32,12 +32,16 @@ const tramoSchema = new Schema({
     valor: {
         type: Number,
         required: [true, 'El valor es obligatorio'],
-        min: 0
+        min: 0,
+        get: v => parseFloat(v).toFixed(2),
+        set: v => parseFloat(parseFloat(v).toFixed(2))
     },
     valorPeaje: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
+        get: v => parseFloat(v).toFixed(2),
+        set: v => parseFloat(parseFloat(v).toFixed(2))
     },
     vigenciaDesde: {
         type: Date,
@@ -53,7 +57,23 @@ const tramoSchema = new Schema({
     }
 }, { 
     timestamps: true,
-    collection: 'tramos' 
+    collection: 'tramos',
+    toJSON: { getters: true },
+    toObject: { getters: true }
+});
+
+// Middleware para formatear decimales antes de guardar
+tramoSchema.pre('save', function(next) {
+    // Preservar dos decimales en los campos valor y valorPeaje
+    if (this.isModified('valor') || this.isNew) {
+        this.valor = parseFloat(parseFloat(this.valor).toFixed(2));
+    }
+    
+    if (this.isModified('valorPeaje') || this.isNew) {
+        this.valorPeaje = parseFloat(parseFloat(this.valorPeaje).toFixed(2));
+    }
+    
+    next();
 });
 
 // Definir índice compuesto que incluya el tipo

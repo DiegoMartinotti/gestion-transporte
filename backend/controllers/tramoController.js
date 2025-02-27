@@ -893,5 +893,86 @@ exports.updateVigenciaMasiva = async (req, res) => {
     }
 };
 
+exports.calcularTarifa = async (req, res) => {
+    try {
+        const { cliente, origen, destino, fecha, palets } = req.body;
+
+        if (!cliente || !origen || !destino || !fecha) {
+            return res.status(400).json({
+                success: false,
+                message: 'Todos los campos son requeridos'
+            });
+        }
+
+        // Buscar tramo vigente para la fecha especificada
+        const tramo = await Tramo.findOne({
+            cliente,
+            origen,
+            destino,
+            vigenciaDesde: { $lte: new Date(fecha) },
+            vigenciaHasta: { $gte: new Date(fecha) }
+        }).populate('origen destino');
+
+        if (!tramo) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontró un tramo vigente para la ruta y fecha especificadas'
+            });
+        }
+
+        // Calcular tarifa según el método de cálculo
+        let tarifaBase = 0;
+        const numPalets = Number(palets) || 1;
+
+        switch (tramo.metodoCalculo) {
+            case 'Palet':
+                tarifaBase = tramo.valor * numPalets;
+                break;
+            case 'Kilometro':
+                tarifaBase = tramo.valor * tramo.distancia;
+                break;
+            case 'Fijo':
+                tarifaBase = tramo.valor;
+                break;
+            default:
+                tarifaBase = 0;
+        }
+
+        // Asegurar que los valores sean números
+        const peaje = Number(tramo.valorPeaje) || 0;
+        tarifaBase = Number(tarifaBase) || 0;
+
+        // Calcular total
+        const total = tarifaBase + peaje;
+
+        // Convertir los resultados a números fijos con 2 decimales
+        const resultadoFinal = {
+            tarifaBase: Math.round(tarifaBase * 100) / 100,
+            peaje: Math.round(peaje * 100) / 100,
+            total: Math.round(total * 100) / 100,
+            detalles: {
+                origen: tramo.origen.Site,
+                destino: tramo.destino.Site,
+                distancia: tramo.distancia,
+                metodoCalculo: tramo.metodoCalculo,
+                tipo: tramo.tipo
+            }
+        };
+
+        res.json({
+            success: true,
+            data: resultadoFinal
+        });
+
+    } catch (error) {
+        console.error('Error al calcular tarifa:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al calcular la tarifa',
+            error: error.message
+        });
+    }
+};
+
 // Export the module
 module.exports = exports;

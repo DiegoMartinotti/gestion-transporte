@@ -4,9 +4,11 @@ import { Box, Container, Grid, Paper, Typography } from '@mui/material';
 import {
   People as PeopleIcon,
   LocalShipping as LocalShippingIcon,
+  Calculate as CalculateIcon,
 } from '@mui/icons-material';
 import ViajesManager from './ViajesManager';
 import ClientesManager from './ClientesManager';
+import CalcularTarifa from './CalcularTarifa';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -23,6 +25,12 @@ const Dashboard = () => {
       description: 'Administrar viajes y seguimiento',
       icon: <LocalShippingIcon sx={{ fontSize: 40 }} />,
       path: 'viajes'  // Sin slash inicial
+    },
+    {
+      title: 'Calcular Tarifa',
+      description: 'Calcular tarifas por ruta y cliente',
+      icon: <CalculateIcon sx={{ fontSize: 40 }} />,
+      path: 'calcular-tarifa'  // Sin slash inicial
     }
   ];
 
@@ -31,10 +39,11 @@ const Dashboard = () => {
       <Routes>
         <Route path="clientes" element={<ClientesManager />} />
         <Route path="viajes" element={<ViajesManager />} />
+        <Route path="calcular-tarifa" element={<CalcularTarifa />} />
         <Route index element={
           <Grid container spacing={3}>
             {menuItems.map((item, index) => (
-              <Grid item xs={12} md={6} key={index}>
+              <Grid item xs={12} md={4} key={index}>
                 <Paper
                   sx={{
                     p: 3,
