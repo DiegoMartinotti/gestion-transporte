@@ -218,10 +218,10 @@ const ViajesManager = () => {
               onChange={handleInputChange}
               required
             >
-              <MenuItem value="Pendiente">Pendiente</MenuItem>
-              <MenuItem value="En Proceso">En Proceso</MenuItem>
-              <MenuItem value="Completado">Completado</MenuItem>
               <MenuItem value="Cancelado">Cancelado</MenuItem>
+              <MenuItem value="Completado">Completado</MenuItem>
+              <MenuItem value="En Proceso">En Proceso</MenuItem>
+              <MenuItem value="Pendiente">Pendiente</MenuItem>
             </Select>
           </FormControl>
           <TextField

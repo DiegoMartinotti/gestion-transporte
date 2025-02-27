@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Button, TextField, Dialog, DialogTitle, DialogContent,
-  DialogActions, IconButton, CircularProgress, Alert
+  DialogActions, IconButton, CircularProgress, Alert, Typography,
+  Tooltip
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, Store as StoreIcon, AttachMoney as AttachMoneyIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, Store as StoreIcon, 
+  AttachMoney as AttachMoneyIcon, Functions as FunctionsIcon } from '@mui/icons-material';
 import SitesManager from './SitesManager';
 import TarifarioViewer from './TarifarioViewer';
 
@@ -14,12 +16,19 @@ const ClientesManager = () => {
   const [clientes, setClientes] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
-  const [formData, setFormData] = useState({ Cliente: '', CUIT: '' });
+  const [formData, setFormData] = useState({ 
+    Cliente: '', 
+    CUIT: '', 
+    formulaPaletSider: 'Valor * Palets + Peaje',
+    formulaPaletBitren: 'Valor * Palets + Peaje'
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [tarifarioOpen, setTarifarioOpen] = useState(false);
   const [selectedClienteTarifario, setSelectedClienteTarifario] = useState(null);
+  const [formulaDialogOpen, setFormulaDialogOpen] = useState(false);
+  const [currentClienteFormulas, setCurrentClienteFormulas] = useState(null);
 
   useEffect(() => {
     fetchClientes();
@@ -65,7 +74,12 @@ const ClientesManager = () => {
 
       if (!response.ok) throw new Error('Error al crear cliente');
       
-      setFormData({ Cliente: '', CUIT: '' });
+      setFormData({ 
+        Cliente: '', 
+        CUIT: '',
+        formulaPaletSider: 'Valor * Palets + Peaje',
+        formulaPaletBitren: 'Valor * Palets + Peaje'
+      });
       setOpenDialog(false);
       fetchClientes();
     } catch (error) {
@@ -87,8 +101,38 @@ const ClientesManager = () => {
 
       if (!response.ok) throw new Error('Error al actualizar cliente');
       
-      setFormData({ Cliente: '', CUIT: '' });
+      setFormData({ 
+        Cliente: '', 
+        CUIT: '',
+        formulaPaletSider: 'Valor * Palets + Peaje',
+        formulaPaletBitren: 'Valor * Palets + Peaje'
+      });
       setEditingClient(null);
+      fetchClientes();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleUpdateFormulas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/clientes/${currentClienteFormulas._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          formulaPaletSider: currentClienteFormulas.formulaPaletSider,
+          formulaPaletBitren: currentClienteFormulas.formulaPaletBitren
+        })
+      });
+
+      if (!response.ok) throw new Error('Error al actualizar fórmulas');
+      
+      setFormulaDialogOpen(false);
+      setCurrentClienteFormulas(null);
       fetchClientes();
     } catch (error) {
       console.error('Error:', error);
@@ -113,6 +157,16 @@ const ClientesManager = () => {
     } catch (error) {
       console.error('Error:', error);
     }
+  };
+
+  const openFormulaEditor = (cliente) => {
+    setCurrentClienteFormulas({
+      _id: cliente._id,
+      Cliente: cliente.Cliente,
+      formulaPaletSider: cliente.formulaPaletSider || 'Valor * Palets + Peaje',
+      formulaPaletBitren: cliente.formulaPaletBitren || 'Valor * Palets + Peaje'
+    });
+    setFormulaDialogOpen(true);
   };
 
   if (selectedClient) {
@@ -194,12 +248,18 @@ const ClientesManager = () => {
                         <IconButton 
                           onClick={() => {
                             setEditingClient(cliente._id);
-                            setFormData({ Cliente: cliente.Cliente, CUIT: cliente.CUIT });
+                            setFormData({ 
+                              Cliente: cliente.Cliente, 
+                              CUIT: cliente.CUIT,
+                              formulaPaletSider: cliente.formulaPaletSider || 'Valor * Palets + Peaje',
+                              formulaPaletBitren: cliente.formulaPaletBitren || 'Valor * Palets + Peaje'
+                            });
                           }}
+                          title="Editar cliente"
                         >
                           <EditIcon />
                         </IconButton>
-                        <IconButton onClick={() => handleDelete(cliente._id)} color="error">
+                        <IconButton onClick={() => handleDelete(cliente._id)} color="error" title="Eliminar cliente">
                           <DeleteIcon />
                         </IconButton>
                         <IconButton 
@@ -211,6 +271,14 @@ const ClientesManager = () => {
                         >
                           <AttachMoneyIcon />
                         </IconButton>
+                        <Tooltip title="Editar fórmulas de cálculo">
+                          <IconButton 
+                            onClick={() => openFormulaEditor(cliente)}
+                            color="secondary"
+                          >
+                            <FunctionsIcon />
+                          </IconButton>
+                        </Tooltip>
                       </>
                     )}
                   </TableCell>
@@ -244,6 +312,24 @@ const ClientesManager = () => {
               onChange={(e) => setFormData({ ...formData, CUIT: e.target.value })}
               required
             />
+            <TextField
+              margin="dense"
+              label="Fórmula para Palet (Sider)"
+              fullWidth
+              variant="outlined"
+              value={formData.formulaPaletSider}
+              onChange={(e) => setFormData({ ...formData, formulaPaletSider: e.target.value })}
+              helperText="Ejemplo: Valor * Palets + Peaje"
+            />
+            <TextField
+              margin="dense"
+              label="Fórmula para Palet (Bitren)"
+              fullWidth
+              variant="outlined"
+              value={formData.formulaPaletBitren}
+              onChange={(e) => setFormData({ ...formData, formulaPaletBitren: e.target.value })}
+              helperText="Ejemplo: SI(Palets>26;26+(Palets-26)*0,5;Palets)*Valor+Peaje"
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
@@ -252,6 +338,44 @@ const ClientesManager = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      <Dialog open={formulaDialogOpen} onClose={() => setFormulaDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Fórmulas de cálculo para {currentClienteFormulas?.Cliente}</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle2" gutterBottom mt={2}>
+            Variables disponibles: Valor, Palets, Peaje
+          </Typography>
+          <Typography variant="subtitle2" gutterBottom mb={2}>
+            Funciones disponibles: SI(condicion;valor_si_verdadero;valor_si_falso)
+          </Typography>
+          
+          <TextField
+            margin="dense"
+            label="Fórmula para Palet (Sider)"
+            fullWidth
+            variant="outlined"
+            value={currentClienteFormulas?.formulaPaletSider || ''}
+            onChange={(e) => setCurrentClienteFormulas({...currentClienteFormulas, formulaPaletSider: e.target.value})}
+            helperText="Ejemplo: Valor * Palets + Peaje"
+          />
+          
+          <TextField
+            margin="dense"
+            label="Fórmula para Palet (Bitren)"
+            fullWidth
+            variant="outlined"
+            value={currentClienteFormulas?.formulaPaletBitren || ''}
+            onChange={(e) => setCurrentClienteFormulas({...currentClienteFormulas, formulaPaletBitren: e.target.value})}
+            helperText="Ejemplo: SI(Palets>26;26+(Palets-26)*0,5;Palets)*Valor+Peaje"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFormulaDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={handleUpdateFormulas} variant="contained" color="primary">
+            Guardar
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <TarifarioViewer

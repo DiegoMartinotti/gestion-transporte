@@ -1,7 +1,9 @@
 const Tramo = require('../models/Tramo');
+const Cliente = require('../models/Cliente'); // Importamos el modelo Cliente
 const Site = require('../models/Site');
 const { format } = require('date-fns');
 const { fechasSuperpuestas, generarTramoId, sonTramosIguales } = require('../utils/tramoValidator');
+const { calcularTarifaPaletConFormula } = require('../utils/formulaParser'); // Importamos el parser de fórmulas
 
 exports.getTramosByCliente = async (req, res) => {
     try {
@@ -254,7 +256,6 @@ exports.bulkCreateTramos = async (req, res) => {
                 console.log(`[IMPORT] Encontrados ${tramosConMismoId.length} tramos posibles con ID "${tramoId}"`);
 
                 // Verificación EXPLÍCITA por tipo para diagnóstico
-                console.log(`[IMPORT] Verificación por tipo del tramo #${i+1}:`);
                 const todosLosTramos = Object.values(mapaExistentes).flat();
                 // Verificar si tienen el mismo ID (que incluye tipo)
                 const tramosConMismoOrigenDestino = todosLosTramos.filter(t => 
@@ -263,28 +264,19 @@ exports.bulkCreateTramos = async (req, res) => {
                     
                 const tramosConDiferenteTipo = tramosConMismoOrigenDestino.filter(t => t.tipo !== tramoData.tipo);
                 const tramosConMismoTipo = tramosConMismoOrigenDestino.filter(t => t.tipo === tramoData.tipo);
-                
-                console.log(`[IMPORT] - Total tramos mismo origen-destino: ${tramosConMismoOrigenDestino.length}`);
-                console.log(`[IMPORT] - Con diferente tipo: ${tramosConDiferenteTipo.length}`);
-                console.log(`[IMPORT] - Con mismo tipo: ${tramosConMismoTipo.length}`);
                     
                 // Si existen tramos con el mismo origen y destino pero distinto tipo, no son duplicados
                 if (tramosConDiferenteTipo.length > 0) {
-                    console.log(`[IMPORT] ℹ️ Hay tramos con mismo origen-destino pero tipo diferente:`);
                     tramosConDiferenteTipo.forEach(t => {
-                        console.log(`[IMPORT] - Tramo ID: ${t._id}, Tipo: ${t.tipo}`);
                     });
                 }
                 // Si encontramos un tramo existente con fechas superpuestas
                 let tramoExistente = null;
                 // Validación manual: solo verificar tramos con el MISMO tipo explícitamente
                 for (const existente of tramosConMismoTipo) {
-                    console.log(`[IMPORT] Verificando superposición con tramo existente ID ${existente._id}:`);
-                    console.log(`[IMPORT] - Tipo actual: ${tramoData.tipo}, Tipo existente: ${existente.tipo}`);
                     
                     // Si tienen distinto tipo, NO pueden ser duplicados (verificación redundante)
                     if (existente.tipo !== tramoData.tipo) {
-                        console.log(`[IMPORT] Tipos diferentes, omitiendo verificación de fechas`);
                         continue;
                     }   
 
@@ -300,8 +292,7 @@ exports.bulkCreateTramos = async (req, res) => {
                 }
 
                 if (tramoExistente) {
-                    console.error(`[IMPORT] ❌ Tramo duplicado detectado: ${tramoId}`);
-                    console.error(`[IMPORT] - Tramo existente: ${JSON.stringify(tramoExistente)}`);
+                    
                     
                     resultados.errores.push({
                         tipo: 'superposición',
@@ -353,7 +344,6 @@ exports.bulkCreateTramos = async (req, res) => {
                     };
                 }
 
-                console.log(`[IMPORT] ✅ Tramo #${i+1} sin conflictos, procediendo a guardar`);
                 const tramoObj = {
                     origen: tramoData.origen,
                     destino: tramoData.destino,
@@ -378,7 +368,6 @@ exports.bulkCreateTramos = async (req, res) => {
                     ...nuevoTramo.toObject(),
                     _id: nuevoTramo._id
                 });
-                console.log(`Añadido al mapa: ${nuevoId} (Tipo: ${nuevoTramo.tipo})`);
 
                 resultados.exitosos++;
             } catch (tramoBatchError) {
@@ -895,9 +884,9 @@ exports.updateVigenciaMasiva = async (req, res) => {
 
 exports.calcularTarifa = async (req, res) => {
     try {
-        const { cliente, origen, destino, fecha, palets } = req.body;
+        const { cliente: clienteNombre, origen, destino, fecha, palets, tipoUnidad, tipoTramo } = req.body;
 
-        if (!cliente || !origen || !destino || !fecha) {
+        if (!clienteNombre || !origen || !destino || !fecha || !tipoTramo) {
             return res.status(400).json({
                 success: false,
                 message: 'Todos los campos son requeridos'
@@ -906,9 +895,10 @@ exports.calcularTarifa = async (req, res) => {
 
         // Buscar tramo vigente para la fecha especificada
         const tramo = await Tramo.findOne({
-            cliente,
+            cliente: clienteNombre,
             origen,
             destino,
+            tipo: tipoTramo, // Añadido el filtro por tipo
             vigenciaDesde: { $lte: new Date(fecha) },
             vigenciaHasta: { $gte: new Date(fecha) }
         }).populate('origen destino');
@@ -920,30 +910,49 @@ exports.calcularTarifa = async (req, res) => {
             });
         }
 
+        // Obtenemos la información del cliente para sus fórmulas personalizadas
+        const cliente = await Cliente.findOne({ Cliente: clienteNombre });
+
         // Calcular tarifa según el método de cálculo
         let tarifaBase = 0;
+        let peaje = Number(tramo.valorPeaje) || 0;
+        let total = 0;
         const numPalets = Number(palets) || 1;
+        const tipoDeUnidad = tipoUnidad || 'Sider'; // Valor por defecto: Sider
 
         switch (tramo.metodoCalculo) {
             case 'Palet':
+                // Si es tipo Palet, verificamos si el cliente tiene una fórmula personalizada para el tipo de unidad
+                if (cliente) {
+                    const formulaKey = tipoDeUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
+                    const formulaPersonalizada = cliente[formulaKey];
+                    
+                    // Si hay una fórmula personalizada, la usamos para calcular la tarifa
+                    if (formulaPersonalizada) {
+                        console.log(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${formulaPersonalizada}`);
+                        const resultado = calcularTarifaPaletConFormula(tramo.valor, peaje, numPalets, formulaPersonalizada);
+                        tarifaBase = resultado.tarifaBase;
+                        peaje = resultado.peaje;
+                        total = resultado.total;
+                        break;
+                    }
+                }
+                // Si no hay fórmula personalizada, usa el cálculo por defecto
                 tarifaBase = tramo.valor * numPalets;
+                total = tarifaBase + peaje;
                 break;
             case 'Kilometro':
                 tarifaBase = tramo.valor * tramo.distancia;
+                total = tarifaBase + peaje;
                 break;
             case 'Fijo':
                 tarifaBase = tramo.valor;
+                total = tarifaBase + peaje;
                 break;
             default:
                 tarifaBase = 0;
+                total = peaje;
         }
-
-        // Asegurar que los valores sean números
-        const peaje = Number(tramo.valorPeaje) || 0;
-        tarifaBase = Number(tarifaBase) || 0;
-
-        // Calcular total
-        const total = tarifaBase + peaje;
 
         // Convertir los resultados a números fijos con 2 decimales
         const resultadoFinal = {
@@ -955,8 +964,13 @@ exports.calcularTarifa = async (req, res) => {
                 destino: tramo.destino.Site,
                 distancia: tramo.distancia,
                 metodoCalculo: tramo.metodoCalculo,
-                tipo: tramo.tipo
-            }
+                tipo: tramo.tipo,
+                tipoUnidad: tipoDeUnidad,
+                valor: tramo.valor,
+                valorPeaje: tramo.valorPeaje
+            },
+            formula: cliente && tramo.metodoCalculo === 'Palet' ? 
+                (tipoDeUnidad === 'Bitren' ? cliente.formulaPaletBitren : cliente.formulaPaletSider) : 'Estándar'
         };
 
         res.json({

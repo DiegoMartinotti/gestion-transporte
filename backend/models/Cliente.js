@@ -11,6 +11,16 @@ const clienteSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
+  },
+  formulaPaletSider: {
+    type: String,
+    default: "Valor * Palets + Peaje", // Fórmula por defecto para cálculo tipo Palet con unidad Sider
+    trim: true
+  },
+  formulaPaletBitren: {
+    type: String,
+    default: "Valor * Palets + Peaje", // Fórmula por defecto para cálculo tipo Palet con unidad Bitren
+    trim: true
   }
 }, {
   timestamps: true // Agrega createdAt y updatedAt

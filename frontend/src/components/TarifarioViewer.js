@@ -44,7 +44,7 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
                         value={tramoData.origen}
                         onChange={(e) => setTramoData({...tramoData, origen: e.target.value})}
                     >
-                        {sites.map(site => (
+                        {sites.sort((a, b) => a.Site.localeCompare(b.Site)).map(site => (
                             <MenuItem key={site._id} value={site._id}>
                                 {site.Site}
                             </MenuItem>
@@ -58,7 +58,7 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
                         value={tramoData.destino}
                         onChange={(e) => setTramoData({...tramoData, destino: e.target.value})}
                     >
-                        {sites.map(site => (
+                        {sites.sort((a, b) => a.Site.localeCompare(b.Site)).map(site => (
                             <MenuItem key={site._id} value={site._id}>
                                 {site.Site}
                             </MenuItem>
@@ -151,6 +151,13 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const ISO_FORMAT = 'YYYY-MM-DD';
+
+const formatMoney = (value) => {
+    return Number(value || 0).toLocaleString('es-AR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+};
 
 const TarifarioViewer = ({ open, cliente, onClose }) => {
     const [tramos, setTramos] = useState([]);
@@ -658,11 +665,11 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                                                 {dayjs.utc(tramo.vigenciaHasta).format(DATE_FORMAT)}
                                             </TableCell>
                                             <TableCell>
-                                                ${tramo.valor} 
+                                                ${formatMoney(tramo.valor)} 
                                                 {tramo.metodoCalculo === 'Kilometro' ? '/km' : 
                                                 tramo.metodoCalculo === 'Palet' ? '/palet' : ''}
                                             </TableCell>
-                                            <TableCell>${tramo.valorPeaje}</TableCell>
+                                            <TableCell>${formatMoney(tramo.valorPeaje)}</TableCell>
                                             <TableCell>
                                                 <IconButton 
                                                     size="small" 
