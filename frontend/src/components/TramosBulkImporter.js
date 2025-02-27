@@ -366,6 +366,13 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
         return `$${parseFloat(value).toFixed(2).replace('.', ',')}`;
     };
 
+    const formatMoney = (value) => {
+        return Number(value || 0).toLocaleString('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    };
+
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
             <DialogTitle>Importar Tramos</DialogTitle>
@@ -529,7 +536,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                                                                                 Vigencia: {dup.tramoExistente.vigenciaDesde} - {dup.tramoExistente.vigenciaHasta}
                                                                             </Typography>
                                                                             <Typography variant="body2">
-                                                                                Valor: {formatCurrency(dup.tramoExistente.valor)}, Peaje: {formatCurrency(dup.tramoExistente.valorPeaje)}
+                                                                                Valor: ${formatMoney(dup.tramoExistente.valor)}, Peaje: ${formatMoney(dup.tramoExistente.valorPeaje)}
                                                                             </Typography>
                                                                         </React.Fragment>
                                                                     }

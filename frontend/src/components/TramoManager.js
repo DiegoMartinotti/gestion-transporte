@@ -30,6 +30,13 @@ const initialFormData = {
   valorPeaje: 0
 };
 
+const formatMoney = (value) => {
+  return Number(value || 0).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
 const TramoManager = () => {
   const [tramos, setTramos] = useState([]);
   const [sites, setSites] = useState([]);
@@ -330,7 +337,7 @@ const TramoManager = () => {
                     label="Origen"
                     required
                   >
-                    {sites.map((site) => (
+                    {sites.sort((a, b) => a.Site.localeCompare(b.Site)).map((site) => (
                       <MenuItem key={site._id} value={site._id}>
                         {site.Site} - {site.Descripcion}
                       </MenuItem>
@@ -349,7 +356,7 @@ const TramoManager = () => {
                     label="Destino"
                     required
                   >
-                    {sites.map((site) => (
+                    {sites.sort((a, b) => a.Site.localeCompare(b.Site)).map((site) => (
                       <MenuItem key={site._id} value={site._id}>
                         {site.Site} - {site.Descripcion}
                       </MenuItem>
