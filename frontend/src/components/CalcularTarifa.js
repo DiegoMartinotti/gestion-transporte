@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Paper,
@@ -12,6 +12,7 @@ import {
   TextField,
   Box,
   Alert,
+  Autocomplete,
 } from '@mui/material';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -135,15 +136,15 @@ const CalcularTarifa = () => {
     }
   };
 
-  const handleOrigenChange = (event) => {
-    setOrigen(event.target.value);
+  const handleOrigenChange = (event, newValue) => {
+    setOrigen(newValue ? newValue._id : '');
     setDestino(''); // Limpiar el destino cuando cambia el origen
     setTiposDisponibles([]); // Limpiar tipos disponibles
     setTipoTramo(''); // Limpiar tipo seleccionado
   };
 
-  const handleDestinoChange = (event) => {
-    const destinoId = event.target.value;
+  const handleDestinoChange = (event, newValue) => {
+    const destinoId = newValue ? newValue._id : '';
     setDestino(destinoId);
     
     // Buscar todos los tramos para este par origen-destino y obtener sus tipos únicos
@@ -169,6 +170,47 @@ const CalcularTarifa = () => {
         setTipoTramo(tiposUnicos[0]);
       } else {
         setTipoTramo('');
+      }
+    }
+  };
+
+  // Referencias para los componentes
+  const destinoInputRef = useRef(null);
+  const tipoTramoInputRef = useRef(null);
+
+  // Función mejorada para manejar las teclas en Autocomplete
+  const handleAutoCompleteKeyDown = (event, options, onChange, nextFieldRef) => {
+    if (event.key === 'Tab' || event.key === 'Enter') {
+      const listboxNode = document.querySelector('[role="listbox"]');
+      if (!listboxNode) return;
+      
+      const highlightedOption = listboxNode.querySelector('[aria-selected="true"]');
+      if (!highlightedOption) return;
+      
+      // Obtener el índice del elemento resaltado
+      const highlightedIndex = Array.from(listboxNode.children).indexOf(highlightedOption);
+      if (highlightedIndex === -1) return;
+
+      // Obtener las opciones filtradas según el texto ingresado
+      const inputValue = event.target.value.toLowerCase();
+      const filteredOptions = options.filter(option => 
+        option.Site.toLowerCase().includes(inputValue)
+      );
+
+      // Si hay una opción válida resaltada, seleccionarla
+      if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Seleccionar la opción
+        onChange(event, filteredOptions[highlightedIndex]);
+
+        // Si es Tab y hay un siguiente campo, mover el foco
+        if (event.key === 'Tab' && nextFieldRef?.current) {
+          setTimeout(() => {
+            nextFieldRef.current.focus();
+          }, 0);
+        }
       }
     }
   };
@@ -206,41 +248,56 @@ const CalcularTarifa = () => {
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <InputLabel>Origen</InputLabel>
-              <Select
-                value={origen}
-                onChange={handleOrigenChange}
-                label="Origen"
-                disabled={!selectedCliente}
-              >
-                {sites.sort((a, b) => a.Site.localeCompare(b.Site)).map((site) => (
-                  <MenuItem key={site._id} value={site._id}>
-                    {site.Site}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              options={sites.sort((a, b) => a.Site.localeCompare(b.Site))}
+              getOptionLabel={(option) => option.Site || ''}
+              value={sites.find(site => site._id === origen) || null}
+              onChange={handleOrigenChange}
+              disabled={!selectedCliente}
+              onKeyDown={(e) => handleAutoCompleteKeyDown(e, sites, handleOrigenChange, destinoInputRef)}
+              blurOnSelect={false}
+              selectOnFocus={true}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Origen"
+                  fullWidth
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option._id === value._id}
+              filterOptions={(options, { inputValue }) => 
+                options.filter(option =>
+                  option.Site.toLowerCase().includes(inputValue.toLowerCase())
+                )
+              }
+            />
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <InputLabel>Destino</InputLabel>
-              <Select
-                value={destino}
-                onChange={handleDestinoChange}
-                label="Destino"
-                disabled={!origen || destinosDisponibles.length === 0}
-              >
-                {destinosDisponibles
-                  .sort((a, b) => a.Site.localeCompare(b.Site))
-                  .map((site) => (
-                    <MenuItem key={site._id} value={site._id}>
-                      {site.Site}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              options={destinosDisponibles.sort((a, b) => a.Site.localeCompare(b.Site))}
+              getOptionLabel={(option) => option.Site || ''}
+              value={destinosDisponibles.find(site => site._id === destino) || null}
+              onChange={handleDestinoChange}
+              disabled={!origen || destinosDisponibles.length === 0}
+              onKeyDown={(e) => handleAutoCompleteKeyDown(e, destinosDisponibles, handleDestinoChange, tipoTramoInputRef)}
+              blurOnSelect={false}
+              selectOnFocus={true}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Destino"
+                  fullWidth
+                  inputRef={destinoInputRef}
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option._id === value._id}
+              filterOptions={(options, { inputValue }) => 
+                options.filter(option =>
+                  option.Site.toLowerCase().includes(inputValue.toLowerCase())
+                )
+              }
+            />
           </Grid>
 
           {selectedTramo && (
@@ -273,6 +330,7 @@ const CalcularTarifa = () => {
                 onChange={(e) => setTipoTramo(e.target.value)}
                 label="Tipo de Tramo"
                 disabled={!origen || !destino || tiposDisponibles.length === 0}
+                inputRef={tipoTramoInputRef}
               >
                 {tiposDisponibles.map((tipo) => (
                   <MenuItem key={tipo} value={tipo}>
