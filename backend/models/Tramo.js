@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const Site = mongoose.model('Site');
 const { calcularDistanciaRuta } = require('../services/routingService');
+// Eliminamos la importación directa del modelo Site para evitar dependencia circular
 
 const tramoSchema = new Schema({
     origen: {
@@ -108,6 +108,9 @@ tramoSchema.pre('save', async function(next) {
     try {
         // Solo calcular distancia si tenemos origen y destino
         if (this.origen && this.destino) {
+            // Obtenemos el modelo Site dentro de la función para evitar dependencia circular
+            const Site = mongoose.model('Site');
+            
             // Cargar los sitios con sus coordenadas
             const origenSite = await Site.findById(this.origen).select('location');
             const destinoSite = await Site.findById(this.destino).select('location');
