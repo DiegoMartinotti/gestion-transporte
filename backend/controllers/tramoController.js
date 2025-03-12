@@ -1,3 +1,8 @@
+/**
+ * @module controllers/tramoController
+ * @description Controlador para gestionar los tramos de transporte
+ */
+
 const Tramo = require('../models/Tramo');
 const Cliente = require('../models/Cliente'); // Importamos el modelo Cliente
 const Site = require('../models/Site');
@@ -5,6 +10,18 @@ const { format } = require('date-fns');
 const { fechasSuperpuestas, generarTramoId, sonTramosIguales } = require('../utils/tramoValidator');
 const { calcularTarifaPaletConFormula } = require('../utils/formulaParser'); // Importamos el parser de fórmulas
 
+/**
+ * Obtiene todos los tramos asociados a un cliente específico
+ * 
+ * @async
+ * @function getTramosByCliente
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} req.params - Parámetros de la URL
+ * @param {string} req.params.cliente - ID del cliente
+ * @param {Object} res - Objeto de respuesta Express
+ * @returns {Promise<Object>} Lista de tramos del cliente
+ * @throws {Error} Error 500 si hay un error en el servidor
+ */
 exports.getTramosByCliente = async (req, res) => {
     try {
         console.log('Buscando tramos para cliente:', req.params.cliente);
@@ -33,6 +50,28 @@ exports.getTramosByCliente = async (req, res) => {
     }
 };
 
+/**
+ * Crea múltiples tramos en una sola operación
+ * 
+ * @async
+ * @function bulkCreateTramos
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} req.body - Cuerpo de la solicitud
+ * @param {string} req.body.cliente - ID del cliente
+ * @param {Array<Object>} req.body.tramos - Array de objetos con datos de tramos
+ * @param {string} req.body.tramos[].origen - ID del sitio de origen
+ * @param {string} req.body.tramos[].destino - ID del sitio de destino
+ * @param {string} req.body.tramos[].tipo - Tipo de tramo (TRMC/TRMI)
+ * @param {string} req.body.tramos[].metodoCalculo - Método de cálculo de tarifa
+ * @param {number} req.body.tramos[].valor - Valor base del tramo
+ * @param {number} req.body.tramos[].valorPeaje - Valor del peaje
+ * @param {Date} req.body.tramos[].vigenciaDesde - Fecha de inicio de vigencia
+ * @param {Date} req.body.tramos[].vigenciaHasta - Fecha de fin de vigencia
+ * @param {Object} res - Objeto de respuesta Express
+ * @returns {Promise<Object>} Resultado de la operación con tramos creados y errores
+ * @throws {Error} Error 400 si los datos son inválidos
+ * @throws {Error} Error 500 si hay un error en el servidor
+ */
 exports.bulkCreateTramos = async (req, res) => {
     try {
         // Verificar si el cuerpo está llegando correctamente
@@ -882,9 +921,40 @@ exports.updateVigenciaMasiva = async (req, res) => {
     }
 };
 
+/**
+ * Calcula la tarifa para un tramo específico
+ * 
+ * @async
+ * @function calcularTarifa
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} req.body - Cuerpo de la solicitud
+ * @param {string} req.body.cliente - Nombre del cliente
+ * @param {string} req.body.origen - ID del sitio de origen
+ * @param {string} req.body.destino - ID del sitio de destino
+ * @param {Date} req.body.fecha - Fecha para la cual calcular la tarifa
+ * @param {number} req.body.palets - Cantidad de palets
+ * @param {string} req.body.tipoUnidad - Tipo de unidad (Sider/Bitren)
+ * @param {string} req.body.tipoTramo - Tipo de tramo (TRMC/TRMI)
+ * @param {boolean} req.body.permitirTramoNoVigente - Permitir calcular la tarifa de un tramo no vigente
+ * @param {string} req.body.tramoId - ID del tramo para calcular la tarifa
+ * @param {Object} res - Objeto de respuesta Express
+ * @returns {Promise<Object>} Tarifa calculada con detalles
+ * @throws {Error} Error 404 si no se encuentra el tramo
+ * @throws {Error} Error 500 si hay un error en el servidor
+ */
 exports.calcularTarifa = async (req, res) => {
     try {
-        const { cliente: clienteNombre, origen, destino, fecha, palets, tipoUnidad, tipoTramo } = req.body;
+        const { 
+            cliente: clienteNombre, 
+            origen, 
+            destino, 
+            fecha, 
+            palets, 
+            tipoUnidad, 
+            tipoTramo, 
+            permitirTramoNoVigente,
+            tramoId
+        } = req.body;
 
         if (!clienteNombre || !origen || !destino || !fecha || !tipoTramo) {
             return res.status(400).json({
@@ -893,15 +963,30 @@ exports.calcularTarifa = async (req, res) => {
             });
         }
 
-        // Buscar tramo vigente para la fecha especificada
-        const tramo = await Tramo.findOne({
-            cliente: clienteNombre,
-            origen,
-            destino,
-            tipo: tipoTramo, // Añadido el filtro por tipo
-            vigenciaDesde: { $lte: new Date(fecha) },
-            vigenciaHasta: { $gte: new Date(fecha) }
-        }).populate('origen destino');
+        let tramo;
+
+        // Si se proporciona un ID de tramo específico y permitirTramoNoVigente es true
+        if (tramoId && permitirTramoNoVigente === true) {
+            console.log('Buscando tramo específico por ID:', tramoId, 'con permitirTramoNoVigente:', permitirTramoNoVigente);
+            tramo = await Tramo.findOne({
+                _id: tramoId,
+                cliente: clienteNombre,
+                origen,
+                destino,
+                tipo: tipoTramo
+            }).populate('origen destino');
+        } else {
+            // Buscar tramo vigente para la fecha especificada
+            console.log('Buscando tramo vigente para fecha:', fecha);
+            tramo = await Tramo.findOne({
+                cliente: clienteNombre,
+                origen,
+                destino,
+                tipo: tipoTramo,
+                vigenciaDesde: { $lte: new Date(fecha) },
+                vigenciaHasta: { $gte: new Date(fecha) }
+            }).populate('origen destino');
+        }
 
         if (!tramo) {
             return res.status(404).json({

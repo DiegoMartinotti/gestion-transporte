@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { Table } from '../ui/components';
+import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 
 const ClientesTable = () => {
     const [clientes, setClientes] = useState([]);
@@ -28,33 +30,48 @@ const ClientesTable = () => {
         }
     }, [isAuthenticated]);
 
-    if (loading) return <div>Cargando...</div>;
-    if (error) return <div>Error: {error}</div>;
-    if (!clientes.length) return <div>No hay clientes registrados</div>;
+    // Definición de columnas para la tabla
+    const columns = [
+        { id: 'nombre', label: 'Nombre' },
+        { id: 'email', label: 'Email' },
+        { id: 'telefono', label: 'Teléfono' },
+        { 
+            id: 'acciones', 
+            label: 'Acciones',
+            align: 'center',
+            format: (value, row) => (
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                    {/* Aquí puedes agregar botones de editar/eliminar */}
+                    <Typography variant="body2">Editar</Typography>
+                </Box>
+            )
+        },
+    ];
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (error) {
+        return (
+            <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+            </Alert>
+        );
+    }
 
     return (
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Teléfono</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {clientes.map(cliente => (
-                    <tr key={cliente._id}>
-                        <td>{cliente.nombre}</td>
-                        <td>{cliente.email}</td>
-                        <td>{cliente.telefono}</td>
-                        <td>
-                            {/* Aquí puedes agregar botones de editar/eliminar */}
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+        <Table
+            columns={columns}
+            data={clientes}
+            title="Clientes"
+            enableSearch={true}
+            onRowClick={(row) => console.log('Cliente seleccionado:', row)}
+        />
     );
 };
 

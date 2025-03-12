@@ -82,4 +82,7 @@ router.post('/diagnose-tipos', verifyToken, async (req, res) => {
 // Ruta para actualización masiva de vigencias
 router.post('/updateVigenciaMasiva', verifyToken, tramoController.updateVigenciaMasiva);
 
+// Ruta para calcular tarifa
+router.post('/calcular-tarifa', verifyToken, tramoController.calcularTarifa);
+
 module.exports = router;

@@ -14,7 +14,6 @@ import {
 import { 
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  ListAlt as ListAltIcon,
   ExitToApp as LogoutIcon,
   AccountCircle as AccountCircleIcon
 } from '@mui/icons-material';
@@ -107,20 +106,6 @@ const Navbar = () => {
           >
             <DashboardIcon fontSize="small" />
             Dashboard
-          </MenuItem>
-          <MenuItem 
-            onClick={() => handleNavigate('/tarifario')} 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: 1,
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-              }
-            }}
-          >
-            <ListAltIcon fontSize="small" />
-            Tarifario
           </MenuItem>
         </Menu>
 

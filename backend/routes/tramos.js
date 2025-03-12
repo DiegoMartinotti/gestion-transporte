@@ -561,6 +561,6 @@ router.post('/verificarDuplicados', verifyToken, tramoController.verificarPosibl
 router.post('/updateVigenciaMasiva', auth, tramoController.updateVigenciaMasiva);
 
 // Ruta para calcular tarifa
-router.post('/calcular-tarifa', verifyToken, tramoController.calcularTarifa);
+router.post('/calcular-tarifa', auth, tramoController.calcularTarifa);
 
 module.exports = router;

@@ -1,11 +1,21 @@
-/************************************************************
- *  MODELO USUARIO (models/Usuario.js)
- *  ---------------------------------------------------------
- *  Define el esquema para registrar usuarios en la base de datos.
- ************************************************************/
+/**
+ * @module models/Usuario
+ * @description Modelo para la gestión de usuarios en el sistema
+ */
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+/**
+ * Esquema de usuario para MongoDB
+ * 
+ * @typedef {Object} UsuarioSchema
+ * @property {string} email - Correo electrónico del usuario (único)
+ * @property {string} password - Contraseña del usuario (encriptada)
+ * @property {string} nombre - Nombre completo del usuario
+ * @property {Date} createdAt - Fecha de creación (automática)
+ * @property {Date} updatedAt - Fecha de última actualización (automática)
+ */
 const usuarioSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -26,7 +36,16 @@ const usuarioSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Encriptar contraseña antes de guardar
+/**
+ * Middleware que se ejecuta antes de guardar un usuario
+ * Encripta la contraseña si ha sido modificada
+ * 
+ * @async
+ * @function preSave
+ * @param {Function} next - Función para continuar con el siguiente middleware
+ * @returns {void}
+ * @throws {Error} Si ocurre un error durante la encriptación
+ */
 usuarioSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
@@ -39,6 +58,23 @@ usuarioSchema.pre('save', async function(next) {
   }
 });
 
+/**
+ * Método para verificar la contraseña del usuario
+ * 
+ * @async
+ * @method verificarPassword
+ * @param {string} password - Contraseña a verificar
+ * @returns {Promise<boolean>} true si la contraseña es correcta, false en caso contrario
+ */
+usuarioSchema.methods.verificarPassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
+};
+
+/**
+ * Modelo de Usuario basado en el esquema definido
+ * 
+ * @type {mongoose.Model<UsuarioSchema>}
+ */
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 
 module.exports = Usuario; // FIN DEL MODELO USUARIO

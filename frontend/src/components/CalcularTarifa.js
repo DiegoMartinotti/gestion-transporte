@@ -33,6 +33,7 @@ const CalcularTarifa = () => {
   const [loading, setLoading] = useState(false);
   const [tramos, setTramos] = useState([]);
   const [selectedTramo, setSelectedTramo] = useState(null);
+  const [tramoNoVigente, setTramoNoVigente] = useState(false);
 
   useEffect(() => {
     fetchClientes();
@@ -104,33 +105,128 @@ const CalcularTarifa = () => {
   const handleCalcular = async () => {
     if (!selectedCliente || !origen || !destino || !tipoTramo) {
       setError('Por favor complete todos los campos requeridos');
+      console.log('Campos faltantes:', { selectedCliente, origen, destino, tipoTramo });
       return;
     }
 
     setLoading(true);
     setError(null);
     
+    // Declarar las variables fuera del bloque try para que sean accesibles en catch
+    let tramoAUsar = null;
+    let usandoTramoNoVigente = false;
+    
     try {
+      console.log('Iniciando cálculo con tramos:', tramos);
+      
+      // Obtener los tramos disponibles para esta ruta
+      const tramosDisponibles = tramos.filter(
+        tramo => {
+          console.log('Evaluando tramo:', tramo);
+          return tramo.origen?._id === origen && 
+                 tramo.destino?._id === destino && 
+                 tramo.tipo === tipoTramo;
+        }
+      );
+
+      console.log('Tramos disponibles encontrados:', tramosDisponibles);
+
+      // Si no hay tramos disponibles, mostrar error
+      if (tramosDisponibles.length === 0) {
+        console.log('No se encontraron tramos. Datos de búsqueda:', {
+          origen,
+          destino,
+          tipoTramo,
+          tramosTotal: tramos.length
+        });
+        throw new Error('No se encontraron tramos para la ruta especificada');
+      }
+
+      // Buscar tramos vigentes
+      const tramosVigentes = tramosDisponibles.filter(estaTramoVigente);
+      console.log('Tramos vigentes:', tramosVigentes);
+      
+      // Determinar qué tramo usar
+      if (tramosVigentes.length > 0) {
+        // Usar el tramo vigente más reciente
+        tramoAUsar = tramosVigentes.sort((a, b) => 
+          dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
+        )[0];
+        console.log('Usando tramo vigente:', tramoAUsar);
+        usandoTramoNoVigente = false;
+      } else {
+        // Usar el tramo más reciente de todos (ordenados por fecha de vigencia descendente)
+        tramoAUsar = tramosDisponibles.sort((a, b) => 
+          dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
+        )[0];
+        console.log('Usando tramo no vigente más reciente:', tramoAUsar);
+        usandoTramoNoVigente = true;
+      }
+
       const token = localStorage.getItem('token');
-      const response = await axios.post('/api/tramos/calcular-tarifa', {
+      
+      // Verificar que tramoAUsar exista antes de construir la solicitud
+      if (!tramoAUsar) {
+        throw new Error('No se pudo determinar un tramo válido para la ruta especificada');
+      }
+      
+      const requestData = {
         cliente: selectedCliente,
         origen,
         destino,
-        fecha: dayjs().toISOString(), // Use current date for calculation
+        fecha: dayjs().toISOString(),
         palets,
         tipoUnidad,
-        tipoTramo
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+        tipoTramo,
+        permitirTramoNoVigente: true,
+        tramoId: tramoAUsar._id,
+        esTramoNoVigente: usandoTramoNoVigente,
+        vigenciaDesde: tramoAUsar.vigenciaDesde,
+        vigenciaHasta: tramoAUsar.vigenciaHasta
+      };
+      
+      console.log('Enviando solicitud al servidor:', requestData);
+
+      const response = await axios.post('/api/tramos/calcular-tarifa', requestData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+
+      console.log('Respuesta del servidor:', response.data);
 
       if (response.data.success && response.data.data) {
         setResultado(response.data.data);
+        setSelectedTramo(tramoAUsar);
+        setTramoNoVigente(usandoTramoNoVigente);
       } else {
         throw new Error('Formato de respuesta inválido');
       }
     } catch (error) {
-      setError('Error al calcular tarifa: ' + (error.response?.data?.message || error.message));
+      console.error('Error completo:', error);
+      let mensajeError = 'Error al calcular tarifa: ';
+      
+      // Determinar si el error está relacionado con tramos no vigentes
+      if (error.response?.data?.message?.includes('vigente') || error.message?.includes('vigente')) {
+        mensajeError += 'No se pudo aplicar el tramo no vigente. Por favor contacte a soporte técnico.';
+        
+        // Solo loguear la información del tramo si realmente existe
+        if (tramoAUsar) {
+          console.error('Se intentó usar un tramo no vigente pero fue rechazado:', {
+            tramoId: tramoAUsar._id,
+            vigenciaDesde: tramoAUsar.vigenciaDesde,
+            vigenciaHasta: tramoAUsar.vigenciaHasta,
+            permitirTramoNoVigente: true
+          });
+        } else {
+          console.error('Error con tramo no vigente, pero no se encontró información del tramo');
+        }
+      } else {
+        mensajeError += (error.response?.data?.message || error.message);
+      }
+      
+      setError(mensajeError);
     } finally {
       setLoading(false);
     }
@@ -143,29 +239,52 @@ const CalcularTarifa = () => {
     setTipoTramo(''); // Limpiar tipo seleccionado
   };
 
+  // Función para verificar si un tramo está vigente
+  const estaTramoVigente = (tramoEvaluar) => {
+    const fechaActualUTC = dayjs().utc();
+    const vigenciaDesdeTramo = dayjs.utc(tramoEvaluar.vigenciaDesde);
+    const vigenciaHastaTramo = dayjs.utc(tramoEvaluar.vigenciaHasta);
+    return (fechaActualUTC.isAfter(vigenciaDesdeTramo) || fechaActualUTC.isSame(vigenciaDesdeTramo, 'day')) && 
+           (fechaActualUTC.isBefore(vigenciaHastaTramo) || fechaActualUTC.isSame(vigenciaHastaTramo, 'day'));
+  };
+
   const handleDestinoChange = (event, newValue) => {
     const destinoId = newValue ? newValue._id : '';
     setDestino(destinoId);
+    setTramoNoVigente(false); // Resetear el estado de advertencia
     
-    // Buscar todos los tramos para este par origen-destino y obtener sus tipos únicos
     if (origen && destinoId) {
       const tramosDisponibles = tramos.filter(
         tramo => tramo.origen?._id === origen && tramo.destino?._id === destinoId
       );
       
-      // Obtener tipos únicos y el tramo más reciente
+      if (tramosDisponibles.length > 0) {
+        // Primero buscar tramos vigentes
+        const tramosVigentes = tramosDisponibles.filter(estaTramoVigente);
+        
+        if (tramosVigentes.length > 0) {
+          // Si hay tramos vigentes, usar el más reciente de ellos
+          const tramoVigenteMasReciente = tramosVigentes.sort((a, b) => 
+            dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
+          )[0];
+          setSelectedTramo(tramoVigenteMasReciente);
+          setTramoNoVigente(false);
+          console.log('Preseleccionando tramo vigente:', tramoVigenteMasReciente);
+        } else {
+          // Si no hay tramos vigentes, usar el más reciente de todos
+          const tramoMasReciente = tramosDisponibles.sort((a, b) => 
+            dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
+          )[0];
+          setSelectedTramo(tramoMasReciente);
+          setTramoNoVigente(true);
+          console.log('Preseleccionando tramo NO vigente:', tramoMasReciente);
+        }
+      }
+      
+      // Obtener tipos únicos
       const tiposUnicos = [...new Set(tramosDisponibles.map(tramo => tramo.tipo))];
       setTiposDisponibles(tiposUnicos);
       
-      // Encontrar el tramo más reciente
-      if (tramosDisponibles.length > 0) {
-        const tramoMasReciente = tramosDisponibles.reduce((prev, current) => {
-          return new Date(prev.vigenciaHasta) > new Date(current.vigenciaHasta) ? prev : current;
-        });
-        setSelectedTramo(tramoMasReciente);
-      }
-      
-      // Siempre seleccionar el primer tipo disponible
       if (tiposUnicos.length > 0) {
         setTipoTramo(tiposUnicos[0]);
       } else {
@@ -302,8 +421,26 @@ const CalcularTarifa = () => {
 
           {selectedTramo && (
             <Grid item xs={12}>
-              <Alert severity="info">
-                Tarifa vigente desde {dayjs.utc(selectedTramo.vigenciaDesde).format('DD/MM/YYYY')} hasta {dayjs.utc(selectedTramo.vigenciaHasta).format('DD/MM/YYYY')}
+              <Alert severity={tramoNoVigente ? "warning" : "info"} 
+                     icon={tramoNoVigente ? <span>⚠️</span> : undefined}
+                     sx={{
+                       '& .MuiAlert-icon': {
+                         alignItems: 'center',
+                         padding: tramoNoVigente ? '0 6px' : undefined
+                       }
+                     }}>
+                {tramoNoVigente ? (
+                  <>
+                    <strong>Advertencia:</strong> No hay tramos vigentes para esta ruta. 
+                    Se utilizará el tramo más reciente con vigencia desde {dayjs.utc(selectedTramo.vigenciaDesde).format('DD/MM/YYYY')} 
+                    hasta {dayjs.utc(selectedTramo.vigenciaHasta).format('DD/MM/YYYY')}
+                  </>
+                ) : (
+                  <>
+                    Tarifa vigente desde {dayjs.utc(selectedTramo.vigenciaDesde).format('DD/MM/YYYY')} 
+                    hasta {dayjs.utc(selectedTramo.vigenciaHasta).format('DD/MM/YYYY')}
+                  </>
+                )}
               </Alert>
             </Grid>
           )}
@@ -403,6 +540,49 @@ const CalcularTarifa = () => {
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Valor peaje: ${formatMoney(resultado.detalles?.valorPeaje)}
                     </Typography>
+                    
+                    {/* Mostrar información de vigencia de la tarifa */}
+                    {selectedTramo && (
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: 1, 
+                          mt: 1, 
+                          mb: 1, 
+                          bgcolor: tramoNoVigente ? 'warning.light' : 'info.light',
+                          borderLeft: tramoNoVigente ? '4px solid #ED6C02' : '4px solid #0288d1'
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight={500}>
+                          {tramoNoVigente ? (
+                            <span style={{color: '#ED6C02', fontWeight: 'bold'}}>
+                              ⚠️ TARIFA NO VIGENTE
+                            </span>
+                          ) : (
+                            <span style={{color: '#0288d1'}}>
+                              Tarifa vigente
+                            </span>
+                          )}
+                        </Typography>
+                        <Typography variant="body2">
+                          Fecha actual: {dayjs().utc().format('DD/MM/YYYY')}
+                        </Typography>
+                        <Typography variant="body2">
+                          Vigencia: {dayjs.utc(selectedTramo.vigenciaDesde).format('DD/MM/YYYY')} 
+                          {' '} al {' '}
+                          {dayjs.utc(selectedTramo.vigenciaHasta).format('DD/MM/YYYY')}
+                        </Typography>
+                        {tramoNoVigente && (
+                          <Typography variant="body2" color="warning.dark" sx={{ mt: 0.5 }}>
+                            Esta tarifa está {
+                              dayjs().utc().isBefore(dayjs.utc(selectedTramo.vigenciaDesde)) ? 
+                                'pendiente de entrar en vigencia' : 
+                                'vencida'
+                            }.
+                          </Typography>
+                        )}
+                      </Paper>
+                    )}
                   </Grid>
                   <Grid item xs={12}>
                     <Typography variant="h6" color="primary">
