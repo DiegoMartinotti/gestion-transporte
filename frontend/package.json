@@ -16,6 +16,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
+    "http-proxy-middleware": "^3.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.2.0",
@@ -28,7 +29,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "dev": "set FAST_REFRESH=true && react-scripts start"
+    "dev": "set FAST_REFRESH=true && react-scripts start",
+    "create-ui-component": "node scripts/create-ui-component.js"
   },
   "eslintConfig": {
     "extends": [

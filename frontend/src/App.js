@@ -10,9 +10,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login'; // Asegúrate de que la ruta sea correcta
 import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
-import { Box, Container, CssBaseline } from '@mui/material';
-import { ThemeProvider } from '@mui/material/styles';
-import { theme } from './theme/theme';
+import { Box, Container } from '@mui/material';
+import { ThemeProvider } from './theme';
 
 // Componente de protección de rutas
 const ProtectedRoute = ({ children }) => {
@@ -65,8 +64,7 @@ const AppContent = () => {
 function App() {
   return (
     <Router>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+      <ThemeProvider>
         <AuthProvider>
           <AppContent />
         </AuthProvider>

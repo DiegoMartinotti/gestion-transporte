@@ -1,7 +1,27 @@
+/**
+ * @module controllers/authController
+ * @description Controlador para gestionar la autenticación de usuarios en el sistema
+ */
+
 const Usuario = require('../models/Usuario');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+/**
+ * Autentica a un usuario y genera un token JWT
+ * 
+ * @async
+ * @function login
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} req.body - Cuerpo de la solicitud
+ * @param {string} req.body.email - Email del usuario
+ * @param {string} req.body.password - Contraseña del usuario
+ * @param {Object} res - Objeto de respuesta Express
+ * @returns {Promise<Object>} Objeto JSON con el token y datos del usuario
+ * @throws {Error} Error 400 si faltan credenciales
+ * @throws {Error} Error 401 si las credenciales son inválidas
+ * @throws {Error} Error 500 si hay un error en el servidor
+ */
 exports.login = async (req, res) => {
     try {
         console.log('Datos recibidos:', req.body);
@@ -72,6 +92,21 @@ exports.login = async (req, res) => {
     }
 };
 
+/**
+ * Registra un nuevo usuario en el sistema
+ * 
+ * @async
+ * @function register
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} req.body - Cuerpo de la solicitud
+ * @param {string} req.body.nombre - Nombre completo del usuario
+ * @param {string} req.body.email - Email del usuario
+ * @param {string} req.body.password - Contraseña del usuario
+ * @param {Object} res - Objeto de respuesta Express
+ * @returns {Promise<Object>} Objeto JSON con mensaje de éxito
+ * @throws {Error} Error 400 si el usuario ya existe
+ * @throws {Error} Error 500 si hay un error en el servidor
+ */
 exports.register = async (req, res) => {
     try {
         const { nombre, email, password } = req.body;
