@@ -1,6 +1,7 @@
 /**
  * Utilidad para evaluar fórmulas tipo Excel en JavaScript
  */
+const logger = require('./logger');
 
 /**
  * Evalúa una fórmula con una sintaxis similar a Excel utilizando nombres de variables
@@ -40,9 +41,9 @@ function evaluarFormula(formula, variables) {
     
     return resultado;
   } catch (error) {
-    console.error('Error al evaluar fórmula:', error);
-    console.error('Fórmula original:', formula);
-    console.error('Variables:', variables);
+    logger.error('Error al evaluar fórmula:', error);
+    logger.error('Fórmula original:', formula);
+    logger.debug('Variables:', variables);
     // En caso de error, devolver 0 o un valor por defecto
     return 0;
   }
@@ -112,7 +113,7 @@ function calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, formula) {
       total: Math.round(total * 100) / 100
     };
   } catch (error) {
-    console.error('Error al calcular tarifa con fórmula personalizada:', error);
+    logger.error('Error al calcular tarifa con fórmula personalizada:', error);
     
     // Fallback a cálculo estándar
     const tarifaBase = valorBase * palets;

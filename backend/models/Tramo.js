@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const { calcularDistanciaRuta } = require('../services/routingService');
+const logger = require('../utils/logger');
 // Eliminamos la importación directa del modelo Site para evitar dependencia circular
 
 const tramoSchema = new Schema({
@@ -118,7 +119,7 @@ tramoSchema.pre('save', async function(next) {
             if (origenSite?.location?.coordinates?.length === 2 && 
                 destinoSite?.location?.coordinates?.length === 2) {
                 
-                console.log('[DISTANCIA] Calculando distancia entre:', {
+                logger.debug('[DISTANCIA] Calculando distancia entre:', {
                     origen: origenSite.location.coordinates,
                     destino: destinoSite.location.coordinates
                 });
@@ -131,18 +132,18 @@ tramoSchema.pre('save', async function(next) {
                     
                     // Actualizar el campo de distancia
                     this.distancia = distanciaKm;
-                    console.log(`[DISTANCIA] ✅ Distancia calculada: ${distanciaKm} km`);
+                    logger.debug(`[DISTANCIA] ✅ Distancia calculada: ${distanciaKm} km`);
                 } catch (routeError) {
-                    console.error('[DISTANCIA] ❌ Error calculando distancia:', routeError.message);
+                    logger.error('[DISTANCIA] ❌ Error calculando distancia:', routeError.message);
                     // No interrumpimos el guardado si falla el cálculo de distancia
                 }
             } else {
-                console.warn('[DISTANCIA] ⚠️ No se pudo calcular distancia: coordenadas faltantes');
+                logger.warn('[DISTANCIA] ⚠️ No se pudo calcular distancia: coordenadas faltantes');
             }
         }
         next();
     } catch (error) {
-        console.error('[DISTANCIA] ❌ Error en middleware de cálculo de distancia:', error);
+        logger.error('[DISTANCIA] ❌ Error en middleware de cálculo de distancia:', error);
         // No interrumpimos el guardado si falla el cálculo de distancia
         next();
     }
@@ -161,7 +162,7 @@ tramoSchema.pre('save', async function(next) {
             this.tipo = this.tipo.toUpperCase();
         }
         
-        console.log('[VALIDACIÓN] Validando tramo:', {
+        logger.debug('[VALIDACIÓN] Validando tramo:', {
             origen: this.origen,
             destino: this.destino,
             tipo: this.tipo,
@@ -181,7 +182,7 @@ tramoSchema.pre('save', async function(next) {
             _id: { $ne: this._id } // Excluir este documento si se está actualizando
         });
         
-        console.log(`[VALIDACIÓN] Encontrados ${tramosExistentes.length} tramos existentes con misma ruta, tipo (${this.tipo}) y método`);
+        logger.debug(`[VALIDACIÓN] Encontrados ${tramosExistentes.length} tramos existentes con misma ruta, tipo (${this.tipo}) y método`);
         
         // Verificar superposición de fechas
         for (const tramo of tramosExistentes) {
@@ -195,18 +196,18 @@ tramoSchema.pre('save', async function(next) {
             const noHayConflicto = esteHasta < otroDesde || esteDesde > otroHasta;
             const hayConflicto = !noHayConflicto;
             
-            console.log(`[VALIDACIÓN] Comparando fechas: [${esteDesde.toISOString()} - ${esteHasta.toISOString()}] vs [${otroDesde.toISOString()} - ${otroHasta.toISOString()}]`);
-            console.log(`[VALIDACIÓN] ¿Hay conflicto?: ${hayConflicto}`);
+            logger.debug(`[VALIDACIÓN] Comparando fechas: [${esteDesde.toISOString()} - ${esteHasta.toISOString()}] vs [${otroDesde.toISOString()} - ${otroHasta.toISOString()}]`);
+            logger.debug(`[VALIDACIÓN] ¿Hay conflicto?: ${hayConflicto}`);
             
             if (hayConflicto) {
                 throw new Error(`Ya existe un tramo con las mismas características (${this.tipo}) y fechas que se superponen.`);
             }
         }
         
-        console.log('[VALIDACIÓN] ✅ Validación exitosa, no hay conflictos');
+        logger.debug('[VALIDACIÓN] ✅ Validación exitosa, no hay conflictos');
         next();
     } catch (error) {
-        console.error('[VALIDACIÓN] ❌ Error en validación de tramo:', error);
+        logger.error('[VALIDACIÓN] ❌ Error en validación de tramo:', error);
         next(error);
     }
 });

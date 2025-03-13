@@ -6,9 +6,11 @@ import {
   Tooltip
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, Store as StoreIcon, 
-  AttachMoney as AttachMoneyIcon, Functions as FunctionsIcon } from '@mui/icons-material';
+  AttachMoney as AttachMoneyIcon, Functions as FunctionsIcon, Add as AddIcon } from '@mui/icons-material';
 import SitesManager from './SitesManager';
 import TarifarioViewer from './TarifarioViewer';
+import ExtrasManager from './ExtrasManager';
+import logger from '../utils/logger';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -29,6 +31,8 @@ const ClientesManager = () => {
   const [selectedClienteTarifario, setSelectedClienteTarifario] = useState(null);
   const [formulaDialogOpen, setFormulaDialogOpen] = useState(false);
   const [currentClienteFormulas, setCurrentClienteFormulas] = useState(null);
+  const [extrasManagerOpen, setExtrasManagerOpen] = useState(false);
+  const [selectedClienteExtras, setSelectedClienteExtras] = useState(null);
 
   useEffect(() => {
     fetchClientes();
@@ -52,7 +56,7 @@ const ClientesManager = () => {
       const data = await response.json();
       setClientes(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching clientes:', error);
+      logger.error('Error fetching clientes:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -83,7 +87,7 @@ const ClientesManager = () => {
       setOpenDialog(false);
       fetchClientes();
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
     }
   };
 
@@ -110,7 +114,7 @@ const ClientesManager = () => {
       setEditingClient(null);
       fetchClientes();
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
     }
   };
 
@@ -135,7 +139,7 @@ const ClientesManager = () => {
       setCurrentClienteFormulas(null);
       fetchClientes();
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
     }
   };
 
@@ -155,7 +159,7 @@ const ClientesManager = () => {
       
       fetchClientes();
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
     }
   };
 
@@ -171,6 +175,13 @@ const ClientesManager = () => {
 
   if (selectedClient) {
     return <SitesManager cliente={selectedClient} onBack={() => setSelectedClient(null)} />;
+  }
+
+  if (extrasManagerOpen && selectedClienteExtras) {
+    return <ExtrasManager cliente={selectedClienteExtras} onBack={() => {
+      setExtrasManagerOpen(false);
+      setSelectedClienteExtras(null);
+    }} />;
   }
 
   if (loading) {
@@ -277,6 +288,17 @@ const ClientesManager = () => {
                             color="secondary"
                           >
                             <FunctionsIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Gestionar Extras">
+                          <IconButton 
+                            onClick={() => {
+                              setSelectedClienteExtras(cliente.Cliente);
+                              setExtrasManagerOpen(true);
+                            }}
+                            color="primary"
+                          >
+                            <AddIcon />
                           </IconButton>
                         </Tooltip>
                       </>

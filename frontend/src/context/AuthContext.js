@@ -1,21 +1,16 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import axiosInstance from '../config/axios';
 import { useNavigate } from 'react-router-dom';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-
-axios.defaults.baseURL = API_URL;
-axios.defaults.withCredentials = true;
-axios.defaults.headers.common['Content-Type'] = 'application/json';
+import logger from '../utils/logger';
 
 export const AuthContext = createContext(null);
 
 const setAuthToken = (token) => {
     if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         localStorage.setItem('token', token);
     } else {
-        delete axios.defaults.headers.common['Authorization'];
+        delete axiosInstance.defaults.headers.common['Authorization'];
         localStorage.removeItem('token');
     }
 };
@@ -26,61 +21,53 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const fetchUserData = useCallback(async (token) => {
-        if (!token) return;
-        try {
-            const response = await axios.get('/api/auth/me', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            if (response.data.success && response.data.user) {
-                setUser(response.data.user);
-                setIsAuthenticated(true);
-            }
-        } catch (error) {
-            console.error('Error al obtener datos del usuario:', error);
-            setAuthToken(null);
-            setUser(null);
-            setIsAuthenticated(false);
-            navigate('/login');
-        }
-    }, [navigate]);
-
+    // Verificar si hay un token guardado al cargar la aplicación
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            setAuthToken(token);
-            fetchUserData(token);
-        }
-        setLoading(false);
-    }, [fetchUserData]);
-
-    const login = async (token) => {
-        try {
-            if (!token) {
-                throw new Error('Token no proporcionado');
+        const checkAuth = async () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    setAuthToken(token);
+                    const response = await axiosInstance.get('/api/auth/me');
+                    if (response.data.user) {
+                        setUser(response.data.user);
+                        setIsAuthenticated(true);
+                    }
+                } catch (error) {
+                    logger.error('Error al verificar autenticación:', error);
+                    setAuthToken(null);
+                }
             }
+            setLoading(false);
+        };
+        
+        checkAuth();
+    }, []);
 
+    const login = async (credentials) => {
+        try {
+            const response = await axiosInstance.post('/api/auth/login', credentials);
+            const { token, user } = response.data;
             setAuthToken(token);
-            await fetchUserData(token);
+            setUser(user);
+            setIsAuthenticated(true);
             navigate('/');
-            return true;
+            return { success: true };
         } catch (error) {
-            console.error('Error en login:', error);
-            setAuthToken(null);
-            setIsAuthenticated(false);
-            setUser(null);
-            throw error;
+            logger.error('Error en login:', error);
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Error al iniciar sesión'
+            };
         }
     };
 
-    const logout = useCallback(() => {
+    const logout = () => {
         setAuthToken(null);
         setUser(null);
         setIsAuthenticated(false);
         navigate('/login');
-    }, [navigate]);
+    };
 
     const value = {
         user,
@@ -92,7 +79,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

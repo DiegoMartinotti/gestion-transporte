@@ -7,13 +7,9 @@ const {
     updateCliente, 
     deleteCliente 
 } = require('../controllers/clienteController');
+const logger = require('../utils/logger');
 
-// Logging middleware
-router.use((req, res, next) => {
-    console.log(`Clientes Route: ${req.method} ${req.path}`);
-    next();
-});
-
+// Rutas
 router.get('/', getClientes);
 router.get('/:id', getClienteById);
 router.post('/', createCliente);

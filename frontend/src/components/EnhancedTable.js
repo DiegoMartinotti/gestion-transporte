@@ -8,6 +8,7 @@ import {
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table';
 import BulkUpload from './BulkUpload';
+import logger from '../utils/logger';
 
 const formatDate = (dateString) => {
   const date = new Date(dateString);
@@ -40,7 +41,7 @@ const EnhancedTable = () => {
     })
       .then(res => res.json())
       .then(setData)
-      .catch(console.error);
+      .catch(logger.error);
   }, []);
 
   const columns = [
@@ -140,7 +141,7 @@ const EnhancedTable = () => {
         item.dt === row.dt && item.cliente === row.cliente ? updatedRow : item
       ));
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
     } finally {
       setEditCell(null);
       setEditValue('');
@@ -161,7 +162,7 @@ const EnhancedTable = () => {
     })
       .then(res => res.json())
       .then(setData)
-      .catch(console.error);
+      .catch(logger.error);
   };
 
   const handleDelete = async () => {
@@ -195,7 +196,7 @@ const EnhancedTable = () => {
       // Cerrar el diálogo solo si la eliminación fue exitosa
       setDeleteConfirm({ open: false, row: null });
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
       // Opcional: Mostrar el error al usuario
       alert('Error al eliminar el viaje: ' + error.message);
     }
@@ -215,7 +216,7 @@ const EnhancedTable = () => {
       const data = await response.json();
       setClienteSites(data);
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
     }
   };
 
@@ -248,7 +249,7 @@ const EnhancedTable = () => {
       ));
       setEditCell(null);
     } catch (error) {
-      console.error('Error:', error);
+      logger.error('Error:', error);
     }
   };
 

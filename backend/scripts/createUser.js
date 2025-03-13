@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Usuario = require('../models/Usuario');
+const logger = require('../utils/logger');
 
 mongoose.connect('mongodb://localhost:27017/mydatabase', {
   useNewUrlParser: true,
@@ -15,10 +16,10 @@ async function createUser() {
     });
 
     await usuario.save();
-    console.log('Usuario creado exitosamente');
+    logger.info('Usuario creado exitosamente');
     process.exit(0);
   } catch (error) {
-    console.error('Error al crear usuario:', error);
+    logger.error('Error al crear usuario:', error);
     process.exit(1);
   }
 }

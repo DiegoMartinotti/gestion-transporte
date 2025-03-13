@@ -2,11 +2,13 @@
  * Wrapper para manejo de errores en controladores async
  * @param {Function} fn - Función async del controlador
  */
+const logger = require('./logger');
+
 const tryCatch = (fn) => async (req, res, next) => {
     try {
         await fn(req, res, next);
     } catch (error) {
-        console.error('Error capturado:', error);
+        logger.error('Error capturado:', error);
         
         if (error.name === 'ValidationError') {
             return res.status(400).json({

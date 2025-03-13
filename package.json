@@ -4,11 +4,16 @@
   "description": "Sistema de Gestión de Sites",
   "scripts": {
     "start": "cd frontend && npm start",
-    "server": "cd backend && npm start",
+    "server": "cd backend && set NODE_ENV=production&& npm run dev",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
-    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "set-prod": "node scripts/set-production.js",
+    "set-dev": "node scripts/set-development.js",
+    "start-prod": "npm run set-prod && npm run dev",
+    "start-dev": "npm run set-dev && npm run dev"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3"
   }
 }

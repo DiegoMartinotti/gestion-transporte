@@ -6,6 +6,7 @@
 const Usuario = require('../models/Usuario');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 
 /**
  * Autentica a un usuario y genera un token JWT
@@ -24,12 +25,12 @@ const jwt = require('jsonwebtoken');
  */
 exports.login = async (req, res) => {
     try {
-        console.log('Datos recibidos:', req.body);
+        logger.debug('Datos recibidos:', req.body);
         
         const { email, password } = req.body;
 
         if (!email || !password) {
-            console.log('Faltan campos:', { email: !!email, password: !!password });
+            logger.debug('Faltan campos:', { email: !!email, password: !!password });
             return res.status(400).json({ 
                 success: false,
                 error: 'Email y contraseña son requeridos'
@@ -38,7 +39,7 @@ exports.login = async (req, res) => {
 
         const usuario = await Usuario.findOne({ email });
         if (!usuario) {
-            console.log('Usuario no encontrado:', email);
+            logger.debug('Usuario no encontrado:', email);
             return res.status(401).json({ 
                 success: false,
                 error: 'Credenciales inválidas'
@@ -84,7 +85,7 @@ exports.login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error en login:', error);
+        logger.error('Error en login:', error);
         res.status(500).json({ 
             success: false,
             error: 'Error en el servidor'
@@ -123,10 +124,10 @@ exports.register = async (req, res) => {
         });
 
         await usuario.save();
-        console.log('Usuario registrado:', email);
+        logger.debug('Usuario registrado:', email);
         res.status(201).json({ message: 'Usuario registrado exitosamente' });
     } catch (error) {
-        console.error('Error en registro:', error);
+        logger.error('Error en registro:', error);
         res.status(500).json({ message: 'Error en el servidor' });
     }
 };

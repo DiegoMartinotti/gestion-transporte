@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const Usuario = require('../models/Usuario');
+const logger = require('../utils/logger');
 
 // Usar la misma URL que en app.js
 const MONGODB_URI = 'mongodb+srv://dbLiquidaciones:joseblanco4272@cluster0.ahw8j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
@@ -12,7 +13,7 @@ async function createInitialUser() {
     // Verificar si ya existe
     const exists = await Usuario.findOne({ email: 'admin@example.com' });
     if (exists) {
-      console.log('El usuario admin ya existe');
+      logger.info('El usuario admin ya existe');
       process.exit(0);
     }
 
@@ -27,10 +28,10 @@ async function createInitialUser() {
     });
 
     await usuario.save();
-    console.log('Usuario admin creado exitosamente');
+    logger.info('Usuario admin creado exitosamente');
     
   } catch (error) {
-    console.error('Error:', error);
+    logger.error('Error:', error);
   } finally {
     await mongoose.disconnect();
   }

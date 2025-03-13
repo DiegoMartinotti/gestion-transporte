@@ -1,15 +1,16 @@
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 require('dotenv').config();
 
 async function migrateSiteFields() {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
-        console.log('Conectado a MongoDB');
+        logger.info('Conectado a MongoDB');
 
         const db = mongoose.connection;
         const collection = db.collection('sites');
 
-        console.log('Iniciando migración de campos...');
+        logger.info('Iniciando migración de campos...');
 
         // Actualizar todos los documentos
         const result = await collection.updateMany(
@@ -26,16 +27,16 @@ async function migrateSiteFields() {
             }]
         );
 
-        console.log(`Documentos actualizados: ${result.modifiedCount}`);
-        console.log('Migración completada');
+        logger.info(`Documentos actualizados: ${result.modifiedCount}`);
+        logger.info('Migración completada');
         
         // Mostrar algunos documentos de ejemplo
         const samples = await collection.find().limit(3).toArray();
-        console.log('Ejemplos de documentos actualizados:', samples);
+        logger.debug('Ejemplos de documentos actualizados:', samples);
 
         process.exit(0);
     } catch (error) {
-        console.error('Error en migración:', error);
+        logger.error('Error en migración:', error);
         process.exit(1);
     }
 }

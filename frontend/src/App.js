@@ -10,12 +10,21 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login'; // Asegúrate de que la ruta sea correcta
 import Dashboard from './components/Dashboard';
 import Navbar from './components/Navbar';
-import { Box, Container } from '@mui/material';
+import { Box, Container, CircularProgress } from '@mui/material';
 import { ThemeProvider } from './theme';
 
 // Componente de protección de rutas
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
@@ -38,6 +47,22 @@ const AuthenticatedLayout = ({ children }) => {
 };
 
 const AppContent = () => {
+  const { loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        bgcolor: 'background.default'
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  
   return (
     <Box sx={{ 
       minHeight: '100vh',

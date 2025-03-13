@@ -1,8 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { connectDB } = require('./config/database');
-require('dotenv').config();
+const logger = require('./utils/logger');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -25,7 +26,7 @@ app.use(express.json({
         try {
             JSON.parse(buf);
         } catch (e) {
-            console.error('Error al analizar JSON en verify:', e.message);
+            logger.error('Error al analizar JSON en verify:', e.message);
             throw new Error('JSON inválido');
         }
     }
@@ -49,10 +50,19 @@ app.use((req, res, next) => {
 
 // Improved request logging
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    if (['POST', 'PUT'].includes(req.method)) {
-        console.log('Headers:', req.headers);
-        console.log('Body:', req.body);
+    // En producción, solo registrar errores
+    if (process.env.NODE_ENV === 'production') {
+        res.on('finish', () => {
+            if (res.statusCode >= 400) {
+                logger.error(`[Request Error] ${req.method} ${req.originalUrl} - Status: ${res.statusCode}`);
+            }
+        });
+    } else {
+        logger.debug(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+        if (['POST', 'PUT'].includes(req.method)) {
+            logger.debug('Headers:', req.headers);
+            logger.debug('Body:', req.body);
+        }
     }
     next();
 });
@@ -76,13 +86,15 @@ app.use('/api', apiRoutes);
 
 // 404 handler
 app.use((req, res) => {
-    console.log('Ruta no encontrada:', req.path);
+    // Siempre registrar los 404 como errores para que aparezcan en producción
+    const errorMsg = `Ruta no encontrada: ${req.method} ${req.originalUrl}`;
+    logger.error(errorMsg);
     res.status(404).json({ message: 'Ruta no encontrada' });
 });
 
 // Error handlers
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
+    logger.error(`${err.message || 'Error interno del servidor'}`);
     res.status(err.status || 500).json({ 
         message: err.message || 'Error interno del servidor',
         details: process.env.NODE_ENV === 'development' ? err : undefined
@@ -92,7 +104,7 @@ app.use((err, req, res, next) => {
 // JSON parse error handler
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        console.error('Error al analizar JSON:', err);
+        logger.error(`Error al analizar JSON: ${err.message}`);
         return res.status(400).json({
             success: false,
             message: 'JSON inválido',
@@ -106,14 +118,14 @@ async function startServer() {
     try {
         await connectDB();
         app.listen(port, () => {
-            console.log(`Servidor ejecutándose en http://localhost:${port}`);
-            console.log('Rutas disponibles:');
-            console.log('- POST /api/auth/login');
-            console.log('- POST /api/auth/register');
-            console.log('- GET /api/test');
+            logger.info(`Servidor ejecutándose en http://localhost:${port}`);
+            logger.info('Rutas disponibles:');
+            logger.info('- POST /api/auth/login');
+            logger.info('- POST /api/auth/register');
+            logger.info('- GET /api/test');
         });
     } catch (error) {
-        console.error('Error al iniciar el servidor:', error);
+        logger.error(`Error al iniciar el servidor: ${error.message}`);
         process.exit(1);
     }
 }

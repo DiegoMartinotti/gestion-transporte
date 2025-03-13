@@ -5,15 +5,18 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Button, TextField, Dialog, DialogTitle, DialogContent,
   DialogActions, IconButton, CircularProgress, Alert,
-  Select, MenuItem, FormControl, InputLabel, Snackbar
+  Select, MenuItem, FormControl, InputLabel, Snackbar, Box, Typography
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, CloudUpload as CloudUploadIcon } from '@mui/icons-material';
+import logger from '../utils/logger';
+import ViajeBulkImporter from './ViajeBulkImporter';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
 const ViajesManager = () => {
   const [viajes, setViajes] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [selectedViaje, setSelectedViaje] = useState(null);
   const [formData, setFormData] = useState({
     cliente: '',
@@ -26,11 +29,13 @@ const ViajesManager = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [sites, setSites] = useState([]);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchViajes();
+      fetchSites();
     }
   }, [isAuthenticated]);
 
@@ -43,10 +48,23 @@ const ViajesManager = () => {
       setViajes(response.data);
       setError(null);
     } catch (error) {
-      console.error('Error al obtener viajes:', error);
+      logger.error('Error al obtener viajes:', error);
       setError('Error al cargar los viajes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSites = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/sites`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setSites(response.data);
+    } catch (error) {
+      logger.error('Error al obtener sites:', error);
+      setError('Error al cargar los sites');
     }
   };
 
@@ -114,19 +132,48 @@ const ViajesManager = () => {
     });
   };
 
+  const handleImportComplete = () => {
+    fetchViajes();
+    setSuccessMessage('Importación completada correctamente');
+  };
+
   if (loading) return <CircularProgress />;
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <div>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        onClick={() => setIsModalOpen(true)}
-        style={{ marginBottom: 20 }}
-      >
-        Nuevo Viaje
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5">
+          Gestión de Viajes
+        </Typography>
+
+        <Button
+          variant="outlined"
+          onClick={() => window.history.back()}
+          sx={{ width: 'auto' }}
+        >
+          Volver Atrás
+        </Button>
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={() => setIsModalOpen(true)}
+        >
+          Nuevo Viaje
+        </Button>
+
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={() => setIsImporterOpen(true)}
+          startIcon={<CloudUploadIcon />}
+        >
+          Importar Viajes
+        </Button>
+      </Box>
 
       <TableContainer component={Paper}>
         <Table>
@@ -163,7 +210,7 @@ const ViajesManager = () => {
       </TableContainer>
 
       {/* Dialog para crear/editar viajes */}
-      <Dialog open={isModalOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={isModalOpen} onClose={handleCloseDialog}>
         <DialogTitle>
           {selectedViaje ? 'Editar Viaje' : 'Nuevo Viaje'}
         </DialogTitle>
@@ -245,6 +292,15 @@ const ViajesManager = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Componente de importación masiva */}
+      <ViajeBulkImporter
+        open={isImporterOpen}
+        onClose={() => setIsImporterOpen(false)}
+        cliente={formData.cliente}
+        onComplete={handleImportComplete}
+        sites={sites}
+      />
 
       {/* Snackbar para mensajes de éxito */}
       <Snackbar

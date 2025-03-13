@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Usuario = require('../models/Usuario');
 const bcrypt = require('bcryptjs');
+const logger = require('../utils/logger');
 
 async function initDatabase() {
   try {
@@ -20,13 +21,13 @@ async function initDatabase() {
       });
 
       await adminUser.save();
-      console.log('Usuario administrador creado exitosamente');
+      logger.info('Usuario administrador creado exitosamente');
     }
 
-    console.log('Base de datos inicializada correctamente');
+    logger.info('Base de datos inicializada correctamente');
     process.exit(0);
   } catch (error) {
-    console.error('Error al inicializar la base de datos:', error);
+    logger.error('Error al inicializar la base de datos:', error);
     process.exit(1);
   }
 }

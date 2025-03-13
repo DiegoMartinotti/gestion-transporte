@@ -2,22 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { login, register } = require('../controllers/authController');
 const auth = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 // Middleware de logging para rutas de auth
 router.use((req, res, next) => {
-    console.log(`Auth Route: ${req.method} ${req.path}`);
+    logger.debug(`Auth Route: ${req.method} ${req.path}`);
     next();
 });
 
-router.post('/login', (req, res, next) => {
-    console.log('Login attempt:', req.body);
-    login(req, res, next);
-});
-
-router.post('/register', (req, res, next) => {
-    console.log('Register attempt:', req.body);
-    register(req, res, next);
-});
+// Rutas de autenticación
+router.post('/login', login);
+router.post('/register', register);
 
 // Nueva ruta para obtener datos del usuario
 router.get('/me', auth, async (req, res) => {
@@ -31,7 +26,7 @@ router.get('/me', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error al obtener datos del usuario:', error);
+        logger.error('Error al obtener datos del usuario:', error);
         res.status(500).json({ 
             success: false, 
             message: 'Error al obtener datos del usuario' 

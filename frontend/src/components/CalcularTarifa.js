@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import logger from '../utils/logger';
 
 const CalcularTarifa = () => {
   const [clientes, setClientes] = useState([]);
@@ -105,7 +106,7 @@ const CalcularTarifa = () => {
   const handleCalcular = async () => {
     if (!selectedCliente || !origen || !destino || !tipoTramo) {
       setError('Por favor complete todos los campos requeridos');
-      console.log('Campos faltantes:', { selectedCliente, origen, destino, tipoTramo });
+      logger.debug('Campos faltantes:', { selectedCliente, origen, destino, tipoTramo });
       return;
     }
 
@@ -117,23 +118,23 @@ const CalcularTarifa = () => {
     let usandoTramoNoVigente = false;
     
     try {
-      console.log('Iniciando cálculo con tramos:', tramos);
+      logger.debug('Iniciando cálculo con tramos:', tramos);
       
       // Obtener los tramos disponibles para esta ruta
       const tramosDisponibles = tramos.filter(
         tramo => {
-          console.log('Evaluando tramo:', tramo);
+          logger.debug('Evaluando tramo:', tramo);
           return tramo.origen?._id === origen && 
                  tramo.destino?._id === destino && 
                  tramo.tipo === tipoTramo;
         }
       );
 
-      console.log('Tramos disponibles encontrados:', tramosDisponibles);
+      logger.debug('Tramos disponibles encontrados:', tramosDisponibles);
 
       // Si no hay tramos disponibles, mostrar error
       if (tramosDisponibles.length === 0) {
-        console.log('No se encontraron tramos. Datos de búsqueda:', {
+        logger.debug('No se encontraron tramos. Datos de búsqueda:', {
           origen,
           destino,
           tipoTramo,
@@ -144,7 +145,7 @@ const CalcularTarifa = () => {
 
       // Buscar tramos vigentes
       const tramosVigentes = tramosDisponibles.filter(estaTramoVigente);
-      console.log('Tramos vigentes:', tramosVigentes);
+      logger.debug('Tramos vigentes:', tramosVigentes);
       
       // Determinar qué tramo usar
       if (tramosVigentes.length > 0) {
@@ -152,14 +153,14 @@ const CalcularTarifa = () => {
         tramoAUsar = tramosVigentes.sort((a, b) => 
           dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
         )[0];
-        console.log('Usando tramo vigente:', tramoAUsar);
+        logger.debug('Usando tramo vigente:', tramoAUsar);
         usandoTramoNoVigente = false;
       } else {
         // Usar el tramo más reciente de todos (ordenados por fecha de vigencia descendente)
         tramoAUsar = tramosDisponibles.sort((a, b) => 
           dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
         )[0];
-        console.log('Usando tramo no vigente más reciente:', tramoAUsar);
+        logger.debug('Usando tramo no vigente más reciente:', tramoAUsar);
         usandoTramoNoVigente = true;
       }
 
@@ -185,7 +186,7 @@ const CalcularTarifa = () => {
         vigenciaHasta: tramoAUsar.vigenciaHasta
       };
       
-      console.log('Enviando solicitud al servidor:', requestData);
+      logger.debug('Enviando solicitud al servidor:', requestData);
 
       const response = await axios.post('/api/tramos/calcular-tarifa', requestData, {
         headers: { 
@@ -194,7 +195,7 @@ const CalcularTarifa = () => {
         }
       });
 
-      console.log('Respuesta del servidor:', response.data);
+      logger.debug('Respuesta del servidor:', response.data);
 
       if (response.data.success && response.data.data) {
         setResultado(response.data.data);
@@ -204,7 +205,7 @@ const CalcularTarifa = () => {
         throw new Error('Formato de respuesta inválido');
       }
     } catch (error) {
-      console.error('Error completo:', error);
+      logger.error('Error completo:', error);
       let mensajeError = 'Error al calcular tarifa: ';
       
       // Determinar si el error está relacionado con tramos no vigentes
@@ -213,14 +214,14 @@ const CalcularTarifa = () => {
         
         // Solo loguear la información del tramo si realmente existe
         if (tramoAUsar) {
-          console.error('Se intentó usar un tramo no vigente pero fue rechazado:', {
+          logger.error('Se intentó usar un tramo no vigente pero fue rechazado:', {
             tramoId: tramoAUsar._id,
             vigenciaDesde: tramoAUsar.vigenciaDesde,
             vigenciaHasta: tramoAUsar.vigenciaHasta,
             permitirTramoNoVigente: true
           });
         } else {
-          console.error('Error con tramo no vigente, pero no se encontró información del tramo');
+          logger.error('Error con tramo no vigente, pero no se encontró información del tramo');
         }
       } else {
         mensajeError += (error.response?.data?.message || error.message);
@@ -269,7 +270,7 @@ const CalcularTarifa = () => {
           )[0];
           setSelectedTramo(tramoVigenteMasReciente);
           setTramoNoVigente(false);
-          console.log('Preseleccionando tramo vigente:', tramoVigenteMasReciente);
+          logger.debug('Preseleccionando tramo vigente:', tramoVigenteMasReciente);
         } else {
           // Si no hay tramos vigentes, usar el más reciente de todos
           const tramoMasReciente = tramosDisponibles.sort((a, b) => 
@@ -277,7 +278,7 @@ const CalcularTarifa = () => {
           )[0];
           setSelectedTramo(tramoMasReciente);
           setTramoNoVigente(true);
-          console.log('Preseleccionando tramo NO vigente:', tramoMasReciente);
+          logger.debug('Preseleccionando tramo NO vigente:', tramoMasReciente);
         }
       }
       
@@ -344,9 +345,19 @@ const CalcularTarifa = () => {
   return (
     <Container maxWidth="md">
       <Paper sx={{ p: 3, mt: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Calcular Tarifa
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5">
+            Calcular Tarifa
+          </Typography>
+
+          <Button
+            variant="outlined"
+            onClick={() => window.history.back()}
+            sx={{ width: 'auto' }}
+          >
+            Volver Atrás
+          </Button>
+        </Box>
 
         <Grid container spacing={3}>
           <Grid item xs={12}>

@@ -9,6 +9,7 @@ const Site = require('../models/Site');
 const { format } = require('date-fns');
 const { fechasSuperpuestas, generarTramoId, sonTramosIguales } = require('../utils/tramoValidator');
 const { calcularTarifaPaletConFormula } = require('../utils/formulaParser'); // Importamos el parser de fórmulas
+const logger = require('../utils/logger');
 
 /**
  * Obtiene todos los tramos asociados a un cliente específico
@@ -24,7 +25,7 @@ const { calcularTarifaPaletConFormula } = require('../utils/formulaParser'); // 
  */
 exports.getTramosByCliente = async (req, res) => {
     try {
-        console.log('Buscando tramos para cliente:', req.params.cliente);
+        logger.debug('Buscando tramos para cliente:', req.params.cliente);
         
         const { cliente } = req.params;
         const tramos = await Tramo.find({ cliente })
@@ -32,9 +33,9 @@ exports.getTramosByCliente = async (req, res) => {
             .populate('destino', 'Site location')
             .sort({ 'origen.Site': 1, 'destino.Site': 1 });
         
-        console.log(`Se encontraron ${tramos.length} tramos para cliente ${cliente}`);
+        logger.debug(`Se encontraron ${tramos.length} tramos para cliente ${cliente}`);
         if(tramos.length > 0) {
-            console.log('Primer tramo (ejemplo):', tramos[0]);
+            logger.debug('Primer tramo (ejemplo):', tramos[0]);
         }
 
         res.json({
@@ -42,7 +43,7 @@ exports.getTramosByCliente = async (req, res) => {
             data: tramos
         });
     } catch (error) {
-        console.error('Error al obtener tramos:', error);
+        logger.error('Error al obtener tramos:', error);
         res.status(500).json({ 
             success: false,
             message: error.message 
@@ -76,7 +77,7 @@ exports.bulkCreateTramos = async (req, res) => {
     try {
         // Verificar si el cuerpo está llegando correctamente
         if (!req.body || Object.keys(req.body).length === 0) {
-            console.error('ERROR: Cuerpo de solicitud vacío');
+            logger.error('ERROR: Cuerpo de solicitud vacío');
             return res.status(400).json({
                 success: false,
                 message: 'Cuerpo de solicitud vacío',
@@ -89,20 +90,20 @@ exports.bulkCreateTramos = async (req, res) => {
 
         const { cliente, tramos } = req.body;
         
-        console.log('Datos recibidos:', {
+        logger.debug('Datos recibidos:', {
             clientePresente: !!cliente,
             tramosPresente: !!tramos,
             tramosLength: tramos?.length || 0
         });
 
-        console.log('Recibiendo importación masiva:', { 
+        logger.debug('Recibiendo importación masiva:', { 
             cliente, 
             tramosCantidad: tramos?.length || 0,
             body: JSON.stringify(req.body).substring(0, 200) + '...' 
         });
 
         if (!Array.isArray(tramos)) {
-            console.error('Datos inválidos recibidos:', tramos);
+            logger.error('Datos inválidos recibidos:', tramos);
             return res.status(400).json({ 
                 success: false,
                 message: 'El formato de datos es inválido',
@@ -118,7 +119,7 @@ exports.bulkCreateTramos = async (req, res) => {
         }
 
         // Verificar un tramo de ejemplo para debug
-        console.log('Ejemplo de tramo recibido:', JSON.stringify(tramos[0]));
+        logger.debug('Ejemplo de tramo recibido:', JSON.stringify(tramos[0]));
 
         const resultados = {
             exitosos: 0,
@@ -128,18 +129,18 @@ exports.bulkCreateTramos = async (req, res) => {
 
         // Primero, cargar todos los tramos existentes para ese cliente para hacer una comparación más eficiente
         const tramosExistentes = await Tramo.find({ cliente }).lean();
-        console.log(`Encontrados ${tramosExistentes.length} tramos existentes para el cliente ${cliente}`);
+        logger.debug(`Encontrados ${tramosExistentes.length} tramos existentes para el cliente ${cliente}`);
 
         // Crear un mapa de tramos existentes para búsqueda eficiente
         const mapaExistentes = {};
         tramosExistentes.forEach(tramo => {
             const id = generarTramoId(tramo);
-            console.log(`Registrando tramo existente con ID: ${id}`);
+            logger.debug(`Registrando tramo existente con ID: ${id}`);
             if (!mapaExistentes[id]) {
                 mapaExistentes[id] = [];
             }
             mapaExistentes[id].push(tramo);
-            console.log(`Registrado existente: ${id} - ${tramo.tipo}`);
+            logger.debug(`Registrado existente: ${id} - ${tramo.tipo}`);
         });
 
         // Verificar posibles duplicados antes de intentar guardar
@@ -164,16 +165,16 @@ exports.bulkCreateTramos = async (req, res) => {
                 }
 
                 // Asegurarse de que las fechas se procesan correctamente
-                console.log(`Procesando fechas para tramo #${i+1}:`);
-                console.log(`  Fecha desde original: ${tramoData.vigenciaDesde}`);
-                console.log(`  Fecha hasta original: ${tramoData.vigenciaHasta}`);
+                logger.debug(`Procesando fechas para tramo #${i+1}:`);
+                logger.debug(`  Fecha desde original: ${tramoData.vigenciaDesde}`);
+                logger.debug(`  Fecha hasta original: ${tramoData.vigenciaHasta}`);
 
                 // Mejorar el procesamiento de fechas
                 let fechaDesde = tramoData.vigenciaDesde;
                 let fechaHasta = tramoData.vigenciaHasta;
 
-                console.log(`Procesando fecha desde (tipo): ${typeof fechaDesde}`);
-                console.log(`Fecha desde original: ${fechaDesde}`);
+                logger.debug(`Procesando fecha desde (tipo): ${typeof fechaDesde}`);
+                logger.debug(`Fecha desde original: ${fechaDesde}`);
 
                 // Si ya es un objeto Date, dejarlo como está
                 if (!(fechaDesde instanceof Date)) {
@@ -181,7 +182,7 @@ exports.bulkCreateTramos = async (req, res) => {
                         // Para formato ISO (2025-01-01T00:00:00.000Z)
                         if (typeof fechaDesde === 'string' && fechaDesde.includes('T')) {
                             fechaDesde = new Date(fechaDesde);
-                            console.log(`Fecha ISO detectada y procesada: ${fechaDesde}`);
+                            logger.debug(`Fecha ISO detectada y procesada: ${fechaDesde}`);
                         }
                         // Para formato DD/MM/YYYY
                         else if (typeof fechaDesde === 'string' && fechaDesde.includes('/')) {
@@ -193,7 +194,7 @@ exports.bulkCreateTramos = async (req, res) => {
                                 const month = parseInt(parts[1], 10) - 1; // Los meses en JS van de 0-11
                                 const day = parseInt(parts[0], 10);
                                 fechaDesde = new Date(Date.UTC(year, month, day));
-                                console.log(`Fecha DD/MM/YYYY procesada: ${fechaDesde}`);
+                                logger.debug(`Fecha DD/MM/YYYY procesada: ${fechaDesde}`);
                             } else {
                                 fechaDesde = new Date(fechaDesde);
                             }
@@ -201,15 +202,15 @@ exports.bulkCreateTramos = async (req, res) => {
                         // Para formato YYYY-MM-DD sin hora
                         else if (typeof fechaDesde === 'string' && fechaDesde.includes('-') && !fechaDesde.includes('T')) {
                             fechaDesde = new Date(`${fechaDesde}T00:00:00.000Z`);
-                            console.log(`Fecha YYYY-MM-DD procesada: ${fechaDesde}`);
+                            logger.debug(`Fecha YYYY-MM-DD procesada: ${fechaDesde}`);
                         }
                         // Cualquier otro formato
                         else if (typeof fechaDesde === 'string') {
                             fechaDesde = new Date(fechaDesde);
-                            console.log(`Otro formato de fecha procesado: ${fechaDesde}`);
+                            logger.debug(`Otro formato de fecha procesado: ${fechaDesde}`);
                         }
                     } catch (fechaError) {
-                        console.error(`Error procesando fecha desde: ${fechaError}`);
+                        logger.error(`Error procesando fecha desde: ${fechaError}`);
                         throw new Error(`Error al procesar fecha de inicio: ${fechaError.message}`);
                     }
                 }
@@ -232,7 +233,7 @@ exports.bulkCreateTramos = async (req, res) => {
                                 const day = parseInt(parts[0], 10);
                                 // Creamos la fecha a final del día para incluir todo el día de fin de vigencia
                                 fechaHasta = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
-                                console.log(`Fecha DD/MM/YYYY procesada hasta: ${fechaHasta}`);
+                                logger.debug(`Fecha DD/MM/YYYY procesada hasta: ${fechaHasta}`);
                             } else {
                                 fechaHasta = new Date(fechaHasta);
                             }
@@ -246,21 +247,21 @@ exports.bulkCreateTramos = async (req, res) => {
                             fechaHasta = new Date(fechaHasta);
                         }
                     } catch (fechaError) {
-                        console.error(`Error procesando fecha hasta: ${fechaError}`);
+                        logger.error(`Error procesando fecha hasta: ${fechaError}`);
                         throw new Error(`Error al procesar fecha de fin: ${fechaError.message}`);
                     }
                 }
 
-                console.log(`Fecha desde procesada final: ${fechaDesde}`);
-                console.log(`Fecha hasta procesada final: ${fechaHasta}`);
+                logger.debug(`Fecha desde procesada final: ${fechaDesde}`);
+                logger.debug(`Fecha hasta procesada final: ${fechaHasta}`);
 
                 // Verificar que las fechas sean válidas DESPUÉS de procesarlas
                 if (!(fechaDesde instanceof Date) || isNaN(fechaDesde.getTime())) {
-                    console.error('Fecha inicio inválida después del procesamiento:', fechaDesde);
+                    logger.error('Fecha inicio inválida después del procesamiento:', fechaDesde);
                     throw new Error(`La fecha de inicio no es válida después del procesamiento`);
                 }
                 if (!(fechaHasta instanceof Date) || isNaN(fechaHasta.getTime())) {
-                    console.error('Fecha fin inválida después del procesamiento:', fechaHasta);
+                    logger.error('Fecha fin inválida después del procesamiento:', fechaHasta);
                     throw new Error(`La fecha de fin no es válida después del procesamiento`);
                 }
 
@@ -270,29 +271,29 @@ exports.bulkCreateTramos = async (req, res) => {
                 } else {
                     tramoData.tipo = 'TRMC'; // Valor por defecto
                 }
-                console.log(`[IMPORT] Procesando tramo #${i+1} con tipo: ${tramoData.tipo}`);
+                logger.debug(`[IMPORT] Procesando tramo #${i+1} con tipo: ${tramoData.tipo}`);
 
                 // Generar ID explícito para este tramo (incluye el tipo)
                 let tramoId; // Declarar fuera del try para que esté disponible en todo el ámbito
                 try {
                     tramoId = generarTramoId(tramoData);
-                    console.log(`[IMPORT] Verificando tramo #${i+1}: ${tramoId}`);
-                    console.log(`[IMPORT] Tipo: ${tramoData.tipo}, Método: ${tramoData.metodoCalculo || 'Palet'}`);
+                    logger.debug(`[IMPORT] Verificando tramo #${i+1}: ${tramoId}`);
+                    logger.debug(`[IMPORT] Tipo: ${tramoData.tipo}, Método: ${tramoData.metodoCalculo || 'Palet'}`);
                     
                     // DEBUG: Verificar explícitamente que el ID incluye el tipo
                     if (!tramoId.includes(tramoData.tipo)) {
-                        console.error(`[IMPORT] ⚠️ ERROR: El ID generado no contiene el tipo del tramo (${tramoData.tipo})`);
+                        logger.error(`[IMPORT] ⚠️ ERROR: El ID generado no contiene el tipo del tramo (${tramoData.tipo})`);
                     }
                     
                 } catch (idError) {
-                    console.error(`Error al generar ID para tramo #${i+1}:`, idError);
-                    console.error('Datos del tramo:', JSON.stringify(tramoData));
+                    logger.error(`Error al generar ID para tramo #${i+1}:`, idError);
+                    logger.error('Datos del tramo:', JSON.stringify(tramoData));
                     throw new Error(`Error al generar ID: ${idError.message}`);
                 }
                 
                 // Solo buscar superposiciones con tramos del mismo tipo exacto
                 const tramosConMismoId = mapaExistentes[tramoId] || [];
-                console.log(`[IMPORT] Encontrados ${tramosConMismoId.length} tramos posibles con ID "${tramoId}"`);
+                logger.debug(`[IMPORT] Encontrados ${tramosConMismoId.length} tramos posibles con ID "${tramoId}"`);
 
                 // Verificación EXPLÍCITA por tipo para diagnóstico
                 const todosLosTramos = Object.values(mapaExistentes).flat();
@@ -410,9 +411,9 @@ exports.bulkCreateTramos = async (req, res) => {
 
                 resultados.exitosos++;
             } catch (tramoBatchError) {
-                console.error(`Error procesando tramo #${i+1}:`, tramoBatchError);
-                console.error('Detalles del error:', tramoBatchError.stack);
-                console.error('Datos del tramo con error:', JSON.stringify(tramos[i]));
+                logger.error(`Error procesando tramo #${i+1}:`, tramoBatchError);
+                logger.error('Detalles del error:', tramoBatchError.stack);
+                logger.error('Datos del tramo con error:', JSON.stringify(tramos[i]));
                 
                 // Verificar si el error tiene información detallada del tramo existente
                 const detalleExistente = tramoBatchError.tramoExistente ? tramoBatchError.tramoExistente : null;
@@ -434,7 +435,7 @@ exports.bulkCreateTramos = async (req, res) => {
             }
         }
 
-        console.log('Resultado final importación:', {
+        logger.debug('Resultado final importación:', {
             exitosos: resultados.exitosos,
             errores: resultados.errores.length,
             total: resultados.total
@@ -451,7 +452,7 @@ exports.bulkCreateTramos = async (req, res) => {
                 Math.round((resultados.exitosos / resultados.total) * 100) : 0
         });
     } catch (error) {
-        console.error('Error en importación masiva:', error);
+        logger.error('Error en importación masiva:', error);
         res.status(500).json({ 
             success: false,
             message: 'Error en la importación masiva',
@@ -484,7 +485,7 @@ exports.getVigentesByFecha = async (req, res) => {
             data: tramos
         });
     } catch (error) {
-        console.error('Error al obtener tramos vigentes:', error);
+        logger.error('Error al obtener tramos vigentes:', error);
         res.status(500).json({
             success: false,
             message: error.message
@@ -511,7 +512,7 @@ exports.getTramoById = async (req, res) => {
             data: tramo
         });
     } catch (error) {
-        console.error('Error al obtener tramo por ID:', error);
+        logger.error('Error al obtener tramo por ID:', error);
         res.status(500).json({
             success: false,
             message: error.message
@@ -530,7 +531,7 @@ exports.getAllTramos = async (req, res) => {
             data: tramos
         });
     } catch (error) {
-        console.error('Error al obtener todos los tramos:', error);
+        logger.error('Error al obtener todos los tramos:', error);
         res.status(500).json({
             success: false,
             message: error.message
@@ -553,7 +554,7 @@ exports.createTramo = async (req, res) => {
             data: tramoGuardado
         });
     } catch (error) {
-        console.error('Error al crear tramo:', error);
+        logger.error('Error al crear tramo:', error);
         res.status(400).json({
             success: false,
             message: error.message
@@ -584,7 +585,7 @@ exports.updateTramo = async (req, res) => {
             data: tramoActualizado
         });
     } catch (error) {
-        console.error('Error al actualizar tramo:', error);
+        logger.error('Error al actualizar tramo:', error);
         res.status(400).json({
             success: false,
             message: error.message
@@ -609,7 +610,7 @@ exports.deleteTramo = async (req, res) => {
             message: 'Tramo eliminado correctamente'
         });
     } catch (error) {
-        console.error('Error al eliminar tramo:', error);
+        logger.error('Error al eliminar tramo:', error);
         res.status(500).json({
             success: false,
             message: error.message
@@ -696,7 +697,7 @@ exports.verificarPosiblesDuplicados = async (req, res) => {
             resultado
         });
     } catch (error) {
-        console.error('Error al verificar duplicados:', error);
+        logger.error('Error al verificar duplicados:', error);
         res.status(500).json({
             success: false,
             message: 'Error al verificar duplicados',
@@ -759,7 +760,7 @@ exports.normalizarTiposTramos = async (req, res) => {
             resultados
         });
     } catch (error) {
-        console.error('Error normalizando tramos:', error);
+        logger.error('Error normalizando tramos:', error);
         res.status(500).json({
             success: false,
             message: 'Error al normalizar los tramos',
@@ -819,7 +820,7 @@ exports.testImportacionTipos = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error en prueba de importación:', error);
+        logger.error('Error en prueba de importación:', error);
         res.status(500).json({
             success: false,
             message: 'Error en la prueba de importación',
@@ -899,7 +900,7 @@ exports.updateVigenciaMasiva = async (req, res) => {
                 actualizados.push(tramoId);
 
             } catch (error) {
-                console.error(`Error actualizando tramo ${tramoId}:`, error);
+                logger.error(`Error actualizando tramo ${tramoId}:`, error);
                 conflictos.push({ id: tramoId, error: error.message });
             }
         }
@@ -912,7 +913,7 @@ exports.updateVigenciaMasiva = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error en actualización masiva:', error);
+        logger.error('Error en actualización masiva:', error);
         res.status(500).json({
             success: false,
             message: 'Error al actualizar los tramos',
@@ -967,7 +968,7 @@ exports.calcularTarifa = async (req, res) => {
 
         // Si se proporciona un ID de tramo específico y permitirTramoNoVigente es true
         if (tramoId && permitirTramoNoVigente === true) {
-            console.log('Buscando tramo específico por ID:', tramoId, 'con permitirTramoNoVigente:', permitirTramoNoVigente);
+            logger.debug('Buscando tramo específico por ID:', tramoId, 'con permitirTramoNoVigente:', permitirTramoNoVigente);
             tramo = await Tramo.findOne({
                 _id: tramoId,
                 cliente: clienteNombre,
@@ -977,7 +978,7 @@ exports.calcularTarifa = async (req, res) => {
             }).populate('origen destino');
         } else {
             // Buscar tramo vigente para la fecha especificada
-            console.log('Buscando tramo vigente para fecha:', fecha);
+            logger.debug('Buscando tramo vigente para fecha:', fecha);
             tramo = await Tramo.findOne({
                 cliente: clienteNombre,
                 origen,
@@ -1014,7 +1015,7 @@ exports.calcularTarifa = async (req, res) => {
                     
                     // Si hay una fórmula personalizada, la usamos para calcular la tarifa
                     if (formulaPersonalizada) {
-                        console.log(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${formulaPersonalizada}`);
+                        logger.debug(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${formulaPersonalizada}`);
                         const resultado = calcularTarifaPaletConFormula(tramo.valor, peaje, numPalets, formulaPersonalizada);
                         tarifaBase = resultado.tarifaBase;
                         peaje = resultado.peaje;
@@ -1064,7 +1065,7 @@ exports.calcularTarifa = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error al calcular tarifa:', error);
+        logger.error('Error al calcular tarifa:', error);
         res.status(500).json({
             success: false,
             message: 'Error al calcular la tarifa',

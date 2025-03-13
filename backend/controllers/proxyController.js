@@ -1,10 +1,11 @@
 const axios = require('axios');
+const logger = require('../utils/logger');
 
 exports.geocode = async (req, res) => {
     try {
         const { lat, lng } = req.query;
         
-        console.log('Geocoding request for:', { lat, lng });
+        logger.debug('Geocoding request for:', { lat, lng });
 
         if (!lat || !lng) {
             return res.status(400).json({ 
@@ -14,7 +15,7 @@ exports.geocode = async (req, res) => {
         }
 
         const url = 'https://nominatim.openstreetmap.org/reverse';
-        console.log('Requesting:', url);
+        logger.debug('Requesting:', url);
 
         const response = await axios.get(url, {
             params: {
@@ -29,10 +30,10 @@ exports.geocode = async (req, res) => {
             timeout: 5000 // 5 segundos timeout
         });
 
-        console.log('Nominatim response:', response.data);
+        logger.debug('Nominatim response:', response.data);
         res.json(response.data);
     } catch (error) {
-        console.error('Geocoding error details:', {
+        logger.error('Geocoding error details:', {
             message: error.message,
             code: error.code,
             response: error.response?.data,

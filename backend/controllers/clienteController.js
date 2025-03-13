@@ -1,13 +1,14 @@
 const Cliente = require('../models/Cliente');
+const logger = require('../utils/logger');
 
 exports.getClientes = async (req, res) => {
     try {
-        console.log('Obteniendo lista de clientes');
+        logger.debug('Obteniendo lista de clientes');
         const clientes = await Cliente.find().sort({ createdAt: -1 });
-        console.log(`${clientes.length} clientes encontrados`);
+        logger.debug(`${clientes.length} clientes encontrados`);
         res.json(clientes);
     } catch (error) {
-        console.error('Error al obtener clientes:', error);
+        logger.error('Error al obtener clientes:', error);
         res.status(500).json({ message: 'Error al obtener clientes' });
     }
 };
@@ -20,7 +21,7 @@ exports.getClienteById = async (req, res) => {
         }
         res.json(cliente);
     } catch (error) {
-        console.error('Error al obtener cliente:', error);
+        logger.error('Error al obtener cliente:', error);
         res.status(500).json({ message: 'Error al obtener cliente' });
     }
 };
@@ -31,7 +32,7 @@ exports.createCliente = async (req, res) => {
         await nuevoCliente.save();
         res.status(201).json(nuevoCliente);
     } catch (error) {
-        console.error('Error al crear cliente:', error);
+        logger.error('Error al crear cliente:', error);
         res.status(500).json({ message: 'Error al crear cliente' });
     }
 };
@@ -48,7 +49,7 @@ exports.updateCliente = async (req, res) => {
         }
         res.json(cliente);
     } catch (error) {
-        console.error('Error al actualizar cliente:', error);
+        logger.error('Error al actualizar cliente:', error);
         res.status(500).json({ message: 'Error al actualizar cliente' });
     }
 };
@@ -61,7 +62,7 @@ exports.deleteCliente = async (req, res) => {
         }
         res.json({ message: 'Cliente eliminado exitosamente' });
     } catch (error) {
-        console.error('Error al eliminar cliente:', error);
+        logger.error('Error al eliminar cliente:', error);
         res.status(500).json({ message: 'Error al eliminar cliente' });
     }
 };

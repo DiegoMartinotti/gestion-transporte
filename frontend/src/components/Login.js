@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../config/axios';
 import {
   Box,
   Container,
@@ -119,22 +120,13 @@ const Login = () => {
     setError('');
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Error en el login');
+      const result = await login(formData);
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Error en el login');
       }
-
-      await login(data.token);
-      navigate('/');
+      
+      // La redirección se maneja en el método login del AuthContext
     } catch (error) {
       setError(error.message);
     }
@@ -250,14 +242,15 @@ const Login = () => {
               sx={{
                 mt: 3,
                 mb: 2,
-                py: 1.5,
-                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                py: 1.2,
+                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
                 '&:hover': {
-                  background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
-                }
+                  background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                },
+                boxShadow: `0 4px 10px rgba(0, 0, 0, 0.1)`,
               }}
             >
-              Ingresar
+              Iniciar Sesión
             </Button>
           </Box>
         </Paper>
