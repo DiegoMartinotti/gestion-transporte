@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Table } from '../ui/components';
 import { Box, Typography, CircularProgress, Alert } from '@mui/material';
+import logger from '../utils/logger';
 
 const ClientesTable = () => {
     const [clientes, setClientes] = useState([]);
@@ -15,10 +16,10 @@ const ClientesTable = () => {
             try {
                 setLoading(true);
                 const response = await axios.get('/api/clientes');
-                console.log('Clientes recibidos:', response.data);
+                logger.debug('Clientes recibidos:', response.data);
                 setClientes(response.data);
             } catch (error) {
-                console.error('Error al obtener clientes:', error);
+                logger.error('Error al obtener clientes:', error);
                 setError(error.response?.data?.message || 'Error al cargar los clientes');
             } finally {
                 setLoading(false);
@@ -70,7 +71,7 @@ const ClientesTable = () => {
             data={clientes}
             title="Clientes"
             enableSearch={true}
-            onRowClick={(row) => console.log('Cliente seleccionado:', row)}
+            onRowClick={(row) => logger.debug('Cliente seleccionado:', row)}
         />
     );
 };

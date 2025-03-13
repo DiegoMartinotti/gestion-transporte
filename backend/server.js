@@ -4,6 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const logger = require('./utils/logger');
 
 const app = express();
 
@@ -23,10 +24,10 @@ mongoose.connect(process.env.MONGODB_URI, {
     debug: process.env.NODE_ENV !== 'production'
 })
 .then(() => {
-    console.log('Conexión a MongoDB establecida');
+    logger.info('Conexión a MongoDB establecida');
 })
 .catch(err => {
-    console.error('Error conectando a MongoDB:', err);
+    logger.error('Error conectando a MongoDB:', err);
     process.exit(1);
 });
 
@@ -44,7 +45,7 @@ app.get('/', (req, res) => {
 
 // Manejador de errores global
 app.use((err, req, res, next) => {
-    console.error('Error no controlado:', err);
+    logger.error('Error no controlado:', err);
     res.status(500).json({ 
         success: false, 
         message: 'Error interno del servidor',
@@ -55,5 +56,5 @@ app.use((err, req, res, next) => {
 // Iniciar servidor
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
+    logger.info(`Servidor corriendo en puerto ${PORT}`);
 });

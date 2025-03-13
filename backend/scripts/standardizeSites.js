@@ -1,14 +1,15 @@
 const mongoose = require('mongoose');
 const Site = require('../models/Site');
+const logger = require('../utils/logger');
 require('dotenv').config();
 
 async function standardizeSites() {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
-        console.log('Conectado a MongoDB');
+        logger.info('Conectado a MongoDB');
 
         const sites = await Site.find({});
-        console.log(`Encontrados ${sites.length} sites para estandarizar`);
+        logger.info(`Encontrados ${sites.length} sites para estandarizar`);
 
         for (const site of sites) {
             site.cliente = site.cliente.toUpperCase();
@@ -16,10 +17,10 @@ async function standardizeSites() {
             await site.save();
         }
 
-        console.log('Estandarización completada');
+        logger.info('Estandarización completada');
         process.exit(0);
     } catch (error) {
-        console.error('Error:', error);
+        logger.error('Error:', error);
         process.exit(1);
     }
 }

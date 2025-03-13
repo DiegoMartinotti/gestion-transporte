@@ -28,6 +28,7 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useTable, useSortBy, useFilters, usePagination } from '@tanstack/react-table';
+import logger from '../utils/logger';
 
 /**
  * Componente de tabla de datos avanzada
@@ -122,7 +123,7 @@ const DataTable = ({
         const { pageSize, sortBy } = JSON.parse(savedPreferences);
         // Implementar restauración de preferencias
       } catch (error) {
-        console.error('Error al restaurar preferencias:', error);
+        logger.error('Error al restaurar preferencias:', error);
       }
     }
   }, []);

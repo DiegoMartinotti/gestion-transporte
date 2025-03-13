@@ -8,6 +8,7 @@ import {
 import InfoIcon from '@mui/icons-material/Info';
 import axios from 'axios';
 import { format } from 'date-fns';
+import logger from '../utils/logger';
 
 const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
     const [rows, setRows] = useState([]);
@@ -101,7 +102,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
             }
 
             // Importante: Asegurarnos que las fechas estén en formato YYYY-MM-DD
-            console.log(`Fechas procesadas para ${origen}-${destino}: ${fechaDesde} - ${fechaHasta}`);
+            logger.debug(`Fechas procesadas para ${origen}-${destino}: ${fechaDesde} - ${fechaHasta}`);
 
             return {
                 origen: sites.find(s => s.Site === origen)?._id,
@@ -134,7 +135,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
             const fechaHasta = format(new Date(hasta + 'T00:00:00'), 'dd/MM/yyyy');
             return `${fechaDesde} - ${fechaHasta}`;
         } catch (error) {
-            console.error('Error formateando fechas:', error);
+            logger.error('Error formateando fechas:', error);
             return 'Fecha inválida';
         }
     };
@@ -197,7 +198,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                 if (!confirmed) {
                     setProgress(0);
                     setImporting(false);
-                    console.log('Duplicados detectados:', posiblesDuplicados);
+                    logger.debug('Duplicados detectados:', posiblesDuplicados);
                     setError(`Duplicados detectados en los datos. Revise y vuelva a intentar.`);
                     return;
                 }
@@ -210,7 +211,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                 batches.push(validRows.slice(i, i + BATCH_SIZE));
             }
 
-            console.log(`Enviando ${validRows.length} tramos en ${batches.length} lotes`);
+            logger.debug(`Enviando ${validRows.length} tramos en ${batches.length} lotes`);
 
             let exitosos = 0;
             let errores = [];
@@ -225,7 +226,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                         throw new Error('No hay token de autenticación');
                     }
 
-                    console.log(`Enviando lote ${i+1}:`, {
+                    logger.debug(`Enviando lote ${i+1}:`, {
                         tamañoLote: batch.length,
                         primerTramo: batch[0]
                     });
@@ -245,7 +246,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                         }
                     );
 
-                    console.log(`Respuesta del lote ${i+1}:`, response.data);
+                    logger.debug(`Respuesta del lote ${i+1}:`, response.data);
                     
                     if (response.data.success) {
                         exitosos += response.data.exitosos || 0;
@@ -256,12 +257,12 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                         throw new Error(response.data.message || `Error en lote ${i+1}`);
                     }
                 } catch (batchError) {
-                    console.error(`Error en lote ${i+1}:`, batchError);
+                    logger.error(`Error en lote ${i+1}:`, batchError);
                     
                     // Registrar información detallada del error
                     if (batchError.response) {
                         // Error de respuesta del servidor
-                        console.error('Error del servidor:', {
+                        logger.error('Error del servidor:', {
                             status: batchError.response.status,
                             data: batchError.response.data,
                             headers: batchError.response.headers
@@ -272,14 +273,14 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                         });
                     } else if (batchError.request) {
                         // Error de falta de respuesta
-                        console.error('Error de red - no hubo respuesta:', batchError.request);
+                        logger.error('Error de red - no hubo respuesta:', batchError.request);
                         errores.push({
                             lote: i+1,
                             error: 'No se recibió respuesta del servidor'
                         });
                     } else {
                         // Error de configuración
-                        console.error('Error de configuración:', batchError.message);
+                        logger.error('Error de configuración:', batchError.message);
                         errores.push({
                             lote: i+1,
                             error: `Error de configuración: ${batchError.message}`
@@ -296,7 +297,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
             
             // Actualizar mensaje de error para mejor interpretación y mostrar detalles
             if (errores.length > 0) {
-                console.error(`Importación completada con errores: ${exitosos} exitosos, ${errores.length} fallidos`);
+                logger.error(`Importación completada con errores: ${exitosos} exitosos, ${errores.length} fallidos`);
                 
                 // Agrupar errores por tipo
                 const duplicadosEncontrados = errores.filter(e => e.error && e.error.includes('Tramo duplicado'));
@@ -312,10 +313,10 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                 }
                 
                 // Mostrar detalles de los errores en la consola para debugging
-                console.error('Detalle de errores:', errores);
+                logger.error('Detalle de errores:', errores);
                 
                 // Añadir mejor log de errores
-                console.error("Muestra de errores:", errores.slice(0, 5).map(e => ({
+                logger.error("Muestra de errores:", errores.slice(0, 5).map(e => ({
                     origen: e.origen,
                     destino: e.destino,
                     tipo: e.tipo,
@@ -333,13 +334,13 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                     errorPorTipos[errorMsg]++;
                 });
                 
-                console.error("Recuento de errores por tipo:", errorPorTipos);
+                logger.error("Recuento de errores por tipo:", errorPorTipos);
                 
                 setError(mensajeError);
                 setImporting(false);
                 onComplete?.();
             } else if (exitosos > 0) {
-                console.log(`Importación exitosa: ${exitosos} tramos importados`);
+                logger.debug(`Importación exitosa: ${exitosos} tramos importados`);
                 onComplete?.();
                 setTimeout(() => {
                     setImporting(false); // Asegurar que importing se establece en false antes de cerrar
@@ -349,7 +350,7 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                 throw new Error('No se importó ningún tramo');
             }
         } catch (err) {
-            console.error('Error general en importación:', err);
+            logger.error('Error general en importación:', err);
             setProgress(0);
             setImporting(false); // Asegurar que importing siempre se establece en false en caso de error
             setError(`Error: ${err.message}`);

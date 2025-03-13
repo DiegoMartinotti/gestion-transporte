@@ -1,4 +1,5 @@
 const fs = require('fs');
+const logger = require('../utils/logger');
 
 const viajes = [
   {
@@ -50,4 +51,4 @@ const csvContent = [headers, ...rows].join('\n');
 // Escribir el archivo CSV
 fs.writeFileSync('viajes-ejemplo.csv', csvContent);
 
-console.log("Archivo CSV generado: viajes-ejemplo.csv");
+logger.info("Archivo CSV generado: viajes-ejemplo.csv");

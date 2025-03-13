@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const tramoController = require('../controllers/tramoController');
 const { verifyToken } = require('../middleware/verifyToken');
+const logger = require('../utils/logger');
 
 // CRUD básico
 router.get('/', verifyToken, tramoController.getAllTramos);
@@ -70,7 +71,7 @@ router.post('/diagnose-tipos', verifyToken, async (req, res) => {
                 'Problema: No hay tramos con diferentes tipos para este origen-destino'
         });
     } catch (error) {
-        console.error('Error en diagnóstico:', error);
+        logger.error('Error en diagnóstico:', error);
         res.status(500).json({
             success: false,
             message: 'Error en diagnóstico',

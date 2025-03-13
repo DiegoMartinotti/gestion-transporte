@@ -1,6 +1,7 @@
 /**
  * Utility para validar tramos y detectar duplicados
  */
+const logger = require('./logger');
 
 /**
  * Normaliza las fechas para manejo consistente
@@ -37,12 +38,12 @@ const fechasSuperpuestas = (fecha1Desde, fecha1Hasta, fecha2Desde, fecha2Hasta) 
     const f2Hasta = normalizarFecha(fecha2Hasta);
 
     // Verificar superposición y mostrar log detallado
-    console.log('Comparando fechas para superposición:');
-    console.log(`Rango 1: ${f1Desde.toISOString()} - ${f1Hasta.toISOString()}`);
-    console.log(`Rango 2: ${f2Desde.toISOString()} - ${f2Hasta.toISOString()}`);
+    logger.debug('Comparando fechas para superposición:');
+    logger.debug(`Rango 1: ${f1Desde.toISOString()} - ${f1Hasta.toISOString()}`);
+    logger.debug(`Rango 2: ${f2Desde.toISOString()} - ${f2Hasta.toISOString()}`);
     
     const haySuper = f1Desde <= f2Hasta && f2Desde <= f1Hasta;
-    console.log(`¿Hay superposición?: ${haySuper}`);
+    logger.debug(`¿Hay superposición?: ${haySuper}`);
     
     return haySuper;
 };
@@ -64,11 +65,11 @@ const generarTramoId = (tramo) => {
     const metodo = tramo.metodoCalculo || 'Palet';
     
     // Log de diagnóstico mejorado
-    console.log(`[DIAGNÓSTICO] generarTramoId - Datos: origen=${tramo.origen}, destino=${tramo.destino}, tipo=${tipo}, metodo=${metodo}`);
+    logger.debug(`[DIAGNÓSTICO] generarTramoId - Datos: origen=${tramo.origen}, destino=${tramo.destino}, tipo=${tipo}, metodo=${metodo}`);
     
     // Crear un ID que garantice la distinción por tipo
     const id = `${tramo.origen}:${tramo.destino}:${tipo}:${metodo}`;
-    console.log(`[DIAGNÓSTICO] ID generado: ${id}`);
+    logger.debug(`[DIAGNÓSTICO] ID generado: ${id}`);
     
     return id;
 };
@@ -92,8 +93,8 @@ const sonTramosIguales = (tramo1, tramo2) => {
     );
     
     // Log detallado
-    console.log(`sonTramosIguales: Comparando tramos - Resultado: ${sonIguales}`);
-    console.log(`Tipo 1: ${tipo1}, Tipo 2: ${tipo2}`);
+    logger.debug(`sonTramosIguales: Comparando tramos - Resultado: ${sonIguales}`);
+    logger.debug(`Tipo 1: ${tipo1}, Tipo 2: ${tipo2}`);
     
     return sonIguales;
 };
@@ -104,15 +105,15 @@ const sonTramosIguales = (tramo1, tramo2) => {
  * @param {string} etiqueta - Etiqueta para identificar el log
  */
 const debugTramo = (tramo, etiqueta = 'Tramo') => {
-    console.log(`------ DEBUG ${etiqueta} ------`);
-    console.log(`ID: ${generarTramoId(tramo)}`);
-    console.log(`Origen: ${tramo.origen}`);
-    console.log(`Destino: ${tramo.destino}`);
-    console.log(`Tipo: ${tramo.tipo} (normalizado: ${tramo.tipo ? tramo.tipo.toUpperCase() : 'TRMC'})`);
-    console.log(`Método: ${tramo.metodoCalculo || 'Kilometro'}`);
-    console.log(`Cliente: ${tramo.cliente}`);
-    console.log(`Vigencia: ${tramo.vigenciaDesde} - ${tramo.vigenciaHasta}`);
-    console.log('-------------------------');
+    logger.debug(`------ DEBUG ${etiqueta} ------`);
+    logger.debug(`ID: ${generarTramoId(tramo)}`);
+    logger.debug(`Origen: ${tramo.origen}`);
+    logger.debug(`Destino: ${tramo.destino}`);
+    logger.debug(`Tipo: ${tramo.tipo} (normalizado: ${tramo.tipo ? tramo.tipo.toUpperCase() : 'TRMC'})`);
+    logger.debug(`Método: ${tramo.metodoCalculo || 'Kilometro'}`);
+    logger.debug(`Cliente: ${tramo.cliente}`);
+    logger.debug(`Vigencia: ${tramo.vigenciaDesde} - ${tramo.vigenciaHasta}`);
+    logger.debug('-------------------------');
 };
 
 module.exports = {

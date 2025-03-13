@@ -6,18 +6,19 @@ const Site = require('../models/Site');
 const Cliente = require('../models/Cliente');
 const tramoController = require('../controllers/tramoController');
 const auth = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 // Middleware para debugging de solicitudes grandes
 router.use('/bulk', (req, res, next) => {
-    console.log('Recibiendo solicitud bulk import:');
-    console.log('- Headers:', req.headers);
-    console.log('- Cliente:', req.body?.cliente);
-    console.log('- Cantidad tramos:', req.body?.tramos?.length || 0);
+    logger.debug('Recibiendo solicitud bulk import:');
+    logger.debug('- Headers:', req.headers);
+    logger.debug('- Cliente:', req.body?.cliente);
+    logger.debug('- Cantidad tramos:', req.body?.tramos?.length || 0);
     
     if (!req.body || !req.body.tramos) {
-        console.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
-        console.error('Content-Type:', req.headers['content-type']);
-        console.error('Content-Length:', req.headers['content-length']);
+        logger.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
+        logger.error('Content-Type:', req.headers['content-type']);
+        logger.error('Content-Length:', req.headers['content-length']);
         return res.status(400).json({
             success: false,
             message: 'Datos de solicitud vacíos o inválidos',
@@ -75,13 +76,13 @@ router.get('/vigentes/:fecha', verifyToken, async (req, res) => {
 // Mejorar la ruta para obtener tramos por cliente
 router.get('/cliente/:cliente', verifyToken, async (req, res) => {
   try {
-    console.log('Buscando tramos para cliente:', req.params.cliente);
+    logger.info('Buscando tramos para cliente:', req.params.cliente);
     
     const tramos = await Tramo.find({ cliente: req.params.cliente })
       .populate('origen', 'Site location')
       .populate('destino', 'Site location');
     
-    console.log(`Se encontraron ${tramos.length} tramos para el cliente ${req.params.cliente}`);
+    logger.info(`Se encontraron ${tramos.length} tramos para el cliente ${req.params.cliente}`);
     
     // Devolver en formato esperado por el frontend
     res.json({
@@ -89,7 +90,7 @@ router.get('/cliente/:cliente', verifyToken, async (req, res) => {
       data: tramos
     });
   } catch (error) {
-    console.error('Error al obtener tramos por cliente:', error);
+    logger.error('Error al obtener tramos por cliente:', error);
     res.status(500).json({ 
       success: false, 
       message: error.message,
@@ -239,7 +240,7 @@ router.post('/', auth, tramoController.createTramo);
 // Mejorada la ruta bulk para manejar errores mejor
 router.post('/bulk', verifyToken, async (req, res) => {
     try {
-        console.log('Bulk import - Headers:', {
+        logger.debug('Bulk import - Headers:', {
             contentType: req.headers['content-type'],
             contentLength: req.headers['content-length'],
             authorization: req.headers['authorization'] ? 'Presente' : 'Ausente'
@@ -247,7 +248,7 @@ router.post('/bulk', verifyToken, async (req, res) => {
 
         // Validar formato de la solicitud
         if (!req.body) {
-            console.error('Cuerpo de la solicitud nulo o indefinido');
+            logger.error('Cuerpo de la solicitud nulo o indefinido');
             return res.status(400).json({
                 success: false,
                 message: 'El cuerpo de la solicitud está vacío'
@@ -256,7 +257,7 @@ router.post('/bulk', verifyToken, async (req, res) => {
 
         const { cliente, tramos } = req.body;
         
-        console.log('Datos recibidos en bulk import:', {
+        logger.debug('Datos recibidos en bulk import:', {
             clientePresente: !!cliente,
             tramosPresente: !!tramos,
             tipoTramos: typeof tramos,
@@ -284,7 +285,7 @@ router.post('/bulk', verifyToken, async (req, res) => {
         // Llamar al controlador para procesar los tramos
         await tramoController.bulkCreateTramos(req, res);
     } catch (error) {
-        console.error('Error no controlado en bulk import:', error);
+        logger.error('Error no controlado en bulk import:', error);
         res.status(500).json({
             success: false,
             message: 'Error en la importación masiva de tramos',
@@ -319,7 +320,7 @@ router.post('/diagnostico-tipos', verifyToken, async (req, res) => {
             .populate('destino', 'Site')
             .lean();
 
-        console.log(`Encontrados ${tramos.length} tramos para diagnóstico con filtros:`, baseQuery);
+        logger.info(`Encontrados ${tramos.length} tramos para diagnóstico con filtros:`, baseQuery);
 
         // Analizar los tramos por tipo
         const analisis = {
@@ -380,7 +381,7 @@ router.post('/diagnostico-tipos', verifyToken, async (req, res) => {
             analisis
         });
     } catch (error) {
-        console.error('Error en diagnóstico de tipos:', error);
+        logger.error('Error en diagnóstico de tipos:', error);
         res.status(500).json({
             success: false,
             message: 'Error realizando el diagnóstico',
@@ -422,7 +423,7 @@ router.post('/corregir-tipos', verifyToken, async (req, res) => {
                     tramo.tipo = nuevoTipo;
                     await tramo.save();
                     resultados.actualizados++;
-                    console.log(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
+                    logger.info(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
                 } else {
                     resultados.errores.push({
                         id,
@@ -442,7 +443,7 @@ router.post('/corregir-tipos', verifyToken, async (req, res) => {
             resultados
         });
     } catch (error) {
-        console.error('Error corrigiendo tipos:', error);
+        logger.error('Error corrigiendo tipos:', error);
         res.status(500).json({
             success: false,
             message: 'Error corrigiendo tipos',

@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import logger from '../utils/logger';
 
 // Configurar dayjs para usar español y formato de fecha preferido
 dayjs.locale('es');
@@ -195,7 +196,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     });
 
     const applyFilters = useCallback(() => {
-        console.log('Aplicando filtros a', tramos.length, 'tramos');
+        logger.debug('Aplicando filtros a', tramos.length, 'tramos');
         if (!tramos || tramos.length === 0) {
             setFilteredTramos([]);
             return;
@@ -227,7 +228,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             });
             setSites(response.data.data || []);
         } catch (error) {
-            console.error('Error al cargar sites:', error);
+            logger.error('Error al cargar sites:', error);
             setSites([]);
         }
     }, [cliente]);
@@ -238,7 +239,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            console.log('Solicitando tramos para cliente:', cliente);
+            logger.debug('Solicitando tramos para cliente:', cliente);
             
             const url = `/api/tramos/cliente/${encodeURIComponent(cliente)}`;
             const response = await axios.get(url, {
@@ -266,7 +267,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                 setFilteredTramos([]);
             }
         } catch (error) {
-            console.error('Error al cargar tramos:', error);
+            logger.error('Error al cargar tramos:', error);
             setError(`Error al cargar tramos: ${error.message}`);
             setTramos([]);
             setFilteredTramos([]);
@@ -283,7 +284,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
 
     useEffect(() => {
         if (open && cliente) {
-            console.log('TarifarioViewer abierto para cliente:', cliente);
+            logger.debug('TarifarioViewer abierto para cliente:', cliente);
             fetchTramos();
             fetchSites();
         }
@@ -315,7 +316,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             });
             fetchTramos();
         } catch (error) {
-            console.error('Error al crear tramo:', error);
+            logger.error('Error al crear tramo:', error);
         }
     };
 
@@ -363,7 +364,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             setDeleteConfirmOpen(false);
             setTramoToDelete(null);
         } catch (error) {
-            console.error('Error al eliminar tramo(s):', error);
+            logger.error('Error al eliminar tramo(s):', error);
             setError('Error al eliminar: ' + (error.response?.data?.message || error.message));
         }
     };

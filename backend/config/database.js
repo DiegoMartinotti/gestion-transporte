@@ -1,5 +1,6 @@
-const mongoose = require('mongoose');
 require('dotenv').config();
+const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
 const connectDB = async () => {
     try {
@@ -8,15 +9,15 @@ const connectDB = async () => {
             socketTimeoutMS: 45000,
         };
 
-        console.log('Intentando conectar a MongoDB...');
+        logger.info('Intentando conectar a MongoDB...');
         await mongoose.connect(process.env.MONGODB_URI, options);
-        console.log('MongoDB conectado correctamente');
+        logger.info('MongoDB conectado correctamente');
         
         mongoose.connection.on('error', err => {
-            console.error('Error de MongoDB:', err);
+            logger.error('Error de MongoDB:', err);
         });
     } catch (error) {
-        console.error('Error de conexión MongoDB:', error);
+        logger.error('Error de conexión MongoDB:', error);
         process.exit(1);
     }
 };

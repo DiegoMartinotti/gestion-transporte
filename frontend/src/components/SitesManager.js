@@ -3,15 +3,17 @@ import {
     Container, Typography, Paper, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, CircularProgress, Alert,
     IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TextField
+    Button, TextField, Box
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import axios from 'axios';
 import SiteBulkImporter from './SiteBulkImporter';
+import logger from '../utils/logger';
 
-const API_URL = process.env.REACT_APP_API_URL;
+// Configuración de la URL base de la API
+const API_URL = process.env.REACT_APP_API_URL || '';
 
-const SitesManager = ({ cliente }) => {
+const SitesManager = ({ cliente, onBack }) => {
     const [sites, setSites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -26,10 +28,11 @@ const SitesManager = ({ cliente }) => {
 
     const fetchSites = useCallback(async () => {
         try {
-            console.log('Intentando obtener sites para cliente:', cliente);
+            logger.debug('Intentando obtener sites para cliente:', cliente);
             const token = localStorage.getItem('token');
             
-            const response = await axios.get('/api/sites', {
+            // Asegurarnos de que la URL sea correcta
+            const response = await axios.get(`/api/sites`, {
                 headers: { 
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -37,20 +40,20 @@ const SitesManager = ({ cliente }) => {
                 params: { cliente }
             });
 
-            console.log('Respuesta completa:', response);
+            logger.debug('Respuesta completa:', response);
             // Asegurarnos de que sites sea siempre un array
             const sitesData = response.data.data || response.data || [];
-            console.log('Sites procesados:', sitesData);
+            logger.debug('Sites procesados:', sitesData);
             
             if (!Array.isArray(sitesData)) {
-                console.error('Los datos recibidos no son un array:', sitesData);
+                logger.error('Los datos recibidos no son un array:', sitesData);
                 throw new Error('Formato de datos inválido');
             }
 
             setSites(sitesData);
             setError(null);
         } catch (error) {
-            console.error('Error detallado:', error.response || error);
+            logger.error('Error detallado:', error.response || error);
             setError('Error al cargar los sites: ' + (error.response?.data?.message || error.message));
             setSites([]); // Establecer un array vacío en caso de error
         } finally {
@@ -59,8 +62,10 @@ const SitesManager = ({ cliente }) => {
     }, [cliente]);
 
     useEffect(() => {
-        fetchSites();
-    }, [fetchSites]);
+        if (cliente) {
+            fetchSites();
+        }
+    }, [fetchSites, cliente]);
 
     const handleImportComplete = () => {
         fetchSites(); // Recargar la lista después de importar
@@ -87,7 +92,7 @@ const SitesManager = ({ cliente }) => {
             });
             fetchSites();
         } catch (error) {
-            console.error('Error al eliminar:', error);
+            logger.error('Error al eliminar:', error);
             setError('Error al eliminar el site');
         }
     };
@@ -103,7 +108,7 @@ const SitesManager = ({ cliente }) => {
             setDialogOpen(false);
             fetchSites();
         } catch (error) {
-            console.error('Error al actualizar:', error);
+            logger.error('Error al actualizar:', error);
             setError('Error al actualizar el site');
         }
     };
@@ -127,9 +132,19 @@ const SitesManager = ({ cliente }) => {
 
     return (
         <Container>
-            <Typography variant="h5" gutterBottom>
-                Sites de {cliente}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Button 
+                    startIcon={<ArrowBackIcon />} 
+                    onClick={onBack}
+                    variant="outlined"
+                    sx={{ mr: 2 }}
+                >
+                    Volver
+                </Button>
+                <Typography variant="h5">
+                    Sites de {cliente}
+                </Typography>
+            </Box>
 
             <SiteBulkImporter 
                 cliente={cliente}

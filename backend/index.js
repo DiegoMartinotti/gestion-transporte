@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const config = require('./config/config');
 const errorHandler = require('./middleware/errorHandler');
+const logger = require('./utils/logger');
 // Comentar o remover esta línea si no quieres usar rate limiting por ahora
 // const rateLimiter = require('./middleware/rateLimiter');
 
@@ -40,13 +41,13 @@ mongoose.connect(config.mongoUri, {
   useUnifiedTopology: true 
 })
 .then(() => {
-  console.log('Conexión a MongoDB exitosa');
+  logger.info('Conexión a MongoDB exitosa');
   app.listen(config.port, () => {
-    console.log(`Servidor ejecutándose en http://localhost:${config.port}`);
+    logger.info(`Servidor ejecutándose en http://localhost:${config.port}`);
   });
 })
 .catch(error => {
-  console.error('Error de conexión a MongoDB:', error.message);
+  logger.error('Error de conexión a MongoDB:', error.message);
   process.exit(1);
 });
 

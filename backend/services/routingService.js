@@ -1,4 +1,5 @@
 const axios = require('axios');
+const logger = require('../utils/logger');
 
 // Usando OSRM (Open Source Routing Machine)
 const OSRM_URL = 'http://router.project-osrm.org/route/v1/driving';
@@ -6,7 +7,7 @@ const OSRM_URL = 'http://router.project-osrm.org/route/v1/driving';
 async function calcularDistanciaRuta(origen, destino) {
     try {
         const url = `${OSRM_URL}/${origen[0]},${origen[1]};${destino[0]},${destino[1]}`;
-        console.log('Calculando ruta:', url);
+        logger.debug('Calculando ruta:', url);
 
         const response = await axios.get(url, {
             params: {
@@ -23,7 +24,7 @@ async function calcularDistanciaRuta(origen, destino) {
 
         throw new Error('No se pudo calcular la ruta');
     } catch (error) {
-        console.error('Error calculando distancia por ruta:', error);
+        logger.error('Error calculando distancia por ruta:', error);
         throw error;
     }
 }

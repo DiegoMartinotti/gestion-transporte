@@ -8,13 +8,9 @@ const {
     bulkCreateSites,
     searchNearby
 } = require('../controllers/siteController');
+const logger = require('../utils/logger');
 
-router.use((req, res, next) => {
-    console.log(`Sites Route: ${req.method} ${req.path}`);
-    next();
-});
-
-// Rutas CRUD
+// Rutas
 router.get('/', getSites);
 router.post('/', createSite);
 router.put('/:id', updateSite);

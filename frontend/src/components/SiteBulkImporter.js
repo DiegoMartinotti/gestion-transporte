@@ -5,6 +5,7 @@ import {
     Paper, TextField, CircularProgress, Alert
 } from '@mui/material';
 import axios from 'axios';
+import logger from '../utils/logger';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -35,7 +36,7 @@ const SiteBulkImporter = ({ cliente, onComplete }) => {
                 provincia: address.state || ''
             };
         } catch (error) {
-            console.error('Error en geocodificación:', error);
+            logger.error('Error en geocodificación:', error);
             return { direccion: '', localidad: '', provincia: '' };
         }
     };

@@ -1,6 +1,7 @@
 const Site = require('../models/Site');
 const { tryCatch } = require('../utils/errorHandler');
 const { ValidationError } = require('../utils/errors');
+const logger = require('../utils/logger');
 
 /**
  * Get sites by client
@@ -32,7 +33,7 @@ exports.getSites = tryCatch(async (req, res) => {
         };
     });
 
-    console.log('Sites procesados:', sitesFormateados);
+    logger.debug('Sites procesados:', sitesFormateados);
 
     res.json({
         success: true,
@@ -60,7 +61,7 @@ exports.createSite = async (req, res) => {
                 message: 'Ya existe un site con este nombre para este cliente'
             });
         }
-        console.error('Error al crear site:', error);
+        logger.error('Error al crear site:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -77,7 +78,7 @@ exports.updateSite = async (req, res) => {
         }
         res.json(site);
     } catch (error) {
-        console.error('Error al actualizar site:', error);
+        logger.error('Error al actualizar site:', error);
         res.status(500).json({ message: 'Error al actualizar site' });
     }
 };
@@ -90,7 +91,7 @@ exports.deleteSite = async (req, res) => {
         }
         res.json({ message: 'Site eliminado exitosamente' });
     } catch (error) {
-        console.error('Error al eliminar site:', error);
+        logger.error('Error al eliminar site:', error);
         res.status(500).json({ message: 'Error al eliminar site' });
     }
 };
@@ -98,7 +99,7 @@ exports.deleteSite = async (req, res) => {
 exports.bulkCreateSites = async (req, res) => {
     try {
         const { sites } = req.body;
-        console.log('Recibidos sites para importación:', sites.length);
+        logger.debug('Recibidos sites para importación:', sites.length);
 
         const resultados = {
             exitosos: 0,
@@ -142,7 +143,7 @@ exports.bulkCreateSites = async (req, res) => {
             resultados
         });
     } catch (error) {
-        console.error('Error en importación masiva:', error);
+        logger.error('Error en importación masiva:', error);
         res.status(500).json({ message: 'Error en la importación masiva' });
     }
 };
@@ -165,7 +166,7 @@ exports.searchNearby = async (req, res) => {
 
         res.json(sites);
     } catch (error) {
-        console.error('Error en búsqueda por proximidad:', error);
+        logger.error('Error en búsqueda por proximidad:', error);
         res.status(500).json({ message: 'Error en la búsqueda' });
     }
 };
