@@ -15,7 +15,11 @@ import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   ExitToApp as LogoutIcon,
-  AccountCircle as AccountCircleIcon
+  AccountCircle as AccountCircleIcon,
+  People as PeopleIcon,
+  LocalShipping as LocalShippingIcon,
+  Calculate as CalculateIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -43,6 +47,26 @@ const Navbar = () => {
     handleClose();
     logout();
     navigate('/login');
+  };
+
+  // Definir los elementos del menú para evitar repetición
+  const menuItems = [
+    { path: '/', label: 'Dashboard', icon: <DashboardIcon fontSize="small" /> },
+    { path: '/clientes', label: 'Gestión de Clientes', icon: <PeopleIcon fontSize="small" /> },
+    { path: '/viajes', label: 'Gestión de Viajes', icon: <LocalShippingIcon fontSize="small" /> },
+    { path: '/calcular-tarifa', label: 'Calcular Tarifa', icon: <CalculateIcon fontSize="small" /> },
+    { path: '/empresas', label: 'Gestión de Empresas', icon: <BusinessIcon fontSize="small" /> }
+  ];
+
+  // Estilo común para los elementos del menú
+  const menuItemStyle = { 
+    display: 'flex', 
+    alignItems: 'center',
+    gap: 1,
+    minWidth: 200,
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    }
   };
 
   return (
@@ -92,21 +116,16 @@ const Navbar = () => {
             }
           }}
         >
-          <MenuItem 
-            onClick={() => handleNavigate('/')} 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: 1,
-              minWidth: 200,
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-              }
-            }}
-          >
-            <DashboardIcon fontSize="small" />
-            Dashboard
-          </MenuItem>
+          {menuItems.map((item, index) => (
+            <MenuItem 
+              key={index}
+              onClick={() => handleNavigate(item.path)} 
+              sx={menuItemStyle}
+            >
+              {item.icon}
+              {item.label}
+            </MenuItem>
+          ))}
         </Menu>
 
         <Typography 
