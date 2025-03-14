@@ -3,13 +3,18 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Button, Checkbox, TextField, FormControl, InputLabel, Select, MenuItem,
-    IconButton, Box, Alert, Typography, Toolbar, Grid, Snackbar
+    IconButton, Box, Alert, Typography, Toolbar, Grid, Snackbar, Chip, Tooltip, CircularProgress
 } from '@mui/material';
 import { 
     Add as AddIcon, 
     Delete as DeleteIcon,
     FilterAlt as FilterIcon,
-    CloudUpload as CloudUploadIcon
+    CloudUpload as CloudUploadIcon,
+    Info as InfoIcon,
+    FileDownload as FileDownloadIcon,
+    Edit as EditIcon,
+    CheckCircle as CheckCircleIcon,
+    Cancel as CancelIcon
 } from '@mui/icons-material';
 import { format, parseISO, isWithinInterval } from 'date-fns';
 import axios from 'axios';
@@ -23,6 +28,7 @@ import 'dayjs/locale/es';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import logger from '../utils/logger';
+import * as XLSX from 'xlsx';
 
 // Configurar dayjs para usar español y formato de fecha preferido
 dayjs.locale('es');
@@ -30,8 +36,78 @@ dayjs.locale('es');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// Configurar dayjs para no ajustar automáticamente las zonas horarias
+const parseDate = (dateString) => {
+    if (!dateString) return null;
+    return dayjs(dateString).format('YYYY-MM-DD');
+};
+
 const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
-    const [tramoData, setTramoData] = useState(initialData);
+    const [tramoData, setTramoData] = useState({
+        origen: initialData?.origen || '',
+        destino: initialData?.destino || '',
+        cliente: initialData?.cliente || '',
+        tarifasHistoricas: [{
+            tipo: initialData?.tarifasHistoricas?.[0]?.tipo || 'TRMC',
+            metodoCalculo: initialData?.tarifasHistoricas?.[0]?.metodoCalculo || 'Kilometro',
+            valor: initialData?.tarifasHistoricas?.[0]?.valor || 0,
+            valorPeaje: initialData?.tarifasHistoricas?.[0]?.valorPeaje || 0,
+            vigenciaDesde: initialData?.tarifasHistoricas?.[0]?.vigenciaDesde ? dayjs(initialData.tarifasHistoricas[0].vigenciaDesde) : dayjs(),
+            vigenciaHasta: initialData?.tarifasHistoricas?.[0]?.vigenciaHasta ? dayjs(initialData.tarifasHistoricas[0].vigenciaHasta) : dayjs().add(1, 'year')
+        }]
+    });
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        
+        if (['tipo', 'metodoCalculo', 'valor', 'valorPeaje'].includes(name)) {
+            setTramoData({
+                ...tramoData,
+                tarifasHistoricas: [
+                    {
+                        ...tramoData.tarifasHistoricas[0],
+                        [name]: value
+                    }
+                ]
+            });
+        } else {
+            setTramoData({
+                ...tramoData,
+                [name]: value
+            });
+        }
+    };
+
+    const handleDateChange = (name, date) => {
+        setTramoData({
+            ...tramoData,
+            tarifasHistoricas: [
+                {
+                    ...tramoData.tarifasHistoricas[0],
+                    [name]: date
+                }
+            ]
+        });
+    };
+
+    const handleSave = () => {
+        const tarifaHistorica = tramoData.tarifasHistoricas[0];
+        
+        // Optimización: Usar formato ISO directamente para evitar manipulaciones innecesarias
+        const vigenciaDesde = tarifaHistorica.vigenciaDesde.format('YYYY-MM-DD');
+        const vigenciaHasta = tarifaHistorica.vigenciaHasta.format('YYYY-MM-DD');
+        
+        const dataToSave = {
+            ...tramoData,
+            tarifasHistoricas: [{
+                ...tarifaHistorica,
+                vigenciaDesde,
+                vigenciaHasta
+            }]
+        };
+        
+        onSave(dataToSave);
+    };
 
     return (
         <Dialog 
@@ -45,7 +121,7 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
                     <InputLabel>Origen</InputLabel>
                     <Select
                         value={tramoData.origen}
-                        onChange={(e) => setTramoData({...tramoData, origen: e.target.value})}
+                        onChange={(e) => handleInputChange({target: {name: 'origen', value: e.target.value}})}
                     >
                         {sites.sort((a, b) => a.Site.localeCompare(b.Site)).map(site => (
                             <MenuItem key={site._id} value={site._id}>
@@ -59,7 +135,7 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
                     <InputLabel>Destino</InputLabel>
                     <Select
                         value={tramoData.destino}
-                        onChange={(e) => setTramoData({...tramoData, destino: e.target.value})}
+                        onChange={(e) => handleInputChange({target: {name: 'destino', value: e.target.value}})}
                     >
                         {sites.sort((a, b) => a.Site.localeCompare(b.Site)).map(site => (
                             <MenuItem key={site._id} value={site._id}>
@@ -72,8 +148,8 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Tipo</InputLabel>
                     <Select
-                        value={tramoData.tipo}
-                        onChange={(e) => setTramoData({...tramoData, tipo: e.target.value})}
+                        value={tramoData.tarifasHistoricas[0].tipo}
+                        onChange={(e) => handleInputChange({target: {name: 'tipo', value: e.target.value}})}
                     >
                         <MenuItem value="TRMC">TRMC</MenuItem>
                         <MenuItem value="TRMI">TRMI</MenuItem> {/* Cambiado de TMRI a TRMI */}
@@ -83,8 +159,8 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
                 <FormControl fullWidth margin="normal">
                     <InputLabel>Método de Cálculo</InputLabel>
                     <Select
-                        value={tramoData.metodoCalculo}
-                        onChange={(e) => setTramoData({...tramoData, metodoCalculo: e.target.value})}
+                        value={tramoData.tarifasHistoricas[0].metodoCalculo}
+                        onChange={(e) => handleInputChange({target: {name: 'metodoCalculo', value: e.target.value}})}
                     >
                         <MenuItem value="Kilometro">Por Kilómetro</MenuItem>
                         <MenuItem value="Palet">Por Palet</MenuItem>
@@ -97,54 +173,46 @@ const AddTramoDialog = ({ open, onClose, onSave, sites, initialData }) => {
                     margin="normal"
                     label="Valor Peaje"
                     type="number"
-                    value={tramoData.valorPeaje}
-                    onChange={(e) => setTramoData({...tramoData, valorPeaje: parseFloat(e.target.value)})}
+                    inputProps={{ step: "0.01" }}
+                    value={tramoData.tarifasHistoricas[0].valorPeaje}
+                    onChange={(e) => handleInputChange({target: {name: 'valorPeaje', value: parseFloat(e.target.value)}})}
                 />
 
                 <TextField
                     fullWidth
                     margin="normal"
-                    label="Valor"
+                    label="Valor Tarifa"
                     type="number"
-                    value={tramoData.valor}
-                    onChange={(e) => setTramoData({
-                        ...tramoData, 
-                        valor: parseFloat(e.target.value)
-                    })}
-                    helperText={
-                        tramoData.metodoCalculo === 'Kilometro' ? 'Valor por kilómetro' :
-                        tramoData.metodoCalculo === 'Palet' ? 'Valor por palet' :
-                        'Valor fijo'
-                    }
+                    inputProps={{ step: "0.01" }}
+                    value={tramoData.tarifasHistoricas[0].valor}
+                    onChange={(e) => handleInputChange({target: {name: 'valor', value: parseFloat(e.target.value)}})}
                 />
 
-                <TextField
-                    fullWidth
-                    margin="normal"
-                    label="Vigencia Desde"
-                    type="date"
-                    value={tramoData.vigenciaDesde}
-                    onChange={(e) => setTramoData({...tramoData, vigenciaDesde: e.target.value})}
-                    InputLabelProps={{ shrink: true }}
-                />
-
-                <TextField
-                    fullWidth
-                    margin="normal"
-                    label="Vigencia Hasta"
-                    type="date"
-                    value={tramoData.vigenciaHasta}
-                    onChange={(e) => setTramoData({...tramoData, vigenciaHasta: e.target.value})}
-                    InputLabelProps={{ shrink: true }}
-                />
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, mt: 2 }}>
+                        <DatePicker
+                            label="Vigencia Desde"
+                            value={tramoData.tarifasHistoricas[0].vigenciaDesde}
+                            onChange={(date) => handleDateChange('vigenciaDesde', date)}
+                            format="DD/MM/YYYY"
+                            sx={{ flex: 1 }}
+                        />
+                        <DatePicker
+                            label="Vigencia Hasta"
+                            value={tramoData.tarifasHistoricas[0].vigenciaHasta}
+                            onChange={(date) => handleDateChange('vigenciaHasta', date)}
+                            format="DD/MM/YYYY"
+                            sx={{ flex: 1 }}
+                        />
+                    </Box>
+                </LocalizationProvider>
             </DialogContent>
+
             <DialogActions>
-                <Button onClick={onClose}>Cancelar</Button>
-                <Button 
-                    onClick={() => onSave(tramoData)} 
-                    variant="contained" 
-                    color="primary"
-                >
+                <Button onClick={onClose} color="primary">
+                    Cancelar
+                </Button>
+                <Button onClick={handleSave} color="primary" variant="contained">
                     Guardar
                 </Button>
             </DialogActions>
@@ -160,6 +228,69 @@ const formatMoney = (value) => {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
+};
+
+// Función para obtener la tarifa vigente de un tramo
+const obtenerTarifaVigente = (tramo, hoyStr) => {
+    // Si el tramo tiene una tarifaActual (del nuevo formato)
+    if (tramo.tarifaActual) {
+        return tramo.tarifaActual;
+    } 
+    
+    if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
+        // Buscar en tarifasHistoricas por tipo y vigencia
+        const tarifaVigenteActual = tramo.tarifasHistoricas.find(tarifa => {
+            // Si hay un tipo específico en el tramo, filtrar por ese tipo
+            if (tramo.tipo && tarifa.tipo !== tramo.tipo) {
+                return false;
+            }
+            
+            // Extraer solo la parte de la fecha (YYYY-MM-DD)
+            const tarifaDesdeStr = tarifa.vigenciaDesde.split('T')[0];
+            const tarifaHastaStr = tarifa.vigenciaHasta.split('T')[0];
+            
+            // Comparar las fechas como strings
+            return tarifaDesdeStr <= hoyStr && tarifaHastaStr >= hoyStr;
+        });
+        
+        // Si no hay vigente, usar la primera
+        return tarifaVigenteActual || tramo.tarifasHistoricas[0];
+    } 
+    
+    // Para tramos con formato antiguo
+    return {
+        tipo: tramo.tipo || 'TRMC',
+        metodoCalculo: tramo.metodoCalculo || 'Kilometro',
+        valor: tramo.valor || 0,
+        valorPeaje: tramo.valorPeaje || 0,
+        vigenciaDesde: tramo.vigenciaDesde,
+        vigenciaHasta: tramo.vigenciaHasta
+    };
+};
+
+// Función para generar el detalle del método de cálculo
+const generarDetalleMetodo = (metodoCalculo, valor, distancia) => {
+    switch(metodoCalculo) {
+        case "Kilometro":
+            return `$${formatMoney(valor)}/km (${distancia || 0} km)`;
+        case "Palet":
+            return `$${formatMoney(valor)}/palet`;
+        case "Fijo":
+            return "Tarifa fija";
+        default:
+            return metodoCalculo;
+    }
+};
+
+// Función para formatear una fecha ISO a formato DD/MM/YYYY
+const formatearFecha = (fechaStr) => {
+    if (!fechaStr) return 'N/A';
+    
+    // Extraer solo la parte de la fecha (YYYY-MM-DD)
+    const soloFecha = fechaStr.split('T')[0];
+    
+    // Convertir a formato DD/MM/YYYY
+    return `${soloFecha.substring(8, 10)}/${soloFecha.substring(5, 7)}/${soloFecha.substring(0, 4)}`;
 };
 
 const TarifarioViewer = ({ open, cliente, onClose }) => {
@@ -181,16 +312,25 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
         vigenciaHasta: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
     });
     const [error, setError] = useState(null);
-    const [successMessage, setSuccessMessage] = useState(null);  // Agregando estado faltante
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [successMessage, setSuccessMessage] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [tramoToDelete, setTramoToDelete] = useState(null);
+    const [tramoToEdit, setTramoToEdit] = useState(null);
+    const [permisos, setPermisos] = useState(['editar_tramos', 'eliminar_tramos']);
+    
+    // Metadata
+    const [metadata, setMetadata] = useState({
+        totalTramos: 0,
+        tramosUnicos: 0,
+        combinacionesUnicas: 0
+    });
     
     // New state for filters and multi-selection
     const [filtroVigencia, setFiltroVigencia] = useState({
         desde: '',
         hasta: ''
     });
-    const [selectedTramos, setSelectedTramos] = useState({});
+    const [selectedTramos, setSelectedTramos] = useState([]);
     const [filteredTramos, setFilteredTramos] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
     const [isVigenciaMasivaOpen, setIsVigenciaMasivaOpen] = useState(false);
@@ -206,22 +346,102 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             return;
         }
         
-        let results = [...tramos];
-        if (filtroVigencia.desde && filtroVigencia.hasta) {
-            const desde = parseISO(filtroVigencia.desde);
-            const hasta = parseISO(filtroVigencia.hasta);
-
-            results = results.filter(tramo => {
-                const tramoDesde = new Date(tramo.vigenciaDesde);
-                const tramoHasta = new Date(tramo.vigenciaHasta);
-                
-                return isWithinInterval(desde, { start: tramoDesde, end: tramoHasta }) ||
-                       isWithinInterval(hasta, { start: tramoDesde, end: tramoHasta }) ||
-                       (desde <= tramoDesde && hasta >= tramoHasta);
-            });
+        // Si no hay filtros de fecha, mostrar todos los tramos
+        if (!filtroVigencia.desde || !filtroVigencia.hasta) {
+            setFilteredTramos(tramos);
+            return;
         }
         
-        setFilteredTramos(results);
+        // Convertir las fechas de filtro a formato YYYY-MM-DD
+        const desdeStr = filtroVigencia.desde;
+        const hastaStr = filtroVigencia.hasta;
+
+        logger.debug(`Filtrando tramos por rango de fechas: ${desdeStr} - ${hastaStr}`);
+
+        // Crear un mapa para almacenar solo el tramo más reciente por cada combinación
+        const tramosUnicos = new Map();
+        
+        // Procesar cada tramo
+        tramos.forEach(tramo => {
+            // Verificar si el tramo tiene tarifas históricas
+            if (tramo.tarifasHistoricas?.length > 0) {
+                // Filtrar tarifas que se superpongan con el rango de fechas solicitado
+                const tarifasEnRango = tramo.tarifasHistoricas.filter(tarifa => {
+                    // Extraer solo la parte de la fecha (YYYY-MM-DD)
+                    const tarifaDesdeStr = tarifa.vigenciaDesde.split('T')[0];
+                    const tarifaHastaStr = tarifa.vigenciaHasta.split('T')[0];
+                    
+                    // Verificar si la tarifa se superpone con el rango de fechas
+                    return tarifaDesdeStr <= hastaStr && tarifaHastaStr >= desdeStr;
+                });
+                
+                // Si no hay tarifas en rango, omitir este tramo
+                if (tarifasEnRango.length === 0) return;
+                
+                // Agrupar por tipo de tarifa
+                const tiposTarifa = new Set(tarifasEnRango.map(t => t.tipo));
+                
+                // Para cada tipo de tarifa, encontrar la más reciente en el rango
+                tiposTarifa.forEach(tipo => {
+                    // Filtrar tarifas por tipo
+                    const tarifasDeTipo = tarifasEnRango.filter(t => t.tipo === tipo);
+                    
+                    // Ordenar por fecha de vigencia (más reciente primero)
+                    tarifasDeTipo.sort((a, b) => 
+                        new Date(b.vigenciaHasta) - new Date(a.vigenciaHasta)
+                    );
+                    
+                    if (tarifasDeTipo.length > 0) {
+                        // Crear una copia del tramo con la tarifa específica
+                        const tramoConTarifa = {
+                            ...tramo,
+                            tipo: tipo, // Asignar el tipo de la tarifa al tramo
+                            tarifaActual: tarifasDeTipo[0] // Guardar referencia a la tarifa más reciente
+                        };
+                        
+                        // Clave única que incluye origen, destino y tipo
+                        const key = `${tramo.origen?.Site}-${tramo.destino?.Site}-${tipo}`;
+                        
+                        // Guardar en el mapa
+                        if (!tramosUnicos.has(key) || 
+                            new Date(tarifasDeTipo[0].vigenciaHasta) > new Date(tramosUnicos.get(key).tarifaActual.vigenciaHasta)) {
+                            tramosUnicos.set(key, tramoConTarifa);
+                        }
+                    }
+                });
+            } else if (tramo.vigenciaDesde && tramo.vigenciaHasta) {
+                // Para tramos con formato antiguo
+                // Extraer solo la parte de la fecha (YYYY-MM-DD)
+                const tramoDesdeStr = tramo.vigenciaDesde.split('T')[0];
+                const tramoHastaStr = tramo.vigenciaHasta.split('T')[0];
+                
+                // Verificar si el tramo se superpone con el rango de fechas
+                if (tramoDesdeStr <= hastaStr && tramoHastaStr >= desdeStr) {
+                    // Clave única que incluye origen, destino y tipo
+                    const key = `${tramo.origen?.Site}-${tramo.destino?.Site}-${tramo.tipo || 'TRMC'}`;
+                    
+                    // Si no existe un tramo para esta clave o este tramo tiene una fecha más reciente
+                    if (!tramosUnicos.has(key) || 
+                        new Date(tramo.vigenciaHasta) > new Date(tramosUnicos.get(key).vigenciaHasta)) {
+                        tramosUnicos.set(key, tramo);
+                    }
+                }
+            }
+        });
+        
+        // Convertir el mapa a array
+        const filteredResults = Array.from(tramosUnicos.values());
+        
+        logger.debug(`Filtrado completado: ${filteredResults.length} tramos coinciden con el filtro de fecha`);
+        
+        // Si no hay resultados, mostrar un mensaje informativo
+        if (filteredResults.length === 0) {
+            setError(`No se encontraron tramos para el período ${desdeStr} - ${hastaStr}`);
+        } else {
+            setError(null);
+        }
+        
+        setFilteredTramos(filteredResults);
     }, [tramos, filtroVigencia]);
 
     const fetchSites = useCallback(async () => {
@@ -245,28 +465,33 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             const token = localStorage.getItem('token');
             logger.debug('Solicitando tramos para cliente:', cliente);
             
-            const url = `/api/tramos/cliente/${encodeURIComponent(cliente)}`;
+            // Añadir parámetros de filtro de fecha si están presentes
+            let url = `/api/tramos/cliente/${encodeURIComponent(cliente)}`;
+            if (filtroVigencia.desde && filtroVigencia.hasta) {
+                url += `?desde=${filtroVigencia.desde}&hasta=${filtroVigencia.hasta}&incluirHistoricos=true`;
+                logger.debug(`Solicitando tramos históricos con filtro: ${url}`);
+            }
+            
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (response.data) {
-                if (response.data.success) {
-                    const tramosRecibidos = response.data.data || [];
-                    setTramos(tramosRecibidos);
-                    setFilteredTramos(tramosRecibidos);
-                    setError(null);
-                } else if (Array.isArray(response.data)) {
-                    setTramos(response.data);
-                    setFilteredTramos(response.data);
-                    setError(null);
-                } else {
-                    setError('Formato de respuesta no reconocido');
-                    setTramos([]);
-                    setFilteredTramos([]);
+            if (response.data && response.data.success) {
+                const tramosRecibidos = response.data.data || [];
+                logger.debug(`Recibidos ${tramosRecibidos.length} tramos del servidor`);
+                
+                // Establecer los tramos recibidos directamente
+                setTramos(tramosRecibidos);
+                setFilteredTramos(tramosRecibidos);
+                
+                if (response.data.metadata) {
+                    setMetadata(response.data.metadata);
+                    logger.debug('Metadata recibida:', response.data.metadata);
                 }
+                
+                setError(null);
             } else {
-                setError('Respuesta vacía del servidor');
+                setError('Formato de respuesta no reconocido');
                 setTramos([]);
                 setFilteredTramos([]);
             }
@@ -278,8 +503,8 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
         } finally {
             setLoading(false);
         }
-        setSelectedTramos({});
-    }, [open, cliente]);
+        setSelectedTramos([]);
+    }, [open, cliente, filtroVigencia.desde, filtroVigencia.hasta]);
 
     // Inicializar filteredTramos con tramos al principio
     useEffect(() => {
@@ -301,44 +526,57 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
 
     const handleAddTramo = async (tramoData) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post('/api/tramos', 
-                { ...tramoData, cliente },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            setLoading(true);
+            // Asegúrate de que el cliente esté establecido
+            tramoData.cliente = cliente;
             
+            let response;
+            
+            // Si hay un tramo para editar, actualizar en lugar de crear
+            if (tramoToEdit) {
+                logger.debug('Actualizando tramo existente:', tramoToEdit._id);
+                response = await axios.put(`/api/tramos/${tramoToEdit._id}`, tramoData);
+                setSuccessMessage('Tramo actualizado exitosamente');
+            } else {
+                logger.debug('Creando nuevo tramo');
+                response = await axios.post('/api/tramos', tramoData);
+                setSuccessMessage('Tramo agregado exitosamente');
+            }
+            
+            // Cerrar el diálogo y limpiar el tramo en edición
             setShowAddForm(false);
-            setNewTramo({
-                origen: '',
-                destino: '',
-                tipo: 'TRMC',
-                metodoCalculo: 'Palet',
-                valor: 0,
-                valorPeaje: 0,
-                distancia: 0,
-                vigenciaDesde: new Date(),
-                vigenciaHasta: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-            });
+            setTramoToEdit(null);
+            
+            // Recargar los tramos
             fetchTramos();
         } catch (error) {
-            logger.error('Error al crear tramo:', error);
+            logger.error('Error al procesar tramo:', error);
+            setError(`Error: ${error.response?.data?.message || error.message}`);
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleDeleteClick = (tramo) => {
-        // For single delete
         setTramoToDelete(tramo);
-        setDeleteConfirmOpen(true);
+        setShowDeleteConfirm(true);
     };
 
     const handleDeleteSelected = () => {
         // For bulk delete
-        const selectedCount = Object.values(selectedTramos).filter(Boolean).length;
+        const selectedCount = selectedTramos.length;
         if (selectedCount === 0) return;
         
         // Set null to indicate bulk delete
         setTramoToDelete(null);
-        setDeleteConfirmOpen(true);
+        setShowDeleteConfirm(true);
+    };
+
+    // Función para manejar la edición de un tramo
+    const handleEditClick = (tramo) => {
+        logger.debug('Editando tramo:', tramo);
+        setTramoToEdit(tramo);
+        setShowAddForm(true);
     };
 
     const handleDeleteConfirm = async () => {
@@ -352,9 +590,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                 });
             } else {
                 // Bulk delete - get all selected IDs
-                const selectedIds = Object.entries(selectedTramos)
-                    .filter(([_, selected]) => selected)
-                    .map(([id]) => id);
+                const selectedIds = selectedTramos;
                 
                 // Delete each tramo in sequence
                 for (const id of selectedIds) {
@@ -366,7 +602,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             
             // Refresh the list and reset selection
             fetchTramos();
-            setDeleteConfirmOpen(false);
+            setShowDeleteConfirm(false);
             setTramoToDelete(null);
         } catch (error) {
             logger.error('Error al eliminar tramo(s):', error);
@@ -375,42 +611,41 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     };
 
     const handleDeleteCancel = () => {
-        setDeleteConfirmOpen(false);
+        setShowDeleteConfirm(false);
         setTramoToDelete(null);
     };
 
     // New functions for multi-selection
     const toggleSelectTramo = (id) => {
-        setSelectedTramos(prev => ({
-            ...prev,
-            [id]: !prev[id]
-        }));
+        setSelectedTramos(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(tramoId => tramoId !== id);
+            } else {
+                return [...prev, id];
+            }
+        });
     };
 
     const toggleSelectAll = () => {
         // Check if all visible tramos are already selected
-        const allSelected = filteredTramos.every(t => selectedTramos[t._id]);
+        const allSelected = filteredTramos.length > 0 && 
+                           filteredTramos.every(t => selectedTramos.includes(t._id));
         
-        // Create new selection state
-        const newSelection = {};
-        
-        if (!allSelected) {
+        if (allSelected) {
+            // Deselect all
+            setSelectedTramos([]);
+        } else {
             // Select all visible tramos
-            filteredTramos.forEach(t => {
-                newSelection[t._id] = true;
-            });
+            setSelectedTramos(filteredTramos.map(t => t._id));
         }
-        // If all were selected, this will clear the selection
-        
-        setSelectedTramos(newSelection);
     };
 
     // Calculate if all visible tramos are selected
     const areAllSelected = filteredTramos.length > 0 && 
-                           filteredTramos.every(t => selectedTramos[t._id]);
+                           filteredTramos.every(t => selectedTramos.includes(t._id));
     
     // Count selected tramos
-    const selectedCount = Object.values(selectedTramos).filter(Boolean).length;
+    const selectedCount = selectedTramos.length;
 
     const handleCloseAll = () => {
         // Cerrar todos los diálogos de una vez
@@ -452,44 +687,315 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const selectedIds = Object.entries(selectedTramos)
-                .filter(([_, selected]) => selected)
-                .map(([id]) => id);
+            const selectedIds = selectedTramos;
 
-            // Convertir las fechas a UTC manteniendo el día seleccionado
-            const vigenciaDesdeUTC = vigenciaMasiva.vigenciaDesde
-                .utc(true)
-                .startOf('day')
-                .toISOString();
-            
-            const vigenciaHastaUTC = vigenciaMasiva.vigenciaHasta
-                .utc(true)
-                .startOf('day')
-                .toISOString();
+            // Validar que haya tramos seleccionados
+            if (selectedIds.length === 0) {
+                setError('Debe seleccionar al menos un tramo para actualizar');
+                setLoading(false);
+                return;
+            }
+
+            // Validar que la fecha de inicio sea anterior a la fecha de fin
+            if (vigenciaMasiva.vigenciaDesde.isAfter(vigenciaMasiva.vigenciaHasta)) {
+                setError('La fecha de inicio debe ser anterior a la fecha de fin');
+                setLoading(false);
+                return;
+            }
+
+            // Formatear las fechas como YYYY-MM-DD sin ajustes de zona horaria
+            const vigenciaDesdeISO = vigenciaMasiva.vigenciaDesde.format(ISO_FORMAT);
+            const vigenciaHastaISO = vigenciaMasiva.vigenciaHasta.format(ISO_FORMAT);
+
+            logger.debug('Actualizando vigencias con fechas:', { vigenciaDesdeISO, vigenciaHastaISO });
 
             const response = await axios.post(`/api/tramos/updateVigenciaMasiva`, {
                 tramosIds: selectedIds,
-                vigenciaDesde: vigenciaDesdeUTC,
-                vigenciaHasta: vigenciaHastaUTC,
+                vigenciaDesde: vigenciaDesdeISO,
+                vigenciaHasta: vigenciaHastaISO,
                 cliente
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (response.data.conflictos && response.data.conflictos.length > 0) {
-                setError(`Se actualizaron ${response.data.actualizados.length} tramos. ${response.data.conflictos.length} tramos tienen conflictos de fechas.`);
+            // Procesar la respuesta
+            const { actualizados = [], conflictos = [] } = response.data;
+            
+            if (conflictos.length > 0) {
+                setError(`Se actualizaron ${actualizados.length} tramos. ${conflictos.length} tramos tienen conflictos de fechas.`);
             } else {
-                setSuccessMessage(`Se actualizaron ${response.data.actualizados.length} tramos correctamente`);
+                setSuccessMessage(`Se actualizaron ${actualizados.length} tramos correctamente`);
             }
 
+            // Cerrar el diálogo y limpiar la selección
             setIsVigenciaMasivaOpen(false);
-            setSelectedTramos({});
+            setSelectedTramos([]);
+            
+            // Recargar los tramos
             fetchTramos();
         } catch (error) {
+            logger.error('Error al actualizar vigencias:', error);
             setError('Error al actualizar las vigencias: ' + (error.response?.data?.message || error.message));
         } finally {
             setLoading(false);
         }
+    };
+
+    // Función para exportar a Excel las tarifas seleccionadas
+    const handleExportToExcel = () => {
+        try {
+            // Verificar si hay tramos seleccionados
+            if (selectedTramos.length === 0) {
+                setError('Debe seleccionar al menos un tramo para exportar');
+                return;
+            }
+
+            // Obtener los tramos seleccionados
+            const tramosSeleccionados = filteredTramos.filter(tramo => 
+                selectedTramos.includes(tramo._id)
+            );
+
+            // Preparar los datos para el Excel
+            const excelData = prepararDatosExcel(tramosSeleccionados);
+            
+            if (excelData.length === 0) {
+                setError('No se pudieron procesar los tramos seleccionados');
+                return;
+            }
+            
+            // Crear y descargar el archivo Excel
+            crearArchivoExcel(excelData, `tarifas_seleccionadas_${cliente.Cliente || cliente}_${dayjs().format('DDMMYYYY')}.xlsx`);
+            
+            // Mostrar mensaje de éxito
+            setSuccessMessage(`Se exportaron ${excelData.length} tarifas correctamente`);
+        } catch (error) {
+            logger.error('Error al exportar a Excel:', error);
+            setError('Error al exportar a Excel: ' + error.message);
+        }
+    };
+
+    // Función para exportar a Excel todos los tramos visibles
+    const handleExportAllToExcel = () => {
+        try {
+            // Verificar si hay tramos para exportar
+            if (filteredTramos.length === 0) {
+                setError('No hay tramos para exportar');
+                return;
+            }
+
+            // Preparar los datos para el Excel
+            const excelData = prepararDatosExcel(filteredTramos);
+            
+            if (excelData.length === 0) {
+                setError('No se pudieron procesar los tramos');
+                return;
+            }
+            
+            // Crear y descargar el archivo Excel
+            crearArchivoExcel(excelData, `tarifas_completo_${cliente.Cliente || cliente}_${dayjs().format('DDMMYYYY')}.xlsx`);
+            
+            // Mostrar mensaje de éxito
+            setSuccessMessage(`Se exportaron ${excelData.length} tarifas correctamente`);
+        } catch (error) {
+            logger.error('Error al exportar a Excel:', error);
+            setError('Error al exportar a Excel: ' + error.message);
+        }
+    };
+
+    // Función auxiliar para preparar los datos para Excel
+    const prepararDatosExcel = (tramos) => {
+        // Obtener la fecha actual en formato YYYY-MM-DD
+        const hoyStr = dayjs().format('YYYY-MM-DD');
+        
+        return tramos.map(tramo => {
+            // Obtener la tarifa vigente para la fecha actual
+            const tarifaVigente = obtenerTarifaVigente(tramo, hoyStr);
+            
+            if (!tarifaVigente) return null;
+            
+            // Formatear fechas correctamente sin ajustes de zona horaria
+            const vigenciaDesdeStr = tarifaVigente.vigenciaDesde.split('T')[0];
+            const vigenciaHastaStr = tarifaVigente.vigenciaHasta.split('T')[0];
+            
+            // Convertir a formato DD/MM/YYYY para mostrar en Excel
+            const fechaDesdeFormateada = vigenciaDesdeStr ? 
+                `${vigenciaDesdeStr.substring(8, 10)}/${vigenciaDesdeStr.substring(5, 7)}/${vigenciaDesdeStr.substring(0, 4)}` : 
+                'N/A';
+            const fechaHastaFormateada = vigenciaHastaStr ? 
+                `${vigenciaHastaStr.substring(8, 10)}/${vigenciaHastaStr.substring(5, 7)}/${vigenciaHastaStr.substring(0, 4)}` : 
+                'N/A';
+            
+            // Generar el detalle según el método de cálculo
+            let detalleMetodo = "";
+            detalleMetodo = generarDetalleMetodo(tarifaVigente.metodoCalculo, tarifaVigente.valor, tramo.distancia);
+            
+            return {
+                'Origen': tramo.origen.Site,
+                'Destino': tramo.destino.Site,
+                'Tipo': tarifaVigente.tipo,
+                'Método de Cálculo': tarifaVigente.metodoCalculo,
+                'Valor': Number(tarifaVigente.valor),
+                'Valor Peaje': Number(tarifaVigente.valorPeaje),
+                'Detalle': detalleMetodo,
+                'Vigencia Desde': fechaDesdeFormateada,
+                'Vigencia Hasta': fechaHastaFormateada,
+                'Distancia (km)': tramo.distancia || 0
+            };
+        }).filter(Boolean); // Eliminar posibles valores nulos
+    };
+
+    // Función auxiliar para crear y descargar el archivo Excel
+    const crearArchivoExcel = (data, nombreArchivo) => {
+        // Crear el libro de Excel
+        const wb = XLSX.utils.book_new();
+        
+        // Crear la hoja con los datos
+        const ws = XLSX.utils.json_to_sheet(data);
+        
+        // Ajustar el ancho de las columnas
+        const wscols = [
+            { wch: 25 }, // Origen
+            { wch: 25 }, // Destino
+            { wch: 10 }, // Tipo
+            { wch: 15 }, // Método de Cálculo
+            { wch: 12 }, // Valor
+            { wch: 12 }, // Valor Peaje
+            { wch: 25 }, // Detalle
+            { wch: 15 }, // Vigencia Desde
+            { wch: 15 }, // Vigencia Hasta
+            { wch: 15 }  // Distancia
+        ];
+        ws['!cols'] = wscols;
+        
+        // Agregar la hoja al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Tarifas');
+        
+        // Guardar el archivo
+        XLSX.writeFile(wb, nombreArchivo);
+    };
+
+    // Función para renderizar la tabla de tramos
+    const renderTramosTable = () => {
+        if (loading) return <Typography>Cargando tarifario...</Typography>;
+        
+        if (filteredTramos.length === 0) {
+            return <Alert severity="info">No hay tramos disponibles para este cliente.</Alert>;
+        }
+
+        // Obtener la fecha actual en formato YYYY-MM-DD
+        const hoyStr = dayjs().format(ISO_FORMAT);
+        
+        return (
+            <TableContainer component={Paper} sx={{ maxHeight: '60vh', overflow: 'auto' }}>
+                <Table stickyHeader size="small">
+                    <TableHead>
+                        <TableRow>
+                            <TableCell padding="checkbox" sx={{ position: 'sticky', left: 0, zIndex: 3, backgroundColor: 'background.paper' }}>
+                                <Checkbox
+                                    indeterminate={selectedTramos.length > 0 && selectedTramos.length < filteredTramos.length}
+                                    checked={selectedTramos.length > 0 && selectedTramos.length === filteredTramos.length}
+                                    onChange={toggleSelectAll}
+                                />
+                            </TableCell>
+                            <TableCell sx={{ position: 'sticky', left: '40px', zIndex: 3, backgroundColor: 'background.paper' }}>Origen</TableCell>
+                            <TableCell>Destino</TableCell>
+                            <TableCell>Tipo</TableCell>
+                            <TableCell>Método</TableCell>
+                            <TableCell align="right">Valor</TableCell>
+                            <TableCell align="right">Peaje</TableCell>
+                            <TableCell>Detalle</TableCell>
+                            <TableCell>Vigencia</TableCell>
+                            <TableCell>Acciones</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {filteredTramos.map(tramo => {
+                            // Obtener la tarifa vigente para la fecha actual
+                            const tarifaVigente = obtenerTarifaVigente(tramo, hoyStr);
+                            
+                            if (!tarifaVigente) return null;
+                            
+                            const isSelected = selectedTramos.includes(tramo._id);
+                            
+                            // Determinar si el tramo está vigente actualmente
+                            const vigenciaDesdeStr = tarifaVigente.vigenciaDesde.split('T')[0];
+                            const vigenciaHastaStr = tarifaVigente.vigenciaHasta.split('T')[0];
+                            const isVigente = vigenciaDesdeStr <= hoyStr && vigenciaHastaStr >= hoyStr;
+                            
+                            // Generar el detalle según el método de cálculo
+                            const detalleMetodo = generarDetalleMetodo(
+                                tarifaVigente.metodoCalculo, 
+                                tarifaVigente.valor, 
+                                tramo.distancia
+                            );
+                            
+                            // Formatear fechas
+                            const fechaDesde = formatearFecha(tarifaVigente.vigenciaDesde);
+                            const fechaHasta = formatearFecha(tarifaVigente.vigenciaHasta);
+                            
+                            return (
+                                <TableRow 
+                                    key={tramo._id}
+                                    hover
+                                    selected={isSelected}
+                                    sx={{
+                                        backgroundColor: !isVigente && filtroVigencia.desde && filtroVigencia.hasta ? 'rgba(255, 152, 0, 0.08)' : 'inherit'
+                                    }}
+                                >
+                                    <TableCell padding="checkbox" sx={{ position: 'sticky', left: 0, zIndex: 2, backgroundColor: isSelected ? 'action.selected' : 'background.paper' }}>
+                                        <Checkbox
+                                            checked={isSelected}
+                                            onChange={() => toggleSelectTramo(tramo._id)}
+                                        />
+                                    </TableCell>
+                                    <TableCell sx={{ position: 'sticky', left: '40px', zIndex: 2, backgroundColor: isSelected ? 'action.selected' : 'background.paper' }}>{tramo.origen.Site}</TableCell>
+                                    <TableCell>{tramo.destino.Site}</TableCell>
+                                    <TableCell>{tarifaVigente.tipo || tramo.tipo || 'TRMC'}</TableCell>
+                                    <TableCell>{tarifaVigente.metodoCalculo}</TableCell>
+                                    <TableCell align="right">
+                                        ${formatMoney(tarifaVigente.valor)}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        ${formatMoney(tarifaVigente.valorPeaje)}
+                                    </TableCell>
+                                    <TableCell>
+                                        {detalleMetodo}
+                                    </TableCell>
+                                    <TableCell>
+                                        {fechaDesde} - {fechaHasta}
+                                        {!isVigente && filtroVigencia.desde && filtroVigencia.hasta && (
+                                            <Chip 
+                                                size="small" 
+                                                color="warning" 
+                                                label="Histórico" 
+                                                sx={{ ml: 1, fontSize: '0.7rem' }}
+                                            />
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <IconButton 
+                                            size="small" 
+                                            onClick={() => handleEditClick(tramo)}
+                                            disabled={!permisos.includes('editar_tramos')}
+                                        >
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton 
+                                            size="small" 
+                                            color="error"
+                                            onClick={() => handleDeleteClick(tramo)}
+                                            disabled={!permisos.includes('eliminar_tramos')}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+        );
     };
 
     return (
@@ -506,14 +1012,6 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="h6">Tarifario de {cliente?.Cliente}</Typography>
                         <Box>
-                            <Button 
-                                startIcon={<AddIcon />}
-                                variant="contained" 
-                                onClick={() => handleOpenImporter('bulk')}
-                                sx={{ mr: 1 }}
-                            >
-                                Importar Tramos
-                            </Button>
                             <Button 
                                 variant="outlined" 
                                 color="primary" 
@@ -536,6 +1034,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                                 startIcon={<FilterIcon />}
                                 variant="outlined" 
                                 onClick={() => setShowFilters(!showFilters)}
+                                sx={{ mr: 1 }}
                             >
                                 Filtros
                             </Button>
@@ -548,47 +1047,97 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                             >
                                 Actualizar vigencias ({selectedCount})
                             </Button>
+                            <Button 
+                                variant="outlined" 
+                                color="primary" 
+                                startIcon={<FileDownloadIcon />}
+                                onClick={handleExportAllToExcel}
+                            >
+                                Exportar Todo
+                            </Button>
                         </Box>
                     </Box>
                 </DialogTitle>
                 <DialogContent>
                     {/* Filtros */}
                     {showFilters && (
-                        <Box sx={{ mb: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                            <Typography variant="subtitle2" gutterBottom>
+                        <Box sx={{ 
+                            mb: 2, 
+                            p: 2, 
+                            bgcolor: 'rgba(0, 0, 0, 0.05)', 
+                            borderRadius: 1,
+                            border: '1px solid rgba(0, 0, 0, 0.12)'
+                        }}>
+                            <Typography variant="subtitle2" gutterBottom sx={{ color: 'text.primary', fontWeight: 'bold' }}>
                                 Filtrar por vigencia
                             </Typography>
                             <Grid container spacing={2}>
                                 <Grid item xs={12} sm={5}>
-                                    <TextField
-                                        label="Desde"
-                                        type="date"
-                                        fullWidth
-                                        value={filtroVigencia.desde}
-                                        onChange={(e) => setFiltroVigencia({
-                                            ...filtroVigencia,
-                                            desde: e.target.value
-                                        })}
-                                        InputLabelProps={{ shrink: true }}
-                                    />
+                                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                        <DatePicker
+                                            label="Desde"
+                                            value={filtroVigencia.desde ? dayjs(filtroVigencia.desde) : null}
+                                            onChange={(date) => setFiltroVigencia({
+                                                ...filtroVigencia,
+                                                desde: date ? date.format('YYYY-MM-DD') : ''
+                                            })}
+                                            format="DD/MM/YYYY"
+                                            slotProps={{ 
+                                                textField: { 
+                                                    fullWidth: true,
+                                                    variant: "outlined",
+                                                    sx: { 
+                                                        bgcolor: 'background.paper',
+                                                        '& .MuiOutlinedInput-root': {
+                                                            '& fieldset': {
+                                                                borderColor: 'rgba(0, 0, 0, 0.23)',
+                                                            },
+                                                            '&:hover fieldset': {
+                                                                borderColor: 'primary.main',
+                                                            },
+                                                        },
+                                                    }
+                                                } 
+                                            }}
+                                        />
+                                    </LocalizationProvider>
                                 </Grid>
                                 <Grid item xs={12} sm={5}>
-                                    <TextField
-                                        label="Hasta"
-                                        type="date"
-                                        fullWidth
-                                        value={filtroVigencia.hasta}
-                                        onChange={(e) => setFiltroVigencia({
-                                            ...filtroVigencia,
-                                            hasta: e.target.value
-                                        })}
-                                        InputLabelProps={{ shrink: true }}
-                                    />
+                                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                        <DatePicker
+                                            label="Hasta"
+                                            value={filtroVigencia.hasta ? dayjs(filtroVigencia.hasta) : null}
+                                            onChange={(date) => setFiltroVigencia({
+                                                ...filtroVigencia,
+                                                hasta: date ? date.format('YYYY-MM-DD') : ''
+                                            })}
+                                            format="DD/MM/YYYY"
+                                            slotProps={{ 
+                                                textField: { 
+                                                    fullWidth: true,
+                                                    variant: "outlined",
+                                                    sx: { 
+                                                        bgcolor: 'background.paper',
+                                                        '& .MuiOutlinedInput-root': {
+                                                            '& fieldset': {
+                                                                borderColor: 'rgba(0, 0, 0, 0.23)',
+                                                            },
+                                                            '&:hover fieldset': {
+                                                                borderColor: 'primary.main',
+                                                            },
+                                                        },
+                                                    }
+                                                } 
+                                            }}
+                                        />
+                                    </LocalizationProvider>
                                 </Grid>
                                 <Grid item xs={12} sm={2} display="flex" alignItems="center">
                                     <Button
-                                        variant="outlined"
+                                        variant="contained"
                                         onClick={() => setFiltroVigencia({ desde: '', hasta: '' })}
+                                        fullWidth
+                                        sx={{ height: '56px' }}
                                     >
                                         Limpiar
                                     </Button>
@@ -597,121 +1146,54 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                         </Box>
                     )}
 
-                    {/* Toolbar para acciones masivas */}
-                    <Toolbar 
-                        sx={{ 
-                            pl: { sm: 2 }, 
-                            pr: { xs: 1 },
-                            bgcolor: selectedCount > 0 ? '#e3f2fd' : 'transparent',
-                            minHeight: 48
-                        }}
-                        variant="dense"
-                    >
-                        {selectedCount > 0 ? (
-                            <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1">
-                                {selectedCount} tramo(s) seleccionado(s)
-                            </Typography>
-                        ) : (
-                            <Typography sx={{ flex: '1 1 100%' }} variant="subtitle1">
-                                {filteredTramos.length} tramos encontrados
-                            </Typography>
-                        )}
+                    {/* Toolbar con acciones */}
+                    <Toolbar sx={{ borderBottom: '1px solid #e0e0e0', pl: { sm: 1 }, pr: { xs: 1, sm: 1 } }}>
+                        <Typography
+                            sx={{ flex: '1 1 100%' }}
+                            variant="h6"
+                            id="tableTitle"
+                            component="div"
+                        >
+                            {selectedCount > 0 ? (
+                                <span>{selectedCount} tramos seleccionados</span>
+                            ) : (
+                                <>
+                                    <span>{filteredTramos.length} tramos {metadata && metadata.totalTramos > metadata.tramosUnicos && (
+                                        <Chip 
+                                            size="small" 
+                                            color="success" 
+                                            label={`${Math.round((metadata.totalTramos - metadata.tramosUnicos) / metadata.totalTramos * 100)}% optimizado`} 
+                                            sx={{ ml: 1, fontSize: '0.7rem' }}
+                                        />
+                                    )}</span>
+                                </>
+                            )}
+                        </Typography>
 
                         {selectedCount > 0 && (
-                            <Button 
-                                variant="contained" 
-                                color="error" 
-                                startIcon={<DeleteIcon />}
-                                onClick={handleDeleteSelected}
-                            >
-                                Borrar selección
-                            </Button>
+                            <>
+                                <Button 
+                                    variant="contained" 
+                                    color="primary" 
+                                    startIcon={<FileDownloadIcon />}
+                                    onClick={handleExportToExcel}
+                                    sx={{ mr: 1 }}
+                                >
+                                    Exportar a Excel
+                                </Button>
+                                <Button 
+                                    variant="contained" 
+                                    color="error" 
+                                    startIcon={<DeleteIcon />}
+                                    onClick={handleDeleteSelected}
+                                >
+                                    Borrar selección
+                                </Button>
+                            </>
                         )}
                     </Toolbar>
 
-                    <TableContainer component={Paper}>
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell padding="checkbox">
-                                        <Checkbox
-                                            indeterminate={selectedCount > 0 && !areAllSelected}
-                                            checked={areAllSelected}
-                                            onChange={toggleSelectAll}
-                                        />
-                                    </TableCell>
-                                    <TableCell>Origen</TableCell>
-                                    <TableCell>Destino</TableCell>
-                                    <TableCell>Método</TableCell>
-                                    <TableCell>Tipo</TableCell>
-                                    <TableCell>Distancia</TableCell>
-                                    <TableCell>Vigencia Desde</TableCell>
-                                    <TableCell>Vigencia Hasta</TableCell>
-                                    <TableCell>Valor</TableCell>
-                                    <TableCell>Peaje</TableCell>
-                                    <TableCell>Acciones</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={11} align="center">
-                                            Cargando tramos...
-                                        </TableCell>
-                                    </TableRow>
-                                ) : filteredTramos.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={11} align="center">
-                                            {error ? 
-                                                `Error: ${error}` : 
-                                                `No hay tramos disponibles para el cliente ${cliente}`
-                                            }
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    filteredTramos.map((tramo) => (
-                                        <TableRow 
-                                            key={tramo._id}
-                                            selected={!!selectedTramos[tramo._id]}
-                                        >
-                                            <TableCell padding="checkbox">
-                                                <Checkbox
-                                                    checked={!!selectedTramos[tramo._id]}
-                                                    onChange={() => toggleSelectTramo(tramo._id)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>{tramo.origen?.Site || '-'}</TableCell>
-                                            <TableCell>{tramo.destino?.Site || '-'}</TableCell>
-                                            <TableCell>{tramo.metodoCalculo}</TableCell>
-                                            <TableCell>{tramo.tipo}</TableCell>
-                                            <TableCell>{tramo.distancia} km</TableCell>
-                                            <TableCell>
-                                                {dayjs.utc(tramo.vigenciaDesde).format(DATE_FORMAT)}
-                                            </TableCell>
-                                            <TableCell>
-                                                {dayjs.utc(tramo.vigenciaHasta).format(DATE_FORMAT)}
-                                            </TableCell>
-                                            <TableCell>
-                                                ${formatMoney(tramo.valor)} 
-                                                {tramo.metodoCalculo === 'Kilometro' ? '/km' : 
-                                                tramo.metodoCalculo === 'Palet' ? '/palet' : ''}
-                                            </TableCell>
-                                            <TableCell>${formatMoney(tramo.valorPeaje)}</TableCell>
-                                            <TableCell>
-                                                <IconButton 
-                                                    size="small" 
-                                                    color="error"
-                                                    onClick={() => handleDeleteClick(tramo)}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                    {renderTramosTable()}
 
                     {error && (
                         <Alert severity="error" sx={{ mt: 2 }}>
@@ -726,7 +1208,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
 
             {/* Dialog de confirmación de borrado - Corregido */}
             <Dialog
-                open={deleteConfirmOpen}
+                open={showDeleteConfirm}
                 onClose={handleDeleteCancel}
             >
                 <DialogTitle>Confirmar eliminación</DialogTitle>
@@ -803,10 +1285,13 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             {showAddForm && (
                 <AddTramoDialog
                     open={showAddForm}
-                    onClose={() => setShowAddForm(false)}
+                    onClose={() => {
+                        setShowAddForm(false);
+                        setTramoToEdit(null);
+                    }}
                     onSave={handleAddTramo}
                     sites={sites}
-                    initialData={newTramo}
+                    initialData={tramoToEdit || newTramo}
                 />
             )}
 

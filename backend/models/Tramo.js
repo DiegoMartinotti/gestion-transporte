@@ -4,31 +4,18 @@ const { calcularDistanciaRuta } = require('../services/routingService');
 const logger = require('../utils/logger');
 // Eliminamos la importación directa del modelo Site para evitar dependencia circular
 
-const tramoSchema = new Schema({
-    origen: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Site',
-        required: [true, 'El origen es obligatorio']
-    },
-    destino: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Site',
-        required: [true, 'El destino es obligatorio']
-    },
+// Esquema para las tarifas históricas
+const tarifaHistoricaSchema = new Schema({
     tipo: {
         type: String,
         enum: ['TRMC', 'TRMI'],
         default: 'TRMC',
         required: true
     },
-    cliente: {
-        type: String,
-        required: [true, 'El cliente es obligatorio']
-    },
     metodoCalculo: {
         type: String,
         enum: ['Kilometro', 'Palet', 'Fijo'],
-        default: 'Palet'
+        required: true
     },
     valor: {
         type: Number,
@@ -51,11 +38,30 @@ const tramoSchema = new Schema({
     vigenciaHasta: {
         type: Date,
         required: [true, 'La fecha de fin de vigencia es obligatoria']
+    }
+}, { _id: true, id: false });
+
+const tramoSchema = new Schema({
+    origen: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Site',
+        required: [true, 'El origen es obligatorio']
+    },
+    destino: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Site',
+        required: [true, 'El destino es obligatorio']
+    },
+    cliente: {
+        type: String,
+        required: [true, 'El cliente es obligatorio']
     },
     distancia: {
         type: Number,
         default: 0
-    }
+    },
+    // Array de tarifas históricas
+    tarifasHistoricas: [tarifaHistoricaSchema]
 }, { 
     timestamps: true,
     collection: 'tramos',
@@ -63,52 +69,48 @@ const tramoSchema = new Schema({
     toObject: { getters: true }
 });
 
-// Middleware para formatear decimales antes de guardar
-tramoSchema.pre('save', function(next) {
-    // Preservar dos decimales en los campos valor y valorPeaje
-    if (this.isModified('valor') || this.isNew) {
-        this.valor = parseFloat(parseFloat(this.valor).toFixed(2));
-    }
-    
-    if (this.isModified('valorPeaje') || this.isNew) {
-        this.valorPeaje = parseFloat(parseFloat(this.valorPeaje).toFixed(2));
-    }
-    
-    next();
-});
-
-// Definir índice compuesto que incluya el tipo
+// Definir índice compuesto para los campos fijos
 tramoSchema.index({ 
     origen: 1, 
     destino: 1, 
-    cliente: 1, 
-    tipo: 1, // Incluir tipo en el índice único para permitir diferentes tipos en misma ruta
-    vigenciaDesde: 1,
-    vigenciaHasta: 1,
-    metodoCalculo: 1
-}, { 
-    name: "origen_destino_cliente_tipo_fechas_metodo",
-    unique: true,
-    background: true 
-});
-
-// También mantener un índice de búsqueda general
-tramoSchema.index({ 
-    origen: 1, 
-    destino: 1, 
-    tipo: 1,
-    cliente: 1, 
-    metodoCalculo: 1
+    cliente: 1
 }, { 
     name: "idx_tramo_base",
+    unique: false, // Ya no es único porque el tipo está en el histórico
     background: true 
 });
+
+// Método para obtener la tarifa vigente a una fecha dada
+tramoSchema.methods.getTarifaVigente = function(fecha = new Date(), tipo = null) {
+    if (tipo) {
+        // Buscar tarifa vigente con tipo específico
+        return this.tarifasHistoricas.find(tarifa => 
+            tarifa.tipo === tipo &&
+            tarifa.vigenciaDesde <= fecha && 
+            tarifa.vigenciaHasta >= fecha
+        );
+    } else {
+        // Buscar cualquier tarifa vigente
+        return this.tarifasHistoricas.find(tarifa => 
+            tarifa.vigenciaDesde <= fecha && 
+            tarifa.vigenciaHasta >= fecha
+        );
+    }
+};
+
+// Método para obtener todas las tarifas vigentes a una fecha dada
+tramoSchema.methods.getTarifasVigentes = function(fecha = new Date()) {
+    return this.tarifasHistoricas.filter(tarifa => 
+        tarifa.vigenciaDesde <= fecha && 
+        tarifa.vigenciaHasta >= fecha
+    );
+};
 
 // Middleware para calcular distancia automáticamente
 tramoSchema.pre('save', async function(next) {
     try {
-        // Solo calcular distancia si tenemos origen y destino
-        if (this.origen && this.destino) {
+        // Solo calcular distancia si tenemos origen y destino y no hay distancia pre-calculada
+        if (this.origen && this.destino && (!this.distancia || this.distancia === 0)) {
             // Obtenemos el modelo Site dentro de la función para evitar dependencia circular
             const Site = mongoose.model('Site');
             
@@ -140,6 +142,8 @@ tramoSchema.pre('save', async function(next) {
             } else {
                 logger.warn('[DISTANCIA] ⚠️ No se pudo calcular distancia: coordenadas faltantes');
             }
+        } else if (this.distancia > 0) {
+            logger.debug(`[DISTANCIA] ℹ️ Usando distancia pre-calculada: ${this.distancia} km`);
         }
         next();
     } catch (error) {
@@ -149,58 +153,79 @@ tramoSchema.pre('save', async function(next) {
     }
 });
 
-// Método para validar que no se superpongan fechas
+// Middleware para formatear decimales antes de guardar
+tramoSchema.pre('save', function(next) {
+    // Formatear valores en las tarifas históricas
+    if (this.tarifasHistoricas && this.tarifasHistoricas.length > 0) {
+        this.tarifasHistoricas.forEach(tarifa => {
+            // Normalizar el tipo a mayúsculas
+            if (tarifa.tipo) {
+                tarifa.tipo = tarifa.tipo.toUpperCase();
+            }
+            
+            if (tarifa.valor) {
+                tarifa.valor = parseFloat(parseFloat(tarifa.valor).toFixed(2));
+            }
+            
+            if (tarifa.valorPeaje) {
+                tarifa.valorPeaje = parseFloat(parseFloat(tarifa.valorPeaje).toFixed(2));
+            }
+        });
+    }
+    
+    next();
+});
+
+// Método para validar que no se superpongan fechas en las tarifas
 tramoSchema.pre('save', async function(next) {
     try {
-        // Validar que vigenciaHasta sea mayor o igual a vigenciaDesde
-        if (this.vigenciaHasta < this.vigenciaDesde) {
-            throw new Error('La fecha de fin de vigencia debe ser mayor o igual a la fecha de inicio.');
+        // Validar que no haya superposición de fechas en las tarifas
+        if (this.tarifasHistoricas && this.tarifasHistoricas.length > 1) {
+            // Ordenar por fecha de inicio
+            const tarifasOrdenadas = [...this.tarifasHistoricas].sort((a, b) => 
+                a.vigenciaDesde - b.vigenciaDesde
+            );
+            
+            // Validar que cada tarifa tenga vigenciaHasta >= vigenciaDesde
+            for (const tarifa of tarifasOrdenadas) {
+                if (tarifa.vigenciaHasta < tarifa.vigenciaDesde) {
+                    throw new Error('La fecha de fin de vigencia debe ser mayor o igual a la fecha de inicio.');
+                }
+            }
+            
+            // Verificar superposición de fechas entre tarifas
+            for (let i = 0; i < tarifasOrdenadas.length - 1; i++) {
+                for (let j = i + 1; j < tarifasOrdenadas.length; j++) {
+                    const tarifaA = tarifasOrdenadas[i];
+                    const tarifaB = tarifasOrdenadas[j];
+                    
+                    // Si el tipo o método de cálculo es diferente, pueden coexistir
+                    if (tarifaA.tipo !== tarifaB.tipo || tarifaA.metodoCalculo !== tarifaB.metodoCalculo) {
+                        continue;
+                    }
+                    
+                    // Comprobar si hay superposición
+                    const noHayConflicto = tarifaA.vigenciaHasta < tarifaB.vigenciaDesde || 
+                                           tarifaA.vigenciaDesde > tarifaB.vigenciaHasta;
+                    
+                    if (!noHayConflicto) {
+                        throw new Error(`Existen tarifas con el mismo tipo (${tarifaA.tipo}) y método de cálculo (${tarifaA.metodoCalculo}) con fechas que se superponen.`);
+                    }
+                }
+            }
         }
         
-        // Normalizar el tipo a mayúsculas
-        if (this.tipo) {
-            this.tipo = this.tipo.toUpperCase();
-        }
-        
-        logger.debug('[VALIDACIÓN] Validando tramo:', {
-            origen: this.origen,
-            destino: this.destino,
-            tipo: this.tipo,
-            metodoCalculo: this.metodoCalculo,
-            cliente: this.cliente,
-            vigenciaDesde: this.vigenciaDesde,
-            vigenciaHasta: this.vigenciaHasta
-        });
-        
-        // IMPORTANTE: Incluir explícitamente el tipo en la consulta
-        const tramosExistentes = await this.constructor.find({
-            origen: this.origen,
-            destino: this.destino,
-            tipo: this.tipo, // Buscar solo tramos con el mismo tipo
-            metodoCalculo: this.metodoCalculo,
-            cliente: this.cliente,
-            _id: { $ne: this._id } // Excluir este documento si se está actualizando
-        });
-        
-        logger.debug(`[VALIDACIÓN] Encontrados ${tramosExistentes.length} tramos existentes con misma ruta, tipo (${this.tipo}) y método`);
-        
-        // Verificar superposición de fechas
-        for (const tramo of tramosExistentes) {
-            // Versión más explícita y legible de la verificación
-            const esteDesde = new Date(this.vigenciaDesde);
-            const esteHasta = new Date(this.vigenciaHasta);
-            const otroDesde = new Date(tramo.vigenciaDesde);
-            const otroHasta = new Date(tramo.vigenciaHasta);
+        // Verificar que no exista otro tramo con la misma configuración base
+        if (this.isNew) {
+            const tramoExistente = await this.constructor.findOne({
+                origen: this.origen,
+                destino: this.destino,
+                cliente: this.cliente,
+                _id: { $ne: this._id }
+            });
             
-            // Comprobación explícita para debugging - una fecha termina antes de que la otra empiece
-            const noHayConflicto = esteHasta < otroDesde || esteDesde > otroHasta;
-            const hayConflicto = !noHayConflicto;
-            
-            logger.debug(`[VALIDACIÓN] Comparando fechas: [${esteDesde.toISOString()} - ${esteHasta.toISOString()}] vs [${otroDesde.toISOString()} - ${otroHasta.toISOString()}]`);
-            logger.debug(`[VALIDACIÓN] ¿Hay conflicto?: ${hayConflicto}`);
-            
-            if (hayConflicto) {
-                throw new Error(`Ya existe un tramo con las mismas características (${this.tipo}) y fechas que se superponen.`);
+            if (tramoExistente) {
+                throw new Error(`Ya existe un tramo con la misma configuración para este cliente.`);
             }
         }
         
@@ -214,15 +239,10 @@ tramoSchema.pre('save', async function(next) {
 
 // Método para crear una descripción humanizada del tramo
 tramoSchema.virtual('descripcion').get(function() {
-    return `${this.origen} → ${this.destino} (${this.tipo}/${this.metodoCalculo})`;
-});
-
-// Asegurarnos que el tipo de tramo siempre esté en mayúsculas
-tramoSchema.pre('save', function(next) {
-    if (this.tipo) {
-        this.tipo = this.tipo.toUpperCase();
-    }
-    next();
+    const tarifaActual = this.getTarifaVigente();
+    const tipoStr = tarifaActual ? tarifaActual.tipo : 'Sin tipo';
+    const metodoCalculo = tarifaActual ? tarifaActual.metodoCalculo : 'Sin tarifa vigente';
+    return `${this.origen} → ${this.destino} (${tipoStr}/${metodoCalculo})`;
 });
 
 // Validaciones adicionales
@@ -230,23 +250,15 @@ tramoSchema.path('destino').validate(function(value) {
     return String(value) !== String(this.origen);
 }, 'El origen y el destino no pueden ser el mismo Site');
 
-tramoSchema.path('vigenciaHasta').validate(function(value) {
-    return this.vigenciaDesde <= value;
-}, 'La fecha de fin de vigencia debe ser posterior a la fecha de inicio');
+// Virtual para obtener la tarifa vigente actual
+tramoSchema.virtual('tarifaVigente').get(function() {
+    return this.getTarifaVigente();
+});
 
-// Modificando la validación para permitir valor 0 en tramos con método Palet
-tramoSchema.path('valor').validate(function(value) {
-    switch (this.metodoCalculo) {
-        case 'Kilometro':
-            return value >= 0; // Cambiado para permitir 0
-        case 'Palet':
-            return value >= 0; // Cambiado para permitir 0
-        case 'Fijo':
-            return value >= 0;
-        default:
-            return true;
-    }
-}, 'Valor inválido para el método de cálculo seleccionado');
+// Virtual para obtener todas las tarifas vigentes
+tramoSchema.virtual('tarifasVigentes').get(function() {
+    return this.getTarifasVigentes();
+});
 
 const Tramo = mongoose.model('Tramo', tramoSchema);
 

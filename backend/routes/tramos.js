@@ -564,4 +564,35 @@ router.post('/updateVigenciaMasiva', auth, tramoController.updateVigenciaMasiva)
 // Ruta para calcular tarifa
 router.post('/calcular-tarifa', auth, tramoController.calcularTarifa);
 
+/**
+ * @swagger
+ * /api/tramos/distancias:
+ *   get:
+ *     tags:
+ *       - Tramos
+ *     summary: Obtiene las distancias calculadas para pares origen-destino
+ *     responses:
+ *       200:
+ *         description: Lista de distancias calculadas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       origen:
+ *                         type: string
+ *                       destino:
+ *                         type: string
+ *                       distancia:
+ *                         type: number
+ */
+router.get('/distancias', verifyToken, tramoController.getDistanciasCalculadas);
+
 module.exports = router;

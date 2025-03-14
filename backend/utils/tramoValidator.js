@@ -39,11 +39,22 @@ const fechasSuperpuestas = (fecha1Desde, fecha1Hasta, fecha2Desde, fecha2Hasta) 
 
     // Verificar superposición y mostrar log detallado
     logger.debug('Comparando fechas para superposición:');
-    logger.debug(`Rango 1: ${f1Desde.toISOString()} - ${f1Hasta.toISOString()}`);
-    logger.debug(`Rango 2: ${f2Desde.toISOString()} - ${f2Hasta.toISOString()}`);
+    logger.debug(`Rango 1: ${f1Desde.toISOString().split('T')[0]} - ${f1Hasta.toISOString().split('T')[0]}`);
+    logger.debug(`Rango 2: ${f2Desde.toISOString().split('T')[0]} - ${f2Hasta.toISOString().split('T')[0]}`);
     
+    // Dos rangos se superponen si el inicio de uno es anterior o igual al fin del otro
+    // Y el fin de uno es posterior o igual al inicio del otro
     const haySuper = f1Desde <= f2Hasta && f2Desde <= f1Hasta;
-    logger.debug(`¿Hay superposición?: ${haySuper}`);
+    
+    if (haySuper) {
+        logger.debug('⚠️ SUPERPOSICIÓN DETECTADA');
+        logger.debug(`Rango 1 inicia antes del fin de Rango 2: ${f1Desde <= f2Hasta}`);
+        logger.debug(`Rango 2 inicia antes del fin de Rango 1: ${f2Desde <= f1Hasta}`);
+    } else {
+        logger.debug('✅ No hay superposición');
+        logger.debug(`Rango 1 termina antes de que inicie Rango 2: ${f1Hasta < f2Desde}`);
+        logger.debug(`Rango 2 termina antes de que inicie Rango 1: ${f2Hasta < f1Desde}`);
+    }
     
     return haySuper;
 };

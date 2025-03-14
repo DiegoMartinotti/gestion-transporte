@@ -86,4 +86,7 @@ router.post('/updateVigenciaMasiva', verifyToken, tramoController.updateVigencia
 // Ruta para calcular tarifa
 router.post('/calcular-tarifa', verifyToken, tramoController.calcularTarifa);
 
+// Ruta para obtener distancias calculadas
+router.get('/distancias', verifyToken, tramoController.getDistanciasCalculadas);
+
 module.exports = router;

@@ -29,9 +29,6 @@ exports.getTramosByCliente = async (req, res) => {
         logger.debug('Buscando tramos para cliente:', req.params.cliente);
         
         const { cliente } = req.params;
-        const { desde, hasta, incluirHistoricos } = req.query;
-        
-        logger.debug(`Parámetros de filtro: desde=${desde}, hasta=${hasta}, incluirHistoricos=${incluirHistoricos}`);
         
         // Obtener todos los tramos del cliente
         const todosLosTramos = await Tramo.find({ cliente })
@@ -41,109 +38,8 @@ exports.getTramosByCliente = async (req, res) => {
         
         logger.debug(`Encontrados ${todosLosTramos.length} tramos totales para cliente ${cliente}`);
         
-        // Si se solicitan tramos históricos con filtro de fecha
-        if (desde && hasta && incluirHistoricos === 'true') {
-            logger.debug('Procesando tramos históricos con filtro de fecha');
-            
-            // Convertir fechas a objetos Date para comparación
-            const desdeDate = new Date(desde);
-            const hastaDate = new Date(hasta);
-            
-            logger.debug(`Filtrando tramos por rango de fechas: ${desdeDate.toISOString().split('T')[0]} - ${hastaDate.toISOString().split('T')[0]}`);
-            
-            // Crear un mapa para almacenar solo el tramo más reciente por cada combinación
-            const tramosUnicos = new Map();
-            
-            // Procesar cada tramo
-            todosLosTramos.forEach(tramo => {
-                if (!tramo || !tramo.origen || !tramo.destino) {
-                    return;
-                }
-                
-                // Verificar si el tramo tiene tarifas históricas
-                if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-                    // Filtrar tarifas que se superpongan con el rango de fechas solicitado
-                    const tarifasEnRango = tramo.tarifasHistoricas.filter(tarifa => {
-                        const tarifaDesde = new Date(tarifa.vigenciaDesde);
-                        const tarifaHasta = new Date(tarifa.vigenciaHasta);
-                        
-                        // Verificar si la tarifa se superpone con el rango de fechas
-                        return tarifaDesde <= hastaDate && tarifaHasta >= desdeDate;
-                    });
-                    
-                    // Agrupar por tipo de tarifa
-                    const tiposTarifa = new Set(tarifasEnRango.map(t => t.tipo));
-                    
-                    // Para cada tipo de tarifa, encontrar la más reciente en el rango
-                    tiposTarifa.forEach(tipo => {
-                        // Filtrar tarifas por tipo
-                        const tarifasDeTipo = tarifasEnRango.filter(t => t.tipo === tipo);
-                        
-                        // Ordenar por fecha de vigencia (más reciente primero)
-                        tarifasDeTipo.sort((a, b) => 
-                            new Date(b.vigenciaHasta) - new Date(a.vigenciaHasta)
-                        );
-                        
-                        if (tarifasDeTipo.length > 0) {
-                            // Crear una copia del tramo con la tarifa específica
-                            const tramoConTarifa = {
-                                ...tramo,
-                                tipo: tipo, // Asignar el tipo de la tarifa al tramo
-                                metodoCalculo: tarifasDeTipo[0].metodoCalculo,
-                                valor: tarifasDeTipo[0].valor,
-                                valorPeaje: tarifasDeTipo[0].valorPeaje,
-                                vigenciaDesde: tarifasDeTipo[0].vigenciaDesde,
-                                vigenciaHasta: tarifasDeTipo[0].vigenciaHasta,
-                                // Mantener la referencia a todas las tarifas históricas
-                                tarifasHistoricas: tramo.tarifasHistoricas
-                            };
-                            
-                            // Clave única que incluye origen, destino y tipo
-                            const key = `${tramo.origen.Site}-${tramo.destino.Site}-${tipo}`;
-                            
-                            // Guardar en el mapa
-                            if (!tramosUnicos.has(key) || 
-                                new Date(tarifasDeTipo[0].vigenciaHasta) > new Date(tramosUnicos.get(key).vigenciaHasta)) {
-                                tramosUnicos.set(key, tramoConTarifa);
-                            }
-                        }
-                    });
-                } else if (tramo.vigenciaDesde && tramo.vigenciaHasta) {
-                    // Para tramos con formato antiguo
-                    const tramoDesde = new Date(tramo.vigenciaDesde);
-                    const tramoHasta = new Date(tramo.vigenciaHasta);
-                    
-                    // Verificar si el tramo se superpone con el rango de fechas
-                    if (tramoDesde <= hastaDate && tramoHasta >= desdeDate) {
-                        // Clave única que incluye origen, destino y tipo
-                        const key = `${tramo.origen.Site}-${tramo.destino.Site}-${tramo.tipo || 'TRMC'}`;
-                        
-                        // Si no existe un tramo para esta clave o este tramo tiene una fecha más reciente
-                        if (!tramosUnicos.has(key) || 
-                            tramoHasta > new Date(tramosUnicos.get(key).vigenciaHasta)) {
-                            tramosUnicos.set(key, tramo);
-                        }
-                    }
-                }
-            });
-            
-            // Convertir el mapa a array
-            const tramosHistoricos = Array.from(tramosUnicos.values());
-            
-            logger.debug(`Devolviendo ${tramosHistoricos.length} tramos históricos filtrados por fecha`);
-            
-            return res.status(200).json({
-                success: true,
-                data: tramosHistoricos,
-                metadata: {
-                    totalTramos: todosLosTramos.length,
-                    tramosHistoricos: tramosHistoricos.length
-                }
-            });
-        }
-        
-        // Si no hay filtros de fecha o no se solicitan históricos, continuar con el comportamiento normal
         // Crear un mapa para almacenar solo el tramo más reciente por cada combinación
+        // Modificamos la clave para incluir el tipo de tramo
         const tramosUnicos = new Map();
         
         // Procesar cada tramo
@@ -183,8 +79,8 @@ exports.getTramosByCliente = async (req, res) => {
                         logger.debug(`Actualizado tramo para ${clave} con vigencia hasta ${vigenciaHasta.toISOString()}`);
                     }
                 });
-            } else if (tramo.tipo) {
-                // Para tramos con formato antiguo (sin tarifasHistoricas)
+            } else {
+                // Para tramos sin tarifas históricas (formato antiguo)
                 // Crear una clave única que incluya origen, destino y tipo
                 const clave = `${tramo.origen.Site}-${tramo.destino.Site}-${tramo.tipo || 'TRMC'}`;
                 
@@ -240,6 +136,16 @@ exports.getTramosByCliente = async (req, res) => {
     }
 };
 
+/**
+ * Obtiene las distancias calculadas para pares origen-destino
+ * 
+ * @async
+ * @function getDistanciasCalculadas
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
+ * @returns {Promise<Object>} Lista de distancias calculadas
+ * @throws {Error} Error 500 si hay un error en el servidor
+ */
 exports.getDistanciasCalculadas = async (req, res) => {
     try {
         // Obtener todas las distancias calculadas de tramos existentes
