@@ -5,6 +5,8 @@ const Extra = require('./Extra');
 const { calcularTarifaPaletConFormula } = require('../utils/formulaParser');
 const { actualizarEstadoPartida } = require('../utils/estadoPartida');
 const logger = require('../utils/logger');
+const Personal = require('./Personal');
+const Vehiculo = require('./Vehiculo');
 
 /**
  * @typedef {Object} Viaje
@@ -42,6 +44,42 @@ const viajeSchema = new mongoose.Schema({
     default: 'TRMC',
     required: true
   },
+  /**
+   * Chofer asignado al viaje, debe ser un Personal activo
+   */
+  chofer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Personal',
+    required: true,
+    validate: {
+      validator: async function(value) {
+        const personal = await Personal.findById(value).lean();
+        return personal && personal.activo === true;
+      },
+      message: 'El chofer debe ser un personal activo'
+    }
+  },
+  /**
+   * Configuración de vehículos para el viaje
+   * Al menos debe tener un vehículo (el principal)
+   */
+  vehiculos: [{
+    vehiculo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vehiculo',
+      required: true
+    },
+    posicion: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+    observaciones: String
+  }],
+  /**
+   * El tipo de unidad ahora se obtiene del vehículo principal
+   * Se mantiene por compatibilidad con código existente
+   */
   tipoUnidad: { 
     type: String, 
     enum: ['Sider', 'Bitren'], 
@@ -124,14 +162,45 @@ const viajeSchema = new mongoose.Schema({
 });
 
 /**
+ * Validación para asegurar que al menos hay un vehículo en la configuración
+ * y que las posiciones son únicas
+ */
+viajeSchema.path('vehiculos').validate(function(vehiculos) {
+  if (!vehiculos || vehiculos.length === 0) {
+    return false;
+  }
+  
+  // Verificar que no hay posiciones duplicadas
+  const posiciones = vehiculos.map(v => v.posicion);
+  return posiciones.length === new Set(posiciones).size;
+}, 'Debe asignarse al menos un vehículo al viaje y las posiciones deben ser únicas');
+
+/**
  * Middleware que se ejecuta antes de guardar un viaje
  * Calcula la tarifa y el total del viaje según:
  * 1. Tramo y método de cálculo correspondiente
  * 2. Fórmulas personalizadas del cliente si existen
  * 3. Extras aplicados
+ * 
+ * También actualiza el tipoUnidad basado en el vehículo principal
  */
 viajeSchema.pre('save', async function (next) {
   try {
+    // Verificar y actualizar el tipo de unidad basado en el vehículo principal
+    if (this.isNew || this.isModified('vehiculos')) {
+      if (this.vehiculos && this.vehiculos.length > 0) {
+        // Optimización: Usar lean() para mejorar rendimiento
+        const vehiculoPrincipal = await Vehiculo.findById(this.vehiculos[0].vehiculo).lean();
+        
+        if (!vehiculoPrincipal) {
+          throw new Error('Vehículo principal no encontrado');
+        }
+        
+        // Simplificar la asignación del tipo de unidad
+        this.tipoUnidad = vehiculoPrincipal.tipo === 'Bitren' ? 'Bitren' : 'Sider';
+      }
+    }
+    
     // Si es un documento nuevo o se modificaron campos relevantes
     if (this.isNew || this.isModified('origen') || this.isModified('destino') || 
         this.isModified('tipoTramo') || this.isModified('tipoUnidad') || this.isModified('paletas')) {

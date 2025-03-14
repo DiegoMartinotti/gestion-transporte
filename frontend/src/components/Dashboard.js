@@ -5,10 +5,13 @@ import {
   People as PeopleIcon,
   LocalShipping as LocalShippingIcon,
   Calculate as CalculateIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import ViajesManager from './ViajesManager';
 import ClientesManager from './ClientesManager';
 import CalcularTarifa from './CalcularTarifa';
+import EmpresasManager from './EmpresasManager';
+import VehiculosManager from './VehiculosManager';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -32,15 +35,48 @@ const Dashboard = () => {
       description: 'Calcular tarifas por ruta y cliente',
       icon: <CalculateIcon sx={{ fontSize: 48 }} />,
       path: 'calcular-tarifa'
+    },
+    {
+      title: 'Gestión de Empresas',
+      description: 'Administrar empresas propias y subcontratadas',
+      icon: <BusinessIcon sx={{ fontSize: 48 }} />,
+      path: 'empresas'
     }
   ];
+
+  const routes = [
+    { path: "clientes", element: <ClientesManager /> },
+    { path: "viajes", element: <ViajesManager /> },
+    { path: "calcular-tarifa", element: <CalcularTarifa /> },
+    { path: "empresas", element: <EmpresasManager /> },
+    { path: "vehiculos/:empresaId", element: <VehiculosManager /> }
+  ];
+
+  const cardStyle = {
+    p: 4,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    cursor: 'pointer',
+    height: '100%',
+    transition: 'all 0.3s ease-in-out',
+    background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: `0 8px 24px rgba(0,0,0,0.3)`,
+      '& .icon': {
+        color: 'primary.main',
+        transform: 'scale(1.1)',
+      }
+    },
+  };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Routes>
-        <Route path="clientes" element={<ClientesManager />} />
-        <Route path="viajes" element={<ViajesManager />} />
-        <Route path="calcular-tarifa" element={<CalcularTarifa />} />
+        {routes.map((route, index) => (
+          <Route key={index} path={route.path} element={route.element} />
+        ))}
         <Route index element={
           <Box sx={{ pt: 4 }}>
             <Typography variant="h4" gutterBottom sx={{ mb: 4, color: 'primary.main' }}>
@@ -48,26 +84,9 @@ const Dashboard = () => {
             </Typography>
             <Grid container spacing={4}>
               {menuItems.map((item, index) => (
-                <Grid item xs={12} md={4} key={index}>
+                <Grid item xs={12} md={6} lg={3} key={index}>
                   <Paper
-                    sx={{
-                      p: 4,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      height: '100%',
-                      transition: 'all 0.3s ease-in-out',
-                      background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: `0 8px 24px rgba(0,0,0,0.3)`,
-                        '& .icon': {
-                          color: 'primary.main',
-                          transform: 'scale(1.1)',
-                        }
-                      },
-                    }}
+                    sx={cardStyle}
                     onClick={() => navigate(item.path)}
                   >
                     <Box 

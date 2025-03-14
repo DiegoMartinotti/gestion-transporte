@@ -8,11 +8,13 @@ import {
 import { 
     Add as AddIcon, 
     Delete as DeleteIcon,
-    FilterAlt as FilterIcon
+    FilterAlt as FilterIcon,
+    CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
 import { format, parseISO, isWithinInterval } from 'date-fns';
 import axios from 'axios';
 import TramosBulkImporter from './TramosBulkImporter';
+import TramosExcelImporter from './TramosExcelImporter';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -166,15 +168,17 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     const [sites, setSites] = useState([]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [showImporter, setShowImporter] = useState(false);
+    const [showExcelImporter, setShowExcelImporter] = useState(false);
     const [newTramo, setNewTramo] = useState({
         origen: '',
         destino: '',
         tipo: 'TRMC',
-        metodoCalculo: 'Kilometro',
-        valorPeaje: 0,
+        metodoCalculo: 'Palet',
         valor: 0,
-        vigenciaDesde: format(new Date(), 'yyyy-MM-dd'),
-        vigenciaHasta: format(new Date(Date.now() + 31536000000), 'yyyy-MM-dd') // Un año después
+        valorPeaje: 0,
+        distancia: 0,
+        vigenciaDesde: new Date(),
+        vigenciaHasta: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
     });
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);  // Agregando estado faltante
@@ -308,11 +312,12 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                 origen: '',
                 destino: '',
                 tipo: 'TRMC',
-                metodoCalculo: 'Kilometro',
-                valorPeaje: 0,
+                metodoCalculo: 'Palet',
                 valor: 0,
-                vigenciaDesde: format(new Date(), 'yyyy-MM-dd'),
-                vigenciaHasta: format(new Date(Date.now() + 31536000000), 'yyyy-MM-dd')
+                valorPeaje: 0,
+                distancia: 0,
+                vigenciaDesde: new Date(),
+                vigenciaHasta: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
             });
             fetchTramos();
         } catch (error) {
@@ -408,9 +413,20 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     const selectedCount = Object.values(selectedTramos).filter(Boolean).length;
 
     const handleCloseAll = () => {
+        // Cerrar todos los diálogos de una vez
         setShowAddForm(false);
         setShowImporter(false);
+        setShowExcelImporter(false);
         onClose();
+    };
+
+    // Función para manejar la apertura de importadores
+    const handleOpenImporter = (type) => {
+        if (type === 'bulk') {
+            setShowImporter(true);
+        } else if (type === 'excel') {
+            setShowExcelImporter(true);
+        }
     };
 
     const handleVigenciaMasivaOpen = () => {
@@ -480,27 +496,37 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
         <>
             <Dialog 
                 open={open} 
-                onClose={handleCloseAll} 
-                maxWidth="lg" 
+                onClose={handleCloseAll}
+                maxWidth="lg"
                 fullWidth
                 disableEnforceFocus
                 disableAutoFocus
             >
                 <DialogTitle>
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <Typography>Tarifario - {cliente}</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6">Tarifario de {cliente?.Cliente}</Typography>
                         <Box>
                             <Button 
                                 startIcon={<AddIcon />}
-                                variant="contained"
-                                onClick={() => setShowImporter(true)}
+                                variant="contained" 
+                                onClick={() => handleOpenImporter('bulk')}
                                 sx={{ mr: 1 }}
                             >
                                 Importar Tramos
                             </Button>
                             <Button 
+                                variant="outlined" 
+                                color="primary" 
+                                startIcon={<CloudUploadIcon />}
+                                onClick={() => handleOpenImporter('excel')}
+                                sx={{ mr: 1 }}
+                            >
+                                Importar Excel
+                            </Button>
+                            <Button 
                                 startIcon={<AddIcon />}
                                 variant="contained"
+                                color="primary"
                                 onClick={() => setShowAddForm(true)}
                                 sx={{ mr: 1 }}
                             >
@@ -508,7 +534,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                             </Button>
                             <Button 
                                 startIcon={<FilterIcon />}
-                                variant="outlined"
+                                variant="outlined" 
                                 onClick={() => setShowFilters(!showFilters)}
                             >
                                 Filtros
@@ -785,12 +811,22 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             )}
 
             {showImporter && (
-                <TramosBulkImporter
+                <TramosBulkImporter 
                     open={showImporter}
                     onClose={() => setShowImporter(false)}
                     cliente={cliente}
-                    sites={sites}
                     onComplete={fetchTramos}
+                    sites={sites}
+                />
+            )}
+
+            {showExcelImporter && (
+                <TramosExcelImporter 
+                    open={showExcelImporter}
+                    onClose={() => setShowExcelImporter(false)}
+                    cliente={cliente}
+                    onComplete={fetchTramos}
+                    sites={sites}
                 />
             )}
 

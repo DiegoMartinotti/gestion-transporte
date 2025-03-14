@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
+
+// Importar todas las rutas
+const authRoutes = require('./auth');
 const clientesRoutes = require('./clientes');
 const sitesRoutes = require('./sites');
 const tramosRoutes = require('./tramos');
 const viajesRoutes = require('./viajes');
-const authRoutes = require('./auth');
 const extrasRoutes = require('./extras');
+const empresasRoutes = require('./empresas');
+const vehiculosRoutes = require('./vehiculos');
 const proxyRouter = require('./proxy');
+
+// Middleware
 const authMiddleware = require('../middleware/auth');
 const logger = require('../utils/logger');
 
@@ -31,14 +37,25 @@ router.use((req, res, next) => {
     next();
 });
 
-// Asegurarnos de usar correctamente las rutas
+// Rutas públicas (no requieren autenticación)
 router.use('/auth', authRoutes);
-router.use('/clientes', authMiddleware, clientesRoutes);
-router.use('/sites', authMiddleware, sitesRoutes);
-router.use('/tramos', authMiddleware, tramosRoutes);
-router.use('/viajes', authMiddleware, viajesRoutes);
-router.use('/extras', authMiddleware, extrasRoutes);
 router.use('/proxy', proxyRouter);
+
+// Rutas protegidas (requieren autenticación)
+const protectedRoutes = [
+  { path: '/clientes', router: clientesRoutes },
+  { path: '/sites', router: sitesRoutes },
+  { path: '/tramos', router: tramosRoutes },
+  { path: '/viajes', router: viajesRoutes },
+  { path: '/extras', router: extrasRoutes },
+  { path: '/empresas', router: empresasRoutes },
+  { path: '/vehiculos', router: vehiculosRoutes }
+];
+
+// Registrar todas las rutas protegidas
+protectedRoutes.forEach(route => {
+  router.use(route.path, authMiddleware, route.router);
+});
 
 // Ruta para verificar que el router está funcionando
 router.get('/status', (req, res) => {
