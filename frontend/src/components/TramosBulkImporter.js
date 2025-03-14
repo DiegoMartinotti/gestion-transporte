@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, TableContainer, Table, TableHead, TableBody,
@@ -23,6 +23,47 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
     const [processingStatus, setProcessingStatus] = useState('');
     const [duplicados, setDuplicados] = useState([]);
     const [showDuplicados, setShowDuplicados] = useState(false);
+    const [distanciasExistentes, setDistanciasExistentes] = useState({});
+
+    // Nuevo efecto para cargar distancias existentes cuando se abre el diálogo
+    useEffect(() => {
+        if (open) {
+            cargarDistanciasExistentes();
+        }
+    }, [open]);
+
+    // Función para cargar distancias existentes
+    const cargarDistanciasExistentes = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No hay token de autenticación');
+            }
+
+            const response = await axios.get(
+                '/api/tramos/distancias',
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            if (response.data.success) {
+                // Crear un mapa de distancias por origen-destino
+                const distanciasMap = {};
+                response.data.data.forEach(item => {
+                    const key = `${item.origen}-${item.destino}`;
+                    distanciasMap[key] = item.distancia;
+                });
+                setDistanciasExistentes(distanciasMap);
+                logger.debug('Distancias existentes cargadas:', distanciasMap);
+            }
+        } catch (error) {
+            logger.error('Error al cargar distancias existentes:', error);
+            // No interrumpimos el flujo si falla la carga de distancias
+        }
+    };
 
     const handleClose = () => {
         setRows([]);
@@ -153,12 +194,18 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                 const vigenciaDesde = `${vigencia.desde}T00:00:00.000Z`;
                 const vigenciaHasta = `${vigencia.hasta}T23:59:59.999Z`;
 
+                // Verificar si ya tenemos la distancia calculada para este origen-destino
+                const distanciaKey = `${row.origen}-${row.destino}`;
+                const distanciaExistente = distanciasExistentes[distanciaKey];
+
                 return {
                     ...row,
                     vigenciaDesde,
                     vigenciaHasta,
                     valor: Number(row.valor) || 0,
-                    valorPeaje: Number(row.valorPeaje || 0)
+                    valorPeaje: Number(row.valorPeaje || 0),
+                    // Si existe una distancia calculada previamente, la incluimos
+                    distanciaPreCalculada: distanciaExistente !== undefined ? distanciaExistente : null
                 };
             });
 
@@ -228,14 +275,16 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
 
                     logger.debug(`Enviando lote ${i+1}:`, {
                         tamañoLote: batch.length,
-                        primerTramo: batch[0]
+                        primerTramo: batch[0],
+                        distanciasPreCalculadas: batch.filter(t => t.distanciaPreCalculada !== null).length
                     });
 
                     const response = await axios.post(
                         '/api/tramos/bulk',
                         { 
                             cliente, 
-                            tramos: batch
+                            tramos: batch,
+                            reutilizarDistancias: true // Indicar al backend que queremos reutilizar distancias
                         },
                         { 
                             headers: { 
@@ -374,6 +423,59 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
         });
     };
 
+    const processRows = (rows) => {
+        let parsedRows = [];
+        let errorsFound = [];
+
+        rows.forEach((row, index) => {
+            try {
+                // Validar campos obligatorios
+                const origen = row['Origen'];
+                const destino = row['Destino'];
+                const cliente = row['Cliente'];
+                const tipo = row['Tipo'] || 'TRMC';
+                const metodoCalculo = row['Método de Cálculo'] || 'Kilometro';
+                const valor = parseFloat(row['Valor'] || 0);
+                const valorPeaje = parseFloat(row['Peaje'] || 0);
+                
+                // Validar fechas de vigencia
+                let vigenciaDesde = row['Vigencia Desde'] ? new Date(row['Vigencia Desde']) : new Date();
+                let vigenciaHasta = row['Vigencia Hasta'] ? new Date(row['Vigencia Hasta']) : new Date();
+                vigenciaHasta.setFullYear(vigenciaHasta.getFullYear() + 1);
+
+                if (!origen || !destino || !cliente) {
+                    throw new Error('Faltan campos obligatorios (Origen, Destino o Cliente)');
+                }
+
+                if (isNaN(valor)) {
+                    throw new Error('El valor debe ser un número');
+                }
+
+                parsedRows.push({
+                    origen,
+                    destino,
+                    cliente,
+                    tarifasHistoricas: [{
+                        tipo,
+                        metodoCalculo,
+                        valor,
+                        valorPeaje,
+                        vigenciaDesde: vigenciaDesde.toISOString(),
+                        vigenciaHasta: vigenciaHasta.toISOString()
+                    }]
+                });
+            } catch (error) {
+                errorsFound.push({
+                    row: index + 1,
+                    error: error.message
+                });
+            }
+        });
+
+        setErrors(errorsFound);
+        return parsedRows;
+    };
+
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
             <DialogTitle>Importar Tramos</DialogTitle>
@@ -408,6 +510,14 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                 
                 <Alert severity="info" sx={{ mb: 2 }}>
                     Formato esperado: Origen⇥Destino⇥Tipo⇥Método⇥Valor⇥Peaje⇥FechaDesde⇥FechaHasta
+                </Alert>
+                
+                <Alert severity="success" sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2">Optimización de cálculo de distancias:</Typography>
+                    <Typography variant="body2">
+                        El sistema reutilizará automáticamente los cálculos de distancia existentes para los mismos pares origen-destino,
+                        mejorando el rendimiento de la importación.
+                    </Typography>
                 </Alert>
                 
                 <Alert severity="warning" sx={{ mb: 2 }}>

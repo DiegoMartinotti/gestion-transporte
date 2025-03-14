@@ -10,7 +10,8 @@ import {
   CloudUpload as CloudUploadIcon,
   CloudDownload as CloudDownloadIcon,
   Info as InfoIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Error as ErrorIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -55,6 +56,51 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
   const [uploadResult, setUploadResult] = useState(null);
   const [processingStatus, setProcessingStatus] = useState('');
   const [progress, setProgress] = useState(0);
+  const [distanciasExistentes, setDistanciasExistentes] = useState({});
+  const [previewData, setPreviewData] = useState([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [errorDetailsOpen, setErrorDetailsOpen] = useState(false);
+  const [selectedError, setSelectedError] = useState(null);
+
+  // Cargar distancias existentes cuando se abre el diálogo
+  useEffect(() => {
+    if (open) {
+      cargarDistanciasExistentes();
+    }
+  }, [open]);
+
+  // Función para cargar distancias existentes
+  const cargarDistanciasExistentes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No hay token de autenticación');
+      }
+
+      const response = await axios.get(
+        '/api/tramos/distancias',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.data.success) {
+        // Crear un mapa de distancias por origen-destino
+        const distanciasMap = {};
+        response.data.data.forEach(item => {
+          const key = `${item.origen}-${item.destino}`;
+          distanciasMap[key] = item.distancia;
+        });
+        setDistanciasExistentes(distanciasMap);
+        logger.debug('Distancias existentes cargadas:', distanciasMap);
+      }
+    } catch (error) {
+      logger.error('Error al cargar distancias existentes:', error);
+      // No interrumpimos el flujo si falla la carga de distancias
+    }
+  };
 
   const handleClose = () => {
     setError(null);
@@ -145,6 +191,8 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
         ['- Los nombres de los sitios deben coincidir exactamente con los nombres en la hoja "Sitios Disponibles"'],
         ['- Las fechas deben estar en formato DD/MM/YYYY'],
         ['- Los campos marcados con * son obligatorios'],
+        ['- Si ya existe un tramo con el mismo origen y destino, se agregará la nueva tarifa al tramo existente'],
+        ['- No se pueden agregar tarifas con fechas superpuestas para el mismo tipo y método de cálculo']
       ];
 
       const wsReference = XLSX.utils.aoa_to_sheet(referenceData);
@@ -271,22 +319,39 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
               throw new Error(`Fecha de vigencia hasta inválida en la fila ${index + 2}`);
             }
 
+            // Verificar si ya tenemos la distancia calculada para este origen-destino
+            const distanciaKey = `${origenSite._id}-${destinoSite._id}`;
+            const distanciaExistente = distanciasExistentes[distanciaKey];
+
             return {
               origen: origenSite._id,
               destino: destinoSite._id,
               origenNombre: row.origen,
               destinoNombre: row.destino,
-              tipo: row.tipo || 'TRMC',
-              metodoCalculo: row.metodoCalculo || 'Kilometro',
-              valor: typeof row.valor === 'number' ? row.valor : parseFloat(row.valor) || 0,
-              valorPeaje: typeof row.valorPeaje === 'number' ? row.valorPeaje : parseFloat(row.valorPeaje) || 0,
-              vigenciaDesde,
-              vigenciaHasta
+              // Ahora creamos un objeto de tarifa histórica en lugar de incluir estos campos directamente
+              tarifaHistorica: {
+                tipo: row.tipo || 'TRMC',
+                metodoCalculo: row.metodoCalculo || 'Kilometro',
+                valor: typeof row.valor === 'number' ? row.valor : parseFloat(row.valor) || 0,
+                valorPeaje: typeof row.valorPeaje === 'number' ? row.valorPeaje : parseFloat(row.valorPeaje) || 0,
+                vigenciaDesde,
+                vigenciaHasta
+              },
+              // Si existe una distancia calculada previamente, la incluimos
+              distanciaPreCalculada: distanciaExistente !== undefined ? distanciaExistente : null
             };
           });
 
           // Validar datos requeridos
-          const invalidData = tramosData.filter(t => !t.origen || !t.destino || !t.tipo || !t.metodoCalculo || !t.vigenciaDesde || !t.vigenciaHasta);
+          const invalidData = tramosData.filter(t => 
+            !t.origen || 
+            !t.destino || 
+            !t.tarifaHistorica.tipo || 
+            !t.tarifaHistorica.metodoCalculo || 
+            !t.tarifaHistorica.vigenciaDesde || 
+            !t.tarifaHistorica.vigenciaHasta
+          );
+          
           if (invalidData.length > 0) {
             throw new Error(`Algunos registros no tienen los campos requeridos. Filas con problemas: ${invalidData.map((_, i) => i + 2).join(', ')}`);
           }
@@ -302,6 +367,8 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
 
           let exitosos = 0;
           let errores = [];
+          let tramosCreados = 0;
+          let tramosActualizados = 0;
 
           for (let i = 0; i < batches.length; i++) {
             const batch = batches[i];
@@ -316,14 +383,17 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
 
               logger.debug(`Enviando lote ${i+1}:`, {
                 tamañoLote: batch.length,
-                primerTramo: batch[0]
+                primerTramo: batch[0],
+                distanciasPreCalculadas: batch.filter(t => t.distanciaPreCalculada !== null).length
               });
 
               const response = await axios.post(
                 '/api/tramos/bulk',
                 { 
                   cliente, 
-                  tramos: batch
+                  tramos: batch,
+                  reutilizarDistancias: true, // Indicar al backend que queremos reutilizar distancias
+                  actualizarExistentes: true  // Nuevo parámetro para indicar que queremos actualizar tramos existentes
                 },
                 { 
                   headers: { 
@@ -338,6 +408,8 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
               
               if (response.data.success) {
                 exitosos += response.data.exitosos || 0;
+                tramosCreados += response.data.tramosCreados || 0;
+                tramosActualizados += response.data.tramosActualizados || 0;
                 if (response.data.errores) {
                   errores = [...errores, ...response.data.errores];
                 }
@@ -385,7 +457,9 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
           setUploadResult({
             total: tramosData.length,
             exitosos: exitosos,
-            errores: errores
+            errores: errores,
+            tramosCreados: tramosCreados,
+            tramosActualizados: tramosActualizados
           });
           
           // Notificar al componente padre para que actualice la lista de tramos
@@ -427,138 +501,388 @@ const TramosExcelImporter = ({ open, onClose, cliente, onComplete, sites }) => {
     }
   };
 
+  const processExcelData = async (data) => {
+    try {
+      setLoading(true);
+      
+      const parsedData = data.map(row => {
+        // Convertir las fechas de Excel a objetos Date
+        let vigenciaDesde = row['Vigencia Desde'];
+        let vigenciaHasta = row['Vigencia Hasta'];
+        
+        if (vigenciaDesde) {
+          if (typeof vigenciaDesde === 'number') {
+            // Si es un número, asumimos que es un número de serie de Excel
+            vigenciaDesde = excelDateToJSDate(vigenciaDesde);
+          } else if (typeof vigenciaDesde === 'string') {
+            // Si es un string, intentamos parsearlo
+            vigenciaDesde = new Date(vigenciaDesde);
+          }
+        } else {
+          vigenciaDesde = new Date();
+        }
+        
+        if (vigenciaHasta) {
+          if (typeof vigenciaHasta === 'number') {
+            vigenciaHasta = excelDateToJSDate(vigenciaHasta);
+          } else if (typeof vigenciaHasta === 'string') {
+            vigenciaHasta = new Date(vigenciaHasta);
+          }
+        } else {
+          // Por defecto, un año desde la fecha de inicio
+          vigenciaHasta = new Date(vigenciaDesde);
+          vigenciaHasta.setFullYear(vigenciaHasta.getFullYear() + 1);
+        }
+        
+        return {
+          origen: row['Origen'],
+          destino: row['Destino'],
+          cliente: cliente,
+          tarifasHistoricas: [{
+            tipo: row['Tipo'] || 'TRMC',
+            metodoCalculo: row['Método de Cálculo'] || 'Kilometro',
+            valor: parseFloat(row['Valor'] || 0),
+            valorPeaje: parseFloat(row['Peaje'] || 0),
+            vigenciaDesde: vigenciaDesde.toISOString(),
+            vigenciaHasta: vigenciaHasta.toISOString()
+          }]
+        };
+      });
+      
+      setPreviewData(parsedData);
+      setPreviewOpen(true);
+    } catch (error) {
+      setError(`Error al procesar datos de Excel: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShowErrorDetails = (error) => {
+    setSelectedError(error);
+    setErrorDetailsOpen(true);
+  };
+
+  const handleCloseErrorDetails = () => {
+    setErrorDetailsOpen(false);
+    setSelectedError(null);
+  };
+
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-    >
-      <DialogTitle>Importar Tramos desde Excel - Cliente: {cliente}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body1" gutterBottom>
-            Utilice esta herramienta para importar múltiples tramos desde un archivo Excel.
-          </Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Descargue la plantilla, complete los datos y luego cargue el archivo para importar los tramos.
-          </Typography>
-        </Box>
-
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={6}>
-            <Button
-              variant="outlined"
-              color="primary"
-              startIcon={<CloudDownloadIcon />}
-              onClick={handleDownloadTemplate}
-              fullWidth
-            >
-              Descargar Plantilla Excel
-            </Button>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<CloudUploadIcon />}
-              component="label"
-              fullWidth
-              disabled={loading}
-            >
-              Cargar Archivo Excel
-              <input
-                type="file"
-                hidden
-                accept=".xlsx,.xls"
-                onChange={handleFileUpload}
-              />
-            </Button>
-          </Grid>
-        </Grid>
-
-        <Divider sx={{ my: 2 }} />
-
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {uploadError && <Alert severity="error" sx={{ mb: 2 }}>{uploadError}</Alert>}
-        
-        {loading && (
-          <Box sx={{ width: '100%', mb: 2 }}>
+    <>
+      <Dialog 
+        open={open} 
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Importar Tramos desde Excel - Cliente: {cliente}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1" gutterBottom>
+              Utilice esta herramienta para importar múltiples tramos desde un archivo Excel.
+            </Typography>
             <Typography variant="body2" color="text.secondary" gutterBottom>
-              {processingStatus}
+              Descargue la plantilla, complete los datos y luego cargue el archivo para importar los tramos.
             </Typography>
-            <LinearProgress variant="determinate" value={progress} />
           </Box>
-        )}
-        
-        {uploadSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {uploadResult 
-              ? `Se han importado exitosamente ${uploadResult.exitosos} de ${uploadResult.total} tramos.`
-              : 'Los tramos se han importado exitosamente'}
-          </Alert>
-        )}
-        
-        {uploadResult && uploadResult.errores && uploadResult.errores.length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle1" color="error" gutterBottom>
-              Errores durante la importación:
-            </Typography>
-            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 200 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Lote</TableCell>
-                    <TableCell>Error</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {uploadResult.errores.map((err, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{err.lote || 'N/A'}</TableCell>
-                      <TableCell>{err.error}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        )}
 
-        <Box sx={{ mt: 3 }}>
-          <Alert severity="info" icon={<InfoIcon />}>
+          <Alert severity="success" sx={{ mb: 2 }}>
+            <Typography variant="subtitle2">Optimización de cálculo de distancias:</Typography>
             <Typography variant="body2">
-              <strong>Instrucciones:</strong>
+              El sistema reutilizará automáticamente los cálculos de distancia existentes para los mismos pares origen-destino,
+              mejorando el rendimiento de la importación.
             </Typography>
-            <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-              <li>Descargue la plantilla Excel y complete los datos de los tramos.</li>
-              <li>Los campos marcados con * son obligatorios.</li>
-              <li>Utilice los nombres <strong>exactos</strong> de los sitios como aparecen en la hoja "Sitios Disponibles".</li>
-              <li>Respete el formato de fecha (DD/MM/YYYY) para las fechas de vigencia.</li>
-              <li>Puede usar los ejemplos incluidos en la plantilla como guía.</li>
-              <li>No modifique los encabezados de las columnas.</li>
-              <li>Una vez completada la plantilla, cárguela para importar los tramos.</li>
-            </ul>
           </Alert>
+
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="subtitle2">Actualización de tramos existentes:</Typography>
+            <Typography variant="body2">
+              Si ya existe un tramo con el mismo origen y destino, se agregará la nueva tarifa al tramo existente.
+              No se pueden agregar tarifas con fechas superpuestas para el mismo tipo y método de cálculo.
+            </Typography>
+          </Alert>
+
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="subtitle2">Manejo de fechas de vigencia:</Typography>
+            <Typography variant="body2">
+              Para un mismo tramo (mismo origen y destino), puede tener múltiples tarifas con diferentes fechas de vigencia, 
+              pero estas fechas no pueden superponerse si son del mismo tipo (TRMC/TRMI) y método de cálculo.
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Ejemplo correcto: Tarifa 1 (01/01/2023 - 30/06/2023), Tarifa 2 (01/07/2023 - 31/12/2023)
+            </Typography>
+            <Typography variant="body2">
+              Ejemplo incorrecto: Tarifa 1 (01/01/2023 - 30/06/2023), Tarifa 2 (01/06/2023 - 31/12/2023) ← Superposición en junio
+            </Typography>
+          </Alert>
+
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={6}>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<CloudDownloadIcon />}
+                onClick={handleDownloadTemplate}
+                fullWidth
+              >
+                Descargar Plantilla Excel
+              </Button>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<CloudUploadIcon />}
+                component="label"
+                fullWidth
+                disabled={loading}
+              >
+                Cargar Archivo Excel
+                <input
+                  type="file"
+                  hidden
+                  accept=".xlsx,.xls"
+                  onChange={handleFileUpload}
+                />
+              </Button>
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 2 }} />
+
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {uploadError && <Alert severity="error" sx={{ mb: 2 }}>{uploadError}</Alert>}
           
-          <Alert severity="warning" sx={{ mt: 2 }} icon={<WarningIcon />}>
-            <Typography variant="body2">
-              <strong>Importante:</strong>
-            </Typography>
-            <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-              <li>Si encuentra errores relacionados con fechas, asegúrese de que estén en formato DD/MM/YYYY.</li>
-              <li>Verifique que los nombres de los sitios coincidan exactamente con los disponibles.</li>
-              <li>El sistema validará que no haya tramos duplicados o con fechas superpuestas.</li>
-            </ul>
-          </Alert>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
-          Cerrar
-        </Button>
-      </DialogActions>
-    </Dialog>
+          {loading && (
+            <Box sx={{ width: '100%', mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                {processingStatus}
+              </Typography>
+              <LinearProgress variant="determinate" value={progress} />
+            </Box>
+          )}
+          
+          {uploadSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {uploadResult 
+                ? `Se han procesado exitosamente ${uploadResult.exitosos} de ${uploadResult.total} tramos.${
+                    uploadResult.tramosCreados ? ` (${uploadResult.tramosCreados} creados, ${uploadResult.tramosActualizados || 0} actualizados)` : ''
+                  }`
+                : 'Los tramos se han importado exitosamente'}
+            </Alert>
+          )}
+          
+          {uploadResult && uploadResult.errores && uploadResult.errores.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" color="error" gutterBottom>
+                Errores durante la importación:
+              </Typography>
+              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell width="10%" sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>Tramo #</TableCell>
+                      <TableCell width="80%" sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>Error</TableCell>
+                      <TableCell width="10%" sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {uploadResult.errores.map((err, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{err.tramo || err.lote || 'N/A'}</TableCell>
+                        <TableCell>
+                          {err.error.includes('Conflicto de fechas') ? (
+                            <Box>
+                              <Typography variant="body2" color="error">
+                                {err.error}
+                              </Typography>
+                              <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
+                                <strong>Solución:</strong> Utilice fechas de vigencia que no se superpongan con las existentes para el mismo tipo de tramo y método de cálculo. Puede usar fechas diferentes o cambiar el tipo de tramo (TRMC/TRMI) o el método de cálculo.
+                              </Typography>
+                            </Box>
+                          ) : (
+                            err.error
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <IconButton 
+                            size="small" 
+                            color="primary" 
+                            onClick={() => handleShowErrorDetails(err)}
+                            title="Ver detalles"
+                          >
+                            <InfoIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+
+          <Box sx={{ mt: 3 }}>
+            <Alert severity="info" icon={<InfoIcon />}>
+              <Typography variant="body2">
+                <strong>Instrucciones:</strong>
+              </Typography>
+              <ul style={{ marginTop: 8, paddingLeft: 20 }}>
+                <li>Descargue la plantilla Excel y complete los datos de los tramos.</li>
+                <li>Los campos marcados con * son obligatorios.</li>
+                <li>Utilice los nombres <strong>exactos</strong> de los sitios como aparecen en la hoja "Sitios Disponibles".</li>
+                <li>Respete el formato de fecha (DD/MM/YYYY) para las fechas de vigencia.</li>
+                <li>Puede usar los ejemplos incluidos en la plantilla como guía.</li>
+                <li>No modifique los encabezados de las columnas.</li>
+                <li>Una vez completada la plantilla, cárguela para importar los tramos.</li>
+              </ul>
+            </Alert>
+            
+            <Alert severity="warning" sx={{ mt: 2 }} icon={<WarningIcon />}>
+              <Typography variant="body2">
+                <strong>Importante:</strong>
+              </Typography>
+              <ul style={{ marginTop: 8, paddingLeft: 20 }}>
+                <li>Si encuentra errores relacionados con fechas, asegúrese de que estén en formato DD/MM/YYYY.</li>
+                <li>Verifique que los nombres de los sitios coincidan exactamente con los disponibles.</li>
+                <li>El sistema validará que no haya tramos duplicados o con fechas superpuestas.</li>
+              </ul>
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} disabled={loading}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de detalles de error */}
+      <Dialog
+        open={errorDetailsOpen}
+        onClose={handleCloseErrorDetails}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: '#f44336', color: 'white', display: 'flex', alignItems: 'center' }}>
+          <ErrorIcon sx={{ mr: 1 }} />
+          Detalles del Error
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2, bgcolor: '#333', color: 'white' }}>
+          {selectedError && (
+            <>
+              <Alert severity="error" sx={{ mb: 2, color: '#000' }}>
+                <Typography variant="subtitle1">
+                  Error en tramo #{selectedError.tramo || selectedError.lote || 'N/A'}
+                </Typography>
+                <Typography variant="body1">
+                  {selectedError.error}
+                </Typography>
+              </Alert>
+
+              {selectedError.error.includes('Conflicto de fechas') && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="h6" gutterBottom color="white">
+                    Explicación del Conflicto
+                  </Typography>
+                  
+                  <Typography variant="body2" paragraph color="white">
+                    El sistema ha detectado que está intentando agregar una tarifa con fechas que se superponen 
+                    con una tarifa existente para el mismo tramo, tipo y método de cálculo.
+                  </Typography>
+                  
+                  {selectedError.detalles && (
+                    <Box sx={{ bgcolor: '#444', p: 2, borderRadius: 1, mb: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom color="white">
+                        Detalles del conflicto:
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="body2" color="white">
+                            <strong>Tramo:</strong> {selectedError.detalles.origen} → {selectedError.detalles.destino}
+                          </Typography>
+                          <Typography variant="body2" color="white">
+                            <strong>Tipo:</strong> {selectedError.detalles.tipo}
+                          </Typography>
+                          <Typography variant="body2" color="white">
+                            <strong>Método de cálculo:</strong> {selectedError.detalles.metodoCalculo}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="body2" color="white">
+                            <strong>Vigencia nueva:</strong> {selectedError.detalles.vigenciaDesdeNueva} - {selectedError.detalles.vigenciaHastaNueva}
+                          </Typography>
+                          <Typography variant="body2" color="white">
+                            <strong>Vigencia existente:</strong> {selectedError.detalles.vigenciaDesdeExistente} - {selectedError.detalles.vigenciaHastaExistente}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+                  
+                  <Box sx={{ bgcolor: '#444', p: 2, borderRadius: 1, mb: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom color="white">
+                      Reglas de validación:
+                    </Typography>
+                    <ul style={{ color: 'white' }}>
+                      <li>Para un mismo tramo (mismo origen y destino), puede tener múltiples tarifas con diferentes fechas de vigencia.</li>
+                      <li>Las fechas no pueden superponerse si son del mismo tipo (TRMC/TRMI) y método de cálculo.</li>
+                      <li>Si cambia el tipo de tramo (TRMC/TRMI) o el método de cálculo, puede tener tarifas con fechas superpuestas.</li>
+                    </ul>
+                  </Box>
+                  
+                  <Typography variant="h6" gutterBottom color="white">
+                    Posibles Soluciones
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <Paper sx={{ p: 2, height: '100%', bgcolor: '#1a237e', color: 'white' }}>
+                        <Typography variant="subtitle1" gutterBottom>
+                          Opción 1: Cambiar las fechas
+                        </Typography>
+                        <Typography variant="body2">
+                          Modifique las fechas de vigencia para que no se superpongan con las existentes.
+                          Por ejemplo, si ya existe una tarifa del 01/01/2023 al 30/06/2023, use fechas a partir del 01/07/2023.
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Paper sx={{ p: 2, height: '100%', bgcolor: '#1b5e20', color: 'white' }}>
+                        <Typography variant="subtitle1" gutterBottom>
+                          Opción 2: Cambiar el tipo
+                        </Typography>
+                        <Typography variant="body2">
+                          Si está usando TRMC, cambie a TRMI o viceversa. Esto permitirá tener tarifas con fechas superpuestas
+                          ya que se consideran tipos diferentes.
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Paper sx={{ p: 2, height: '100%', bgcolor: '#e65100', color: 'white' }}>
+                        <Typography variant="subtitle1" gutterBottom>
+                          Opción 3: Cambiar el método
+                        </Typography>
+                        <Typography variant="body2">
+                          Cambie el método de cálculo (Kilometro, Palet, Fijo). Esto permitirá tener tarifas con fechas superpuestas
+                          ya que se consideran métodos diferentes.
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ bgcolor: '#333' }}>
+          <Button onClick={handleCloseErrorDetails} color="primary" variant="contained">
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

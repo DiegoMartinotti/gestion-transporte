@@ -22,12 +22,15 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 const initialFormData = {
   origen: '',
   destino: '',
-  tipo: 'TRMC',
   cliente: '',
-  vigenciaDesde: dayjs(),
-  vigenciaHasta: dayjs().add(1, 'year'),
-  metodoCalculo: 'Kilometro',
-  valorPeaje: 0
+  tarifasHistoricas: [{
+    tipo: 'TRMC',
+    metodoCalculo: 'Kilometro',
+    valor: 0,
+    valorPeaje: 0,
+    vigenciaDesde: dayjs(),
+    vigenciaHasta: dayjs().add(1, 'year')
+  }]
 };
 
 const formatMoney = (value) => {
@@ -81,11 +84,25 @@ const TramoManager = () => {
 
   const handleOpenModal = (tramo = null) => {
     if (tramo) {
-      // Para edición: Convertir las fechas de string a Date
+      // Para edición
+      const tarifaActual = tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0 
+        ? tramo.tarifasHistoricas[0] 
+        : {
+            tipo: 'TRMC',
+            metodoCalculo: 'Kilometro',
+            valor: 0,
+            valorPeaje: 0,
+            vigenciaDesde: dayjs(),
+            vigenciaHasta: dayjs().add(1, 'year')
+          };
+      
       setFormData({
         ...tramo,
-        vigenciaDesde: dayjs(tramo.vigenciaDesde),
-        vigenciaHasta: dayjs(tramo.vigenciaHasta)
+        tarifasHistoricas: [{
+          ...tarifaActual,
+          vigenciaDesde: dayjs(tarifaActual.vigenciaDesde),
+          vigenciaHasta: dayjs(tarifaActual.vigenciaHasta)
+        }]
       });
       setSelectedTramo(tramo);
     } else {
@@ -103,38 +120,74 @@ const TramoManager = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    
+    // Si el campo está dentro de tarifasHistoricas
+    if (['tipo', 'metodoCalculo', 'valor', 'valorPeaje'].includes(name)) {
+      setFormData({
+        ...formData,
+        tarifasHistoricas: [
+          {
+            ...formData.tarifasHistoricas[0],
+            [name]: value
+          }
+        ]
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
   const handleDateChange = (name, date) => {
-    setFormData({ 
-      ...formData, 
-      [name]: date 
-    });
+    // Si el campo de fecha está dentro de tarifasHistoricas
+    if (['vigenciaDesde', 'vigenciaHasta'].includes(name)) {
+      setFormData({
+        ...formData,
+        tarifasHistoricas: [
+          {
+            ...formData.tarifasHistoricas[0],
+            [name]: date
+          }
+        ]
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: date
+      });
+    }
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
     try {
+      const tarifaHistorica = formData.tarifasHistoricas[0];
+      
+      // Preparar datos para enviar al servidor
       const dataToSend = {
         ...formData,
-        vigenciaDesde: formData.vigenciaDesde.toISOString(),
-        vigenciaHasta: formData.vigenciaHasta.toISOString()
+        tarifasHistoricas: [{
+          ...tarifaHistorica,
+          vigenciaDesde: tarifaHistorica.vigenciaDesde.toISOString(),
+          vigenciaHasta: tarifaHistorica.vigenciaHasta.toISOString()
+        }]
       };
-
+      
       if (selectedTramo) {
+        // Actualizar tramo existente
         await axios.put(`${API_URL}/tramos/${selectedTramo._id}`, dataToSend);
         setSuccessMessage('Tramo actualizado correctamente');
       } else {
+        // Crear nuevo tramo
         await axios.post(`${API_URL}/tramos`, dataToSend);
         setSuccessMessage('Tramo creado correctamente');
       }
-      fetchTramos();
+      
       handleCloseModal();
+      fetchTramos();
     } catch (error) {
-      setErrorMessage('Error: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setIsLoading(false);
+      setErrorMessage('Error: ' + (error.response?.data?.message || error.message));
     }
   };
 
