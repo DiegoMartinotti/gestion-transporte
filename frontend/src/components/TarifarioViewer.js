@@ -230,42 +230,39 @@ const formatMoney = (value) => {
     });
 };
 
-// Función para obtener la tarifa vigente de un tramo
-const obtenerTarifaVigente = (tramo, hoyStr) => {
-    // Si el tramo tiene una tarifaActual (del nuevo formato)
-    if (tramo.tarifaActual) {
-        return tramo.tarifaActual;
-    } 
-    
-    if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-        // Buscar en tarifasHistoricas por tipo y vigencia
-        const tarifaVigenteActual = tramo.tarifasHistoricas.find(tarifa => {
-            // Si hay un tipo específico en el tramo, filtrar por ese tipo
-            if (tramo.tipo && tarifa.tipo !== tramo.tipo) {
-                return false;
+// Función para obtener las tarifas vigentes de un tramo
+const obtenerTarifasVigentes = (tramo, fechaDesde, fechaHasta) => {
+    // Caso base optimizado
+    if (!tramo.tarifasHistoricas?.length) {
+        return [{
+            tipo: tramo.tipo || 'TRMC',
+            metodoCalculo: tramo.metodoCalculo || 'Kilometro',
+            valor: tramo.valor || 0,
+            valorPeaje: tramo.valorPeaje || 0,
+            vigenciaDesde: tramo.vigenciaDesde,
+            vigenciaHasta: tramo.vigenciaHasta
+        }];
+    }
+
+    // Optimización: Si no hay filtro de fechas, usar Map para mejor rendimiento
+    if (!fechaDesde || !fechaHasta) {
+        const tarifasPorTipo = new Map();
+        tramo.tarifasHistoricas.forEach(tarifa => {
+            const tipo = tarifa.tipo;
+            const tarifaActual = tarifasPorTipo.get(tipo);
+            if (!tarifaActual || new Date(tarifa.vigenciaHasta) > new Date(tarifaActual.vigenciaHasta)) {
+                tarifasPorTipo.set(tipo, tarifa);
             }
-            
-            // Extraer solo la parte de la fecha (YYYY-MM-DD)
-            const tarifaDesdeStr = tarifa.vigenciaDesde.split('T')[0];
-            const tarifaHastaStr = tarifa.vigenciaHasta.split('T')[0];
-            
-            // Comparar las fechas como strings
-            return tarifaDesdeStr <= hoyStr && tarifaHastaStr >= hoyStr;
         });
-        
-        // Si no hay vigente, usar la primera
-        return tarifaVigenteActual || tramo.tarifasHistoricas[0];
-    } 
-    
-    // Para tramos con formato antiguo
-    return {
-        tipo: tramo.tipo || 'TRMC',
-        metodoCalculo: tramo.metodoCalculo || 'Kilometro',
-        valor: tramo.valor || 0,
-        valorPeaje: tramo.valorPeaje || 0,
-        vigenciaDesde: tramo.vigenciaDesde,
-        vigenciaHasta: tramo.vigenciaHasta
-    };
+        return Array.from(tarifasPorTipo.values());
+    }
+
+    // Optimización: Filtrado con una sola iteración
+    return tramo.tarifasHistoricas.filter(tarifa => {
+        const [tarifaDesde] = tarifa.vigenciaDesde.split('T');
+        const [tarifaHasta] = tarifa.vigenciaHasta.split('T');
+        return tarifaDesde <= fechaHasta && tarifaHasta >= fechaDesde;
+    });
 };
 
 // Función para generar el detalle del método de cálculo
@@ -300,6 +297,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     const [showAddForm, setShowAddForm] = useState(false);
     const [showImporter, setShowImporter] = useState(false);
     const [showExcelImporter, setShowExcelImporter] = useState(false);
+    const [tramosExpandidos, setTramosExpandidos] = useState([]);
     const [newTramo, setNewTramo] = useState({
         origen: '',
         destino: '',
@@ -346,7 +344,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             return;
         }
         
-        // Si no hay filtros de fecha, mostrar todos los tramos
+        // Si no hay filtros de fecha, mostrar todos los tramos sin procesar
         if (!filtroVigencia.desde || !filtroVigencia.hasta) {
             setFilteredTramos(tramos);
             return;
@@ -358,90 +356,33 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
 
         logger.debug(`Filtrando tramos por rango de fechas: ${desdeStr} - ${hastaStr}`);
 
-        // Crear un mapa para almacenar solo el tramo más reciente por cada combinación
-        const tramosUnicos = new Map();
-        
-        // Procesar cada tramo
-        tramos.forEach(tramo => {
-            // Verificar si el tramo tiene tarifas históricas
-            if (tramo.tarifasHistoricas?.length > 0) {
-                // Filtrar tarifas que se superpongan con el rango de fechas solicitado
-                const tarifasEnRango = tramo.tarifasHistoricas.filter(tarifa => {
-                    // Extraer solo la parte de la fecha (YYYY-MM-DD)
-                    const tarifaDesdeStr = tarifa.vigenciaDesde.split('T')[0];
-                    const tarifaHastaStr = tarifa.vigenciaHasta.split('T')[0];
-                    
-                    // Verificar si la tarifa se superpone con el rango de fechas
-                    return tarifaDesdeStr <= hastaStr && tarifaHastaStr >= desdeStr;
-                });
-                
-                // Si no hay tarifas en rango, omitir este tramo
-                if (tarifasEnRango.length === 0) return;
-                
-                // Agrupar por tipo de tarifa
-                const tiposTarifa = new Set(tarifasEnRango.map(t => t.tipo));
-                
-                // Para cada tipo de tarifa, encontrar la más reciente en el rango
-                tiposTarifa.forEach(tipo => {
-                    // Filtrar tarifas por tipo
-                    const tarifasDeTipo = tarifasEnRango.filter(t => t.tipo === tipo);
-                    
-                    // Ordenar por fecha de vigencia (más reciente primero)
-                    tarifasDeTipo.sort((a, b) => 
-                        new Date(b.vigenciaHasta) - new Date(a.vigenciaHasta)
-                    );
-                    
-                    if (tarifasDeTipo.length > 0) {
-                        // Crear una copia del tramo con la tarifa específica
-                        const tramoConTarifa = {
-                            ...tramo,
-                            tipo: tipo, // Asignar el tipo de la tarifa al tramo
-                            tarifaActual: tarifasDeTipo[0] // Guardar referencia a la tarifa más reciente
-                        };
-                        
-                        // Clave única que incluye origen, destino y tipo
-                        const key = `${tramo.origen?.Site}-${tramo.destino?.Site}-${tipo}`;
-                        
-                        // Guardar en el mapa
-                        if (!tramosUnicos.has(key) || 
-                            new Date(tarifasDeTipo[0].vigenciaHasta) > new Date(tramosUnicos.get(key).tarifaActual.vigenciaHasta)) {
-                            tramosUnicos.set(key, tramoConTarifa);
-                        }
-                    }
-                });
-            } else if (tramo.vigenciaDesde && tramo.vigenciaHasta) {
-                // Para tramos con formato antiguo
-                // Extraer solo la parte de la fecha (YYYY-MM-DD)
-                const tramoDesdeStr = tramo.vigenciaDesde.split('T')[0];
-                const tramoHastaStr = tramo.vigenciaHasta.split('T')[0];
-                
-                // Verificar si el tramo se superpone con el rango de fechas
-                if (tramoDesdeStr <= hastaStr && tramoHastaStr >= desdeStr) {
-                    // Clave única que incluye origen, destino y tipo
-                    const key = `${tramo.origen?.Site}-${tramo.destino?.Site}-${tramo.tipo || 'TRMC'}`;
-                    
-                    // Si no existe un tramo para esta clave o este tramo tiene una fecha más reciente
-                    if (!tramosUnicos.has(key) || 
-                        new Date(tramo.vigenciaHasta) > new Date(tramosUnicos.get(key).vigenciaHasta)) {
-                        tramosUnicos.set(key, tramo);
-                    }
-                }
+        // Filtrar tramos que tengan tarifas en el rango de fechas
+        const tramosEnRango = tramos.filter(tramo => {
+            const tarifasEnRango = tramo.tarifasHistoricas?.some(tarifa => {
+                const [tarifaDesde] = tarifa.vigenciaDesde.split('T');
+                const [tarifaHasta] = tarifa.vigenciaHasta.split('T');
+                return tarifaDesde <= hastaStr && tarifaHasta >= desdeStr;
+            });
+
+            // Para tramos con formato antiguo
+            if (!tramo.tarifasHistoricas?.length && tramo.vigenciaDesde && tramo.vigenciaHasta) {
+                const [tramoDesde] = tramo.vigenciaDesde.split('T');
+                const [tramoHasta] = tramo.vigenciaHasta.split('T');
+                return tramoDesde <= hastaStr && tramoHasta >= desdeStr;
             }
+
+            return tarifasEnRango;
         });
         
-        // Convertir el mapa a array
-        const filteredResults = Array.from(tramosUnicos.values());
+        logger.debug(`Filtrado completado: ${tramosEnRango.length} tramos coinciden con el filtro de fecha`);
         
-        logger.debug(`Filtrado completado: ${filteredResults.length} tramos coinciden con el filtro de fecha`);
-        
-        // Si no hay resultados, mostrar un mensaje informativo
-        if (filteredResults.length === 0) {
+        if (tramosEnRango.length === 0) {
             setError(`No se encontraron tramos para el período ${desdeStr} - ${hastaStr}`);
         } else {
             setError(null);
         }
         
-        setFilteredTramos(filteredResults);
+        setFilteredTramos(tramosEnRango);
     }, [tramos, filtroVigencia]);
 
     const fetchSites = useCallback(async () => {
@@ -523,6 +464,64 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     useEffect(() => {
         applyFilters();
     }, [tramos, filtroVigencia, applyFilters]);
+
+    // Función para expandir los tramos
+    const expandirTramos = useCallback((tramosAExpandir) => {
+        if (!tramosAExpandir?.length) {
+            setTramosExpandidos([]);
+            return;
+        }
+
+        // Optimización: Usar Map para cachear resultados y evitar duplicados
+        const tramosExpandidosMap = new Map();
+        
+        tramosAExpandir.forEach(tramo => {
+            const tarifasVigentes = obtenerTarifasVigentes(
+                tramo,
+                filtroVigencia.desde,
+                filtroVigencia.hasta
+            );
+
+            tarifasVigentes.forEach(tarifa => {
+                const key = `${tramo._id}-${tarifa.tipo}-${tarifa.vigenciaDesde}-${tarifa.vigenciaHasta}`;
+                
+                // Solo agregar si no existe o si la tarifa es más reciente
+                if (!tramosExpandidosMap.has(key) || 
+                    new Date(tarifa.vigenciaHasta) > new Date(tramosExpandidosMap.get(key).tarifaActual.vigenciaHasta)) {
+                    tramosExpandidosMap.set(key, {
+                        ...tramo,
+                        tarifaActual: tarifa,
+                        _idCompuesto: key
+                    });
+                }
+            });
+        });
+
+        // Convertir el mapa a array y ordenar por fecha de vigencia
+        const expandidos = Array.from(tramosExpandidosMap.values())
+            .sort((a, b) => {
+                // Primero ordenar por origen
+                const origenComp = a.origen.Site.localeCompare(b.origen.Site);
+                if (origenComp !== 0) return origenComp;
+                
+                // Luego por destino
+                const destinoComp = a.destino.Site.localeCompare(b.destino.Site);
+                if (destinoComp !== 0) return destinoComp;
+                
+                // Finalmente por tipo y fecha
+                const tipoComp = a.tarifaActual.tipo.localeCompare(b.tarifaActual.tipo);
+                if (tipoComp !== 0) return tipoComp;
+                
+                return new Date(b.tarifaActual.vigenciaHasta) - new Date(a.tarifaActual.vigenciaHasta);
+            });
+
+        setTramosExpandidos(expandidos);
+    }, [filtroVigencia.desde, filtroVigencia.hasta]);
+
+    // Modificar useEffect para actualizar tramosExpandidos cuando cambien los filtros
+    useEffect(() => {
+        expandirTramos(filteredTramos);
+    }, [filteredTramos, expandirTramos]);
 
     const handleAddTramo = async (tramoData) => {
         try {
@@ -627,23 +626,20 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     };
 
     const toggleSelectAll = () => {
-        // Check if all visible tramos are already selected
-        const allSelected = filteredTramos.length > 0 && 
-                           filteredTramos.every(t => selectedTramos.includes(t._id));
+        const allSelected = tramosExpandidos.length > 0 && 
+                           tramosExpandidos.every(t => selectedTramos.includes(t._idCompuesto));
         
         if (allSelected) {
-            // Deselect all
             setSelectedTramos([]);
         } else {
-            // Select all visible tramos
-            setSelectedTramos(filteredTramos.map(t => t._id));
+            setSelectedTramos(tramosExpandidos.map(t => t._idCompuesto));
         }
     };
 
-    // Calculate if all visible tramos are selected
-    const areAllSelected = filteredTramos.length > 0 && 
-                           filteredTramos.every(t => selectedTramos.includes(t._id));
-    
+    // Modificar el cálculo de areAllSelected
+    const areAllSelected = tramosExpandidos.length > 0 && 
+                          tramosExpandidos.every(t => selectedTramos.includes(t._idCompuesto));
+
     // Count selected tramos
     const selectedCount = selectedTramos.length;
 
@@ -751,12 +747,12 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             }
 
             // Obtener los tramos seleccionados
-            const tramosSeleccionados = filteredTramos.filter(tramo => 
-                selectedTramos.includes(tramo._id)
+            const tramosParaExportar = tramosExpandidos.filter(tramo => 
+                selectedTramos.includes(tramo._idCompuesto)
             );
 
             // Preparar los datos para el Excel
-            const excelData = prepararDatosExcel(tramosSeleccionados);
+            const excelData = prepararDatosExcel(tramosParaExportar);
             
             if (excelData.length === 0) {
                 setError('No se pudieron procesar los tramos seleccionados');
@@ -778,13 +774,13 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     const handleExportAllToExcel = () => {
         try {
             // Verificar si hay tramos para exportar
-            if (filteredTramos.length === 0) {
+            if (tramosExpandidos.length === 0) {
                 setError('No hay tramos para exportar');
                 return;
             }
 
             // Preparar los datos para el Excel
-            const excelData = prepararDatosExcel(filteredTramos);
+            const excelData = prepararDatosExcel(tramosExpandidos);
             
             if (excelData.length === 0) {
                 setError('No se pudieron procesar los tramos');
@@ -803,45 +799,32 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     };
 
     // Función auxiliar para preparar los datos para Excel
-    const prepararDatosExcel = (tramos) => {
-        // Obtener la fecha actual en formato YYYY-MM-DD
-        const hoyStr = dayjs().format('YYYY-MM-DD');
-        
-        return tramos.map(tramo => {
-            // Obtener la tarifa vigente para la fecha actual
-            const tarifaVigente = obtenerTarifaVigente(tramo, hoyStr);
-            
-            if (!tarifaVigente) return null;
-            
-            // Formatear fechas correctamente sin ajustes de zona horaria
-            const vigenciaDesdeStr = tarifaVigente.vigenciaDesde.split('T')[0];
-            const vigenciaHastaStr = tarifaVigente.vigenciaHasta.split('T')[0];
-            
-            // Convertir a formato DD/MM/YYYY para mostrar en Excel
-            const fechaDesdeFormateada = vigenciaDesdeStr ? 
-                `${vigenciaDesdeStr.substring(8, 10)}/${vigenciaDesdeStr.substring(5, 7)}/${vigenciaDesdeStr.substring(0, 4)}` : 
-                'N/A';
-            const fechaHastaFormateada = vigenciaHastaStr ? 
-                `${vigenciaHastaStr.substring(8, 10)}/${vigenciaHastaStr.substring(5, 7)}/${vigenciaHastaStr.substring(0, 4)}` : 
-                'N/A';
-            
-            // Generar el detalle según el método de cálculo
-            let detalleMetodo = "";
-            detalleMetodo = generarDetalleMetodo(tarifaVigente.metodoCalculo, tarifaVigente.valor, tramo.distancia);
+    const prepararDatosExcel = (tramosAExportar) => {
+        // Optimización: Memoizar la función formatearFecha
+        const fechasCache = new Map();
+        const getFechaFormateada = (fecha) => {
+            if (!fechasCache.has(fecha)) {
+                fechasCache.set(fecha, formatearFecha(fecha));
+            }
+            return fechasCache.get(fecha);
+        };
+
+        return tramosAExportar.map(tramo => {
+            const { tarifaActual: tarifa } = tramo;
             
             return {
                 'Origen': tramo.origen.Site,
                 'Destino': tramo.destino.Site,
-                'Tipo': tarifaVigente.tipo,
-                'Método de Cálculo': tarifaVigente.metodoCalculo,
-                'Valor': Number(tarifaVigente.valor),
-                'Valor Peaje': Number(tarifaVigente.valorPeaje),
-                'Detalle': detalleMetodo,
-                'Vigencia Desde': fechaDesdeFormateada,
-                'Vigencia Hasta': fechaHastaFormateada,
+                'Tipo': tarifa.tipo,
+                'Método': tarifa.metodoCalculo,
+                'Valor': formatMoney(tarifa.valor),
+                'Peaje': formatMoney(tarifa.valorPeaje),
+                'Detalle': generarDetalleMetodo(tarifa.metodoCalculo, tarifa.valor, tramo.distancia),
+                'Vigencia Desde': getFechaFormateada(tarifa.vigenciaDesde),
+                'Vigencia Hasta': getFechaFormateada(tarifa.vigenciaHasta),
                 'Distancia (km)': tramo.distancia || 0
             };
-        }).filter(Boolean); // Eliminar posibles valores nulos
+        });
     };
 
     // Función auxiliar para crear y descargar el archivo Excel
@@ -878,13 +861,12 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     const renderTramosTable = () => {
         if (loading) return <Typography>Cargando tarifario...</Typography>;
         
-        if (filteredTramos.length === 0) {
-            return <Alert severity="info">No hay tramos disponibles para este cliente.</Alert>;
+        if (tramosExpandidos.length === 0) {
+            return <Alert severity="info">
+                No hay tramos disponibles para {filtroVigencia.desde ? 'el período seleccionado' : 'este cliente'}.
+            </Alert>;
         }
 
-        // Obtener la fecha actual en formato YYYY-MM-DD
-        const hoyStr = dayjs().format(ISO_FORMAT);
-        
         return (
             <TableContainer component={Paper} sx={{ maxHeight: '60vh', overflow: 'auto' }}>
                 <Table stickyHeader size="small">
@@ -892,8 +874,8 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                         <TableRow>
                             <TableCell padding="checkbox" sx={{ position: 'sticky', left: 0, zIndex: 3, backgroundColor: 'background.paper' }}>
                                 <Checkbox
-                                    indeterminate={selectedTramos.length > 0 && selectedTramos.length < filteredTramos.length}
-                                    checked={selectedTramos.length > 0 && selectedTramos.length === filteredTramos.length}
+                                    indeterminate={selectedTramos.length > 0 && selectedTramos.length < tramosExpandidos.length}
+                                    checked={selectedTramos.length > 0 && selectedTramos.length === tramosExpandidos.length}
                                     onChange={toggleSelectAll}
                                 />
                             </TableCell>
@@ -909,18 +891,14 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {filteredTramos.map(tramo => {
-                            // Obtener la tarifa vigente para la fecha actual
-                            const tarifaVigente = obtenerTarifaVigente(tramo, hoyStr);
-                            
-                            if (!tarifaVigente) return null;
-                            
-                            const isSelected = selectedTramos.includes(tramo._id);
+                        {tramosExpandidos.map(tramo => {
+                            const tarifaVigente = tramo.tarifaActual;
+                            const isSelected = selectedTramos.includes(tramo._idCompuesto);
                             
                             // Determinar si el tramo está vigente actualmente
                             const vigenciaDesdeStr = tarifaVigente.vigenciaDesde.split('T')[0];
                             const vigenciaHastaStr = tarifaVigente.vigenciaHasta.split('T')[0];
-                            const isVigente = vigenciaDesdeStr <= hoyStr && vigenciaHastaStr >= hoyStr;
+                            const isVigente = vigenciaDesdeStr <= filtroVigencia.hasta && vigenciaHastaStr >= filtroVigencia.desde;
                             
                             // Generar el detalle según el método de cálculo
                             const detalleMetodo = generarDetalleMetodo(
@@ -935,7 +913,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                             
                             return (
                                 <TableRow 
-                                    key={tramo._id}
+                                    key={tramo._idCompuesto}
                                     hover
                                     selected={isSelected}
                                     sx={{
@@ -945,12 +923,12 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                                     <TableCell padding="checkbox" sx={{ position: 'sticky', left: 0, zIndex: 2, backgroundColor: isSelected ? 'action.selected' : 'background.paper' }}>
                                         <Checkbox
                                             checked={isSelected}
-                                            onChange={() => toggleSelectTramo(tramo._id)}
+                                            onChange={() => toggleSelectTramo(tramo._idCompuesto)}
                                         />
                                     </TableCell>
                                     <TableCell sx={{ position: 'sticky', left: '40px', zIndex: 2, backgroundColor: isSelected ? 'action.selected' : 'background.paper' }}>{tramo.origen.Site}</TableCell>
                                     <TableCell>{tramo.destino.Site}</TableCell>
-                                    <TableCell>{tarifaVigente.tipo || tramo.tipo || 'TRMC'}</TableCell>
+                                    <TableCell>{tarifaVigente.tipo}</TableCell>
                                     <TableCell>{tarifaVigente.metodoCalculo}</TableCell>
                                     <TableCell align="right">
                                         ${formatMoney(tarifaVigente.valor)}
@@ -975,7 +953,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                                     <TableCell>
                                         <IconButton 
                                             size="small" 
-                                            onClick={() => handleEditClick(tramo)}
+                                            onClick={() => handleEditClick({...tramo, tipo: tarifaVigente.tipo})}
                                             disabled={!permisos.includes('editar_tramos')}
                                         >
                                             <EditIcon fontSize="small" />
@@ -1158,13 +1136,15 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                                 <span>{selectedCount} tramos seleccionados</span>
                             ) : (
                                 <>
-                                    <span>{filteredTramos.length} tramos {metadata && metadata.totalTramos > metadata.tramosUnicos && (
-                                        <Chip 
-                                            size="small" 
-                                            color="success" 
-                                            label={`${Math.round((metadata.totalTramos - metadata.tramosUnicos) / metadata.totalTramos * 100)}% optimizado`} 
-                                            sx={{ ml: 1, fontSize: '0.7rem' }}
-                                        />
+                                    <span>{tramosExpandidos.length} tramos {metadata && metadata.totalTramos > metadata.tramosUnicos && (
+                                        <Tooltip title="Porcentaje de tramos que comparten la misma ruta pero con diferentes tarifas">
+                                            <Chip 
+                                                size="small" 
+                                                color="success" 
+                                                label={`${Math.round((metadata.totalTramos - metadata.tramosUnicos) / metadata.totalTramos * 100)}% optimizado`} 
+                                                sx={{ ml: 1, fontSize: '0.7rem' }}
+                                            />
+                                        </Tooltip>
                                     )}</span>
                                 </>
                             )}
