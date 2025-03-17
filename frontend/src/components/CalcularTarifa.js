@@ -108,7 +108,7 @@ const CalcularTarifa = () => {
     setResultado(null);
     setError(null);
 
-    if (!selectedCliente || !origen || !destino) {
+    if (!selectedCliente || !origen || !destino || !tipoTramo) {
       setError('Por favor complete todos los campos requeridos.');
       setLoading(false);
       return;
@@ -117,75 +117,24 @@ const CalcularTarifa = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // Buscar el tramo correspondiente en base al origen, destino y tipo seleccionado
-      let tramoFinal = null;
-      
-      if (selectedTramo) {
-        // Si ya tenemos un tramo preseleccionado, usamos ese pero filtramos por tipo
-        if (tipoTramo) {
-          // Buscar la tarifa vigente para el tipo seleccionado
-          const tarifaVigente = selectedTramo.tarifasHistoricas.find(tarifa => 
-            tarifa.tipo === tipoTramo && 
-            dayjs().isAfter(dayjs(tarifa.vigenciaDesde)) && 
-            dayjs().isBefore(dayjs(tarifa.vigenciaHasta))
-          );
-          
-          if (tarifaVigente) {
-            tramoFinal = {
-              ...selectedTramo,
-              tarifaActual: tarifaVigente
-            };
-          } else {
-            // Si no hay tarifa vigente para este tipo, buscamos cualquier tarifa de este tipo
-            const tarifaTipo = selectedTramo.tarifasHistoricas.find(tarifa => 
-              tarifa.tipo === tipoTramo
-            );
-            
-            if (tarifaTipo) {
-              tramoFinal = {
-                ...selectedTramo,
-                tarifaActual: tarifaTipo
-              };
-              setTramoNoVigente(true);
-            }
-          }
-        } else {
-          // Si no hay tipo seleccionado, buscamos cualquier tarifa vigente
-          const tarifaVigente = selectedTramo.tarifasHistoricas.find(tarifa => 
-            dayjs().isAfter(dayjs(tarifa.vigenciaDesde)) && 
-            dayjs().isBefore(dayjs(tarifa.vigenciaHasta))
-          );
-          
-          if (tarifaVigente) {
-            tramoFinal = {
-              ...selectedTramo,
-              tarifaActual: tarifaVigente
-            };
-          } else {
-            // Si no hay tarifa vigente, usamos la primera tarifa
-            tramoFinal = {
-              ...selectedTramo,
-              tarifaActual: selectedTramo.tarifasHistoricas[0]
-            };
-            setTramoNoVigente(true);
-          }
-        }
-      }
-      
-      if (!tramoFinal) {
+      // Verificar que tenemos un tramo seleccionado con tarifa
+      if (!selectedTramo || !selectedTramo.tarifaActual) {
         setError('No se encontró un tramo válido para esta ruta y tipo.');
         setLoading(false);
         return;
       }
       
       // Hacer la consulta con el tramo seleccionado
-      const response = await axios.post('/api/tramos/calcular', {
+      const response = await axios.post('/api/tramos/calcular-tarifa', {
         origen: origen,
         destino: destino,
         cliente: selectedCliente,
+        fecha: dayjs().format('YYYY-MM-DD'),
         palets: palets,
         tipoUnidad: tipoUnidad,
-        tipo: tramoFinal.tarifaActual.tipo
+        tipoTramo: tipoTramo,
+        permitirTramoNoVigente: tramoNoVigente,
+        tramoId: selectedTramo._id
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -194,8 +143,8 @@ const CalcularTarifa = () => {
         setError(response.data.error);
       } else {
         setResultado({
-          ...response.data,
-          tramo: tramoFinal,
+          ...response.data.data,
+          tramo: selectedTramo,
           origen: sites.find(s => s._id === origen),
           destino: sites.find(s => s._id === destino)
         });
@@ -251,7 +200,20 @@ const CalcularTarifa = () => {
         const tramosVigentes = tramosCoincidentes.filter(estaTramoVigente);
         
         if (tramosVigentes.length > 0) {
-          setSelectedTramo(tramosVigentes[0]);
+          // Seleccionar el primer tramo vigente
+          const tramoSeleccionado = tramosVigentes[0];
+          
+          // Buscar una tarifa vigente en este tramo
+          const hoy = dayjs();
+          const tarifaVigente = tramoSeleccionado.tarifasHistoricas.find(tarifa => 
+            hoy.isAfter(dayjs(tarifa.vigenciaDesde)) && 
+            hoy.isBefore(dayjs(tarifa.vigenciaHasta))
+          );
+          
+          setSelectedTramo({
+            ...tramoSeleccionado,
+            tarifaActual: tarifaVigente
+          });
           setTramoNoVigente(false);
           
           // Si solo hay un tipo de tramo disponible, seleccionarlo automáticamente
@@ -259,9 +221,19 @@ const CalcularTarifa = () => {
             setTipoTramo(tiposDisponibles[0]);
           }
         } else {
-          setSelectedTramo(tramosCoincidentes[0]);
+          // No hay tramos vigentes, seleccionar el primero y su primera tarifa
+          const tramoSeleccionado = tramosCoincidentes[0];
+          setSelectedTramo({
+            ...tramoSeleccionado,
+            tarifaActual: tramoSeleccionado.tarifasHistoricas[0]
+          });
           setTramoNoVigente(true);
           setError('Advertencia: No hay tramos vigentes para esta ruta.');
+          
+          // Si solo hay un tipo de tramo disponible, seleccionarlo automáticamente
+          if (tiposDisponibles.length === 1) {
+            setTipoTramo(tiposDisponibles[0]);
+          }
         }
       } else {
         setSelectedTramo(null);
@@ -273,6 +245,48 @@ const CalcularTarifa = () => {
       setSelectedTramo(null);
       setTiposDisponibles([]);
       setTipoTramo('');
+    }
+  };
+
+  const handleTipoTramoChange = (event) => {
+    const nuevoTipo = event.target.value;
+    setTipoTramo(nuevoTipo);
+    
+    // Si tenemos un tramo seleccionado, actualizar la tarifa actual
+    if (selectedTramo && selectedTramo.tarifasHistoricas) {
+      const hoy = dayjs();
+      
+      // Buscar primero una tarifa vigente del tipo seleccionado
+      const tarifaVigente = selectedTramo.tarifasHistoricas.find(tarifa => 
+        tarifa.tipo === nuevoTipo && 
+        hoy.isAfter(dayjs(tarifa.vigenciaDesde)) && 
+        hoy.isBefore(dayjs(tarifa.vigenciaHasta))
+      );
+      
+      if (tarifaVigente) {
+        // Hay una tarifa vigente para este tipo
+        setSelectedTramo({
+          ...selectedTramo,
+          tarifaActual: tarifaVigente
+        });
+        setTramoNoVigente(false);
+      } else {
+        // No hay tarifa vigente, buscar cualquier tarifa de este tipo
+        const tarifaTipo = selectedTramo.tarifasHistoricas.find(tarifa => 
+          tarifa.tipo === nuevoTipo
+        );
+        
+        if (tarifaTipo) {
+          setSelectedTramo({
+            ...selectedTramo,
+            tarifaActual: tarifaTipo
+          });
+          setTramoNoVigente(true);
+          setError('Advertencia: No hay tarifas vigentes para este tipo de tramo.');
+        } else {
+          setError('No se encontró ninguna tarifa para este tipo de tramo.');
+        }
+      }
     }
   };
 
@@ -425,13 +439,13 @@ const CalcularTarifa = () => {
                 {tramoNoVigente ? (
                   <>
                     <strong>Advertencia:</strong> No hay tramos vigentes para esta ruta. 
-                    Se utilizará el tramo más reciente con vigencia desde {dayjs.utc(selectedTramo.vigenciaDesde).format('DD/MM/YYYY')} 
-                    hasta {dayjs.utc(selectedTramo.vigenciaHasta).format('DD/MM/YYYY')}
+                    Se utilizará el tramo más reciente con vigencia desde {dayjs.utc(selectedTramo.tarifaActual?.vigenciaDesde).format('DD/MM/YYYY')} 
+                    hasta {dayjs.utc(selectedTramo.tarifaActual?.vigenciaHasta).format('DD/MM/YYYY')}
                   </>
                 ) : (
                   <>
-                    Tarifa vigente desde {dayjs.utc(selectedTramo.vigenciaDesde).format('DD/MM/YYYY')} 
-                    hasta {dayjs.utc(selectedTramo.vigenciaHasta).format('DD/MM/YYYY')}
+                    Tarifa vigente desde {dayjs.utc(selectedTramo.tarifaActual?.vigenciaDesde).format('DD/MM/YYYY')} 
+                    hasta {dayjs.utc(selectedTramo.tarifaActual?.vigenciaHasta).format('DD/MM/YYYY')}
                   </>
                 )}
               </Alert>
@@ -457,7 +471,7 @@ const CalcularTarifa = () => {
               <InputLabel>Tipo de Tramo</InputLabel>
               <Select
                 value={tipoTramo}
-                onChange={(e) => setTipoTramo(e.target.value)}
+                onChange={handleTipoTramoChange}
                 label="Tipo de Tramo"
                 disabled={!origen || !destino || tiposDisponibles.length === 0}
                 inputRef={tipoTramoInputRef}
@@ -561,14 +575,14 @@ const CalcularTarifa = () => {
                           Fecha actual: {dayjs().utc().format('DD/MM/YYYY')}
                         </Typography>
                         <Typography variant="body2">
-                          Vigencia: {dayjs.utc(selectedTramo.vigenciaDesde).format('DD/MM/YYYY')} 
+                          Vigencia: {dayjs.utc(selectedTramo.tarifaActual?.vigenciaDesde).format('DD/MM/YYYY')} 
                           {' '} al {' '}
-                          {dayjs.utc(selectedTramo.vigenciaHasta).format('DD/MM/YYYY')}
+                          {dayjs.utc(selectedTramo.tarifaActual?.vigenciaHasta).format('DD/MM/YYYY')}
                         </Typography>
                         {tramoNoVigente && (
                           <Typography variant="body2" color="warning.dark" sx={{ mt: 0.5 }}>
                             Esta tarifa está {
-                              dayjs().utc().isBefore(dayjs.utc(selectedTramo.vigenciaDesde)) ? 
+                              dayjs().utc().isBefore(dayjs.utc(selectedTramo.tarifaActual?.vigenciaDesde)) ? 
                                 'pendiente de entrar en vigencia' : 
                                 'vencida'
                             }.

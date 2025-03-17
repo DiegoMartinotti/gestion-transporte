@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 /**
  * @typedef {Object} PersonalSchema
- * @property {string} nombre - Nombre completo del empleado
+ * @property {string} nombre - Nombre del empleado
+ * @property {string} apellido - Apellido del empleado
  * @property {string} dni - DNI del empleado
  * @property {string} [cuil] - CUIL del empleado
  * @property {string} tipo - Tipo de personal (Conductor, Administrativo, etc.)
@@ -17,6 +18,11 @@ const personalSchema = new mongoose.Schema({
     nombre: {
         type: String,
         required: [true, 'El nombre es obligatorio'],
+        trim: true
+    },
+    apellido: {
+        type: String,
+        required: [true, 'El apellido es obligatorio'],
         trim: true
     },
     dni: {

@@ -6,9 +6,11 @@ import {
   Tooltip, FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, 
-  DirectionsCar as VehiculoIcon, Person as PersonalIcon, Add as AddIcon } from '@mui/icons-material';
+  DirectionsCar as VehiculoIcon, Person as PersonalIcon, Add as AddIcon,
+  CloudUpload as UploadIcon } from '@mui/icons-material';
 import logger from '../utils/logger';
 import { useNavigate } from 'react-router-dom';
+import PersonalBulkImporter from './PersonalBulkImporter';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -30,6 +32,7 @@ const EmpresasManager = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [openPersonalImporter, setOpenPersonalImporter] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -193,21 +196,47 @@ const EmpresasManager = () => {
     navigate(`/vehiculos/${empresaId}`, { state: { empresaNombre } });
   };
 
+  const handleGestionarPersonal = (empresaId, empresaNombre) => {
+    navigate(`/personal/${empresaId}`, { state: { empresaNombre } });
+  };
+
+  const handleOpenPersonalImporter = () => {
+    setOpenPersonalImporter(true);
+  };
+
+  const handleClosePersonalImporter = () => {
+    setOpenPersonalImporter(false);
+  };
+
+  const handlePersonalImportComplete = (result) => {
+    logger.debug('Importación de personal completada:', result);
+  };
+
   return (
     <div>
       <Typography variant="h4" gutterBottom>
         Gestión de Empresas
       </Typography>
       
-      <Button 
-        variant="contained" 
-        color="primary" 
-        startIcon={<AddIcon />} 
-        onClick={handleOpenDialog}
-        sx={{ mb: 2 }}
-      >
-        Nueva Empresa
-      </Button>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          startIcon={<AddIcon />} 
+          onClick={handleOpenDialog}
+        >
+          Nueva Empresa
+        </Button>
+        
+        <Button 
+          variant="outlined" 
+          color="secondary" 
+          startIcon={<UploadIcon />} 
+          onClick={handleOpenPersonalImporter}
+        >
+          Importar Personal Masivamente
+        </Button>
+      </div>
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       
@@ -268,6 +297,14 @@ const EmpresasManager = () => {
                         color="secondary"
                       >
                         <VehiculoIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Gestionar Personal">
+                      <IconButton 
+                        onClick={() => handleGestionarPersonal(empresa._id, empresa.nombre)} 
+                        color="info"
+                      >
+                        <PersonalIcon />
                       </IconButton>
                     </Tooltip>
                   </TableCell>
@@ -422,6 +459,13 @@ const EmpresasManager = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <PersonalBulkImporter 
+        open={openPersonalImporter}
+        onClose={handleClosePersonalImporter}
+        onComplete={handlePersonalImportComplete}
+        empresas={empresas}
+      />
     </div>
   );
 };
