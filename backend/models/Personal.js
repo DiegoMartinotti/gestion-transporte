@@ -161,7 +161,6 @@ personalSchema.index({ empresa: 1, 'documentacion.psicofisico.vencimiento': 1 })
 personalSchema.pre('save', async function(next) {
     try {
         // Normalizar datos
-        if (this.nombre) this.nombre = this.nombre.toUpperCase();
         if (this.dni) this.dni = this.dni.replace(/\D/g, '');
         
         // Si no hay número de legajo, generarlo automáticamente
