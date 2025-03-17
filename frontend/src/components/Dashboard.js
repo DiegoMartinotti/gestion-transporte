@@ -12,6 +12,7 @@ import ClientesManager from './ClientesManager';
 import CalcularTarifa from './CalcularTarifa';
 import EmpresasManager from './EmpresasManager';
 import VehiculosManager from './VehiculosManager';
+import PersonalManager from './PersonalManager';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -49,7 +50,8 @@ const Dashboard = () => {
     { path: "viajes", element: <ViajesManager /> },
     { path: "calcular-tarifa", element: <CalcularTarifa /> },
     { path: "empresas", element: <EmpresasManager /> },
-    { path: "vehiculos/:empresaId", element: <VehiculosManager /> }
+    { path: "vehiculos/:empresaId", element: <VehiculosManager /> },
+    { path: "personal/:empresaId", element: <PersonalManager /> }
   ];
 
   const cardStyle = {

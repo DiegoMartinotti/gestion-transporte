@@ -840,7 +840,7 @@ exports.verificarPosiblesDuplicados = async (req, res) => {
 };
 
 // Método para verificar y normalizar los tipos de tramos
-exports.normalizarTiposTramos = async (req, res) => {
+exports.normalizarTramos = async (req, res) => {
     try {
         const resultados = {
             procesados: 0,
@@ -856,8 +856,32 @@ exports.normalizarTiposTramos = async (req, res) => {
             try {
                 let actualizado = false;
                 
-                // Normalizar el tipo
-                if (tramo.tipo) {
+                // Verificar si el tramo tiene tarifasHistoricas
+                if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
+                    // Normalizar el tipo en cada tarifa histórica
+                    tramo.tarifasHistoricas.forEach(tarifa => {
+                        if (tarifa.tipo) {
+                            const tipoOriginal = tarifa.tipo;
+                            tarifa.tipo = tarifa.tipo.toUpperCase();
+                            
+                            if (tipoOriginal !== tarifa.tipo) {
+                                actualizado = true;
+                            }
+                            
+                            // Asegurarse que sea uno de los tipos válidos
+                            if (!['TRMC', 'TRMI'].includes(tarifa.tipo)) {
+                                tarifa.tipo = 'TRMC'; // Valor por defecto
+                                actualizado = true;
+                            }
+                        } else {
+                            // Si no tiene tipo, asignar el predeterminado
+                            tarifa.tipo = 'TRMC';
+                            actualizado = true;
+                        }
+                    });
+                } 
+                // Compatibilidad con el modelo antiguo
+                else if (tramo.tipo) {
                     const tipoOriginal = tramo.tipo;
                     tramo.tipo = tramo.tipo.toUpperCase();
                     
@@ -901,6 +925,7 @@ exports.normalizarTiposTramos = async (req, res) => {
         });
     }
 };
+
 // Nuevo método para probar la importación con diferentes tipos
 exports.testImportacionTipos = async (req, res) => {
     try {
@@ -913,50 +938,49 @@ exports.testImportacionTipos = async (req, res) => {
             });
         }
         
-        // Crear dos tramos con el mismo origen-destino pero diferentes tipos
+        // Crear fechas de vigencia
         const fechaInicio = new Date();
         const fechaFin = new Date();
         fechaFin.setFullYear(fechaFin.getFullYear() + 1); // Un año de vigencia
         
-        const tramoTRMC = new Tramo({
+        // Crear un tramo con dos tarifas históricas de diferentes tipos
+        const nuevoTramo = new Tramo({
             origen,
             destino,
-            tipo: 'TRMC',
             cliente,
-            metodoCalculo: 'Kilometro',
-            valor: 100,
-            vigenciaDesde: fechaInicio,
-            vigenciaHasta: fechaFin
+            tarifasHistoricas: [
+                {
+                    tipo: 'TRMC',
+                    metodoCalculo: 'Kilometro',
+                    valor: 100,
+                    valorPeaje: 0,
+                    vigenciaDesde: fechaInicio,
+                    vigenciaHasta: fechaFin
+                },
+                {
+                    tipo: 'TRMI',
+                    metodoCalculo: 'Kilometro',
+                    valor: 200,
+                    valorPeaje: 0,
+                    vigenciaDesde: fechaInicio,
+                    vigenciaHasta: fechaFin
+                }
+            ]
         });
         
-        const tramoTRMI = new Tramo({
-            origen,
-            destino,
-            tipo: 'TRMI',
-            cliente,
-            metodoCalculo: 'Kilometro',
-            valor: 200,
-            vigenciaDesde: fechaInicio,
-            vigenciaHasta: fechaFin
-        });
-        
-        // Guardar ambos tramos
-        await tramoTRMC.save();
-        await tramoTRMI.save();
+        // Guardar el tramo
+        await nuevoTramo.save();
         
         res.json({
             success: true,
             message: 'Prueba completada correctamente',
-            tramos: {
-                trmc: tramoTRMC,
-                trmi: tramoTRMI
-            }
+            tramo: nuevoTramo
         });
     } catch (error) {
         logger.error('Error en prueba de importación:', error);
         res.status(500).json({
             success: false,
-            message: 'Error en la prueba de importación',
+            message: 'Error al realizar la prueba de importación',
             error: error.message
         });
     }
@@ -964,7 +988,7 @@ exports.testImportacionTipos = async (req, res) => {
 
 exports.updateVigenciaMasiva = async (req, res) => {
     try {
-        const { tramosIds, vigenciaDesde, vigenciaHasta, cliente } = req.body;
+        const { tramosIds, vigenciaDesde, vigenciaHasta, cliente, tipoTramo } = req.body;
 
         if (!tramosIds || !Array.isArray(tramosIds) || tramosIds.length === 0) {
             return res.status(400).json({
@@ -1002,36 +1026,85 @@ exports.updateVigenciaMasiva = async (req, res) => {
                     continue;
                 }
 
-                // Validar que no haya conflictos con otros tramos
-                const tramosConflicto = await Tramo.find({
-                    _id: { $ne: tramoId },
-                    origen: tramo.origen,
-                    destino: tramo.destino,
-                    tipo: tramo.tipo,
-                    metodoCalculo: tramo.metodoCalculo,
-                    cliente: tramo.cliente,
-                    $or: [
-                        {
-                            vigenciaDesde: { $lte: fechaHasta },
-                            vigenciaHasta: { $gte: fechaDesde }
+                // Verificar si el tramo tiene tarifasHistoricas
+                if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
+                    // Si se especificó un tipo de tramo, actualizar solo ese tipo
+                    if (tipoTramo) {
+                        const tarifaIndex = tramo.tarifasHistoricas.findIndex(
+                            t => t.tipo === tipoTramo
+                        );
+                        
+                        if (tarifaIndex === -1) {
+                            conflictos.push({ 
+                                id: tramoId, 
+                                error: `No se encontró una tarifa con tipo ${tipoTramo}` 
+                            });
+                            continue;
                         }
-                    ]
-                });
-
-                if (tramosConflicto.length > 0) {
-                    conflictos.push({
-                        id: tramoId,
-                        error: 'Ya existe un tramo con las mismas características y fechas que se superponen'
-                    });
-                    continue;
+                        
+                        // Validar que no haya conflictos con otras tarifas del mismo tipo
+                        const hayConflicto = tramo.tarifasHistoricas.some((t, i) => 
+                            i !== tarifaIndex && 
+                            t.tipo === tipoTramo && 
+                            t.vigenciaDesde <= fechaHasta && 
+                            t.vigenciaHasta >= fechaDesde
+                        );
+                        
+                        if (hayConflicto) {
+                            conflictos.push({
+                                id: tramoId,
+                                error: `Ya existe una tarifa con tipo ${tipoTramo} y fechas que se superponen`
+                            });
+                            continue;
+                        }
+                        
+                        // Actualizar la tarifa específica
+                        tramo.tarifasHistoricas[tarifaIndex].vigenciaDesde = fechaDesde;
+                        tramo.tarifasHistoricas[tarifaIndex].vigenciaHasta = fechaHasta;
+                    } 
+                    // Si no se especificó tipo, actualizar todas las tarifas
+                    else {
+                        tramo.tarifasHistoricas.forEach(tarifa => {
+                            tarifa.vigenciaDesde = fechaDesde;
+                            tarifa.vigenciaHasta = fechaHasta;
+                        });
+                    }
+                    
+                    await tramo.save();
+                    actualizados.push(tramoId);
                 }
+                // Compatibilidad con el modelo antiguo
+                else {
+                    // Validar que no haya conflictos con otros tramos
+                    const tramosConflicto = await Tramo.find({
+                        _id: { $ne: tramoId },
+                        origen: tramo.origen,
+                        destino: tramo.destino,
+                        tipo: tramo.tipo,
+                        metodoCalculo: tramo.metodoCalculo,
+                        cliente: tramo.cliente,
+                        $or: [
+                            {
+                                vigenciaDesde: { $lte: fechaHasta },
+                                vigenciaHasta: { $gte: fechaDesde }
+                            }
+                        ]
+                    });
 
-                // Actualizar el tramo
-                tramo.vigenciaDesde = fechaDesde;
-                tramo.vigenciaHasta = fechaHasta;
-                await tramo.save();
-                actualizados.push(tramoId);
+                    if (tramosConflicto.length > 0) {
+                        conflictos.push({
+                            id: tramoId,
+                            error: 'Ya existe un tramo con las mismas características y fechas que se superponen'
+                        });
+                        continue;
+                    }
 
+                    // Actualizar el tramo
+                    tramo.vigenciaDesde = fechaDesde;
+                    tramo.vigenciaHasta = fechaHasta;
+                    await tramo.save();
+                    actualizados.push(tramoId);
+                }
             } catch (error) {
                 logger.error(`Error actualizando tramo ${tramoId}:`, error);
                 conflictos.push({ id: tramoId, error: error.message });
@@ -1049,7 +1122,7 @@ exports.updateVigenciaMasiva = async (req, res) => {
         logger.error('Error en actualización masiva:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al actualizar los tramos',
+            message: 'Error al actualizar la vigencia de los tramos',
             error: error.message
         });
     }
@@ -1098,6 +1171,7 @@ exports.calcularTarifa = async (req, res) => {
         }
 
         let tramo;
+        const fechaConsulta = new Date(fecha);
 
         // Si se proporciona un ID de tramo específico y permitirTramoNoVigente es true
         if (tramoId && permitirTramoNoVigente === true) {
@@ -1106,26 +1180,32 @@ exports.calcularTarifa = async (req, res) => {
                 _id: tramoId,
                 cliente: clienteNombre,
                 origen,
-                destino,
-                tipo: tipoTramo
+                destino
             }).populate('origen destino');
         } else {
-            // Buscar tramo vigente para la fecha especificada
-            logger.debug('Buscando tramo vigente para fecha:', fecha);
+            // Buscar tramo base (sin considerar tarifas históricas)
+            logger.debug('Buscando tramo base para fecha:', fecha);
             tramo = await Tramo.findOne({
                 cliente: clienteNombre,
                 origen,
-                destino,
-                tipo: tipoTramo,
-                vigenciaDesde: { $lte: new Date(fecha) },
-                vigenciaHasta: { $gte: new Date(fecha) }
+                destino
             }).populate('origen destino');
         }
 
         if (!tramo) {
             return res.status(404).json({
                 success: false,
-                message: 'No se encontró un tramo vigente para la ruta y fecha especificadas'
+                message: 'No se encontró un tramo para la ruta especificada'
+            });
+        }
+
+        // Buscar la tarifa histórica vigente para la fecha y tipo especificados
+        const tarifaVigente = tramo.getTarifaVigente(fechaConsulta, tipoTramo);
+        
+        if (!tarifaVigente && !permitirTramoNoVigente) {
+            return res.status(404).json({
+                success: false,
+                message: `No se encontró una tarifa vigente de tipo ${tipoTramo} para la fecha ${fecha}`
             });
         }
 
@@ -1134,43 +1214,45 @@ exports.calcularTarifa = async (req, res) => {
 
         // Calcular tarifa según el método de cálculo
         let tarifaBase = 0;
-        let peaje = Number(tramo.valorPeaje) || 0;
+        let peaje = tarifaVigente ? Number(tarifaVigente.valorPeaje) || 0 : 0;
         let total = 0;
         const numPalets = Number(palets) || 1;
         const tipoDeUnidad = tipoUnidad || 'Sider'; // Valor por defecto: Sider
 
-        switch (tramo.metodoCalculo) {
-            case 'Palet':
-                // Si es tipo Palet, verificamos si el cliente tiene una fórmula personalizada para el tipo de unidad
-                if (cliente) {
-                    const formulaKey = tipoDeUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
-                    const formulaPersonalizada = cliente[formulaKey];
-                    
-                    // Si hay una fórmula personalizada, la usamos para calcular la tarifa
-                    if (formulaPersonalizada) {
-                        logger.debug(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${formulaPersonalizada}`);
-                        const resultado = calcularTarifaPaletConFormula(tramo.valor, peaje, numPalets, formulaPersonalizada);
-                        tarifaBase = resultado.tarifaBase;
-                        peaje = resultado.peaje;
-                        total = resultado.total;
-                        break;
+        if (tarifaVigente) {
+            switch (tarifaVigente.metodoCalculo) {
+                case 'Palet':
+                    // Si es tipo Palet, verificamos si el cliente tiene una fórmula personalizada para el tipo de unidad
+                    if (cliente) {
+                        const formulaKey = tipoDeUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
+                        const formulaPersonalizada = cliente[formulaKey];
+                        
+                        // Si hay una fórmula personalizada, la usamos para calcular la tarifa
+                        if (formulaPersonalizada) {
+                            logger.debug(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${formulaPersonalizada}`);
+                            const resultado = calcularTarifaPaletConFormula(tarifaVigente.valor, peaje, numPalets, formulaPersonalizada);
+                            tarifaBase = resultado.tarifaBase;
+                            peaje = resultado.peaje;
+                            total = resultado.total;
+                            break;
+                        }
                     }
-                }
-                // Si no hay fórmula personalizada, usa el cálculo por defecto
-                tarifaBase = tramo.valor * numPalets;
-                total = tarifaBase + peaje;
-                break;
-            case 'Kilometro':
-                tarifaBase = tramo.valor * tramo.distancia;
-                total = tarifaBase + peaje;
-                break;
-            case 'Fijo':
-                tarifaBase = tramo.valor;
-                total = tarifaBase + peaje;
-                break;
-            default:
-                tarifaBase = 0;
-                total = peaje;
+                    // Si no hay fórmula personalizada, usa el cálculo por defecto
+                    tarifaBase = tarifaVigente.valor * numPalets;
+                    total = tarifaBase + peaje;
+                    break;
+                case 'Kilometro':
+                    tarifaBase = tarifaVigente.valor * tramo.distancia;
+                    total = tarifaBase + peaje;
+                    break;
+                case 'Fijo':
+                    tarifaBase = tarifaVigente.valor;
+                    total = tarifaBase + peaje;
+                    break;
+                default:
+                    tarifaBase = 0;
+                    total = peaje;
+            }
         }
 
         // Convertir los resultados a números fijos con 2 decimales
@@ -1182,13 +1264,15 @@ exports.calcularTarifa = async (req, res) => {
                 origen: tramo.origen.Site,
                 destino: tramo.destino.Site,
                 distancia: tramo.distancia,
-                metodoCalculo: tramo.metodoCalculo,
-                tipo: tramo.tipo,
+                metodoCalculo: tarifaVigente ? tarifaVigente.metodoCalculo : 'No disponible',
+                tipo: tarifaVigente ? tarifaVigente.tipo : tipoTramo,
                 tipoUnidad: tipoDeUnidad,
-                valor: tramo.valor,
-                valorPeaje: tramo.valorPeaje
+                valor: tarifaVigente ? tarifaVigente.valor : 0,
+                valorPeaje: tarifaVigente ? tarifaVigente.valorPeaje : 0,
+                vigenciaDesde: tarifaVigente ? tarifaVigente.vigenciaDesde : null,
+                vigenciaHasta: tarifaVigente ? tarifaVigente.vigenciaHasta : null
             },
-            formula: cliente && tramo.metodoCalculo === 'Palet' ? 
+            formula: cliente && tarifaVigente && tarifaVigente.metodoCalculo === 'Palet' ? 
                 (tipoDeUnidad === 'Bitren' ? cliente.formulaPaletBitren : cliente.formulaPaletSider) : 'Estándar'
         };
 
