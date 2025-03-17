@@ -1,180 +1,135 @@
-# Reglas de Cursor para el Desarrollo
+# RULES.md
 
-## Formato de Fechas en Frontend
+## Descripción del Proyecto
+Desarrollo de una aplicación web para gestión administrativa y operativa de empresas logísticas. Centraliza registro, planificación de viajes, cálculo automático de tarifas, control de facturación, generación dinámica de reportes y manejo seguro de usuarios. Integración básica con Excel y foco en rendimiento, seguridad y escalabilidad.
 
-### Regla: Uso consistente del formato DD/MM/YYYY
-Siempre que se trabaje con fechas en componentes o utilidades del frontend, se debe utilizar el formato "DD/MM/YYYY".
+## 1. STACK TECNOLÓGICO
+- **Frontend:** React, Material UI, TanStack
+- **Backend:** Node.js, Express.js
+- **Base de Datos:** MongoDB con Mongoose
+- **HTTP Cliente:** Axios
 
-#### Implementación:
-1. En componentes DatePicker:
-```javascript
-<DatePicker format="DD/MM/YYYY" />
+## Estándares Tecnológicos
+- Autenticación robusta con JWT.
+- Infraestructura escalable en servicios cloud.
+
+## 1. TECNOLOGÍA
+- **Frontend:** React v18+, Material UI
+- **Backend:** Node.js v18+ con Express.js
+- **Base de datos:** MongoDB (última versión estable).
+- **Control de versiones:** Git (ramas protegidas: main, dev).
+
+## 2. ESTÁNDARES TÉCNICOS
+
+### Convenciones de Nombres
+- Archivos/componentes React: PascalCase (Ej: `ListaClientes.jsx`)
+- Funciones, métodos: camelCase (Ej: `calcularTarifa()`)
+- Variables locales/estado: camelCase (Ej: `estadoPago`)
+- Constantes globales: UPPERCASE (Ej: `MAX_VIAJES_POR_DIA`)
+
+### Organización del Código
+```
+src/
+├── components
+├── pages
+├── api
+├── services
+├── utils
+├── hooks
+├── context
+├── config
+└── assets
 ```
 
-2. En utilidades de formateo:
-```javascript
-dayjs(date).format('DD/MM/YYYY')
-```
+### Arquitectura
+- Utilizar patrón MVC en backend.
+- Componentes reutilizables en frontend.
+- Implementación de arquitectura RESTful para APIs.
 
-3. Para fechas ISO:
-```javascript
-const formatISODate = (isoString) => dayjs(isoString).format('DD/MM/YYYY');
-```
+### Gestión de Estado
+- React Context para estados globales.
+- React Query (TanStack) para manejo eficiente de estado asíncrono.
 
-#### Razón:
-- Mantener consistencia en la presentación de fechas en toda la aplicación
-- Seguir el formato más común y comprensible en español
-- Evitar confusiones entre formatos MM/DD/YYYY y DD/MM/YYYY
+### Gestión de Datos y APIs
+- Validar todas las entradas con esquemas definidos (Mongoose schemas).
+- Estandarizar respuestas HTTP (códigos y estructuras consistentes).
 
-#### Excepciones:
-- Cuando se envían datos al backend (usar ISO)
-- Cuando se requiere un formato específico por requerimientos del cliente
-- Cuando se trabaja con bibliotecas que requieren un formato específico 
+### Rendimiento y Optimización
+- Tiempo de respuesta máximo: 3 segundos.
+- Uso optimizado de índices en MongoDB.
+- Caché eficiente para consultas frecuentes.
 
-## Análisis de Contexto y Toma de Decisiones
+### Seguridad
+- Tokens JWT con expiración y renovación segura.
+- Protección contra inyección (SQL/NoSQL).
+- Validaciones estrictas de inputs.
+- Manejo seguro de contraseñas (bcrypt).
 
-### Regla: Evaluación Exhaustiva del Contexto
-Antes de realizar cualquier modificación o implementación, se debe realizar un análisis completo del contexto existente.
+## 3. ESTÁNDARES DE DESARROLLO
 
-#### Implementación:
-1. Revisión de archivos relacionados:
-- Verificar dependencias y imports
-- Analizar componentes padres e hijos
-- Revisar utilidades y helpers relacionados
+### Testing
+- Tests unitarios y de integración (Jest/Mocha).
+- Cobertura mínima: 80%.
 
-2. Evaluación de impacto:
-- Identificar posibles efectos secundarios
-- Verificar compatibilidad con funcionalidades existentes
-- Analizar impacto en el rendimiento
+### Documentación
+- Comentarios claros y concisos en código.
+- Documentación API con Swagger.
 
-3. Documentación y referencias:
-- Consultar documentación existente
-- Revisar comentarios relevantes en el código
-- Verificar reglas y estándares del proyecto
+## 2. ESTÁNDARES GENERALES
 
-## Buenas Prácticas de Desarrollo
+### Seguimiento de Requisitos
+- Cumplir estrictamente con requisitos del PRD.
+- Revisar edge cases indicados en las features.
 
-### Regla: Estándares de Código y Calidad
+### Calidad del Código
+- Código limpio y legible.
+- Evitar código duplicado; promover DRY (Don't Repeat Yourself).
 
-#### Implementación:
-1. Nomenclatura y estructura:
-```javascript
-// Nombres descriptivos y en español
-const obtenerUsuarioPorId = (id) => {...}
+### Completitud
+- No dejar TODOs ni placeholders.
+- Código debe estar listo para producción.
 
-// Organización clara de imports
-import { ComponentePrincipal } from './componentes';
-import { utilidad } from './utilidades';
-```
+### Comunicación
+- Preguntar claramente ante ambigüedades.
+- Mantener actualizada la documentación de cambios.
 
-2. Documentación de código:
-```javascript
-/**
- * @descripcion Gestiona la lógica de negocio para usuarios
- * @param {string} id - Identificador único del usuario
- * @returns {Object} Datos del usuario
- */
-```
+## 3. ESTÁNDARES DE DESPLIEGUE
+- CI/CD automatizado con pruebas integradas.
+- Despliegues en entorno aislado antes de producción.
 
-3. Manejo de errores:
-```javascript
-try {
-  await operacionAsincrona();
-} catch (error) {
-  console.error('Error específico:', error.message);
-  // Manejo apropiado del error
-}
-```
+## 4. ESTÁNDARES DE CALIDAD Y PRUEBAS
+- Performance audit con herramientas (Lighthouse).
+- Pruebas unitarias, de integración y e2e obligatorias.
 
-#### Razón:
-- Asegurar mantenibilidad y escalabilidad del código
-- Facilitar la colaboración entre desarrolladores
-- Prevenir errores y comportamientos inesperados
-- Mejorar la calidad general del código
+## 5. IMPLEMENTACIÓN Y CALIDAD
 
-#### Consideraciones Adicionales:
-- Realizar pruebas unitarias cuando sea posible
-- Implementar validaciones robustas
-- Mantener la consistencia con el estilo del proyecto
-- Optimizar el rendimiento cuando sea necesario 
+### Umbrales de Calidad
+- Cumplimiento de requisitos funcionales al 100%.
+- Validación exhaustiva de edge cases indicados.
 
-## Uso del Logger
+### Priorización del Desarrollo
+- Completar MVP según fases indicadas en el PRD.
+- Priorizar rendimiento y seguridad desde el inicio.
 
-### Regla: Implementación Consistente del Logger Centralizado
+## 4. GUIAS GENERALES DE DESARROLLO
 
-#### Implementación:
-1. Importación y configuración:
-```javascript
-const logger = require('../utils/logger');
-```
+### Calidad del Código
+- Código fácilmente legible y modular.
+- Sin placeholders o TODOs en código final.
 
-2. Niveles de log apropiados:
-```javascript
-// Para información de depuración detallada
-logger.debug('Detalles de la operación:', { 
-    id: proceso.id,
-    estado: proceso.estado 
-});
+### Compleción
+- No dejar pendientes que no estén documentados o aprobados explícitamente.
+- Código limpio, organizado y bien estructurado.
 
-// Para información general del flujo de la aplicación
-logger.info('Operación completada exitosamente');
+## 4. MANEJO DE DATOS
+- Integración robusta con Excel (importación/exportación).
+- Formatos validados y consistentes para intercambio de información.
 
-// Para advertencias que no interrumpen el flujo
-logger.warn('Recurso próximo a agotarse:', recurso);
+## 5. REPORTES
+- Reportes dinámicos y configurables.
+- Exportación confiable a Excel.
+- Optimización de consultas para grandes volúmenes de datos.
 
-// Para errores que requieren atención
-logger.error('Error en la operación:', error);
-```
-
-3. Estructuración de mensajes:
-```javascript
-// Mensaje descriptivo + objeto de datos
-logger.info('Procesando solicitud:', {
-    método: req.method,
-    ruta: req.path,
-    parámetros: req.params
-});
-
-// Errores con contexto completo
-logger.error('Error en transacción:', {
-    error: error.message,
-    stack: error.stack,
-    contexto: {
-        operación: 'nombre_operación',
-        datos: datosRelevantes
-    }
-});
-```
-
-#### Razón:
-- Mantener consistencia en el registro de eventos
-- Facilitar el diagnóstico de problemas
-- Mejorar la trazabilidad de operaciones
-- Permitir diferentes niveles de detalle según el entorno
-
-#### Consideraciones:
-1. Uso de niveles:
-   - `debug`: Información detallada para desarrollo
-   - `info`: Eventos normales del sistema
-   - `warn`: Situaciones inesperadas pero manejables
-   - `error`: Errores que requieren atención inmediata
-
-2. Información sensible:
-   - Nunca registrar contraseñas o tokens
-   - Enmascarar datos personales sensibles
-   - Cumplir con regulaciones de privacidad
-
-3. Contexto:
-   - Incluir IDs de transacción
-   - Agregar timestamps cuando sea relevante
-   - Proporcionar suficiente contexto para debugging
-
-4. Performance:
-   - Evitar logging excesivo en producción
-   - Usar logging condicional cuando sea apropiado
-   - Considerar el impacto en el rendimiento
-
-#### Excepciones:
-- Cuando se requiera logging específico por requerimientos del cliente
-- En casos de debugging temporal (recordar remover)
-- Cuando se necesite un formato especial para herramientas de monitoreo 
+## PREGUNTAS ABIERTAS (A resolver)
+- Especificaciones futuras sobre integraciones con sistemas externos.
+- Detalles específicos sobre restricciones regulatorias aplicables.

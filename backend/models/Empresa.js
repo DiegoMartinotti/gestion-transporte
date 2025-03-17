@@ -89,8 +89,6 @@ const empresaSchema = new mongoose.Schema({
 
 // Middleware para normalizar datos antes de guardar
 empresaSchema.pre('save', function(next) {
-    if (this.nombre) this.nombre = this.nombre.toUpperCase();
-    if (this.razonSocial) this.razonSocial = this.razonSocial.toUpperCase();
     next();
 });
 
