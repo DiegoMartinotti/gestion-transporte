@@ -21,7 +21,7 @@ import {
   Calculate as CalculateIcon,
   Business as BusinessIcon
 } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
@@ -51,21 +51,31 @@ const Navbar = () => {
 
   // Definir los elementos del menú para evitar repetición
   const menuItems = [
-    { path: '/', label: 'Dashboard', icon: <DashboardIcon fontSize="small" /> },
-    { path: '/clientes', label: 'Gestión de Clientes', icon: <PeopleIcon fontSize="small" /> },
-    { path: '/viajes', label: 'Gestión de Viajes', icon: <LocalShippingIcon fontSize="small" /> },
-    { path: '/calcular-tarifa', label: 'Calcular Tarifa', icon: <CalculateIcon fontSize="small" /> },
-    { path: '/empresas', label: 'Gestión de Empresas', icon: <BusinessIcon fontSize="small" /> }
+    {
+      text: 'Dashboard',
+      icon: <DashboardIcon />,
+      path: '/'
+    },
+    { text: 'Gestión de Clientes', icon: <PeopleIcon />, path: '/clientes' },
+    { text: 'Gestión de Viajes', icon: <LocalShippingIcon />, path: '/viajes' },
+    { text: 'Calcular Tarifa', icon: <CalculateIcon />, path: '/calcular-tarifa' },
+    { text: 'Gestión de Empresas', icon: <BusinessIcon />, path: '/empresas' }
   ];
 
   // Estilo común para los elementos del menú
-  const menuItemStyle = { 
-    display: 'flex', 
+  const menuItemStyle = {
+    display: 'flex',
     alignItems: 'center',
     gap: 1,
-    minWidth: 200,
+    py: 1,
+    px: 2,
+    color: 'text.primary',
     '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+      bgcolor: 'action.hover',
+    },
+    '& .MuiSvgIcon-root': {
+      mr: 1.5,
+      fontSize: '1.25rem',
     }
   };
 
@@ -123,7 +133,7 @@ const Navbar = () => {
               sx={menuItemStyle}
             >
               {item.icon}
-              {item.label}
+              {item.text}
             </MenuItem>
           ))}
         </Menu>
