@@ -6,87 +6,109 @@
  ************************************************************/
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import Login from './components/Login'; // Asegúrate de que la ruta sea correcta
-import Dashboard from './components/Dashboard';
+import { AuthProvider } from './context/AuthContext';
+import Login from './components/Login';
+import Dashboard from './pages/Dashboard';
+import Vehiculos from './pages/Vehiculos';
+import Tramos from './pages/Tramos';
 import Navbar from './components/Navbar';
 import { Box, Container, CircularProgress } from '@mui/material';
 import { ThemeProvider } from './theme';
+import useAuth from './hooks/useAuth';
+import ClientesManager from './components/ClientesManager';
+import ViajesManager from './components/ViajesManager';
+import CalcularTarifa from './components/CalcularTarifa';
+import EmpresasManager from './components/EmpresasManager';
+import PersonalManager from './components/PersonalManager';
 
 // Componente de protección de rutas
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, loading } = useAuth();
   
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        minHeight="100vh"
+      >
         <CircularProgress />
       </Box>
     );
   }
   
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  return children;
 };
 
-// Contenedor de la aplicación autenticada
+// Layout para rutas autenticadas
 const AuthenticatedLayout = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) return null;
-  
   return (
     <>
       <Navbar />
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ py: 2 }}>
-          {children}
-        </Box>
+      <Container 
+        component="main" 
+        sx={{
+          flexGrow: 1,
+          paddingTop: '64px', // Navbar height
+          height: 'calc(100vh - 64px)', // Full height minus Navbar
+          overflow: 'auto'
+        }}
+      >
+        {children}
       </Container>
     </>
   );
 };
 
+// Componente principal de la aplicación
 const AppContent = () => {
-  const { loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        bgcolor: 'background.default'
-      }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-  
   return (
-    <Box sx={{ 
-      minHeight: '100vh',
-      bgcolor: 'background.default',
-      color: 'text.primary'
-    }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        bgcolor: 'background.default'
+      }}
+    >
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route 
-          path="/*" 
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout>
-                <Dashboard />
-              </AuthenticatedLayout>
-            </ProtectedRoute>
-          } 
-        />
+        
+        {/* Rutas protegidas */}
+        {[
+          { path: "/", element: <Dashboard /> },
+          { path: "/vehiculos", element: <Vehiculos /> },
+          { path: "/vehiculos/:empresaId", element: <Vehiculos /> },
+          { path: "/tramos", element: <Tramos /> },
+          { path: "/clientes", element: <ClientesManager /> },
+          { path: "/viajes", element: <ViajesManager /> },
+          { path: "/calcular-tarifa", element: <CalcularTarifa /> },
+          { path: "/empresas", element: <EmpresasManager /> },
+          { path: "/personal/:empresaId", element: <PersonalManager /> }
+        ].map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  {route.element}
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            }
+          />
+        ))}
       </Routes>
     </Box>
   );
 };
 
-function App() {
+const App = () => {
   return (
     <Router>
       <ThemeProvider>
@@ -96,6 +118,6 @@ function App() {
       </ThemeProvider>
     </Router>
   );
-}
+};
 
 export default App;
