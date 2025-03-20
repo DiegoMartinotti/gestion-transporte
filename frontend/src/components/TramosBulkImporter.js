@@ -10,7 +10,13 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import logger from '../utils/logger';
 
-const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
+// Constante para la URL de la API
+const API_URL = process.env.REACT_APP_API_URL || '';
+
+const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) => {
+    // Manejar la posibilidad de que sites sea undefined
+    const sitesList = Array.isArray(sites) ? sites : [];
+    
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -146,8 +152,8 @@ const TramosBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
             logger.debug(`Fechas procesadas para ${origen}-${destino}: ${fechaDesde} - ${fechaHasta}`);
 
             return {
-                origen: sites.find(s => s.Site === origen)?._id,
-                destino: sites.find(s => s.Site === destino)?._id,
+                origen: sitesList.find(s => s.Site === origen)?._id,
+                destino: sitesList.find(s => s.Site === destino)?._id,
                 origenNombre: origen,
                 destinoNombre: destino,
                 tipo: tipo || 'TRMC',
