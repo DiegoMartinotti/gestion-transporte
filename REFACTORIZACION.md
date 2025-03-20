@@ -225,12 +225,18 @@ mi-proyecto/
      - Creación de archivo índice para exportar controladores ✅
    - Extraer lógica de negocio a servicios 🔄 EN PROGRESO
      - Movida lógica de procesamiento de tramos al servicio ✅
+     - Creación de servicio `vehiculoService.js` en `backend/services/vehiculo/` ✅
+     - Refactorización completa del controlador de vehículos en archivos independientes ✅
+     - Mejora en la gestión de errores y respuestas HTTP ✅
 
 2. **Unificar rutas duplicadas** 🔄 EN PROGRESO
    - Resolver duplicidad entre tramoRoutes.js y tramos.js 🔄 EN PROGRESO
      - Creado nuevo archivo `tramo.routes.js` con rutas más limpias ✅
      - Mantenimiento de compatibilidad con las rutas antiguas para evitar interrupciones ✅
    - Estandarizar nomenclatura 🔄 EN PROGRESO
+     - Creado nuevo archivo `vehiculo.routes.js` para APIs de vehículos ✅
+     - Actualización del router principal para mantener compatibilidad ✅
+     - Documentación clara de endpoints y parámetros ✅
 
 3. **Clarificar estructura de la aplicación** 🔄 PENDIENTE
    - Revisar y unificar app.js, server.js, index.js
@@ -381,6 +387,19 @@ mi-proyecto/
   - El error ocurría porque el middleware se estaba importando usando desestructuración (`const { verifyToken }`) cuando debía ser importado directamente (`const verifyToken`)
   - Pruebas realizadas confirmando que las rutas funcionan correctamente
   - Garantizado que no se alteraron las funcionalidades existentes
+
+### [30/03/2024]
+- Completada la refactorización del controlador de vehículos:
+  - Creación de directorio dedicado para controladores en `backend/controllers/vehiculo/`
+  - Implementación de servicio `vehiculoService.js` en `backend/services/vehiculo/`
+  - División del controlador monolítico en múltiples archivos pequeños:
+    - Separación de métodos por funcionalidad específica (`getVehiculos.js`, `createVehiculo.js`, etc.)
+    - Creación de archivo índice para exportar todos los controladores
+    - Mejor manejo de errores y respuestas HTTP
+  - Creación de archivo `vehiculo.routes.js` con rutas más claras y mejor documentadas
+  - Actualización del enrutador principal para mantener compatibilidad mientras se migra al nuevo sistema
+  - Aplicación de patrones consistentes para facilitar mantenimiento y legibilidad
+  - Estructura final más escalable y menos propensa a errores
 
 ## Plan de Estandarización de Importaciones Excel
 
