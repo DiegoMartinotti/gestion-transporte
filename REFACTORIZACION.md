@@ -216,16 +216,23 @@ mi-proyecto/
      - useNotification.js creado ✅
      - useAuth.js creado ✅
 
-### Fase 3: Refactorización Backend 🔄 PENDIENTE
-1. **Reorganizar controladores**
-   - Dividir tramoController.js y otros controladores grandes
-   - Extraer lógica de negocio a servicios
+### Fase 3: Refactorización Backend 🔄 EN PROGRESO
+1. **Reorganizar controladores** 🔄 EN PROGRESO
+   - Dividir tramoController.js y otros controladores grandes 🔄 EN PROGRESO
+     - Creación de servicio `tramoService.js` en `backend/services/tramo/` ✅
+     - Extracción de funciones `getTramosByCliente` y `getDistanciasCalculadas` a controladores independientes ✅
+     - Creación de estructura de carpetas adecuada para controladores (por dominio) ✅
+     - Creación de archivo índice para exportar controladores ✅
+   - Extraer lógica de negocio a servicios 🔄 EN PROGRESO
+     - Movida lógica de procesamiento de tramos al servicio ✅
 
-2. **Unificar rutas duplicadas**
-   - Resolver duplicidad entre tramoRoutes.js y tramos.js
-   - Estandarizar nomenclatura
+2. **Unificar rutas duplicadas** 🔄 EN PROGRESO
+   - Resolver duplicidad entre tramoRoutes.js y tramos.js 🔄 EN PROGRESO
+     - Creado nuevo archivo `tramo.routes.js` con rutas más limpias ✅
+     - Mantenimiento de compatibilidad con las rutas antiguas para evitar interrupciones ✅
+   - Estandarizar nomenclatura 🔄 EN PROGRESO
 
-3. **Clarificar estructura de la aplicación**
+3. **Clarificar estructura de la aplicación** 🔄 PENDIENTE
    - Revisar y unificar app.js, server.js, index.js
 
 ### Fase 4: Pruebas y Documentación 🔄 PENDIENTE
@@ -354,6 +361,26 @@ mi-proyecto/
   - Optimización del procesamiento de datos para exportación a Excel
   - Mejora del manejo de errores y mensajes al usuario
   - Refactorización de la interfaz para mejor experiencia de usuario
+
+### [28/03/2024]
+- Iniciada la refactorización del backend:
+  - Creación de estructura organizada de carpetas para controladores por dominio
+  - Extracción de la lógica de negocio de `tramoController.js` a servicios:
+    - Implementación de `tramoService.js` para centralizar operaciones de tramos
+    - División de métodos de controlador en archivos independientes
+    - Mejora de documentación y nombres de variables/funciones
+  - Reorganización de rutas:
+    - Creación de archivo `tramo.routes.js` con endpoints refactorizados
+    - Mantenimiento de compatibilidad con rutas existentes
+    - Mejor organización de middleware y manejo de errores
+  - Avance en la separación de responsabilidades siguiendo principios SOLID
+
+### [29/03/2024]
+- Corrección de error en refactorización del backend:
+  - Solucionado el problema con la importación del middleware `verifyToken` en `tramo.routes.js`
+  - El error ocurría porque el middleware se estaba importando usando desestructuración (`const { verifyToken }`) cuando debía ser importado directamente (`const verifyToken`)
+  - Pruebas realizadas confirmando que las rutas funcionan correctamente
+  - Garantizado que no se alteraron las funcionalidades existentes
 
 ## Plan de Estandarización de Importaciones Excel
 
