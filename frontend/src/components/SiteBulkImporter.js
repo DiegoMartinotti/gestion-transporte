@@ -1,192 +1,226 @@
-import React, { useState } from 'react';
-import {
-    Button, Dialog, DialogContent, DialogActions,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, TextField, CircularProgress, Alert
-} from '@mui/material';
+import React, { useState, useCallback } from 'react';
+import PropTypes from 'prop-types';
+import ExcelImportTemplate from './common/ExcelImportTemplate';
+import useNotification from '../hooks/useNotification';
 import axios from 'axios';
 import logger from '../utils/logger';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-const SiteBulkImporter = ({ cliente, onComplete }) => {
-    const [open, setOpen] = useState(false);
-    const [rows, setRows] = useState([{ 
-        site: '', 
-        coordenadas: '', 
-        localidad: '', 
-        provincia: '',
-        direccion: '' 
-    }]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+// Definición de las cabeceras del Excel
+const EXCEL_HEADERS = [
+  { field: 'site', label: 'Site*', required: true },
+  { field: 'coordenadas', label: 'Coordenadas (lat,lng)*', required: true },
+  { field: 'direccion', label: 'Dirección', required: false },
+  { field: 'localidad', label: 'Localidad', required: false },
+  { field: 'provincia', label: 'Provincia', required: false },
+  { field: 'tipo', label: 'Tipo', required: false }
+];
 
-    const obtenerDireccion = async (lat, lng) => {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${API_URL}/api/proxy/geocode`, {
-                params: { lat, lng },
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+/**
+ * Componente optimizado para importación masiva de sites desde Excel
+ * @component
+ */
+const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
+  const { showNotification } = useNotification();
+  
+  // Función para obtener dirección a partir de coordenadas
+  const obtenerDireccion = useCallback(async (lat, lng) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/proxy/geocode`, {
+        params: { lat, lng },
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-            const { address } = response.data;
-            return {
-                direccion: address.road ? `${address.road} ${address.house_number || ''}`.trim() : '',
-                localidad: address.city || address.town || address.village || '',
-                provincia: address.state || ''
-            };
-        } catch (error) {
-            logger.error('Error en geocodificación:', error);
-            return { direccion: '', localidad: '', provincia: '' };
+      const { address } = response.data;
+      return {
+        direccion: address.road ? `${address.road} ${address.house_number || ''}`.trim() : '',
+        localidad: address.city || address.town || address.village || '',
+        provincia: address.state || ''
+      };
+    } catch (error) {
+      logger.error('Error en geocodificación:', error);
+      return { direccion: '', localidad: '', provincia: '' };
+    }
+  }, []);
+
+  // Validación de cada fila del Excel
+  const validateRow = (row, index) => {
+    const errors = [];
+    
+    // Validar campos requeridos
+    EXCEL_HEADERS.forEach(header => {
+      if (header.required && !row[header.field]) {
+        errors.push(`Fila ${index + 1}: El campo ${header.label} es requerido`);
+      }
+    });
+    
+    // Validar formato de coordenadas (lat,lng)
+    if (row.coordenadas) {
+      const coords = row.coordenadas.split(',');
+      if (coords.length !== 2) {
+        errors.push(`Fila ${index + 1}: El formato de coordenadas debe ser "latitud,longitud"`);
+      } else {
+        const [lat, lng] = coords.map(n => parseFloat(n.trim()));
+        if (isNaN(lat) || isNaN(lng)) {
+          errors.push(`Fila ${index + 1}: Las coordenadas deben ser números válidos`);
         }
-    };
-
-    const handlePaste = async (event) => {
-        event.preventDefault();
-        setLoading(true);
-        const data = event.clipboardData.getData('text');
-        const lines = data.split('\n').filter(line => line.trim());
-
-        const newRows = [];
-        for (const line of lines) {
-            const [site, coordsString] = line.split('\t').map(s => s.trim());
-            const [lat, lng] = coordsString.split(',').map(n => parseFloat(n.trim()));
-            
-            // Obtener dirección para cada site
-            const direccionData = await obtenerDireccion(lat, lng);
-            
-            newRows.push({
-                site,
-                coordenadas: coordsString,
-                ...direccionData
-            });
+        if (lat < -90 || lat > 90) {
+          errors.push(`Fila ${index + 1}: La latitud debe estar entre -90 y 90`);
         }
+        if (lng < -180 || lng > 180) {
+          errors.push(`Fila ${index + 1}: La longitud debe estar entre -180 y 180`);
+        }
+      }
+    }
+    
+    return errors;
+  };
 
-        setRows(newRows);
-        setLoading(false);
-    };
-
-    const handleChange = (index, field, value) => {
-        const newRows = [...rows];
-        newRows[index] = { ...newRows[index], [field]: value };
-        setRows(newRows);
-    };
-
-    const handleSave = async () => {
+  // Procesar datos del Excel para enviar al servidor
+  const processExcelData = async (data) => {
+    try {
+      // Procesar y preparar los datos
+      const processedSites = [];
+      
+      for (const row of data) {
         try {
-            setLoading(true);
-            setError(null);
-
-            const validRows = rows.filter(row => row.site && row.coordenadas);
-            const processedSites = validRows.map(row => {
-                const [lat, lng] = row.coordenadas.split(',').map(n => n.trim());
-                return {
-                    site: row.site,
-                    cliente,
-                    coordenadas: { lat: parseFloat(lat), lng: parseFloat(lng) },
-                    localidad: row.localidad,
-                    provincia: row.provincia
-                };
-            });
-
-            const token = localStorage.getItem('token');
-            await axios.post(`${API_URL}/api/sites/bulk`,
-                { sites: processedSites },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            onComplete?.();
-            setOpen(false);
+          const [lat, lng] = row.coordenadas.split(',').map(n => parseFloat(n.trim()));
+          
+          // Si no tiene dirección/localidad/provincia, intentar obtenerlas
+          let direccion = row.direccion || '';
+          let localidad = row.localidad || '';
+          let provincia = row.provincia || '';
+          
+          if (!direccion || !localidad || !provincia) {
+            const geocodeData = await obtenerDireccion(lat, lng);
+            direccion = row.direccion || geocodeData.direccion;
+            localidad = row.localidad || geocodeData.localidad;
+            provincia = row.provincia || geocodeData.provincia;
+          }
+          
+          processedSites.push({
+            site: row.site,
+            cliente,
+            coordenadas: { lat, lng },
+            direccion,
+            localidad,
+            provincia,
+            tipo: row.tipo || 'CLIENTE'
+          });
         } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
+          logger.error(`Error procesando site ${row.site}:`, err);
         }
-    };
+      }
+      
+      if (processedSites.length === 0) {
+        throw new Error('No hay sites válidos para importar');
+      }
+      
+      // Enviar datos al servidor
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API_URL}/api/sites/bulk`,
+        { sites: processedSites },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    return (
-        <>
-            <Button variant="contained" onClick={() => setOpen(true)}>
-                Importar Sites
-            </Button>
+      const exitosos = response.data.insertados || 0;
+      const errores = response.data.errores || [];
+      
+      if (errores.length > 0) {
+        showNotification(
+          `Importación completada con ${errores.length} errores. Se importaron ${exitosos} sites.`, 
+          'warning'
+        );
+        console.error('Errores en importación:', errores);
+      } else {
+        showNotification(`${exitosos} sites importados correctamente`, 'success');
+      }
+      
+      if (onComplete) {
+        onComplete();
+      }
+      
+      onClose();
+    } catch (error) {
+      logger.error('Error en importación de sites:', error);
+      showNotification('Error al procesar la importación: ' + error.message, 'error');
+    }
+  };
 
-            <Dialog open={open} onClose={() => setOpen(false)} maxWidth="lg" fullWidth>
-                <DialogContent>
-                    <TableContainer component={Paper} onPaste={handlePaste}>
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Site</TableCell>
-                                    <TableCell>Coordenadas</TableCell>
-                                    <TableCell>Dirección</TableCell>
-                                    <TableCell>Localidad</TableCell>
-                                    <TableCell>Provincia</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {rows.map((row, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                value={row.site}
-                                                onChange={(e) => handleChange(index, 'site', e.target.value)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                value={row.coordenadas}
-                                                onChange={(e) => handleChange(index, 'coordenadas', e.target.value)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                value={row.direccion}
-                                                onChange={(e) => handleChange(index, 'direccion', e.target.value)}
-                                                placeholder="Dirección"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                value={row.localidad}
-                                                onChange={(e) => handleChange(index, 'localidad', e.target.value)}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                value={row.provincia}
-                                                onChange={(e) => handleChange(index, 'provincia', e.target.value)}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                    {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpen(false)}>Cancelar</Button>
-                    <Button 
-                        onClick={handleSave}
-                        variant="contained"
-                        disabled={loading || !rows.some(r => r.site && r.coordenadas)}
-                    >
-                        {loading ? <CircularProgress size={24} /> : 'Importar'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </>
-    );
+  // Instrucciones para la plantilla
+  const instructionSheets = [
+    {
+      name: 'Instrucciones',
+      data: [
+        ['INSTRUCCIONES PARA IMPORTACIÓN DE SITES'],
+        [''],
+        ['1. Complete los datos en la hoja "Datos"'],
+        ['2. Los campos marcados con asterisco (*) son obligatorios'],
+        ['3. El formato de coordenadas debe ser "latitud,longitud" (ejemplo: -34.603722,-58.381592)'],
+        ['4. Si no proporciona dirección, localidad o provincia, el sistema intentará obtenerlas automáticamente'],
+        ['5. El campo "Tipo" puede ser: CLIENTE, PLANTA, DEPÓSITO, PUERTO (por defecto se usará CLIENTE)']
+      ],
+      columnWidths: [{ wch: 80 }]
+    },
+    {
+      name: 'Formatos',
+      data: [
+        ['CAMPO', 'FORMATO', 'DESCRIPCIÓN'],
+        ['Site*', 'Texto', 'Nombre del sitio (debe ser único)'],
+        ['Coordenadas*', 'lat,lng', 'Coordenadas geográficas en formato decimal (latitud,longitud)'],
+        ['Dirección', 'Texto', 'Dirección física del sitio (se autocompletará si está vacío)'],
+        ['Localidad', 'Texto', 'Localidad o ciudad (se autocompletará si está vacío)'],
+        ['Provincia', 'Texto', 'Provincia o estado (se autocompletará si está vacío)'],
+        ['Tipo', 'Texto', 'Tipo de sitio: CLIENTE, PLANTA, DEPÓSITO, PUERTO, etc.']
+      ],
+      columnWidths: [{ wch: 15 }, { wch: 20 }, { wch: 65 }]
+    }
+  ];
+
+  // Generar datos de ejemplo para la plantilla
+  const exampleData = [
+    {
+      site: 'Planta Centro',
+      coordenadas: '-34.603722,-58.381592',
+      direccion: 'Av. Corrientes 456',
+      localidad: 'CABA',
+      provincia: 'Buenos Aires',
+      tipo: 'PLANTA'
+    },
+    {
+      site: 'Depósito Norte',
+      coordenadas: '-34.550722,-58.463592',
+      direccion: 'Av. General Paz 1500',
+      localidad: 'Vicente López',
+      provincia: 'Buenos Aires',
+      tipo: 'DEPÓSITO'
+    }
+  ];
+
+  return (
+    <ExcelImportTemplate
+      title="Importación de Sites mediante Excel"
+      open={open}
+      onClose={onClose}
+      onComplete={onComplete}
+      excelHeaders={EXCEL_HEADERS}
+      processDataCallback={processExcelData}
+      templateFileName="Plantilla_Importacion_Sites.xlsx"
+      validateRow={validateRow}
+      instructionSheets={instructionSheets}
+      exampleData={exampleData}
+    />
+  );
+};
+
+SiteBulkImporter.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  cliente: PropTypes.string.isRequired,
+  onComplete: PropTypes.func
 };
 
 export default SiteBulkImporter;

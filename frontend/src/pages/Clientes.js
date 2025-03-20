@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Typography, Container, Box, Tabs, Tab } from '@mui/material';
+import { Typography, Container, Box, Tabs, Tab, Button } from '@mui/material';
 import ClienteList from '../components/clientes/ClienteList';
 import ClienteForm from '../components/clientes/ClienteForm';
 import ClienteBulkImporter from '../components/clientes/ClienteBulkImporter';
@@ -23,6 +23,7 @@ const Clientes = () => {
   const [extrasManagerOpen, setExtrasManagerOpen] = useState(false);
   const [selectedClienteExtras, setSelectedClienteExtras] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [importerOpen, setImporterOpen] = useState(false);
   
   const { showNotification } = useNotification();
 
@@ -88,7 +89,6 @@ const Clientes = () => {
    * Maneja la finalización de importación masiva
    */
   const handleImportComplete = () => {
-    setActiveTab(0); // Volver a la lista después de importar
     showNotification('Importación de clientes completada', 'success');
   };
 
@@ -147,7 +147,30 @@ const Clientes = () => {
         
         {/* Panel de importación masiva */}
         {activeTab === 1 && (
-          <ClienteBulkImporter onImportComplete={handleImportComplete} />
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Importación Masiva de Clientes
+            </Typography>
+            <Typography variant="body1" paragraph>
+              Esta herramienta permite importar múltiples clientes desde un archivo Excel.
+              Haga clic en el botón para iniciar el proceso.
+            </Typography>
+            <Box sx={{ my: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setImporterOpen(true)}
+              >
+                Iniciar Importación
+              </Button>
+            </Box>
+
+            <ClienteBulkImporter 
+              open={importerOpen}
+              onClose={() => setImporterOpen(false)}
+              onComplete={handleImportComplete}
+            />
+          </Box>
         )}
         
         {/* Formulario de cliente */}

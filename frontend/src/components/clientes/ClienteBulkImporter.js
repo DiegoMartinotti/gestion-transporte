@@ -1,191 +1,174 @@
-import React, { useState } from 'react';
-import { 
-  Box, Typography, Button, Paper, 
-  CircularProgress, Alert, Grid 
-} from '@mui/material';
-import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
-import * as XLSX from 'xlsx';
-import BulkUpload from '../common/BulkUpload';
+import React, { useMemo } from 'react';
+import PropTypes from 'prop-types';
+import ExcelImportTemplate from '../common/ExcelImportTemplate';
 import clienteService from '../../services/clienteService';
 import useNotification from '../../hooks/useNotification';
-import logger from '../../utils/logger';
+import validationUtils from '../../utils/validationUtils';
+
+// Definición de las cabeceras del Excel
+const EXCEL_HEADERS = [
+  { field: 'Cliente', label: 'Cliente*', required: true },
+  { field: 'CUIT', label: 'CUIT*', required: true },
+  { field: 'formulaPaletSider', label: 'Fórmula Palet Sider', required: false },
+  { field: 'formulaPaletBitren', label: 'Fórmula Palet Bitren', required: false },
+  { field: 'observacion', label: 'Observaciones', required: false }
+];
 
 /**
  * Componente para importación masiva de clientes desde Excel
- * @param {Object} props
- * @param {Function} props.onImportComplete - Función a ejecutar al completar importación
+ * @component
  */
-const ClienteBulkImporter = ({ onImportComplete }) => {
-  const [loading, setLoading] = useState(false);
-  const [previewData, setPreviewData] = useState([]);
-  const [error, setError] = useState(null);
+const ClienteBulkImporter = ({ open, onClose, onComplete }) => {
   const { showNotification } = useNotification();
+  
+  // Definir esquema de validación usando las utilidades
+  const validationSchema = useMemo(() => ({
+    Cliente: {
+      label: 'Cliente',
+      validators: [
+        (value, fieldName, rowIndex) => validationUtils.isRequired(value, fieldName, rowIndex)
+      ]
+    },
+    CUIT: {
+      label: 'CUIT',
+      validators: [
+        (value, fieldName, rowIndex) => validationUtils.isRequired(value, fieldName, rowIndex),
+        (value, fieldName, rowIndex) => validationUtils.isCUIT(value, fieldName, rowIndex)
+      ]
+    }
+  }), []);
 
-  /**
-   * Procesa el archivo Excel subido
-   * @param {File} file - Archivo Excel
-   */
-  const handleFileUpload = (file) => {
-    setError(null);
-    setPreviewData([]);
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
-        
-        if (json.length === 0) {
-          setError('El archivo está vacío');
-          return;
-        }
-        
-        // Validar estructura mínima requerida
-        if (!json[0].hasOwnProperty('Cliente') || !json[0].hasOwnProperty('CUIT')) {
-          setError('El archivo no tiene el formato correcto. Se requieren columnas: Cliente, CUIT');
-          return;
-        }
-        
-        setPreviewData(json);
-      } catch (error) {
-        logger.error('Error procesando archivo Excel:', error);
-        setError('Error al procesar el archivo. Verifique que sea un archivo Excel válido.');
-      }
-    };
-    
-    reader.onerror = () => {
-      setError('Error al leer el archivo');
-    };
-    
-    reader.readAsArrayBuffer(file);
+  // Validación de cada fila del Excel
+  const validateRow = (row, index) => {
+    return validationUtils.validateSchema(row, index, validationSchema);
   };
 
-  /**
-   * Importa los datos a la base de datos
-   */
-  const handleImport = async () => {
-    if (previewData.length === 0) {
-      setError('No hay datos para importar');
-      return;
-    }
-    
+  // Procesar datos del Excel para enviar al servidor
+  const processExcelData = async (data) => {
     try {
-      setLoading(true);
+      // Procesar y preparar los datos
+      const processedData = data.map(row => {
+        return {
+          Cliente: row.Cliente,
+          CUIT: row.CUIT?.toString() || '',
+          formulaPaletSider: row.formulaPaletSider || 'Valor * Palets + Peaje',
+          formulaPaletBitren: row.formulaPaletBitren || 'Valor * Palets + Peaje',
+          observacion: row.observacion || ''
+        };
+      });
       
-      // Proceso de importación cliente por cliente
-      const results = [];
-      for (const cliente of previewData) {
+      // Enviar datos al servidor
+      let successCount = 0;
+      let errorCount = 0;
+      const errores = [];
+      
+      // Proceso de importación cliente por cliente para mayor control
+      for (const cliente of processedData) {
         try {
-          // Normalizar datos
-          const clienteData = {
-            Cliente: cliente.Cliente,
-            CUIT: cliente.CUIT?.toString() || '',
-            formulaPaletSider: cliente.formulaPaletSider || 'Valor * Palets + Peaje',
-            formulaPaletBitren: cliente.formulaPaletBitren || 'Valor * Palets + Peaje'
-          };
-          
-          await clienteService.createCliente(clienteData);
-          results.push({ 
-            success: true, 
-            cliente: clienteData.Cliente 
-          });
+          await clienteService.createCliente(cliente);
+          successCount++;
         } catch (error) {
-          results.push({ 
-            success: false, 
-            cliente: cliente.Cliente, 
-            error: error.message || 'Error desconocido' 
-          });
+          errorCount++;
+          errores.push(`Error al importar cliente ${cliente.Cliente}: ${error.message || 'Error desconocido'}`);
         }
       }
       
-      // Resultados
-      const successCount = results.filter(r => r.success).length;
-      const errorCount = results.length - successCount;
-      
+      // Mostrar resultado
+      if (errorCount > 0) {
       showNotification(
         `Importación completada: ${successCount} clientes importados, ${errorCount} errores`,
-        errorCount > 0 ? 'warning' : 'success'
-      );
-      
-      // Limpiar estados
-      setPreviewData([]);
+          'warning'
+        );
+        console.error('Errores en importación:', errores);
+      } else {
+        showNotification(
+          `Importación completada: ${successCount} clientes importados correctamente`,
+          'success'
+        );
+      }
       
       // Notificar al componente padre
-      if (onImportComplete) {
-        onImportComplete();
+      if (onComplete) {
+        onComplete();
       }
+      
+      onClose();
     } catch (error) {
-      logger.error('Error en importación masiva:', error);
-      setError('Error al realizar la importación');
-      showNotification('Error al realizar la importación', 'error');
-    } finally {
-      setLoading(false);
+      console.error('Error en la importación de clientes:', error);
+      showNotification('Error al procesar la importación', 'error');
     }
   };
 
+  // Instrucciones para la plantilla
+  const instructionSheets = useMemo(() => [
+    {
+      name: 'Instrucciones',
+      data: [
+        ['INSTRUCCIONES PARA IMPORTACIÓN DE CLIENTES'],
+        [''],
+        ['1. Complete los datos en la hoja "Datos"'],
+        ['2. Los campos marcados con asterisco (*) son obligatorios'],
+        ['3. El CUIT debe tener el formato XX-XXXXXXXX-X'],
+        ['4. Si no se especifica una fórmula para el cálculo de palets, se usará "Valor * Palets + Peaje"'],
+      ],
+      columnWidths: [{ wch: 80 }]
+    },
+    {
+      name: 'Formato CUIT',
+      data: [
+        ['Formato de CUIT'],
+        [''],
+        ['El CUIT (Clave Única de Identificación Tributaria) debe ingresarse con el formato: XX-XXXXXXXX-X'],
+        ['Ejemplo: 30-12345678-9'],
+        [''],
+        ['El primer bloque identifica el tipo de entidad:'],
+        ['- 20, 23, 24, 27: Personas físicas'],
+        ['- 30, 33, 34: Empresas, asociaciones, etc.'],
+        [''],
+        ['El número debe ser válido según el algoritmo de validación de AFIP.']
+      ],
+      columnWidths: [{ wch: 80 }]
+    }
+  ], []);
+
+  // Generar datos de ejemplo para la plantilla
+  const exampleData = [
+    {
+      Cliente: 'Distribuidora XYZ S.A.',
+      CUIT: '30-12345678-9',
+      formulaPaletSider: 'Valor * Palets + Peaje',
+      formulaPaletBitren: 'Valor * Palets * 1.2 + Peaje',
+      observacion: 'Cliente preferencial con contrato anual'
+    },
+    {
+      Cliente: 'Transportes ABC',
+      CUIT: '33-87654321-0',
+      formulaPaletSider: 'Valor * Palets',
+      formulaPaletBitren: 'Valor * Palets',
+      observacion: 'Solo opera en CABA y GBA'
+    }
+  ];
+
   return (
-    <Box sx={{ mt: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Importación Masiva de Clientes
-        </Typography>
-        
-        <BulkUpload 
-          onFileUpload={handleFileUpload}
-          acceptedFileTypes={'.xlsx, .xls'}
-          maxFileSizeMB={5}
-        />
-        
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {previewData.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Vista previa ({previewData.length} clientes)
-            </Typography>
-            
-            <Paper sx={{ maxHeight: 300, overflow: 'auto', mt: 2, mb: 2 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ padding: 8, textAlign: 'left', borderBottom: '1px solid #ddd' }}>Cliente</th>
-                    <th style={{ padding: 8, textAlign: 'left', borderBottom: '1px solid #ddd' }}>CUIT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewData.map((row, index) => (
-                    <tr key={index}>
-                      <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{row.Cliente}</td>
-                      <td style={{ padding: 8, borderBottom: '1px solid #eee' }}>{row.CUIT}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Paper>
-            
-            <Grid container justifyContent="flex-end">
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
-                onClick={handleImport}
-                disabled={loading}
-              >
-                {loading ? 'Importando...' : 'Importar Clientes'}
-              </Button>
-            </Grid>
-          </Box>
-        )}
-      </Paper>
-    </Box>
+    <ExcelImportTemplate
+      title="Importación de Clientes mediante Excel"
+      open={open}
+      onClose={onClose}
+      onComplete={onComplete}
+      excelHeaders={EXCEL_HEADERS}
+      processDataCallback={processExcelData}
+      templateFileName="Plantilla_Importacion_Clientes.xlsx"
+      validateRow={validateRow}
+      instructionSheets={instructionSheets}
+      exampleData={exampleData}
+    />
   );
+};
+
+ClienteBulkImporter.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onComplete: PropTypes.func
 };
 
 export default ClienteBulkImporter; 
