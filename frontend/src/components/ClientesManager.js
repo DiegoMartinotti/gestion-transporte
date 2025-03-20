@@ -8,7 +8,7 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon, Save as SaveIcon, Store as StoreIcon, 
   AttachMoney as AttachMoneyIcon, Functions as FunctionsIcon, Add as AddIcon } from '@mui/icons-material';
 import SitesManager from './SitesManager';
-import TarifarioViewer from './TarifarioViewer';
+import TarifarioViewer from './tarifario/TarifarioViewer';
 import ExtrasManager from './ExtrasManager';
 import logger from '../utils/logger';
 
