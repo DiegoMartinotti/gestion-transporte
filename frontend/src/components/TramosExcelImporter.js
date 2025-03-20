@@ -18,6 +18,11 @@ import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import logger from '../utils/logger';
 
+// DEPRECATED: Este componente está obsoleto y será eliminado en futuras versiones.
+// Utilizar en su lugar el componente TramoBulkImporter.js que implementa 
+// ExcelImportTemplate para una interfaz más consistente y mantenible.
+// Por favor, dirija todas las nuevas implementaciones al nuevo componente.
+
 // Columnas del Excel para la carga masiva
 const EXCEL_HEADERS = [
   { key: 'origen', label: 'Origen *' },

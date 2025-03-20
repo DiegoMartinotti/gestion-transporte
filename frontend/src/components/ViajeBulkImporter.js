@@ -1,27 +1,35 @@
 import React, { useState } from 'react';
-import {
-    Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TableContainer, Table, TableHead, TableBody,
-    TableRow, TableCell, Paper, Alert, Typography, Box,
-    LinearProgress, CircularProgress
-} from '@mui/material';
+import PropTypes from 'prop-types';
+import ExcelImportTemplate from './common/ExcelImportTemplate';
+import useNotification from '../hooks/useNotification';
 import axios from 'axios';
 import { format } from 'date-fns';
 import logger from '../utils/logger';
 
-const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [progress, setProgress] = useState(0);
-    const [importing, setImporting] = useState(false);
-    const [processingStatus, setProcessingStatus] = useState('');
+// Definición de las cabeceras del Excel
+const EXCEL_HEADERS = [
+  { field: 'dt', label: 'DT*', required: true },
+  { field: 'fecha', label: 'Fecha (DD/MM/YYYY)*', required: true },
+  { field: 'origen', label: 'Origen*', required: true },
+  { field: 'destino', label: 'Destino*', required: true },
+  { field: 'tipoTramo', label: 'Tipo Tramo', required: false },
+  { field: 'tipoUnidad', label: 'Tipo Unidad', required: false },
+  { field: 'paletas', label: 'Paletas', required: false },
+  { field: 'observaciones', label: 'Observaciones', required: false }
+];
 
-    const handleClose = () => {
-        setRows([]);
-        setError(null);
-        onClose();
-    };
+/**
+ * Componente para importación masiva de viajes desde Excel
+ * @component
+ */
+const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) => {
+  const { showNotification } = useNotification();
+  
+  // Crear mapa de sitios para búsquedas rápidas
+  const sitesMap = {};
+  sites.forEach(site => {
+    sitesMap[site.Site.toLowerCase()] = site;
+  });
 
     // Función para convertir números con formato español/europeo (coma decimal) a formato válido para JavaScript
     const parseSpanishNumber = (value) => {
@@ -32,84 +40,100 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
         return parseFloat(normalizedValue) || 0;
     };
 
-    const handlePaste = (event) => {
-        event.preventDefault();
-        const pastedData = event.clipboardData.getData('text');
-        const lines = pastedData.split('\n').filter(line => line.trim());
+  // Validación de cada fila del Excel
+  const validateRow = (row, index) => {
+    const errors = [];
+    
+    // Validar campos requeridos
+    EXCEL_HEADERS.forEach(header => {
+      if (header.required && !row[header.field]) {
+        errors.push(`Fila ${index + 1}: El campo ${header.label} es requerido`);
+      }
+    });
+    
+    // Validar sitios existentes
+    if (row.origen) {
+      const origenEncontrado = Object.values(sitesMap).find(
+        site => site.Site.toLowerCase() === row.origen.toLowerCase()
+      );
+      if (!origenEncontrado) {
+        errors.push(`Fila ${index + 1}: Sitio de origen "${row.origen}" no encontrado`);
+      }
+    }
+    
+    if (row.destino) {
+      const destinoEncontrado = Object.values(sitesMap).find(
+        site => site.Site.toLowerCase() === row.destino.toLowerCase()
+      );
+      if (!destinoEncontrado) {
+        errors.push(`Fila ${index + 1}: Sitio de destino "${row.destino}" no encontrado`);
+      }
+    }
+    
+    // Validar formato de fecha
+    if (row.fecha) {
+      const fechaRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+      if (!fechaRegex.test(row.fecha)) {
+        errors.push(`Fila ${index + 1}: Formato de fecha inválido. Use DD/MM/YYYY`);
+      }
+    }
+    
+    // Validar valores numéricos
+    if (row.paletas && isNaN(parseSpanishNumber(row.paletas))) {
+      errors.push(`Fila ${index + 1}: El valor de paletas debe ser un número`);
+    }
+    
+    return errors;
+  };
 
-        const processedRows = lines.map(line => {
-            const parts = line.split('\t').map(s => s.trim());
-            
-            // Formato esperado:
-            // DT | Fecha | Origen | Destino | Tipo Tramo | Tipo Unidad | Paletas | Observaciones
-            const dt = parts[0];
-            const fecha = parts[1]; // Formato esperado: DD/MM/YYYY
-            const origen = parts[2];
-            const destino = parts[3];
-            const tipoTramo = parts[4] || 'TRMC';
-            const tipoUnidad = parts[5] || 'Sider';
-            const paletas = parseSpanishNumber(parts[6]);
-            const observaciones = parts[7] || '';
+  // Procesar datos del Excel para enviar al servidor
+  const processExcelData = async (data) => {
+    try {
+      // Procesar y preparar los datos
+      const processedData = data.map(row => {
+        // Encontrar IDs de origen y destino
+        const origen = Object.values(sitesMap).find(
+          site => site.Site.toLowerCase() === row.origen.toLowerCase()
+        );
+        
+        const destino = Object.values(sitesMap).find(
+          site => site.Site.toLowerCase() === row.destino.toLowerCase()
+        );
 
             // Convertir fecha de DD/MM/YYYY a YYYY-MM-DD
-            let fechaFormateada = fecha;
-            if (fecha && fecha.includes('/')) {
-                const [dia, mes, anio] = fecha.split('/');
+        let fechaFormateada = row.fecha;
+        if (row.fecha && row.fecha.includes('/')) {
+          const [dia, mes, anio] = row.fecha.split('/');
                 fechaFormateada = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
             }
 
             return {
-                dt,
+          dt: row.dt,
                 fecha: fechaFormateada,
-                origen: sites.find(s => s.Site === origen)?._id,
-                origenNombre: origen,
-                destino: sites.find(s => s.Site === destino)?._id,
-                destinoNombre: destino,
-                tipoTramo,
-                tipoUnidad,
-                paletas,
-                observaciones
+          origen: origen?._id,
+          origenNombre: row.origen,
+          destino: destino?._id,
+          destinoNombre: row.destino,
+          tipoTramo: row.tipoTramo || 'TRMC',
+          tipoUnidad: row.tipoUnidad || 'Sider',
+          paletas: parseSpanishNumber(row.paletas),
+          observaciones: row.observaciones || ''
             };
         });
 
-        setRows(processedRows);
-    };
-
-    const handleImport = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            setImporting(true);
-            setProgress(0);
-
-            // Validar datos antes de enviar
-            const validRows = rows.filter(row => 
-                row.dt && 
-                row.fecha && 
-                row.origen && 
-                row.destino
-            );
-
-            if (validRows.length === 0) {
-                throw new Error('No hay viajes válidos para importar');
-            }
-
-            // Dividir en lotes más pequeños
+      // Dividir en lotes para evitar problemas de tamaño
             const BATCH_SIZE = 20;
             const batches = [];
-            for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
-                batches.push(validRows.slice(i, i + BATCH_SIZE));
+      
+      for (let i = 0; i < processedData.length; i += BATCH_SIZE) {
+        batches.push(processedData.slice(i, i + BATCH_SIZE));
             }
-
-            logger.debug(`Enviando ${validRows.length} viajes en ${batches.length} lotes`);
 
             let exitosos = 0;
             let errores = [];
 
             for (let i = 0; i < batches.length; i++) {
                 const batch = batches[i];
-                setProcessingStatus(`Procesando lote ${i+1} de ${batches.length} (${batch.length} viajes)`);
-                
                 try {
                     const token = localStorage.getItem('token');
                     if (!token) {
@@ -131,13 +155,12 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                         }
                     );
 
-                    exitosos += response.data.exitosos;
-                    if (response.data.errores) {
+          exitosos += response.data.exitosos || 0;
+          if (response.data.errores && response.data.errores.length > 0) {
                         errores = [...errores, ...response.data.errores];
                     }
-
                 } catch (error) {
-                    logger.error(`Error en lote ${i+1}:`, error);
+          logger.error(`Error procesando lote ${i+1}:`, error);
                     batch.forEach((viaje, index) => {
                         errores.push({
                             indice: i * BATCH_SIZE + index,
@@ -146,136 +169,129 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites }) => {
                         });
                     });
                 }
-
-                setProgress(Math.round(((i + 1) / batches.length) * 100));
             }
 
-            // Proceso completo
-            setProgress(100);
+      const resultMessage = `Importación completada: ${exitosos} viajes importados exitosamente, ${errores.length} con errores`;
             
             if (errores.length > 0) {
-                logger.error(`Importación completada con errores: ${exitosos} exitosos, ${errores.length} fallidos`);
-                setError(`Se importaron ${exitosos} viajes, pero ${errores.length} presentaron errores.`);
-                setImporting(false);
-                onComplete?.();
-            } else if (exitosos > 0) {
-                logger.debug(`Importación exitosa: ${exitosos} viajes importados`);
-                onComplete?.();
-                setTimeout(() => {
-                    setImporting(false);
-                    handleClose();
-                }, 2000);
+        showNotification(
+          `Importación completada con ${errores.length} errores. Se importaron ${exitosos} viajes.`, 
+          'warning'
+        );
+        console.error('Errores en importación:', errores);
             } else {
-                throw new Error('No se importó ningún viaje');
-            }
-        } catch (err) {
-            logger.error('Error general en importación:', err);
-            setProgress(0);
-            setImporting(false);
-            setError(`Error: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+        showNotification(resultMessage, 'success');
+      }
+      
+      if (onComplete) {
+        onComplete();
+      }
+      
+      onClose();
+    } catch (error) {
+      logger.error('Error en importación:', error);
+      showNotification('Error al procesar la importación: ' + error.message, 'error');
+    }
+  };
+
+  // Instrucciones para la plantilla
+  const instructionSheets = [
+    {
+      name: 'Sitios',
+      data: [
+        ['ID', 'Nombre', 'Tipo'],
+        ...sites.map(site => [
+          site._id,
+          site.Site,
+          site.Tipo || ''
+        ])
+      ],
+      columnWidths: [{ wch: 24 }, { wch: 40 }, { wch: 15 }]
+    },
+    {
+      name: 'Instrucciones',
+      data: [
+        ['INSTRUCCIONES PARA IMPORTACIÓN DE VIAJES'],
+        [''],
+        ['1. Complete los datos en la hoja "Datos"'],
+        ['2. Los campos marcados con asterisco (*) son obligatorios'],
+        ['3. Utilice los nombres exactos de los sitios como aparecen en la hoja "Sitios"'],
+        ['4. Las fechas deben estar en formato DD/MM/YYYY'],
+        ['5. Si las paletas tienen decimales, utilice punto (.) como separador'],
+        [''],
+        ['VALORES TÍPICOS:'],
+        ['- Tipo Tramo: TRMC (Tramo Completo) o TRMI (Tramo Intermedio)'],
+        ['- Tipo Unidad: Sider, Bitren, Carreta, Cisterna, Otro']
+      ],
+      columnWidths: [{ wch: 80 }]
+    },
+    {
+      name: 'Formatos',
+      data: [
+        ['CAMPO', 'FORMATO', 'DESCRIPCIÓN'],
+        ['DT*', 'Texto', 'Número de documento de transporte'],
+        ['Fecha*', 'DD/MM/YYYY', 'Fecha del viaje en formato día/mes/año'],
+        ['Origen*', 'Texto', 'Nombre exacto del sitio de origen como aparece en la hoja "Sitios"'],
+        ['Destino*', 'Texto', 'Nombre exacto del sitio de destino como aparece en la hoja "Sitios"'],
+        ['Tipo Tramo', 'TRMC/TRMI', 'Tipo de tramo (TRMC: Completo, TRMI: Intermedio)'],
+        ['Tipo Unidad', 'Texto', 'Tipo de vehículo utilizado (Sider, Bitren, etc.)'],
+        ['Paletas', 'Numérico', 'Cantidad de paletas transportadas'],
+        ['Observaciones', 'Texto', 'Notas adicionales sobre el viaje']
+      ],
+      columnWidths: [{ wch: 15 }, { wch: 20 }, { wch: 65 }]
+    }
+  ];
+
+  // Generar datos de ejemplo para la plantilla
+  const exampleData = [
+    {
+      dt: 'DT001234',
+      fecha: '22/03/2024',
+      origen: sites.length > 0 ? sites[0].Site : 'Origen Ejemplo',
+      destino: sites.length > 1 ? sites[1].Site : 'Destino Ejemplo',
+      tipoTramo: 'TRMC',
+      tipoUnidad: 'Sider',
+      paletas: '24',
+      observaciones: 'Viaje de ejemplo'
+    },
+    {
+      dt: 'DT005678',
+      fecha: '23/03/2024',
+      origen: sites.length > 1 ? sites[1].Site : 'Origen Ejemplo 2',
+      destino: sites.length > 2 ? sites[2].Site : (sites.length > 0 ? sites[0].Site : 'Destino Ejemplo 2'),
+      tipoTramo: 'TRMI',
+      tipoUnidad: 'Bitren',
+      paletas: '36',
+      observaciones: 'Segundo ejemplo'
+    }
+  ];
 
     return (
-        <Dialog 
+    <ExcelImportTemplate
+      title="Importación de Viajes mediante Excel"
             open={open} 
-            onClose={handleClose}
-            maxWidth="lg"
-            fullWidth
-        >
-            <DialogTitle>
-                Importar Viajes
-            </DialogTitle>
-            <DialogContent>
-                <Box sx={{ mb: 2 }}>
-                    <Typography variant="body1" gutterBottom>
-                        Pegue los datos de los viajes desde Excel. El formato debe ser:
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary" component="div" sx={{ mb: 2 }}>
-                        DT | Fecha (DD/MM/YYYY) | Origen | Destino | Tipo Tramo | Tipo Unidad | Paletas | Observaciones
-                    </Typography>
-                </Box>
+      onClose={onClose}
+      onComplete={onComplete}
+      excelHeaders={EXCEL_HEADERS}
+      processDataCallback={processExcelData}
+      templateFileName="Plantilla_Importacion_Viajes.xlsx"
+      validateRow={validateRow}
+      instructionSheets={instructionSheets}
+      exampleData={exampleData}
+    />
+  );
+};
 
-                <Box 
-                    sx={{ 
-                        border: '1px dashed grey',
-                        p: 2,
-                        mb: 2,
-                        backgroundColor: '#f5f5f5'
-                    }}
-                    onPaste={handlePaste}
-                >
-                    <Typography>
-                        Pegue los datos aquí...
-                    </Typography>
-                </Box>
+ViajeBulkImporter.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  cliente: PropTypes.string.isRequired,
+  onComplete: PropTypes.func,
+  sites: PropTypes.array
+};
 
-                {error && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {error}
-                    </Alert>
-                )}
-
-                {rows.length > 0 && (
-                    <TableContainer component={Paper} sx={{ mb: 2 }}>
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>DT</TableCell>
-                                    <TableCell>Fecha</TableCell>
-                                    <TableCell>Origen</TableCell>
-                                    <TableCell>Destino</TableCell>
-                                    <TableCell>Tipo Tramo</TableCell>
-                                    <TableCell>Tipo Unidad</TableCell>
-                                    <TableCell>Paletas</TableCell>
-                                    <TableCell>Observaciones</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {rows.map((row, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>{row.dt}</TableCell>
-                                        <TableCell>{format(new Date(row.fecha), 'dd/MM/yyyy')}</TableCell>
-                                        <TableCell>{row.origenNombre}</TableCell>
-                                        <TableCell>{row.destinoNombre}</TableCell>
-                                        <TableCell>{row.tipoTramo}</TableCell>
-                                        <TableCell>{row.tipoUnidad}</TableCell>
-                                        <TableCell>{row.paletas}</TableCell>
-                                        <TableCell>{row.observaciones}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
-
-                {importing && (
-                    <Box sx={{ width: '100%', mb: 2 }}>
-                        <LinearProgress variant="determinate" value={progress} />
-                        <Typography variant="body2" color="textSecondary" align="center">
-                            {processingStatus}
-                        </Typography>
-                    </Box>
-                )}
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={handleClose}>
-                    Cancelar
-                </Button>
-                <Button 
-                    onClick={handleImport}
-                    variant="contained" 
-                    color="primary"
-                    disabled={rows.length === 0 || loading}
-                    startIcon={loading && <CircularProgress size={20} />}
-                >
-                    Importar
-                </Button>
-            </DialogActions>
-        </Dialog>
-    );
+ViajeBulkImporter.defaultProps = {
+  sites: []
 };
 
 export default ViajeBulkImporter; 

@@ -19,6 +19,7 @@ const SitesManager = ({ cliente, onBack }) => {
     const [error, setError] = useState(null);
     const [editingSite, setEditingSite] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [importerOpen, setImporterOpen] = useState(false);
     const [formData, setFormData] = useState({
         Site: '',
         Direccion: '',
@@ -144,9 +145,22 @@ const SitesManager = ({ cliente, onBack }) => {
                 <Typography variant="h5">
                     Sites de {cliente}
                 </Typography>
+                
+                <Box sx={{ flexGrow: 1 }} />
+                
+                <Button 
+                    variant="contained" 
+                    color="primary"
+                    onClick={() => setImporterOpen(true)}
+                    sx={{ ml: 2 }}
+                >
+                    Importar Sites
+                </Button>
             </Box>
 
             <SiteBulkImporter 
+                open={importerOpen}
+                onClose={() => setImporterOpen(false)}
                 cliente={cliente}
                 onComplete={handleImportComplete}
             />

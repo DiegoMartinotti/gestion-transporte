@@ -18,8 +18,7 @@ import {
 } from '@mui/icons-material';
 import { format, parseISO, isWithinInterval } from 'date-fns';
 import axios from 'axios';
-import TramosBulkImporter from './TramosBulkImporter';
-import TramosExcelImporter from './TramosExcelImporter';
+import TramoBulkImporter from './tramos/TramoBulkImporter';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -299,7 +298,6 @@ const TarifarioViewer = ({ cliente, onBack }) => {
     const [sites, setSites] = useState([]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [showImporter, setShowImporter] = useState(false);
-    const [showExcelImporter, setShowExcelImporter] = useState(false);
     const [tramosExpandidos, setTramosExpandidos] = useState([]);
     const [newTramo, setNewTramo] = useState({
         origen: '',
@@ -666,17 +664,12 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         setTramosExpandidos([]);
         setSelectedTramos([]);
         setShowImporter(false);
-        setShowExcelImporter(false);
         onBack();
     };
 
     // Función para manejar la apertura de importadores
-    const handleOpenImporter = (type) => {
-        if (type === 'bulk') {
-            setShowImporter(true);
-        } else if (type === 'excel') {
-            setShowExcelImporter(true);
-        }
+    const handleOpenImporter = () => {
+        setShowImporter(true);
     };
 
     const handleVigenciaMasivaOpen = () => {
@@ -1013,7 +1006,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                                 variant="outlined" 
                                 color="primary" 
                                 startIcon={<CloudUploadIcon />}
-                                onClick={() => handleOpenImporter('excel')}
+                                onClick={handleOpenImporter}
                                 sx={{ mr: 1 }}
                             >
                                 Importar Excel
@@ -1295,19 +1288,9 @@ const TarifarioViewer = ({ cliente, onBack }) => {
             )}
 
             {showImporter && (
-                <TramosBulkImporter 
+                <TramoBulkImporter 
                     open={showImporter}
                     onClose={() => setShowImporter(false)}
-                    cliente={cliente}
-                    onComplete={fetchTramos}
-                    sites={sites}
-                />
-            )}
-
-            {showExcelImporter && (
-                <TramosExcelImporter 
-                    open={showExcelImporter}
-                    onClose={() => setShowExcelImporter(false)}
                     cliente={cliente}
                     onComplete={fetchTramos}
                     sites={sites}

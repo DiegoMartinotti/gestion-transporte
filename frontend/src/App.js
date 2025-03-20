@@ -12,13 +12,13 @@ import Dashboard from './pages/Dashboard';
 import Vehiculos from './pages/Vehiculos';
 import Tramos from './pages/Tramos';
 import Clientes from './pages/Clientes';
+import Empresas from './pages/Empresas';
 import Navbar from './components/Navbar';
 import { Box, Container, CircularProgress } from '@mui/material';
 import { ThemeProvider } from './theme';
 import useAuth from './hooks/useAuth';
 import ViajesManager from './components/ViajesManager';
 import CalcularTarifa from './components/CalcularTarifa';
-import EmpresasManager from './components/EmpresasManager';
 import PersonalManager from './components/PersonalManager';
 
 // Componente de protección de rutas
@@ -88,7 +88,7 @@ const AppContent = () => {
           { path: "/clientes", element: <Clientes /> },
           { path: "/viajes", element: <ViajesManager /> },
           { path: "/calcular-tarifa", element: <CalcularTarifa /> },
-          { path: "/empresas", element: <EmpresasManager /> },
+          { path: "/empresas", element: <Empresas /> },
           { path: "/personal/:empresaId", element: <PersonalManager /> }
         ].map((route) => (
           <Route

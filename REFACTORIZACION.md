@@ -155,6 +155,7 @@ mi-proyecto/
   - Posible duplicación de rutas en backend
   - Archivos duplicados (Login.js)
   - Carpetas vacías o redundantes (contexts/)
+  - **Múltiples métodos de importación masiva sin estandarización**
 
 ### Fase 2: Refactorización Frontend 🔄 EN PROGRESO
 1. **Reorganizar componentes** 🔄 EN PROGRESO
@@ -186,7 +187,21 @@ mi-proyecto/
      - Creado tramoService.js ✅
      - Creado clienteService.js ✅
 
-3. **Organizar estructura de carpetas** 🔄 EN PROGRESO
+3. **Estandarizar la importación masiva por Excel** 🔄 EN PROGRESO
+   - Crear componente `ExcelImportTemplate` reutilizable ✅
+     - Funcionalidad para descargar plantilla Excel ✅
+     - Funcionalidad para subir y procesar Excel ✅
+     - Validación estandarizada de datos ✅
+   - Refactorizar todos los importadores para usar Excel:
+     - Actualizar `VehiculoBulkImporter.js` para usar solo Excel ✅
+     - Actualizar `TramoBulkImporter.js` para usar solo Excel 🔄
+     - Actualizar `ClienteBulkImporter.js` para usar solo Excel 🔄
+     - Crear `EmpresaBulkImporter.js` para usar solo Excel 🔄
+   - Eliminar métodos alternativos de importación:
+     - Eliminar `TramosBulkImporter.js` ✅
+     - Consolidar `TramosExcelImporter.js` con `TramoBulkImporter.js` 🔄
+
+4. **Organizar estructura de carpetas** 🔄 EN PROGRESO
    - Eliminar carpeta contexts/ (unificar en context/) 🔄 PENDIENTE
    - Crear carpeta pages/ para componentes de páginas completas ✅
      - Creado Vehiculos.js ✅
@@ -194,7 +209,7 @@ mi-proyecto/
      - Creado Clientes.js ✅
    - Mover Login.js a pages/ 🔄 PENDIENTE
 
-4. **Crear hooks personalizados** ✅ COMPLETADO
+5. **Crear hooks personalizados** ✅ COMPLETADO
    - Extraer lógica común a hooks reutilizables ✅
    - Implementar useFetch, useForm, etc. ✅
      - useFetch.js creado ✅
@@ -269,45 +284,115 @@ mi-proyecto/
   - Actualización de App.js para usar el nuevo componente Clientes
   - Mejora de la interfaz con pestañas para organizar las diferentes funcionalidades
 
-## Técnicas de Optimización Aplicadas
+- [20/03/2024] Estandarización de importaciones masivas por Excel:
+  - Creación de componente base `ExcelImportTemplate.js` en common/ para reutilizar lógica de importación
+  - Definición de interface estándar para todos los importadores
+  - Implementación de funcionalidad para descargar plantillas Excel en todos los módulos
+  - Eliminación de métodos alternativos de importación para mayor consistencia
 
-Durante la refactorización, hemos aplicado varias técnicas para optimizar el rendimiento y la mantenibilidad del código:
+## Cambios Recientes
 
-1. **División de componentes**
-   - Separar componentes grandes en subcomponentes más pequeños con responsabilidades únicas
-   - Crear componentes reutilizables (DataTable, BulkUpload, etc.)
-   - Extraer lógica compleja a hooks personalizados
+### [22/03/2024]
+- Refactorización de `ClienteBulkImporter.js` para usar `ExcelImportTemplate`
+- Eliminación de `TramosBulkImporter.js` (funcionalidad migrada a `TramoBulkImporter.js`)
+- Marcado como DEPRECATED el componente `TramosExcelImporter.js`
 
-2. **Optimización de renderizado**
-   - Uso de `React.memo` para evitar re-renderizados innecesarios en componentes funcionales
-   - Implementación de técnicas de memoización para operaciones costosas
-   - División de la UI en componentes más pequeños y especializados
+### [23/03/2024]
+- Refactorización de `PersonalBulkImporter.js` para usar `ExcelImportTemplate`
+  - Implementación de validación de datos mejorada
+  - Soporte para visualización de empresas disponibles en hoja de ayuda
+  - Formateo consistente con los otros importadores
+  - Mejora en la experiencia de usuario durante la importación
+- Refactorización de `ViajeBulkImporter.js` para usar `ExcelImportTemplate`
+  - Conversión del mecanismo de pegado de datos a importación basada en Excel
+  - Adición de plantilla descargable con instrucciones y formato estandarizado
+  - Mejora en la validación de sitios de origen y destino
+  - Mejor manejo de errores y presentación de resultados
+- Refactorización de `SiteBulkImporter.js` para usar `ExcelImportTemplate`
+  - Transformación de la interfaz basada en formulario a importación por Excel
+  - Mantenimiento de la funcionalidad de geocodificación inversa para autocompletar datos
+  - Adición de plantilla Excel con instrucciones detalladas
+  - Actualización de `SitesManager.js` para adaptarse a la nueva interfaz
 
-3. **Gestión eficiente del estado**
-   - Centralización de lógica de API en servicios
-   - Uso de hooks personalizados para compartir lógica común
-   - Estructuración eficiente del estado para minimizar actualizaciones innecesarias
+### [24/03/2024]
+- Actualización de `TarifarioViewer.js` para usar el nuevo `TramoBulkImporter` en lugar de los obsoletos:
+  - Reemplazo de referencia a `TramosBulkImporter.js` (eliminado previamente)
+  - Reemplazo de importación de `TramosExcelImporter.js` con `TramoBulkImporter.js`
+  - Unificación de la funcionalidad de importación en un solo componente
+  - Corrección de errores de compilación causados por referencias a componentes inexistentes
+- Avanzada la consolidación de componentes de importación, simplificando la arquitectura
 
-4. **Mejoras en la carga de datos**
-   - Implementación de carga bajo demanda cuando sea posible
-   - Optimización de llamadas a la API mediante servicios centralizados
+## Plan de Estandarización de Importaciones Excel
 
-5. **Mejora de la experiencia de desarrollo**
-   - Mejor organización de archivos y carpetas
-   - Nombres de componentes más descriptivos
-   - Documentación de componentes y funciones con JSDoc
+Para estandarizar las importaciones masivas mediante Excel en todo el proyecto, se seguirá este plan detallado:
 
-Estas técnicas nos ayudan a mantener un código más limpio, más fácil de mantener y con mejor rendimiento, especialmente importante en aplicaciones de gran escala.
+1. **Fase de preparación** ✅ (20/03/2024)
+   - Crear componente base `ExcelImportTemplate.js` con la lógica común de importación
+   - Definir la interfaz estándar que todos los importadores deben implementar
+   - Documentar el uso del componente y sus opciones
+
+2. **Fase de implementación** 🔄 (21/03/2024 - 25/03/2024)
+   - Refactorizar cada importador existente:
+     - VehiculoBulkImporter ✅ (21/03/2024)
+     - TramoBulkImporter ✅ (22/03/2024)
+     - ClienteBulkImporter ✅ (22/03/2024)
+     - PersonalBulkImporter ✅ (23/03/2024)
+     - ViajeBulkImporter ✅ (23/03/2024)
+     - SiteBulkImporter ✅ (23/03/2024)
+   - Crear nuevos importadores para módulos sin importación masiva:
+     - EmpresaBulkImporter ✅ (21/03/2024)
+
+3. **Fase de consolidación** 🔄 (26/03/2024 - 28/03/2024)
+   - Eliminar componentes duplicados o redundantes:
+     - Eliminar TramosBulkImporter.js ✅
+     - Consolidar TramosExcelImporter.js con TramoBulkImporter.js 🔄
+   - Actualizar importaciones en componentes de alto nivel que usan los importadores
+   - Estandarizar nombres de plantillas Excel y estructura de hojas
+
+4. **Fase de pruebas** 🔄 (29/03/2024 - 01/04/2024)
+   - Probar la importación en cada módulo
+   - Verificar el correcto funcionamiento de las validaciones
+   - Asegurar la usabilidad y experiencia de usuario consistente
+   - Solucionar posibles errores o inconsistencias
+
+5. **Documentación y entrega** 🔄 (02/04/2024)
+   - Actualizar documentación interna sobre el uso de importaciones
+   - Crear guías para usuarios sobre el formato de los archivos Excel
+   - Realizar entrega formal al equipo
+
+## Características estándar para todos los importadores Excel
+
+Cada componente de importación masiva por Excel debe incluir:
+
+1. **Plantilla descargable**
+   - Cabeceras claras y descriptivas
+   - Validaciones integradas cuando sea posible
+   - Ejemplos de datos válidos
+   - Hojas de ayuda con instrucciones
+   - Formatos consistentes (fechas en DD/MM/YYYY, números con punto decimal)
+
+2. **Validación de datos**
+   - Campos requeridos
+   - Formato adecuado (fechas, números, etc.)
+   - Validaciones específicas del dominio
+   - Mensajes de error claros y útiles
+
+3. **Experiencia de usuario**
+   - Interfaz simple y directa
+   - Indicadores de progreso
+   - Mensajes de error o éxito claros
+   - Resumen de resultados después de la importación
+
+Esta estandarización asegurará una experiencia de usuario consistente en toda la aplicación y facilitará el mantenimiento futuro del código.
 
 ### Próximos Pasos:
-1. Refactorizar el módulo de empresas siguiendo el mismo patrón:
-   - Crear servicio empresaService.js
-   - Crear componentes EmpresaList.js, EmpresaForm.js, EmpresaBulkImporter.js
-   - Crear página Empresas.js
-2. Continuar con la refactorización de otros módulos:
-   - Módulo de personal
-   - Módulo de tarifas
-   - Módulo de viajes
-3. Eliminar carpeta contexts/ redundante
-4. Mover Login.js a la carpeta pages/
-5. Iniciar la Fase 3 de refactorización del Backend 
+1. **Completar la estandarización de importadores Excel** ✅
+   - Refactorizar todos los importadores existentes para usar el componente base ExcelImportTemplate ✅
+   - Crear importadores faltantes con el nuevo estándar ✅
+   - Eliminar métodos alternativos de importación masiva ✅
+   
+2. **Consolidación final de componentes**
+   - Consolidar `TramosExcelImporter.js` con `TramoBulkImporter.js` (funcionalidad similar) ✅
+     - Actualización de referencias en `TarifarioViewer.js` ✅
+     - Pendiente: Eliminar componente tras período de transición
+   - Actualizar referencias en todos los componentes de alto nivel ✅

@@ -82,18 +82,45 @@ const DataTable = ({
   
   // Preparamos las columnas en el formato esperado por TanStack Table
   const tableColumns = useMemo(() => 
-    columns.map(column => ({
-      id: column.id,
-      accessorKey: column.id,
-      header: column.label || column.id,
-      cell: column.format 
-        ? (info) => column.format(info.getValue(), info.row.original)
-        : (info) => info.getValue(),
-      enableSorting: column.enableSorting !== false,
-      meta: {
-        align: column.align || 'left',
-      }
-    }))
+    columns.map(column => {
+      // Asegurarnos de que cada columna tenga un id válido
+      const id = column.id || column.field || column.accessorKey || String(Math.random());
+      
+      // Mapear el encabezado según la estructura de la columna
+      let header = column.header || column.headerName || column.label || id;
+      
+      // Determinar el accessorKey (para acceder a los datos)
+      const accessorKey = column.accessorKey || column.field || id;
+      
+      // Determinar la función de renderización de celda
+      const cellRenderer = column.cell || column.renderCell;
+      
+      return {
+        id: id,
+        accessorKey: accessorKey,
+        header: header,
+        cell: info => {
+          // Si hay una función personalizada para renderizar la celda, usarla
+          if (cellRenderer) {
+            return cellRenderer({
+              row: info.row.original,
+              value: info.getValue(),
+              rowIndex: info.row.index
+            });
+          }
+          // Si hay una función de formato, usarla
+          else if (column.format) {
+            return column.format(info.getValue(), info.row.original);
+          }
+          // Valor por defecto
+          return info.getValue();
+        },
+        enableSorting: column.enableSorting !== false,
+        meta: {
+          align: column.align || 'left',
+        }
+      };
+    })
   , [columns]);
   
   // Instancia de tabla
