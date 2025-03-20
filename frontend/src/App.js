@@ -11,11 +11,11 @@ import Login from './components/Login';
 import Dashboard from './pages/Dashboard';
 import Vehiculos from './pages/Vehiculos';
 import Tramos from './pages/Tramos';
+import Clientes from './pages/Clientes';
 import Navbar from './components/Navbar';
 import { Box, Container, CircularProgress } from '@mui/material';
 import { ThemeProvider } from './theme';
 import useAuth from './hooks/useAuth';
-import ClientesManager from './components/ClientesManager';
 import ViajesManager from './components/ViajesManager';
 import CalcularTarifa from './components/CalcularTarifa';
 import EmpresasManager from './components/EmpresasManager';
@@ -85,7 +85,7 @@ const AppContent = () => {
           { path: "/vehiculos", element: <Vehiculos /> },
           { path: "/vehiculos/:empresaId", element: <Vehiculos /> },
           { path: "/tramos", element: <Tramos /> },
-          { path: "/clientes", element: <ClientesManager /> },
+          { path: "/clientes", element: <Clientes /> },
           { path: "/viajes", element: <ViajesManager /> },
           { path: "/calcular-tarifa", element: <CalcularTarifa /> },
           { path: "/empresas", element: <EmpresasManager /> },

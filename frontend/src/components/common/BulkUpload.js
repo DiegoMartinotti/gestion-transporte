@@ -58,22 +58,51 @@ const BulkUpload = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
-  const [tableData, setTableData] = useState([Array(columns.length).fill('')]);
+  const [tableData, setTableData] = useState([Array(columns ? columns.length : 0).fill('')]);
   const [successMessage, setSuccessMessage] = useState(null);
 
-  // Extraer solo las claves de las columnas para simplificar
-  const columnKeys = columns.map(col => col.key);
+  // Verificar que columns es un array válido antes de usarlo
+  const columnKeys = columns && Array.isArray(columns) ? columns.map(col => col.key) : [];
 
   /**
    * Maneja el evento de pegar datos desde el portapapeles
    */
   const handlePaste = useCallback((e) => {
     e.preventDefault();
+    
+    // Verificar que e.clipboardData existe antes de intentar usarlo
+    if (!e || !e.clipboardData) {
+      logger.error('Error: Datos de portapapeles no disponibles');
+      setError('Error al acceder al portapapeles');
+      return;
+    }
+    
     const pasteData = e.clipboardData.getData('text');
-    const rows = pasteData.split('\n').filter(row => row.trim());
+    
+    // Verificar que pasteData es válido
+    if (!pasteData) {
+      logger.error('Error: No hay datos en el portapapeles');
+      setError('No se detectaron datos en el portapapeles');
+      return;
+    }
+    
+    // Asegurarnos que split devuelve un array
+    const rows = pasteData.split('\n').filter(row => row && row.trim());
+    
+    // Verificar que hay filas para procesar
+    if (!rows || rows.length === 0) {
+      logger.error('Error: No hay filas válidas en los datos pegados');
+      setError('Los datos pegados no contienen filas válidas');
+      return;
+    }
     
     try {
       const processedRows = rows.map(row => {
+        // Asegurarnos que row es un string válido
+        if (typeof row !== 'string') {
+          return Array(columnKeys.length).fill('');
+        }
+        
         const cells = row.split('\t');
         return columnKeys.map((_, index) => cells[index] || '');
       });
@@ -91,6 +120,10 @@ const BulkUpload = ({
    * Procesa los datos de la tabla para prepararlos para la carga
    */
   const processTableData = (data) => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      throw new Error('No hay datos válidos para procesar');
+    }
+    
     if (onProcessData) {
       return onProcessData(data, columns);
     }
@@ -99,8 +132,18 @@ const BulkUpload = ({
     return data.map((row, rowIndex) => {
       const item = {};
       
+      if (!columns || !Array.isArray(columns)) {
+        logger.error('Error: columns no es un array válido');
+        throw new Error('Configuración de columnas inválida');
+      }
+      
       columns.forEach((column, colIndex) => {
-        const value = row[colIndex]?.trim();
+        if (!column || !column.key) {
+          logger.error(`Error: columna inválida en el índice ${colIndex}`);
+          return;
+        }
+        
+        const value = row && row[colIndex] ? row[colIndex].trim() : '';
         
         // Validar campos requeridos
         if (column.required && !value) {
@@ -142,7 +185,8 @@ const BulkUpload = ({
     setSuccessMessage(null);
 
     try {
-      if (tableData.length === 0 || tableData[0].every(cell => !cell)) {
+      // Verificar que tableData tiene contenido válido
+      if (!tableData || !Array.isArray(tableData) || tableData.length === 0 || (tableData.length === 1 && tableData[0].every(cell => !cell))) {
         throw new Error('No hay datos para procesar');
       }
 
@@ -177,15 +221,15 @@ const BulkUpload = ({
       }
 
       // Manejar errores en la respuesta
-      if (result.errores?.length > 0) {
+      if (result && result.errores && result.errores.length > 0) {
         setError(`Se encontraron ${result.errores.length} errores. ${result.exitosos || 0} registros guardados correctamente.`);
       } else {
-        setSuccessMessage(`${result.exitosos || processedData.length} registros guardados correctamente.`);
+        setSuccessMessage(`${result && result.exitosos ? result.exitosos : (processedData ? processedData.length : 0)} registros guardados correctamente.`);
         
         // Limpiar la tabla después de una carga exitosa
         setTimeout(() => {
           setOpenDialog(false);
-          setTableData([Array(columns.length).fill('')]);
+          setTableData([Array(columns ? columns.length : 0).fill('')]);
           onUploadComplete && onUploadComplete(result);
         }, 1500);
       }
@@ -235,7 +279,7 @@ const BulkUpload = ({
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  {columns.map((column) => (
+                  {columns && columns.map((column) => (
                     <TableCell key={column.key}>
                       {column.label || column.key}
                       {column.required && <Chip size="small" label="Requerido" color="primary" variant="outlined" style={{marginLeft: 4}} />}
@@ -244,9 +288,9 @@ const BulkUpload = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {tableData.map((row, rowIndex) => (
+                {tableData && tableData.map((row, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    {row.map((cell, cellIndex) => (
+                    {row && row.map((cell, cellIndex) => (
                       <TableCell key={cellIndex}>{cell}</TableCell>
                     ))}
                   </TableRow>
@@ -255,20 +299,37 @@ const BulkUpload = ({
             </Table>
           </TableContainer>
           
-          {error && <Alert severity="error" style={{ marginTop: 10 }}>{error}</Alert>}
-          {successMessage && <Alert severity="success" style={{ marginTop: 10 }}>{successMessage}</Alert>}
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          {successMessage && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              {successMessage}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} disabled={loading}>
+          <Button 
+            onClick={() => setOpenDialog(false)} 
+            disabled={loading}
+          >
             Cancelar
           </Button>
           <Button 
             onClick={handleSave} 
             variant="contained" 
             color="primary"
-            disabled={loading || tableData.length === 0 || tableData[0].every(cell => !cell)}
+            disabled={loading || !tableData || tableData.length === 0}
           >
-            {loading ? <CircularProgress size={24} /> : 'Cargar datos'}
+            {loading ? (
+              <>
+                <CircularProgress size={24} sx={{ mr: 1 }} />
+                Procesando...
+              </>
+            ) : 'Guardar'}
           </Button>
         </DialogActions>
       </Dialog>

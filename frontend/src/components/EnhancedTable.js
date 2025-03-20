@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useReactTable, getCoreRowModel, flexRender } from '@tanstack/react-table';
-import BulkUpload from './BulkUpload';
+import BulkUpload from './common/BulkUpload';
 import logger from '../utils/logger';
 
 const formatDate = (dateString) => {

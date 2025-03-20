@@ -30,6 +30,9 @@ import timezone from 'dayjs/plugin/timezone';
 import logger from '../utils/logger';
 import * as XLSX from 'xlsx';
 
+// Configuración de la URL base de la API
+const API_URL = process.env.REACT_APP_API_URL || '';
+
 // Configurar dayjs para usar español y formato de fecha preferido
 dayjs.locale('es');
 // Añadir el plugin UTC para manejo correcto de zonas horarias
@@ -290,7 +293,7 @@ const formatearFecha = (fechaStr) => {
     return `${soloFecha.substring(8, 10)}/${soloFecha.substring(5, 7)}/${soloFecha.substring(0, 4)}`;
 };
 
-const TarifarioViewer = ({ open, cliente, onClose }) => {
+const TarifarioViewer = ({ cliente, onBack }) => {
     const [tramos, setTramos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sites, setSites] = useState([]);
@@ -386,20 +389,33 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     }, [tramos, filtroVigencia]);
 
     const fetchSites = useCallback(async () => {
+        if (!cliente) return;
+        
         try {
+            logger.debug('Obteniendo sitios para cliente:', cliente);
             const token = localStorage.getItem('token');
-            const response = await axios.get(`/api/sites?cliente=${cliente}`, {
-                headers: { Authorization: `Bearer ${token}` }
+            const response = await axios.get(`${API_URL}/api/sites?cliente=${cliente}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-            setSites(response.data.data || []);
+            
+            if (response.data && Array.isArray(response.data)) {
+                setSites(response.data);
+                logger.debug(`${response.data.length} sitios obtenidos`);
+            } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+                setSites(response.data.data);
+                logger.debug(`${response.data.data.length} sitios obtenidos`);
+            } else {
+                logger.error('Formato de respuesta de sitios no reconocido:', response.data);
+                setSites([]);
+            }
         } catch (error) {
-            logger.error('Error al cargar sites:', error);
+            logger.error('Error al obtener sitios:', error);
             setSites([]);
         }
     }, [cliente]);
 
     const fetchTramos = useCallback(async () => {
-        if (!open || !cliente) return;
+        if (!cliente) return;
         
         try {
             setLoading(true);
@@ -445,20 +461,21 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
             setLoading(false);
         }
         setSelectedTramos([]);
-    }, [open, cliente, filtroVigencia.desde, filtroVigencia.hasta]);
+    }, [cliente, filtroVigencia.desde, filtroVigencia.hasta]);
 
     // Inicializar filteredTramos con tramos al principio
     useEffect(() => {
         setFilteredTramos(tramos);
     }, [tramos]);
 
+    // Cargar tramos cuando el componente se monta
     useEffect(() => {
-        if (open && cliente) {
+        if (cliente) {
             logger.debug('TarifarioViewer abierto para cliente:', cliente);
             fetchTramos();
             fetchSites();
         }
-    }, [open, cliente, fetchTramos, fetchSites]);
+    }, [cliente, fetchTramos, fetchSites]);
 
     // Apply filters when tramos or filter criteria change
     useEffect(() => {
@@ -643,12 +660,14 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     // Count selected tramos
     const selectedCount = selectedTramos.length;
 
-    const handleCloseAll = () => {
-        // Cerrar todos los diálogos de una vez
-        setShowAddForm(false);
+    const handleBack = () => {
+        setTramos([]);
+        setFilteredTramos([]);
+        setTramosExpandidos([]);
+        setSelectedTramos([]);
         setShowImporter(false);
         setShowExcelImporter(false);
-        onClose();
+        onBack();
     };
 
     // Función para manejar la apertura de importadores
@@ -979,8 +998,8 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
     return (
         <>
             <Dialog 
-                open={open} 
-                onClose={handleCloseAll}
+                open={true} 
+                onClose={handleBack}
                 maxWidth="lg"
                 fullWidth
                 disableEnforceFocus
@@ -1182,7 +1201,7 @@ const TarifarioViewer = ({ open, cliente, onClose }) => {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseAll}>Cerrar</Button>
+                    <Button onClick={handleBack}>Cerrar</Button>
                 </DialogActions>
             </Dialog>
 

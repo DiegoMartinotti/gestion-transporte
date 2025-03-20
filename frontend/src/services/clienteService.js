@@ -3,7 +3,7 @@
  * @description Servicio para gestionar clientes en la aplicación
  */
 
-import api from './api';
+import api from './api/index';
 
 const BASE_PATH = '/api/clientes';
 

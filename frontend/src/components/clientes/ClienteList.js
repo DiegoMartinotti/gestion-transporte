@@ -47,7 +47,9 @@ const ClienteList = ({
     try {
       setLoading(true);
       setError(null);
+      logger.debug('Obteniendo clientes desde la API...');
       const data = await clienteService.getClientes();
+      logger.debug('Datos recibidos de la API:', data);
       setClientes(Array.isArray(data) ? data : []);
     } catch (error) {
       logger.error('Error fetching clientes:', error);

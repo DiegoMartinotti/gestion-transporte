@@ -15,6 +15,12 @@ const instance = axios.create({
   }
 });
 
+// Log de configuración base
+logger.debug('Configuración API:', {
+  baseURL: process.env.REACT_APP_API_URL,
+  nodeEnv: process.env.NODE_ENV
+});
+
 // Agregar interceptor para incluir el token de autenticación en cada petición
 instance.interceptors.request.use(
   (config) => {
