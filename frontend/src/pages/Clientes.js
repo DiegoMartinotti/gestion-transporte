@@ -4,7 +4,7 @@ import ClienteList from '../components/clientes/ClienteList';
 import ClienteForm from '../components/clientes/ClienteForm';
 import ClienteBulkImporter from '../components/clientes/ClienteBulkImporter';
 import SitesManager from '../components/SitesManager';
-import TarifarioViewer from '../components/TarifarioViewer';
+import TarifarioViewer from '../components/tarifario/TarifarioViewer';
 import ExtrasManager from '../components/ExtrasManager';
 import useNotification from '../hooks/useNotification';
 
