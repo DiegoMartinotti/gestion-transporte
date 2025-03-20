@@ -39,10 +39,22 @@ const EmpresaList = ({ onAddEmpresa, onEditEmpresa, onDeleteEmpresa }) => {
   const fetchEmpresas = async () => {
     try {
       setLoading(true);
-      const response = await empresaService.getAllEmpresas();
-      setEmpresas(response.data);
+      console.log('Solicitando empresas...');
+      const data = await empresaService.getAllEmpresas();
+      console.log('Respuesta de empresas recibida:', data);
+      
+      // Las empresas vienen directamente como array desde el backend
+      if (Array.isArray(data)) {
+        console.log(`Se encontraron ${data.length} empresas`);
+        setEmpresas(data);
+      } else {
+        console.error('Formato de respuesta inesperado:', data);
+        setEmpresas([]);
+        showNotification('Error en el formato de datos recibidos', 'error');
+      }
     } catch (error) {
       console.error('Error al obtener empresas:', error);
+      setEmpresas([]);
       showNotification('Error al cargar empresas', 'error');
     } finally {
       setLoading(false);

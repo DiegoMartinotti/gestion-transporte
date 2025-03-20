@@ -105,9 +105,11 @@ const Vehiculos = () => {
   const fetchVehiculos = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await vehiculoService.getVehiculos({ empresa: empresaId });
+      const data = await vehiculoService.getVehiculosByEmpresa(empresaId);
       setVehiculos(Array.isArray(data) ? data : []);
+      console.log('Vehículos cargados:', data);
     } catch (err) {
+      console.error('Error al cargar vehículos:', err);
       error(err.message || 'Error al obtener los vehículos');
     } finally {
       setLoading(false);

@@ -11,6 +11,7 @@ const viajesRoutes = require('./viajes');
 const extrasRoutes = require('./extras');
 const empresasRoutes = require('./empresas');
 const vehiculosRoutes = require('./vehiculos');
+const vehiculoRoutes = require('./vehiculo.routes');
 const personalRoutes = require('./personal');
 const proxyRouter = require('./proxy');
 
@@ -53,6 +54,7 @@ const protectedRoutes = [
   { path: '/extras', router: extrasRoutes },
   { path: '/empresas', router: empresasRoutes },
   { path: '/vehiculos', router: vehiculosRoutes },
+  { path: '/vehiculo', router: vehiculoRoutes },
   { path: '/personal', router: personalRoutes }
 ];
 

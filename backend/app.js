@@ -4,6 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { connectDB } = require('./config/database');
 const logger = require('./utils/logger');
+const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -84,22 +85,11 @@ app.use('/api/proxy', proxyRouter);
 // Protected routes
 app.use('/api', apiRoutes);
 
-// 404 handler
-app.use((req, res) => {
-    // Siempre registrar los 404 como errores para que aparezcan en producción
-    const errorMsg = `Ruta no encontrada: ${req.method} ${req.originalUrl}`;
-    logger.error(errorMsg);
-    res.status(404).json({ message: 'Ruta no encontrada' });
-});
+// Middleware para rutas no encontradas (404)
+app.use(notFoundHandler);
 
-// Error handlers
-app.use((err, req, res, next) => {
-    logger.error(`${err.message || 'Error interno del servidor'}`);
-    res.status(err.status || 500).json({ 
-        message: err.message || 'Error interno del servidor',
-        details: process.env.NODE_ENV === 'development' ? err : undefined
-    });
-});
+// Middleware para manejo de errores
+app.use(errorHandler);
 
 // JSON parse error handler
 app.use((err, req, res, next) => {
@@ -131,3 +121,6 @@ async function startServer() {
 }
 
 startServer();
+
+// Exportar la app para poder usarla en server.js
+module.exports = app;
