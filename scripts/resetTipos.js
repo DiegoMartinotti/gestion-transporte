@@ -6,13 +6,14 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Tramo = require('../backend/models/Tramo');
+const { connectDB } = require('../backend/config/database');
 const { generarTramoId } = require('../backend/utils/tramoValidator');
 
 console.log('Conectando a la base de datos...');
-mongoose.connect(process.env.MONGODB_URI, { 
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(async () => {
+
+// Usar la función segura de conexión
+connectDB()
+  .then(async () => {
     try {
         console.log('Conexión establecida. Iniciando corrección de tipos...');
         
