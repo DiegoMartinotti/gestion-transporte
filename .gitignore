@@ -14,6 +14,9 @@
 .env.development.local
 .env.test.local
 .env.production.local
+# Asegurando que los env de subdirectorios también estén ignorados
+/frontend/.env*
+/backend/.env*
 
 # Logs
 npm-debug.log*

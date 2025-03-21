@@ -5,8 +5,13 @@ const cors = require('cors');
 const config = require('./config/config');
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
+const validateEnv = require('./utils/validateEnv');
+const { connectDB } = require('./config/database');
 // Comentar o remover esta línea si no quieres usar rate limiting por ahora
 // const rateLimiter = require('./middleware/rateLimiter');
+
+// Validar variables de entorno antes de iniciar la aplicación
+validateEnv();
 
 const app = express();
 
@@ -36,20 +41,16 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.use(errorHandler);
 
 // Conexión a MongoDB y arranque del servidor
-mongoose.connect(config.mongoUri, { 
-  useNewUrlParser: true, 
-  useUnifiedTopology: true 
-})
-.then(() => {
-  logger.info('Conexión a MongoDB exitosa');
-  app.listen(config.port, () => {
-    logger.info(`Servidor ejecutándose en http://localhost:${config.port}`);
+connectDB()
+  .then(() => {
+    app.listen(config.port, () => {
+      logger.info(`Servidor ejecutándose en http://localhost:${config.port}`);
+    });
+  })
+  .catch(error => {
+    logger.error('Error de conexión a MongoDB:', error.message);
+    process.exit(1);
   });
-})
-.catch(error => {
-  logger.error('Error de conexión a MongoDB:', error.message);
-  process.exit(1);
-});
 
 module.exports = app;
 

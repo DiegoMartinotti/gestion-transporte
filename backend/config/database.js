@@ -4,13 +4,20 @@ const logger = require('../utils/logger');
 
 const connectDB = async () => {
     try {
+        // Configurar opciones de conexión
         const options = {
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000,
         };
+        
+        // Construir la URI de conexión con variables de entorno
+        const mongoURI = process.env.MONGODB_URI.replace(
+            '${DB_PASSWORD}', 
+            process.env.DB_PASSWORD
+        );
 
         logger.info('Intentando conectar a MongoDB...');
-        await mongoose.connect(process.env.MONGODB_URI, options);
+        await mongoose.connect(mongoURI, options);
         logger.info('MongoDB conectado correctamente');
         
         mongoose.connection.on('error', err => {
