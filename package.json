@@ -4,7 +4,7 @@
   "description": "Sistema de Gestión de Sites",
   "scripts": {
     "start": "cd frontend && npm start",
-    "server": "cd backend && set NODE_ENV=production&& npm run dev",
+    "server": "cd backend && npm run dev",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
     "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "set-prod": "node scripts/set-production.js",
