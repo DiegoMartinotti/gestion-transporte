@@ -180,3 +180,34 @@ Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](L
 ## Contacto
 
 Si tienes preguntas o sugerencias, por favor abre un issue en el repositorio o contacta al equipo de desarrollo.
+
+## Configuración de Variables de Entorno
+
+Para proteger las claves de acceso a la base de datos y otras credenciales, sigue estos pasos:
+
+1. En el directorio backend, ejecuta el script de configuración:
+
+```bash
+cd backend
+npm run setup-env
+```
+
+2. El script te solicitará la información necesaria para conectarte a la base de datos y generará un archivo .env con las credenciales protegidas.
+
+3. Nunca compartas el archivo .env en el repositorio o con otros desarrolladores. Cada desarrollador debe configurar su propio archivo .env.
+
+4. Para entornos de producción, configura las variables de entorno directamente en el servidor, sin usar archivos .env.
+
+### Ejemplo de Variables de Entorno
+
+El archivo .env.example muestra la estructura de las variables de entorno necesarias:
+
+```
+MONGODB_URI=mongodb+srv://usuario:${DB_PASSWORD}@host/database?options
+JWT_SECRET=${JWT_SECRET_KEY}
+PORT=3001
+SERVER_URL=http://localhost:3001
+NODE_ENV=production
+DB_PASSWORD=tu_contraseña_aquí
+JWT_SECRET_KEY=tu_clave_secreta_aquí
+```
