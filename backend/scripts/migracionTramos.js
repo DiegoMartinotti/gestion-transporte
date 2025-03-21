@@ -8,43 +8,11 @@ const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
 
-// Intentar cargar la configuración de diferentes maneras
-let mongoURI;
+// Cargar variables de entorno
+require('dotenv').config();
 
-// Función para obtener la URI de MongoDB
-function getMongoURI() {
-    try {
-        // Intento 1: Cargar desde config.js si existe
-        if (fs.existsSync(path.join(__dirname, '../config/config.js'))) {
-            const config = require('../config/config');
-            if (config && config.mongoURI) {
-                return config.mongoURI;
-            }
-        }
-        
-        // Intento 2: Cargar desde .env si existe
-        if (fs.existsSync(path.join(__dirname, '../.env'))) {
-            require('dotenv').config({ path: path.join(__dirname, '../.env') });
-        } else if (fs.existsSync(path.join(__dirname, '../../.env'))) {
-            require('dotenv').config({ path: path.join(__dirname, '../../.env') });
-        }
-        
-        // Intento 3: Usar variable de entorno directamente
-        if (process.env.MONGODB_URI) {
-            return process.env.MONGODB_URI;
-        }
-        
-        if (process.env.MONGO_URI) {
-            return process.env.MONGO_URI;
-        }
-        
-        // Si llegamos aquí, no se encontró la URI
-        throw new Error('No se pudo encontrar la URI de MongoDB. Por favor, especifíquela como argumento o en las variables de entorno.');
-    } catch (error) {
-        logger.error('Error al obtener la URI de MongoDB:', error.message);
-        throw error;
-    }
-}
+// Importar la función de conexión segura
+const { connectDB } = require('../config/database');
 
 // Definimos el esquema antiguo para poder leer los datos existentes
 const tramoSchemaAntiguo = new mongoose.Schema({
@@ -93,18 +61,10 @@ const TramoAntiguo = mongoose.model('TramoAntiguo', tramoSchemaAntiguo, 'tramos'
 // Importamos el nuevo modelo Tramo
 const Tramo = require('../models/Tramo');
 
-async function migrarTramos(uri) {
+async function migrarTramos() {
     try {
-        // Usar la URI proporcionada o intentar obtenerla
-        mongoURI = uri || getMongoURI();
-        
-        logger.info(`Conectando a MongoDB: ${mongoURI.replace(/mongodb(\+srv)?:\/\/[^:]+:[^@]+@/, 'mongodb$1://****:****@')}`);
-        
-        // Conectar a la base de datos
-        await mongoose.connect(mongoURI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        // Conectar a la base de datos usando la función segura
+        await connectDB();
         
         logger.info('Conexión a MongoDB establecida');
         
@@ -195,11 +155,8 @@ async function migrarTramos(uri) {
 if (require.main === module) {
     logger.info('Iniciando migración de tramos...');
     
-    // Verificar si se pasó una URI como argumento
-    const args = process.argv.slice(2);
-    const uri = args.length > 0 ? args[0] : null;
-    
-    migrarTramos(uri)
+    // El script ya no acepta parámetros de URI porque usa variables de entorno
+    migrarTramos()
         .then(() => {
             logger.info('Proceso de migración finalizado');
             process.exit(0);

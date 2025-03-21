@@ -1,14 +1,16 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const Usuario = require('../models/Usuario');
 const logger = require('../utils/logger');
 
-// Usar la misma URL que en app.js
-const MONGODB_URI = 'mongodb+srv://dbLiquidaciones:joseblanco4272@cluster0.ahw8j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+// Usar las variables de entorno para la conexión
+const { connectDB } = require('../config/database');
 
 async function createInitialUser() {
   try {
-    await mongoose.connect(MONGODB_URI);
+    // Conectar usando la configuración segura
+    await connectDB();
     
     // Verificar si ya existe
     const exists = await Usuario.findOne({ email: 'admin@example.com' });
