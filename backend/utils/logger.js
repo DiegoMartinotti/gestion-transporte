@@ -3,65 +3,105 @@
  * 
  * Este módulo proporciona funciones para gestionar logs en la aplicación,
  * permitiendo mostrar solo errores en producción y logs completos en desarrollo.
+ * Implementa niveles de log estándar: debug, info, warn, error, critical
  */
 
-// Forzar modo producción
-const isDevelopment = false;
+// Obtener el modo de entorno desde variables de entorno o usar desarrollo por defecto
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const isDevelopment = NODE_ENV === 'development';
+const isTest = NODE_ENV === 'test';
+
+// Configuración de niveles de log
+const LOG_LEVEL = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3,
+  CRITICAL: 4,
+  NONE: 5
+};
+
+// Nivel mínimo de log según el entorno
+const currentLogLevel = (() => {
+  if (isTest) return LOG_LEVEL.ERROR; // Solo errores en pruebas
+  if (isDevelopment) return LOG_LEVEL.DEBUG; // Todo en desarrollo
+  return LOG_LEVEL.WARN; // Warn, error y critical en producción
+})();
 
 /**
- * Logger para información general
- * Solo se muestra en entorno de desarrollo
- * @param {...any} args - Argumentos a loggear
+ * Formatea la fecha actual para mostrarla en los logs
+ * @returns {string} Fecha formateada
  */
-const info = (...args) => {
-  if (isDevelopment) {
-    console.log(...args);
-  }
+const getTimestamp = () => {
+  return new Date().toISOString();
 };
 
 /**
  * Logger para información de depuración
- * Solo se muestra en entorno de desarrollo
  * @param {...any} args - Argumentos a loggear
  */
 const debug = (...args) => {
-  if (isDevelopment) {
-    console.log('[DEBUG]', ...args);
+  if (currentLogLevel <= LOG_LEVEL.DEBUG) {
+    console.log(`[${getTimestamp()}] [DEBUG]`, ...args);
+  }
+};
+
+/**
+ * Logger para información general
+ * @param {...any} args - Argumentos a loggear
+ */
+const info = (...args) => {
+  if (currentLogLevel <= LOG_LEVEL.INFO) {
+    console.log(`[${getTimestamp()}] [INFO]`, ...args);
   }
 };
 
 /**
  * Logger para advertencias
- * Solo se muestra en entorno de desarrollo o si contiene error
  * @param {...any} args - Argumentos a loggear
  */
 const warn = (...args) => {
-  if (isDevelopment || (args[0] && typeof args[0] === 'string' && args[0].includes('Error'))) {
-    console.warn('[WARN]', ...args);
+  if (currentLogLevel <= LOG_LEVEL.WARN) {
+    console.warn(`[${getTimestamp()}] [WARN]`, ...args);
   }
 };
 
 /**
  * Logger para errores
- * Se muestra en todos los entornos
  * @param {...any} args - Argumentos a loggear
  */
 const error = (...args) => {
-  console.error('[ERROR]', ...args);
+  if (currentLogLevel <= LOG_LEVEL.ERROR) {
+    console.error(`[${getTimestamp()}] [ERROR]`, ...args);
+    
+    // Capturar stack trace para errores cuando sea posible
+    const errorObject = args.find(arg => arg instanceof Error);
+    if (errorObject && errorObject.stack) {
+      console.error(`[${getTimestamp()}] [ERROR] Stack:`, errorObject.stack);
+    }
+  }
 };
 
 /**
  * Logger para información crítica
- * Se muestra en todos los entornos
  * @param {...any} args - Argumentos a loggear
  */
 const critical = (...args) => {
-  console.error('[CRITICAL]', ...args);
+  if (currentLogLevel <= LOG_LEVEL.CRITICAL) {
+    console.error(`[${getTimestamp()}] [CRITICAL]`, ...args);
+    
+    // Capturar stack trace para errores cuando sea posible
+    const errorObject = args.find(arg => arg instanceof Error);
+    if (errorObject && errorObject.stack) {
+      console.error(`[${getTimestamp()}] [CRITICAL] Stack:`, errorObject.stack);
+    }
+  }
 };
 
 // Interceptar errores no capturados
 process.on('uncaughtException', (err) => {
   critical('Excepción no capturada:', err);
+  // En producción podríamos notificar a un servicio externo
 });
 
 // Interceptar promesas rechazadas no capturadas
@@ -69,10 +109,15 @@ process.on('unhandledRejection', (reason, promise) => {
   critical('Promesa rechazada no capturada:', reason);
 });
 
+// Función para obtener el nivel de log actual (útil para pruebas)
+const getCurrentLogLevel = () => currentLogLevel;
+
 module.exports = {
-  info,
   debug,
+  info,
   warn,
   error,
-  critical
+  critical,
+  LOG_LEVEL,
+  getCurrentLogLevel
 }; 
