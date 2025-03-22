@@ -216,30 +216,38 @@ mi-proyecto/
      - useNotification.js creado ✅
      - useAuth.js creado ✅
 
-### Fase 3: Refactorización Backend 🔄 EN PROGRESO
-1. **Reorganizar controladores** 🔄 EN PROGRESO
-   - Dividir tramoController.js y otros controladores grandes 🔄 EN PROGRESO
+### Fase 3: Refactorización Backend ✅ COMPLETADO
+1. **Reorganizar controladores** ✅ COMPLETADO
+   - Dividir tramoController.js y otros controladores grandes ✅ COMPLETADO
      - Creación de servicio `tramoService.js` en `backend/services/tramo/` ✅
      - Extracción de funciones `getTramosByCliente` y `getDistanciasCalculadas` a controladores independientes ✅
      - Creación de estructura de carpetas adecuada para controladores (por dominio) ✅
      - Creación de archivo índice para exportar controladores ✅
-   - Extraer lógica de negocio a servicios 🔄 EN PROGRESO
+   - Extraer lógica de negocio a servicios ✅ COMPLETADO
      - Movida lógica de procesamiento de tramos al servicio ✅
      - Creación de servicio `vehiculoService.js` en `backend/services/vehiculo/` ✅
      - Refactorización completa del controlador de vehículos en archivos independientes ✅
      - Mejora en la gestión de errores y respuestas HTTP ✅
 
-2. **Unificar rutas duplicadas** 🔄 EN PROGRESO
-   - Resolver duplicidad entre tramoRoutes.js y tramos.js 🔄 EN PROGRESO
+2. **Unificar rutas duplicadas** ✅ COMPLETADO
+   - Resolver duplicidad entre tramoRoutes.js y tramos.js ✅ COMPLETADO
      - Creado nuevo archivo `tramo.routes.js` con rutas más limpias ✅
      - Mantenimiento de compatibilidad con las rutas antiguas para evitar interrupciones ✅
-   - Estandarizar nomenclatura 🔄 EN PROGRESO
+   - Estandarizar nomenclatura ✅ COMPLETADO
      - Creado nuevo archivo `vehiculo.routes.js` para APIs de vehículos ✅
      - Actualización del router principal para mantener compatibilidad ✅
      - Documentación clara de endpoints y parámetros ✅
+   - Refactorización del módulo sites ✅ COMPLETADO
+     - Creación de `site.routes.js` siguiendo la convención establecida ✅
+     - Implementación de controladores modulares en `controllers/site/` ✅
+     - Integración en el router principal manteniendo compatibilidad ✅
 
-3. **Clarificar estructura de la aplicación** 🔄 PENDIENTE
-   - Revisar y unificar app.js, server.js, index.js
+3. **Clarificar estructura de la aplicación** ✅ COMPLETADO
+   - Revisar y unificar app.js, server.js, index.js ✅ COMPLETADO
+     - Consolidación de toda la lógica en `server.js` ✅
+     - Simplificación de `index.js` para mantener compatibilidad ✅
+     - Respaldo y eliminación de archivos duplicados ✅
+     - Implementación de mejor manejo de errores y logging ✅
 
 ### Fase 4: Pruebas y Documentación 🔄 PENDIENTE
 - Verificar que toda la funcionalidad sigue intacta
@@ -400,6 +408,28 @@ mi-proyecto/
   - Actualización del enrutador principal para mantener compatibilidad mientras se migra al nuevo sistema
   - Aplicación de patrones consistentes para facilitar mantenimiento y legibilidad
   - Estructura final más escalable y menos propensa a errores
+
+### [31/03/2024]
+- Completada la refactorización de la estructura de la aplicación del backend:
+  - Unificación de los puntos de entrada (app.js, server.js, index.js) para eliminar duplicidades:
+    - Consolidación de toda la lógica principal en `server.js` con un diseño más claro y modular
+    - Simplificación de `index.js` para que solo importe `server.js` (mantiene compatibilidad)
+    - Respaldo de `app.js` original antes de eliminarlo
+    - Mejoras en el manejo de errores y logging
+    - Configuración unificada para CORS y otros middlewares
+  - Refactorización de rutas y controladores para el módulo de sitios:
+    - Creación de patrón consistente para controladores con archivos individuales en `backend/controllers/site/`
+    - Implementación de nuevos controladores modulares con mejor manejo de errores
+    - Creación de rutas estandarizadas en `site.routes.js` siguiendo la convención establecida
+    - Mantenimiento de compatibilidad con rutas existentes
+    - Documentación mejorada con comentarios Swagger para APIs
+  - Actualización del enrutador principal para incluir todas las rutas nuevas
+  - Mejora global en el manejo de errores y validaciones
+
+### Fase 4: Pruebas y Documentación 🔄 PENDIENTE
+- Verificar que toda la funcionalidad sigue intacta
+- Mejorar documentación
+- Actualizar README
 
 ## Plan de Estandarización de Importaciones Excel
 

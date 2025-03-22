@@ -5,6 +5,7 @@ const router = express.Router();
 const authRoutes = require('./auth');
 const clientesRoutes = require('./clientes');
 const sitesRoutes = require('./sites');
+const siteRoutes = require('./site.routes');
 const tramosRoutes = require('./tramos');
 const tramoRoutes = require('./tramo.routes');
 const viajesRoutes = require('./viajes');
@@ -48,6 +49,7 @@ router.use('/proxy', proxyRouter);
 const protectedRoutes = [
   { path: '/clientes', router: clientesRoutes },
   { path: '/sites', router: sitesRoutes },
+  { path: '/site', router: siteRoutes },
   { path: '/tramos', router: tramosRoutes },
   { path: '/tramo', router: tramoRoutes },
   { path: '/viajes', router: viajesRoutes },

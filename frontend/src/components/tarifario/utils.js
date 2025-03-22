@@ -41,58 +41,88 @@ export const parseDate = (dateString) => {
 };
 
 /**
- * Obtiene las tarifas vigentes de un tramo
- * @param {Object} tramo - Tramo con tarifas históricas
- * @param {string} fechaDesde - Fecha desde para filtrar
- * @param {string} fechaHasta - Fecha hasta para filtrar
- * @returns {Array} Tarifas vigentes
+ * Obtiene las tarifas vigentes de un tramo para el período especificado
+ * Esta función evita duplicaciones y maneja correctamente las tarifas históricas
+ * 
+ * @param {Object} tramo - Objeto tramo con sus datos
+ * @param {string} fechaDesde - Fecha desde (YYYY-MM-DD)
+ * @param {string} fechaHasta - Fecha hasta (YYYY-MM-DD)
+ * @returns {Array} - Array de tarifas vigentes en el período
  */
 export const obtenerTarifasVigentes = (tramo, fechaDesde, fechaHasta) => {
-    // Caso base optimizado
-    if (!tramo.tarifasHistoricas?.length) {
-        return [{
-            tipo: tramo.tipo || 'TRMC',
-            metodoCalculo: tramo.metodoCalculo || 'Kilometro',
-            valor: tramo.valor || 0,
-            valorPeaje: tramo.valorPeaje || 0,
-            vigenciaDesde: tramo.vigenciaDesde,
-            vigenciaHasta: tramo.vigenciaHasta
-        }];
+  // Si no especifica fechas, devolver tarifa actual
+  if (!fechaDesde || !fechaHasta) {
+    // Si tiene tarifa actual directa
+    if (tramo.tarifa != null) {
+      return [{
+        ...tramo.tarifa,
+        tipo: tramo.tarifa.tipo || (tramo.trmi ? 'TRMI' : 'TRMC'),
+        valor: tramo.tarifa.valor != null ? tramo.tarifa.valor : tramo.valor,
+        vigenciaDesde: tramo.tarifa.vigenciaDesde || tramo.vigenciaDesde,
+        vigenciaHasta: tramo.tarifa.vigenciaHasta || tramo.vigenciaHasta
+      }];
     }
-
-    // Optimización: Si no hay filtro de fechas, usar Map para mejor rendimiento
-    if (!fechaDesde || !fechaHasta) {
-        const tarifasPorTipo = new Map();
-        
-        // Primero agrupamos por tipo y nos quedamos con la más reciente
-        tramo.tarifasHistoricas.forEach(tarifa => {
-            const key = tarifa.tipo || 'TRMC';
-            const fechaVigencia = new Date(tarifa.vigenciaDesde);
-            
-            if (!tarifasPorTipo.has(key) || fechaVigencia > new Date(tarifasPorTipo.get(key).vigenciaDesde)) {
-                tarifasPorTipo.set(key, tarifa);
-            }
-        });
-        
-        return Array.from(tarifasPorTipo.values());
-    }
-
-    // Con filtro de fechas, filtrar por intervalo
-    const fechaDesdeObj = parseISO(fechaDesde);
-    const fechaHastaObj = parseISO(fechaHasta);
     
-    return tramo.tarifasHistoricas.filter(tarifa => {
-        // Optimización: Solo parsear si las fechas son válidas
-        if (!tarifa.vigenciaDesde || !tarifa.vigenciaHasta) return false;
-        
-        const vigenciaDesdeObj = parseISO(tarifa.vigenciaDesde);
-        const vigenciaHastaObj = parseISO(tarifa.vigenciaHasta);
-        
-        // Verificar si hay intersección entre los intervalos
-        return (
-            (isWithinInterval(fechaDesdeObj, { start: vigenciaDesdeObj, end: vigenciaHastaObj }) ||
-            isWithinInterval(fechaHastaObj, { start: vigenciaDesdeObj, end: vigenciaHastaObj }) ||
-            (fechaDesdeObj <= vigenciaDesdeObj && fechaHastaObj >= vigenciaHastaObj))
-        );
-    });
+    // Para formato antiguo
+    return [{
+      tipo: tramo.trmi ? 'TRMI' : 'TRMC',
+      valor: tramo.valor,
+      vigenciaDesde: tramo.vigenciaDesde,
+      vigenciaHasta: tramo.vigenciaHasta,
+      detalle: tramo.detalle || '-'
+    }];
+  }
+  
+  // Si no hay tarifas históricas o tienen formato diferente
+  if (!tramo.tarifasHistoricas || !Array.isArray(tramo.tarifasHistoricas) || tramo.tarifasHistoricas.length === 0) {
+    // Usar formato antiguo y verificar si está en rango
+    const tarifaActual = {
+      tipo: tramo.trmi ? 'TRMI' : 'TRMC',
+      valor: tramo.valor,
+      vigenciaDesde: tramo.vigenciaDesde,
+      vigenciaHasta: tramo.vigenciaHasta,
+      detalle: tramo.detalle || '-'
+    };
+    
+    // Verificar si está en el rango solicitado
+    if (tarifaActual.vigenciaDesde && tarifaActual.vigenciaHasta) {
+      const [tramoDesde] = tarifaActual.vigenciaDesde.split('T');
+      const [tramoHasta] = tarifaActual.vigenciaHasta.split('T');
+      
+      if (tramoDesde <= fechaHasta && tramoHasta >= fechaDesde) {
+        return [tarifaActual];
+      }
+    }
+    
+    return [];
+  }
+  
+  // Filtrar tarifas históricas que están en el rango de fechas
+  // y usar un Set para guardar los tipos únicos y evitar duplicados
+  const tiposUnicos = new Set();
+  const tarifasEnRango = [];
+  
+  for (const tarifa of tramo.tarifasHistoricas) {
+    if (!tarifa.vigenciaDesde || !tarifa.vigenciaHasta) {
+      continue;
+    }
+    
+    const [tarifaDesde] = tarifa.vigenciaDesde.split('T');
+    const [tarifaHasta] = tarifa.vigenciaHasta.split('T');
+    
+    if (tarifaDesde <= fechaHasta && tarifaHasta >= fechaDesde) {
+      const tipo = tarifa.tipo || (tarifa.trmi ? 'TRMI' : 'TRMC');
+      
+      // Solo agregar esta tarifa si su tipo no se ha agregado antes
+      if (!tiposUnicos.has(tipo)) {
+        tiposUnicos.add(tipo);
+        tarifasEnRango.push({
+          ...tarifa,
+          tipo
+        });
+      }
+    }
+  }
+  
+  return tarifasEnRango;
 }; 

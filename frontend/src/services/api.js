@@ -1,8 +1,9 @@
 // src/services/api.js
 import axios from 'axios';
 import { getAuthHeaders } from '../utils/auth';
+import logger from '../utils/logger';
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || '';
 
 // Creamos un objeto para almacenar los tokens de cancelación
 const cancelTokens = {};
@@ -58,7 +59,7 @@ const crearErrorEstandarizado = (error, url, method) => {
   }
 
   // Registramos el error en consola para debugging
-  console.error(`[${tipo}] ${mensaje} (${method} ${url}):`, error);
+  logger.error(`[${tipo}] ${mensaje} (${method} ${url}):`, error);
 
   return {
     tipo,
@@ -82,6 +83,29 @@ const cancelarPeticion = (clave) => {
   }
 };
 
+/**
+ * Verifica si la respuesta de axios es válida antes de procesarla
+ * @param {Object} response - Respuesta de axios
+ * @param {string} url - URL de la petición
+ * @param {string} method - Método HTTP
+ * @returns {Object} Datos de la respuesta o un error estandarizado
+ */
+const validarRespuesta = (response, url, method) => {
+  // Verificar que la respuesta exista
+  if (!response || !response.data) {
+    logger.error(`Respuesta inválida (${method} ${url}):`, response);
+    throw {
+      tipo: 'ERROR_RESPUESTA_VACIA',
+      mensaje: 'No se recibió respuesta del servidor',
+      url,
+      method,
+      timestamp: new Date().toISOString()
+    };
+  }
+  
+  return response.data;
+};
+
 // Métodos personalizados para manejar las peticiones con parámetros
 const api = {
   /**
@@ -93,6 +117,10 @@ const api = {
    */
   get: async (url, params = {}, opciones = {}) => {
     const clave = opciones.clave || `get_${url}_${JSON.stringify(params)}`;
+    const fullUrl = `${API_URL}${url}`;
+    
+    // Log de la petición para depuración
+    logger.debug(`API GET: ${fullUrl}`, { params });
     
     // Cancelar petición anterior con la misma clave
     cancelarPeticion(clave);
@@ -103,7 +131,7 @@ const api = {
     try {
       const response = await axios({
         method: 'GET',
-        url: `${API_URL}${url}`,
+        url: fullUrl,
         params,
         headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
@@ -111,15 +139,21 @@ const api = {
       });
       
       delete cancelTokens[clave];
-      return response.data;
+      
+      // Validar la respuesta antes de devolverla
+      const data = validarRespuesta(response, url, 'GET');
+      logger.debug(`API GET Response: ${fullUrl}`, { success: true, status: response.status });
+      return data;
     } catch (error) {
       const errorEstandarizado = crearErrorEstandarizado(error, url, 'GET');
       
       // Si es un error de cancelación, no lanzamos excepción
       if (errorEstandarizado.tipo === 'CANCELADO') {
+        logger.debug(`API GET Cancelled: ${fullUrl}`);
         return null;
       }
       
+      logger.error(`API GET Error: ${fullUrl}`, errorEstandarizado);
       throw errorEstandarizado;
     }
   },
@@ -133,6 +167,10 @@ const api = {
    */
   post: async (url, data = {}, opciones = {}) => {
     const clave = opciones.clave || `post_${url}`;
+    const fullUrl = `${API_URL}${url}`;
+    
+    // Log de la petición para depuración
+    logger.debug(`API POST: ${fullUrl}`);
     
     // Cancelar petición anterior con la misma clave
     cancelarPeticion(clave);
@@ -143,7 +181,7 @@ const api = {
     try {
       const response = await axios({
         method: 'POST',
-        url: `${API_URL}${url}`,
+        url: fullUrl,
         data,
         headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
@@ -151,14 +189,20 @@ const api = {
       });
       
       delete cancelTokens[clave];
-      return response.data;
+      
+      // Validar la respuesta antes de devolverla
+      const responseData = validarRespuesta(response, url, 'POST');
+      logger.debug(`API POST Response: ${fullUrl}`, { success: true, status: response.status });
+      return responseData;
     } catch (error) {
       const errorEstandarizado = crearErrorEstandarizado(error, url, 'POST');
       
       if (errorEstandarizado.tipo === 'CANCELADO') {
+        logger.debug(`API POST Cancelled: ${fullUrl}`);
         return null;
       }
       
+      logger.error(`API POST Error: ${fullUrl}`, errorEstandarizado);
       throw errorEstandarizado;
     }
   },
@@ -172,6 +216,10 @@ const api = {
    */
   put: async (url, data = {}, opciones = {}) => {
     const clave = opciones.clave || `put_${url}`;
+    const fullUrl = `${API_URL}${url}`;
+    
+    // Log de la petición para depuración
+    logger.debug(`API PUT: ${fullUrl}`);
     
     // Cancelar petición anterior con la misma clave
     cancelarPeticion(clave);
@@ -182,7 +230,7 @@ const api = {
     try {
       const response = await axios({
         method: 'PUT',
-        url: `${API_URL}${url}`,
+        url: fullUrl,
         data,
         headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
@@ -190,14 +238,20 @@ const api = {
       });
       
       delete cancelTokens[clave];
-      return response.data;
+      
+      // Validar la respuesta antes de devolverla
+      const responseData = validarRespuesta(response, url, 'PUT');
+      logger.debug(`API PUT Response: ${fullUrl}`, { success: true, status: response.status });
+      return responseData;
     } catch (error) {
       const errorEstandarizado = crearErrorEstandarizado(error, url, 'PUT');
       
       if (errorEstandarizado.tipo === 'CANCELADO') {
+        logger.debug(`API PUT Cancelled: ${fullUrl}`);
         return null;
       }
       
+      logger.error(`API PUT Error: ${fullUrl}`, errorEstandarizado);
       throw errorEstandarizado;
     }
   },
@@ -210,6 +264,10 @@ const api = {
    */
   delete: async (url, opciones = {}) => {
     const clave = opciones.clave || `delete_${url}`;
+    const fullUrl = `${API_URL}${url}`;
+    
+    // Log de la petición para depuración
+    logger.debug(`API DELETE: ${fullUrl}`);
     
     // Cancelar petición anterior con la misma clave
     cancelarPeticion(clave);
@@ -220,21 +278,27 @@ const api = {
     try {
       const response = await axios({
         method: 'DELETE',
-        url: `${API_URL}${url}`,
+        url: fullUrl,
         headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
         timeout: opciones.timeout || 30000
       });
       
       delete cancelTokens[clave];
-      return response.data;
+      
+      // Validar la respuesta antes de devolverla
+      const responseData = validarRespuesta(response, url, 'DELETE');
+      logger.debug(`API DELETE Response: ${fullUrl}`, { success: true, status: response.status });
+      return responseData;
     } catch (error) {
       const errorEstandarizado = crearErrorEstandarizado(error, url, 'DELETE');
       
       if (errorEstandarizado.tipo === 'CANCELADO') {
+        logger.debug(`API DELETE Cancelled: ${fullUrl}`);
         return null;
       }
       
+      logger.error(`API DELETE Error: ${fullUrl}`, errorEstandarizado);
       throw errorEstandarizado;
     }
   },
@@ -248,46 +312,23 @@ const api = {
 
 // Funciones existentes que podrían refactorizarse en el futuro
 export const fetchViajes = async () => {
-  const response = await fetch(`${API_URL}/api/viajes`, {
-    headers: getAuthHeaders()
-  });
-  if (!response.ok) throw new Error('Error al obtener viajes');
-  return response.json();
+  return api.get('/viajes');
 };
 
 export const updateViaje = async (dt, cliente, data) => {
-  const response = await fetch(
-    `${API_URL}/api/viajes?dt=${encodeURIComponent(dt)}&cliente=${encodeURIComponent(cliente)}`,
-    {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data)
-    }
-  );
-  if (!response.ok) throw new Error('Error al actualizar viaje');
-  return response.json();
+  return api.post('/viajes', {
+    dt, 
+    cliente,
+    ...data
+  });
 };
 
 export const deleteViaje = async (dt, cliente) => {
-  const response = await fetch(
-    `${API_URL}/api/viajes?dt=${encodeURIComponent(dt)}&cliente=${encodeURIComponent(cliente)}`,
-    {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    }
-  );
-  if (!response.ok) throw new Error('Error al eliminar viaje');
-  return response.json();
+  return api.delete(`/viajes?dt=${dt}&cliente=${cliente}`);
 };
 
 export const bulkUploadViajes = async (viajes) => {
-  const response = await fetch(`${API_URL}/api/viajes/bulk`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ viajes })
-  });
-  if (!response.ok) throw new Error('Error en la carga masiva');
-  return response.json();
+  return api.post('/viajes/bulk', { viajes });
 };
 
 export default api;

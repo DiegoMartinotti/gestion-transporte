@@ -30,6 +30,7 @@ import 'dayjs/locale/es';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import logger from '../../utils/logger';
+import errorService from '../../services/errorService';
 
 // Componentes extraídos - Usando lazy loading para componentes pesados
 const AddTramoDialog = lazy(() => import('./AddTramoDialog'));
@@ -53,6 +54,7 @@ dayjs.extend(timezone);
 const TarifarioViewer = ({ cliente, onBack }) => {
     // Estado principal
     const [tramos, setTramos] = useState([]);
+    const [tramosOriginal, setTramosOriginal] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingOperation, setLoadingOperation] = useState(false); // Nuevo estado para operaciones asíncronas
     const [sites, setSites] = useState([]);
@@ -197,90 +199,6 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         return resultado;
     }, [filtroVigencia]);
     
-    // Aplicar filtros optimizados
-    const applyFilters = useCallback(() => {
-        logger.debug('Aplicando filtros a', tramos.length, 'tramos');
-        if (!tramos || tramos.length === 0) {
-            return [];
-        }
-        
-        // Resetear a la primera página al aplicar filtros
-        setPaginaActual(1);
-        
-        // Si no hay filtros de fecha, mostrar todos los tramos sin procesar
-        if (!filtroVigencia.desde || !filtroVigencia.hasta) {
-            return procesarTramos(tramos);
-        }
-        
-        // Convertir las fechas de filtro a formato YYYY-MM-DD
-        const desdeStr = filtroVigencia.desde;
-        const hastaStr = filtroVigencia.hasta;
-
-        logger.debug(`Filtrando tramos por rango de fechas: ${desdeStr} - ${hastaStr}`);
-
-        // Memorización temporal para mejorar rendimiento
-        const tramosFiltrados = new Map();
-        
-        // Para conjuntos muy grandes, usamos un enfoque de lotes
-        if (tramos.length > 1000) {
-            return filtrarTramosPorLotes(tramos, desdeStr, hastaStr);
-        }
-        
-        // Optimización: filtrar tramos de manera más eficiente
-        const tramosEnRango = tramos.filter(tramo => {
-            // Usamos un identificador único para el tramo
-            const tramoId = tramo._id;
-            
-            // Si no tiene ID, lo omitimos
-            if (!tramoId) return false;
-            
-            // Si ya procesamos este tramo, usamos el resultado memorizado
-            if (tramosFiltrados.has(tramoId)) {
-                return tramosFiltrados.get(tramoId);
-            }
-            
-            let enRango = false;
-            
-            // Para tramos con tarifas históricas
-            if (tramo.tarifasHistoricas?.length) {
-                // Optimización: salir temprano si encontramos coincidencia
-                for (const tarifa of tramo.tarifasHistoricas) {
-                    if (!tarifa.vigenciaDesde || !tarifa.vigenciaHasta) continue;
-                    
-                    const [tarifaDesde] = tarifa.vigenciaDesde.split('T');
-                    const [tarifaHasta] = tarifa.vigenciaHasta.split('T');
-                    
-                    if (tarifaDesde <= hastaStr && tarifaHasta >= desdeStr) {
-                        enRango = true;
-                        break; // Salir del bucle al encontrar coincidencia
-                    }
-                }
-            }
-            // Para tramos con formato antiguo
-            else if (tramo.vigenciaDesde && tramo.vigenciaHasta) {
-                const [tramoDesde] = tramo.vigenciaDesde.split('T');
-                const [tramoHasta] = tramo.vigenciaHasta.split('T');
-                enRango = tramoDesde <= hastaStr && tramoHasta >= desdeStr;
-            }
-            
-            // Guardar resultado para futuros usos
-            tramosFiltrados.set(tramoId, enRango);
-            return enRango;
-        });
-        
-        logger.debug(`Filtrado completado: ${tramosEnRango.length} tramos coinciden con el filtro de fecha`);
-        
-        // Mostrar un mensaje claro al usuario cuando no hay resultados
-        if (tramosEnRango.length === 0) {
-            setError(`No se encontraron tramos para el período ${desdeStr} - ${hastaStr}`);
-        } else {
-            setError(null);
-        }
-        
-        // Procesar los tramos filtrados
-        return procesarTramos(tramosEnRango);
-    }, [tramos, filtroVigencia, procesarTramos]);
-    
     // Filtrado por lotes para conjuntos muy grandes
     const filtrarTramosPorLotes = useCallback((tramosData, desdeStr, hastaStr) => {
         const tramosEnRango = [];
@@ -336,6 +254,146 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         return procesarTramos(tramosEnRango);
     }, [procesarTramos]);
     
+    // Aplicar filtros optimizados
+    const applyFilters = useCallback(() => {
+        logger.debug('Aplicando filtros a', tramos.length, 'tramos');
+        if (!tramos || tramos.length === 0) {
+            return [];
+        }
+        
+        // Resetear a la primera página al aplicar filtros
+        setPaginaActual(1);
+        
+        // Si no hay filtros de fecha, mostrar todos los tramos sin procesar
+        if (!filtroVigencia.desde || !filtroVigencia.hasta) {
+            const tramosConId = procesarTramos(tramos);
+            
+            // Eliminar duplicados usando Map para mayor eficiencia
+            const tramosUnicos = new Map();
+            
+            // Usar un identificador único para cada tramo
+            tramosConId.forEach(tramo => {
+                if (!tramo._idCompuesto) return;
+                
+                // Crear un identificador único que combine origen, destino y tipo
+                const idUnico = `${tramo.origen?._id || 'unknown'}-${tramo.destino?._id || 'unknown'}-${tramo.tarifaActual?.tipo || 'TRMC'}`;
+                
+                // Solo guardar la primera ocurrencia de cada tramo único
+                if (!tramosUnicos.has(idUnico)) {
+                    tramosUnicos.set(idUnico, tramo);
+                }
+            });
+            
+            // Convertir de vuelta a array
+            const resultado = Array.from(tramosUnicos.values());
+            logger.debug(`Filtrado de duplicados completado: ${resultado.length} tramos únicos de ${tramosConId.length} totales`);
+            return resultado;
+        }
+        
+        // Convertir las fechas de filtro a formato YYYY-MM-DD
+        const desdeStr = filtroVigencia.desde;
+        const hastaStr = filtroVigencia.hasta;
+
+        logger.debug(`Filtrando tramos por rango de fechas: ${desdeStr} - ${hastaStr}`);
+
+        // Memorización temporal para mejorar rendimiento
+        const tramosFiltrados = new Map();
+        
+        // Para conjuntos muy grandes, usamos un enfoque de lotes
+        if (tramos.length > 1000) {
+            const tramosConFiltro = filtrarTramosPorLotes(tramos, desdeStr, hastaStr);
+            
+            // Eliminar duplicados
+            const tramosUnicos = new Map();
+            
+            tramosConFiltro.forEach(tramo => {
+                if (!tramo._idCompuesto) return;
+                
+                const idUnico = `${tramo.origen?._id || 'unknown'}-${tramo.destino?._id || 'unknown'}-${tramo.tarifaActual?.tipo || 'TRMC'}`;
+                
+                if (!tramosUnicos.has(idUnico)) {
+                    tramosUnicos.set(idUnico, tramo);
+                }
+            });
+            
+            const resultado = Array.from(tramosUnicos.values());
+            logger.debug(`Filtrado de duplicados completado: ${resultado.length} tramos únicos de ${tramosConFiltro.length} totales`);
+            return resultado;
+        }
+        
+        // Optimización: filtrar tramos de manera más eficiente
+        const tramosEnRango = tramos.filter(tramo => {
+            // Usamos un identificador único para el tramo
+            const tramoId = tramo._id;
+            
+            // Si no tiene ID, lo omitimos
+            if (!tramoId) return false;
+            
+            // Si ya procesamos este tramo, usamos el resultado memorizado
+            if (tramosFiltrados.has(tramoId)) {
+                return tramosFiltrados.get(tramoId);
+            }
+            
+            let enRango = false;
+            
+            // Para tramos con tarifas históricas
+            if (tramo.tarifasHistoricas?.length) {
+                // Optimización: salir temprano si encontramos coincidencia
+                for (const tarifa of tramo.tarifasHistoricas) {
+                    if (!tarifa.vigenciaDesde || !tarifa.vigenciaHasta) continue;
+                    
+                    const [tarifaDesde] = tarifa.vigenciaDesde.split('T');
+                    const [tarifaHasta] = tarifa.vigenciaHasta.split('T');
+                    
+                    if (tarifaDesde <= hastaStr && tarifaHasta >= desdeStr) {
+                        enRango = true;
+                        break; // Salir del bucle al encontrar coincidencia
+                    }
+                }
+            }
+            // Para tramos con formato antiguo
+            else if (tramo.vigenciaDesde && tramo.vigenciaHasta) {
+                const [tramoDesde] = tramo.vigenciaDesde.split('T');
+                const [tramoHasta] = tramo.vigenciaHasta.split('T');
+                enRango = tramoDesde <= hastaStr && tramoHasta >= desdeStr;
+            }
+            
+            // Guardar resultado para futuros usos
+            tramosFiltrados.set(tramoId, enRango);
+            return enRango;
+        });
+        
+        logger.debug(`Filtrado completado: ${tramosEnRango.length} tramos coinciden con el filtro de fecha`);
+        
+        // Mostrar un mensaje claro al usuario cuando no hay resultados
+        if (tramosEnRango.length === 0) {
+            setError(`No se encontraron tramos para el período ${desdeStr} - ${hastaStr}`);
+            return [];
+        } else {
+            setError(null);
+        }
+        
+        // Procesar los tramos filtrados y eliminar duplicados
+        const tramosConId = procesarTramos(tramosEnRango);
+        
+        // Eliminar duplicados
+        const tramosUnicos = new Map();
+        
+        tramosConId.forEach(tramo => {
+            if (!tramo._idCompuesto) return;
+            
+            const idUnico = `${tramo.origen?._id || 'unknown'}-${tramo.destino?._id || 'unknown'}-${tramo.tarifaActual?.tipo || 'TRMC'}`;
+            
+            if (!tramosUnicos.has(idUnico)) {
+                tramosUnicos.set(idUnico, tramo);
+            }
+        });
+        
+        const resultado = Array.from(tramosUnicos.values());
+        logger.debug(`Filtrado de duplicados completado: ${resultado.length} tramos únicos de ${tramosConId.length} totales`);
+        return resultado;
+    }, [tramos, filtroVigencia, procesarTramos, filtrarTramosPorLotes]);
+    
     // Memoizamos los resultados filtrados para evitar recálculos innecesarios
     const memoizedFilteredTramos = useMemo(() => {
         return applyFilters();
@@ -346,82 +404,136 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         setFilteredTramos(memoizedFilteredTramos);
     }, [memoizedFilteredTramos]);
 
+    // Actualizar metadatos para mostrar información correcta
+    useEffect(() => {
+        // Actualizar metadatos cuando se tengan los filteredTramos
+        if (filteredTramos) {
+            setMetadata({
+                totalTramos: tramos.length,
+                tramosUnicos: filteredTramos.length,
+                combinacionesUnicas: new Set(filteredTramos.map(t => 
+                    `${t.origen?._id || 'unknown'}-${t.destino?._id || 'unknown'}`
+                )).size
+            });
+        }
+    }, [filteredTramos, tramos.length]);
+
     // Cargar sitios
     const fetchSites = useCallback(async () => {
         if (!cliente) return;
         
         try {
             logger.debug('Obteniendo sitios para cliente:', cliente);
+            setLoading(true);
             const sitesData = await tarifarioService.getSitesByCliente(cliente);
             setSites(sitesData);
             logger.debug(`${sitesData.length} sitios obtenidos`);
         } catch (error) {
-            logger.error('Error al obtener sitios:', error);
-            const errorMessage = error.response?.data?.message || error.message;
-            setError(`Error al obtener sitios: ${errorMessage}`);
+            // Usar el servicio de errores para procesar y mostrar un mensaje amigable
+            const processedError = errorService.processError(error, {
+                context: 'TarifarioViewer.cargarSitios'
+            });
+            
+            logger.error('Error al obtener sitios:', processedError);
+            
+            // Mostrar mensaje amigable para el usuario
+            const errorMessage = errorService.getUserFriendlyMessage(processedError);
+            setError(`No se pudieron cargar los sitios: ${errorMessage}`);
             setSites([]);
+        } finally {
+            setLoading(false);
         }
     }, [cliente]);
 
     // Cargar tramos con optimización
     const fetchTramos = useCallback(async () => {
-        if (!cliente) return;
+        setLoading(true);
+        setError(null);
         
         try {
-            setLoading(true);
-            logger.debug('Solicitando tramos para cliente:', cliente);
-            
-            // Opcionalmente podemos implementar caché local para evitar recargas frecuentes
-            const cacheKey = `tramos_${cliente}_${filtroVigencia.desde || 'all'}_${filtroVigencia.hasta || 'all'}`;
-            
-            // Intentar usar datos en caché si existen y son recientes
-            const cachedData = sessionStorage.getItem(cacheKey);
-            const cachedTime = sessionStorage.getItem(`${cacheKey}_time`);
-            const now = Date.now();
-            const cacheExpiry = 5 * 60 * 1000; // 5 minutos
-            
-            if (cachedData && cachedTime && (now - parseInt(cachedTime)) < cacheExpiry) {
-                logger.debug('Usando datos en caché');
-                const parsedData = JSON.parse(cachedData);
-                setTramos(parsedData.data || []);
-                setMetadata(parsedData.metadata || {});
-                setError(null);
-                setLoading(false);
-                setSelectedTramos([]);
+            if (!cliente) {
+                setError('Cliente no especificado');
+                setTramos([]);
                 return;
             }
             
+            // Intentamos obtener los tramos con manejo de errores mejorado
+            logger.debug(`Llamando a tarifarioService.getTramosByCliente(${cliente}, ${JSON.stringify(filtroVigencia)})`);
+            
             const response = await tarifarioService.getTramosByCliente(cliente, filtroVigencia);
-
+            logger.debug('Respuesta recibida:', { success: response.success, dataLength: response.data?.length });
+            
+            // La respuesta ahora es el objeto completo con los datos
             if (response && response.success) {
                 const tramosRecibidos = response.data || [];
                 logger.debug(`Recibidos ${tramosRecibidos.length} tramos del servidor`);
                 
-                // Establecer los tramos recibidos
-                setTramos(tramosRecibidos);
-                
-                if (response.metadata) {
-                    setMetadata(response.metadata);
-                    logger.debug('Metadata recibida:', response.metadata);
+                if (tramosRecibidos.length === 0) {
+                    setTramos([]);
+                    setTramosOriginal([]);
+                    setFilteredTramos([]);
+                    return;
                 }
                 
-                // Guardar en caché para uso futuro
-                sessionStorage.setItem(cacheKey, JSON.stringify({
-                    data: tramosRecibidos,
-                    metadata: response.metadata
-                }));
-                sessionStorage.setItem(`${cacheKey}_time`, now.toString());
+                // Procesar tramos recibidos con validación para evitar errores
+                const tramosOrdenados = [...tramosRecibidos].filter(t => t && t.origen && t.destino).sort((a, b) => {
+                    // Ordenar primero por origen y luego por destino
+                    if (a.origen?.nombre === b.origen?.nombre) {
+                        return a.destino?.nombre?.localeCompare(b.destino?.nombre || '') || 0;
+                    }
+                    return a.origen?.nombre?.localeCompare(b.origen?.nombre || '') || 0;
+                });
+                
+                logger.debug('Tramos ordenados:', tramosOrdenados.map(t => `${t.origen?.nombre || 'N/A'} -> ${t.destino?.nombre || 'N/A'}`).slice(0, 5).join(', ') + (tramosOrdenados.length > 5 ? '...' : ''));
+                
+                setTramos(tramosOrdenados);
+                setTramosOriginal(tramosOrdenados);
+                
+                setError(null);
+            } else if (Array.isArray(response)) {
+                // Si tenemos un formato de respuesta sin "success", pero con los datos directamente
+                logger.debug(`Recibidos ${response.length} tramos del servidor (formato array)`);
+                
+                if (response.length === 0) {
+                    setTramos([]);
+                    setTramosOriginal([]);
+                    setFilteredTramos([]);
+                    return;
+                }
+                
+                // Procesar tramos recibidos con validación
+                const tramosOrdenados = [...response].filter(t => t && t.origen && t.destino).sort((a, b) => {
+                    // Ordenar primero por origen y luego por destino
+                    if (a.origen?.nombre === b.origen?.nombre) {
+                        return a.destino?.nombre?.localeCompare(b.destino?.nombre || '') || 0;
+                    }
+                    return a.origen?.nombre?.localeCompare(b.origen?.nombre || '') || 0;
+                });
+                
+                setTramos(tramosOrdenados);
+                setTramosOriginal(tramosOrdenados);
                 
                 setError(null);
             } else {
-                setError('Formato de respuesta no reconocido');
+                setError(response?.message || 'Formato de respuesta no reconocido');
                 setTramos([]);
+                setTramosOriginal([]);
+                setFilteredTramos([]);
             }
         } catch (error) {
-            logger.error('Error al cargar tramos:', error);
-            const errorMessage = error.response?.data?.message || error.message;
-            setError(`Error al cargar tramos: ${errorMessage}`);
+            // Usar el servicio de errores para procesar y mostrar un mensaje amigable
+            const processedError = errorService.processError(error, {
+                context: 'TarifarioViewer.cargarTramos'
+            });
+            
+            logger.error('Error al cargar tramos:', processedError);
+            
+            // Mostrar mensaje amigable para el usuario
+            const errorMessage = errorService.getUserFriendlyMessage(processedError);
+            setError(`No se pudieron cargar los tramos: ${errorMessage}`);
             setTramos([]);
+            setTramosOriginal([]);
+            setFilteredTramos([]);
         } finally {
             setLoading(false);
         }
@@ -695,7 +807,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                     <Chip 
                         icon={<InfoIcon />} 
-                        label={`Total: ${metadata.totalTramos || 0} tramos`} 
+                        label={`Total: ${metadata.tramosUnicos || 0} tramos`} 
                         variant="outlined" 
                     />
                     {filteredTramos.length > 0 && (

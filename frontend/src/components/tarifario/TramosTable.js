@@ -194,8 +194,14 @@ const TramosTable = memo(({
             );
         }
         
-        return tramos.map((tramo) => {
-            const isSelected = selectedTramos.includes(tramo._idCompuesto);
+        return tramos.filter((tramo, index, self) => {
+            // Filtrar tramos duplicados basados en un identificador único (combinación de origen, destino y tipo)
+            const id = `${tramo.origen?._id}-${tramo.destino?._id}-${tramo.tarifaActual?.tipo}`;
+            return index === self.findIndex(t => 
+                `${t.origen?._id}-${t.destino?._id}-${t.tarifaActual?.tipo}` === id
+            );
+        }).map((tramo) => {
+            const isSelected = selectedTramos.includes(tramo._idCompuesto || `${tramo._id}-${tramo.tarifaActual?.tipo}`);
             const vigente = checkVigencia(
                 tramo.tarifaActual.vigenciaDesde, 
                 tramo.tarifaActual.vigenciaHasta
@@ -203,7 +209,7 @@ const TramosTable = memo(({
             
             return (
                 <TramoRow 
-                    key={tramo._idCompuesto}
+                    key={tramo._idCompuesto || `${tramo._id}-${tramo.tarifaActual?.tipo}`}
                     tramo={tramo}
                     isSelected={isSelected}
                     vigente={vigente}
