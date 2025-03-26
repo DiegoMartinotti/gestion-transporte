@@ -36,6 +36,30 @@ La aplicación está construida con una arquitectura moderna de frontend y backe
 - **Concurrently**: Para ejecutar múltiples comandos simultáneamente
 - **dotenv**: Para gestión de variables de entorno
 
+## Novedades de la Versión 2.0
+
+La versión 2.0 incluye importantes mejoras estructurales y de rendimiento:
+
+### Sistema de Importación Excel Estandarizado
+- Nueva interfaz unificada para todas las importaciones masivas
+- Plantillas Excel mejoradas con validaciones y hojas de ayuda
+- Procesamiento asíncrono para archivos grandes mediante Web Workers
+- Validación de datos más robusta y mensajes de error claros
+- [Guía completa de importación Excel](docs/importacion-excel.md)
+
+### Arquitectura Mejorada
+- Componentes más pequeños y especializados para mejor mantenimiento
+- Sistema de hooks personalizados para reutilización de lógica
+- Servicios API centralizados y coherentes
+- Backend modularizado con separación clara de responsabilidades
+- Mejor manejo de errores y respuestas HTTP
+
+### Rendimiento Optimizado
+- Menor tiempo de carga inicial
+- Reducción de re-renders innecesarios
+- Procesamiento por lotes para operaciones masivas
+- Mejor experiencia de usuario durante operaciones largas
+
 ## Estándares del Proyecto
 
 ### Documentación
@@ -97,37 +121,49 @@ Para contribuir al proyecto, asegúrate de revisar y seguir estos estándares de
 
 ```
 sistema-gestion-viajes/
-├── backend/                # Servidor API
-│   ├── config/             # Configuración (base de datos, etc.)
-│   ├── controllers/        # Controladores de la API
-│   ├── middleware/         # Middleware (autenticación, validación)
-│   ├── models/             # Modelos de datos Mongoose
-│   ├── routes/             # Rutas de la API
-│   ├── services/           # Servicios y lógica de negocio
-│   ├── utils/              # Utilidades y helpers
-│   ├── validators/         # Validadores de entrada
-│   ├── app.js              # Aplicación Express
-│   └── server.js           # Punto de entrada del servidor
+├── backend/                        # Servidor API
+│   ├── config/                     # Configuración (base de datos, etc.)
+│   ├── controllers/                # Controladores de la API
+│   │   ├── tramo/                  # Controladores de tramos divididos por funcionalidad
+│   │   ├── vehiculo/               # Controladores de vehículos divididos por funcionalidad
+│   │   └── ...                     # Otros controladores divididos
+│   ├── middleware/                 # Middleware (autenticación, validación)
+│   ├── models/                     # Modelos de datos Mongoose
+│   ├── routes/                     # Rutas de la API
+│   ├── services/                   # Servicios y lógica de negocio
+│   ├── utils/                      # Utilidades y helpers
+│   ├── validators/                 # Validadores de entrada
+│   └── server.js                   # Aplicación Express y punto de entrada
 │
-├── frontend/               # Aplicación React
-│   ├── public/             # Archivos estáticos
-│   ├── src/                # Código fuente
-│   │   ├── components/     # Componentes React
-│   │   ├── context/        # Contextos de React (Auth, etc.)
-│   │   ├── services/       # Servicios para API
-│   │   ├── theme/          # Configuración de tema MUI
-│   │   ├── ui/             # Componentes UI reutilizables
-│   │   └── utils/          # Utilidades y helpers
-│   └── package.json        # Dependencias del frontend
+├── frontend/                       # Aplicación React
+│   ├── public/                     # Archivos estáticos
+│   ├── src/                        # Código fuente
+│   │   ├── components/             # Componentes React
+│   │   │   ├── common/             # Componentes reutilizables
+│   │   │   │   ├── DataTable.js    # Tabla de datos reutilizable
+│   │   │   │   ├── ExcelImportTemplate.js # Componente base para importación Excel
+│   │   │   │   └── ...             # Otros componentes comunes
+│   │   │   ├── vehiculos/          # Componentes específicos por dominio
+│   │   │   ├── tramos/             # Componentes específicos por dominio
+│   │   │   └── ...                 # Otros dominios
+│   │   ├── context/                # Contextos de React (Auth, etc.)
+│   │   ├── hooks/                  # Hooks personalizados
+│   │   ├── pages/                  # Componentes de páginas completas
+│   │   ├── services/               # Servicios para API
+│   │   ├── workers/                # Web Workers para procesamiento asíncrono
+│   │   └── utils/                  # Utilidades y helpers
+│   └── package.json                # Dependencias del frontend
 │
-├── docs/                   # Documentación del proyecto
-│   ├── API.md              # Documentación de la API
-│   └── technical/          # Documentación técnica detallada
+├── docs/                           # Documentación del proyecto
+│   ├── API.md                      # Documentación de la API
+│   ├── importacion-excel.md        # Guía de importación masiva con Excel
+│   └── technical/                  # Documentación técnica detallada
 │
-├── scripts/                # Scripts de utilidad
-├── .gitignore              # Archivos ignorados por Git
-├── package.json            # Dependencias del proyecto principal
-└── README.md               # Este archivo
+├── REFACTORIZACION.md              # Documentación del proceso de refactorización
+├── scripts/                        # Scripts de utilidad
+├── .gitignore                      # Archivos ignorados por Git
+├── package.json                    # Dependencias del proyecto principal
+└── README.md                       # Este archivo
 ```
 
 ## Uso
