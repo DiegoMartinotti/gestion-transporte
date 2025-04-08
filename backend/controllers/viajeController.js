@@ -5,9 +5,33 @@ const Cliente = require('../models/Cliente');
 exports.getViajes = async (req, res) => {
     try {
         logger.debug('Obteniendo lista de viajes');
-        const viajes = await Viaje.find().sort({ fecha: -1 });
-        logger.debug(`${viajes.length} viajes encontrados`);
-        res.json(viajes);
+        
+        // Parámetros de paginación
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20; // Límite por defecto
+        const skip = (page - 1) * limit;
+        
+        // Contar el total de viajes para la metadata
+        const totalViajes = await Viaje.countDocuments();
+        
+        // Obtener viajes con paginación
+        const viajes = await Viaje.find()
+                               .sort({ fecha: -1 })
+                               .skip(skip)
+                               .limit(limit);
+                               
+        logger.debug(`${viajes.length} viajes encontrados (página ${page} de ${Math.ceil(totalViajes / limit)})`);
+        
+        // Devolver los viajes con metadata de paginación
+        res.json({
+            data: viajes,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalViajes / limit),
+                totalItems: totalViajes,
+                limit: limit
+            }
+        });
     } catch (error) {
         logger.error('Error al obtener viajes:', error);
         res.status(500).json({ message: 'Error al obtener viajes' });

@@ -1,19 +1,56 @@
-require('dotenv').config();
+/**
+ * Configuración centralizada de la aplicación
+ * Utiliza variables de entorno con valores por defecto
+ */
 
-// Resolver variables de entorno con valores dinámicos
-const getJwtSecret = () => {
-  return process.env.JWT_SECRET.replace('${JWT_SECRET_KEY}', process.env.JWT_SECRET_KEY);
-};
+/**
+ * Obtiene el secreto JWT, asegurando que existe
+ * @returns {string} El secreto JWT
+ */
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.warn('¡ADVERTENCIA! JWT_SECRET no está configurado. Usando un valor predeterminado inseguro solo para desarrollo.');
+    return 'desarrollo_inseguro_jwt_secret_debe_cambiar_en_produccion';
+  }
+  return secret;
+}
 
+/**
+ * Configuración de la aplicación
+ */
 module.exports = {
+  // Entorno y servidor
   env: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 3001,
+  port: parseInt(process.env.PORT || '3001', 10),
+  
+  // Base de datos
   mongoUri: process.env.MONGODB_URI,
+  
+  // Autenticación
   jwtSecret: getJwtSecret(),
-  jwtExpiration: '1h',
-  allowedOrigins: ['http://localhost:3000'],
+  jwtExpiration: process.env.JWT_EXPIRATION || '24h',
+  jwtCookieMaxAge: parseInt(process.env.JWT_COOKIE_MAX_AGE || '86400000', 10), // 24 horas en milisegundos
+  
+  // CORS
+  allowedOrigins: process.env.CORS_ALLOWED_ORIGINS 
+    ? process.env.CORS_ALLOWED_ORIGINS.split(',') 
+    : ['http://localhost:3000'],
+  
+  // Límites de solicitudes
+  bodyLimits: {
+    json: process.env.JSON_BODY_LIMIT || '5mb',
+    urlencoded: process.env.URLENCODED_BODY_LIMIT || '5mb',
+    parameterLimit: parseInt(process.env.URLENCODED_PARAM_LIMIT || '1000', 10)
+  },
+  
+  // Rate limiting
   rateLimiting: {
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100 // límite de solicitudes por ventana
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutos
+    max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10), // límite de solicitudes por ventana
+    proxy: {
+      windowMs: parseInt(process.env.PROXY_RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minuto
+      max: parseInt(process.env.PROXY_RATE_LIMIT_MAX || '10', 10) // límite de solicitudes por ventana
+    }
   }
 };

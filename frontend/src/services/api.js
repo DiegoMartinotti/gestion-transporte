@@ -1,6 +1,6 @@
 // src/services/api.js
 import axios from 'axios';
-import { getAuthHeaders } from '../utils/auth';
+import axiosInstance from '../config/axios';
 import logger from '../utils/logger';
 
 const API_URL = process.env.REACT_APP_API_URL || '';
@@ -117,7 +117,7 @@ const api = {
    */
   get: async (url, params = {}, opciones = {}) => {
     const clave = opciones.clave || `get_${url}_${JSON.stringify(params)}`;
-    const fullUrl = `${API_URL}${url}`;
+    const fullUrl = url; // Ya no necesitamos el prefijo API_URL, axiosInstance lo maneja
     
     // Log de la petición para depuración
     logger.debug(`API GET: ${fullUrl}`, { params });
@@ -129,11 +129,10 @@ const api = {
     cancelTokens[clave] = axios.CancelToken.source();
     
     try {
-      const response = await axios({
+      const response = await axiosInstance({
         method: 'GET',
         url: fullUrl,
         params,
-        headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
         timeout: opciones.timeout || 30000 // 30 segundos por defecto
       });
@@ -167,7 +166,7 @@ const api = {
    */
   post: async (url, data = {}, opciones = {}) => {
     const clave = opciones.clave || `post_${url}`;
-    const fullUrl = `${API_URL}${url}`;
+    const fullUrl = url; // Ya no necesitamos el prefijo API_URL
     
     // Log de la petición para depuración
     logger.debug(`API POST: ${fullUrl}`);
@@ -179,11 +178,10 @@ const api = {
     cancelTokens[clave] = axios.CancelToken.source();
     
     try {
-      const response = await axios({
+      const response = await axiosInstance({
         method: 'POST',
         url: fullUrl,
         data,
-        headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
         timeout: opciones.timeout || 30000
       });
@@ -216,7 +214,7 @@ const api = {
    */
   put: async (url, data = {}, opciones = {}) => {
     const clave = opciones.clave || `put_${url}`;
-    const fullUrl = `${API_URL}${url}`;
+    const fullUrl = url; // Ya no necesitamos el prefijo API_URL
     
     // Log de la petición para depuración
     logger.debug(`API PUT: ${fullUrl}`);
@@ -228,11 +226,10 @@ const api = {
     cancelTokens[clave] = axios.CancelToken.source();
     
     try {
-      const response = await axios({
+      const response = await axiosInstance({
         method: 'PUT',
         url: fullUrl,
         data,
-        headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
         timeout: opciones.timeout || 30000
       });
@@ -264,7 +261,7 @@ const api = {
    */
   delete: async (url, opciones = {}) => {
     const clave = opciones.clave || `delete_${url}`;
-    const fullUrl = `${API_URL}${url}`;
+    const fullUrl = url; // Ya no necesitamos el prefijo API_URL
     
     // Log de la petición para depuración
     logger.debug(`API DELETE: ${fullUrl}`);
@@ -276,10 +273,9 @@ const api = {
     cancelTokens[clave] = axios.CancelToken.source();
     
     try {
-      const response = await axios({
+      const response = await axiosInstance({
         method: 'DELETE',
         url: fullUrl,
-        headers: getAuthHeaders(),
         cancelToken: cancelTokens[clave].token,
         timeout: opciones.timeout || 30000
       });
@@ -312,11 +308,11 @@ const api = {
 
 // Funciones existentes que podrían refactorizarse en el futuro
 export const fetchViajes = async () => {
-  return api.get('/viajes');
+  return api.get('/api/viajes');
 };
 
 export const updateViaje = async (dt, cliente, data) => {
-  return api.post('/viajes', {
+  return api.post('/api/viajes', {
     dt, 
     cliente,
     ...data
@@ -324,11 +320,11 @@ export const updateViaje = async (dt, cliente, data) => {
 };
 
 export const deleteViaje = async (dt, cliente) => {
-  return api.delete(`/viajes?dt=${dt}&cliente=${cliente}`);
+  return api.delete(`/api/viajes?dt=${dt}&cliente=${cliente}`);
 };
 
 export const bulkUploadViajes = async (viajes) => {
-  return api.post('/viajes/bulk', { viajes });
+  return api.post('/api/viajes/bulk', { viajes });
 };
 
 export default api;

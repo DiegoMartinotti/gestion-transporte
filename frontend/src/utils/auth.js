@@ -1,10 +1,8 @@
-export const getAuthToken = () => localStorage.getItem('token');
+// Las funciones relacionadas con tokens en localStorage ya no son necesarias
+// con el enfoque de cookies HttpOnly
 
-export const setAuthToken = (token) => localStorage.setItem('token', token);
+// Eliminando todas las funciones, ya que ahora se utiliza axiosInstance configurado 
+// con withCredentials y Content-Type ya está configurado en la instancia
 
-export const removeAuthToken = () => localStorage.removeItem('token');
-
-export const getAuthHeaders = () => ({
-  'Authorization': `Bearer ${getAuthToken()}`,
-  'Content-Type': 'application/json'
-});
+// Si algún componente necesita encabezados específicos, puede configurarlos directamente
+// al hacer la llamada a la API

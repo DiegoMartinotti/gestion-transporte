@@ -14,13 +14,25 @@ exports.geocode = async (req, res) => {
             });
         }
 
+        // Validar que lat y lng sean números y estén en rango
+        const numLat = parseFloat(lat);
+        const numLng = parseFloat(lng);
+
+        if (isNaN(numLat) || isNaN(numLng) || numLat < -90 || numLat > 90 || numLng < -180 || numLng > 180) {
+            logger.warn('Coordenadas inválidas recibidas:', { lat, lng });
+            return res.status(400).json({
+                message: 'Latitud y longitud deben ser números válidos en sus rangos respectivos (-90 a 90 para lat, -180 a 180 para lng)',
+                received: { lat, lng }
+            });
+        }
+
         const url = 'https://nominatim.openstreetmap.org/reverse';
         logger.debug('Requesting:', url);
 
         const response = await axios.get(url, {
             params: {
-                lat,
-                lon: lng,
+                lat: numLat,
+                lon: numLng,
                 format: 'json',
                 'accept-language': 'es'
             },

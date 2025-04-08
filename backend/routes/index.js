@@ -17,7 +17,7 @@ const personalRoutes = require('./personal');
 const proxyRouter = require('./proxy');
 
 // Middleware
-const authMiddleware = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/authMiddleware');
 const logger = require('../utils/logger');
 
 // Log de rutas protegidas solo en caso de error
@@ -62,7 +62,7 @@ const protectedRoutes = [
 
 // Registrar todas las rutas protegidas
 protectedRoutes.forEach(route => {
-  router.use(route.path, authMiddleware, route.router);
+  router.use(route.path, authenticateToken, route.router);
 });
 
 // Ruta para verificar que el router está funcionando

@@ -2,12 +2,38 @@
  * Utilidad para evaluar fórmulas tipo Excel en JavaScript
  */
 const logger = require('./logger');
+const math = require('mathjs');
+
+// Configurar mathjs para modo seguro
+const limitedMath = math.create();
+limitedMath.config({
+  matrix: 'Array', // Configurar para usar array normal en lugar de matrices especiales
+  number: 'number' // Usar números JavaScript nativos
+});
+
+// Limitar funciones permitidas
+limitedMath.import({
+  // Funciones matemáticas básicas y seguras
+  add: math.add,
+  subtract: math.subtract,
+  multiply: math.multiply,
+  divide: math.divide,
+  pow: math.pow,
+  sqrt: math.sqrt,
+  round: math.round,
+  max: math.max,
+  min: math.min,
+  abs: math.abs
+}, { override: true });
+
+// Crear evaluador seguro
+const limitedEval = limitedMath.evaluate;
 
 /**
  * Evalúa una fórmula con una sintaxis similar a Excel utilizando nombres de variables
  * @param {string} formula - La fórmula a evaluar
  * @param {object} variables - Un objeto con las variables a utilizar en la evaluación
- * @returns {number} - El resultado de evaluar la fórmula
+ * @returns {number|null} - El resultado de evaluar la fórmula o null en caso de error
  */
 function evaluarFormula(formula, variables) {
   try {
@@ -30,9 +56,8 @@ function evaluarFormula(formula, variables) {
     // Manejar función SI(condicion;valorVerdadero;valorFalso)
     expresion = procesarFuncionSI(expresion);
     
-    // Evaluar la expresión resultante
-    // eslint-disable-next-line no-new-func
-    const resultado = Function('return ' + expresion)();
+    // Evaluar la expresión de forma segura usando mathjs
+    const resultado = limitedEval(expresion);
     
     // Asegurarse de que el resultado sea un número
     if (typeof resultado !== 'number' || isNaN(resultado)) {
@@ -44,8 +69,7 @@ function evaluarFormula(formula, variables) {
     logger.error('Error al evaluar fórmula:', error);
     logger.error('Fórmula original:', formula);
     logger.debug('Variables:', variables);
-    // En caso de error, devolver 0 o un valor por defecto
-    return 0;
+    return null;
   }
 }
 

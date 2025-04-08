@@ -19,14 +19,17 @@ const bcrypt = require('bcryptjs');
 const usuarioSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
+    required: [true, 'El email es obligatorio'],
     unique: true,
     trim: true,
-    lowercase: true
+    lowercase: true,
+    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Por favor, introduce un email válido']
   },
   password: {
     type: String,
-    required: true
+    required: [true, 'La contraseña es obligatoria'],
+    minlength: [8, 'La contraseña debe tener al menos 8 caracteres']
+    // Considerar añadir validación de complejidad con regex si es necesario
   },
   nombre: {
     type: String,
