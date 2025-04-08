@@ -432,7 +432,7 @@
     3.  **`normalizarTramos`:** Reemplaza el bucle `find() -> save()` con `Tramo.updateMany()` para actualizar los tipos directamente en la base de datos.
     4.  **`updateVigenciaMasiva`:** Reemplaza el bucle `findById -> save()` con `Tramo.updateMany({ _id: { $in: tramosIds } }, { $set: { vigenciaDesde, vigenciaHasta } })` (o lógica más compleja si se manejan `tarifasHistoricas`). La validación de conflictos debe hacerse *antes* de la actualización masiva.
 *   **Verificación:** Prueba las operaciones masivas con un número significativo de registros (ej. cientos o miles) y compara el tiempo de ejecución con la versión anterior. Verifica la consistencia de los datos creados/actualizados.
-*   **Estado:** Pendiente
+*   **Estado:** Completado
 
 ---
 

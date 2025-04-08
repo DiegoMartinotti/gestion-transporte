@@ -153,22 +153,32 @@ exports.bulkCreateViajes = async (req, res) => {
             throw new Error('Cliente no encontrado');
         }
 
-        // Procesar cada viaje
+        // Extraer todos los DTs para verificación de duplicados en una sola consulta
+        const allDts = viajes.map(v => v.dt);
+        
+        // Verificar duplicados en la base de datos en una sola consulta
+        const dtsExistentes = await Viaje.find({
+            cliente,
+            dt: { $in: allDts }
+        }).select('dt').lean();
+        
+        // Crear un Set para búsqueda rápida
+        const dtsExistentesSet = new Set(dtsExistentes.map(v => v.dt));
+        
+        // Array para almacenar los viajes válidos a crear
+        const viajesValidos = [];
+        
+        // Validar todos los viajes antes de insertar
         for (let i = 0; i < viajes.length; i++) {
             try {
                 const viajeData = viajes[i];
 
-                // Validar que el DT no esté duplicado para este cliente
-                const dtExistente = await Viaje.findOne({
-                    cliente,
-                    dt: viajeData.dt
-                });
-
-                if (dtExistente) {
+                // Verificar si el DT ya existe
+                if (dtsExistentesSet.has(viajeData.dt)) {
                     throw new Error(`El DT ${viajeData.dt} ya existe para este cliente`);
                 }
 
-                // Crear el objeto viaje
+                // Crear el objeto viaje para inserción masiva
                 const viajeObj = {
                     cliente,
                     fecha: new Date(viajeData.fecha),
@@ -182,19 +192,47 @@ exports.bulkCreateViajes = async (req, res) => {
                     observaciones: viajeData.observaciones || ''
                 };
 
-                // Crear y guardar el viaje
-                const nuevoViaje = new Viaje(viajeObj);
-                await nuevoViaje.save();
-
-                resultados.exitosos++;
+                // Agregar al array de viajes válidos
+                viajesValidos.push(viajeObj);
 
             } catch (error) {
-                logger.error(`Error procesando viaje #${i + 1}:`, error);
+                logger.error(`Error validando viaje #${i + 1}:`, error);
                 resultados.errores.push({
                     indice: i,
                     dt: viajes[i].dt,
                     error: error.message
                 });
+            }
+        }
+        
+        // Insertar todos los viajes válidos en una sola operación
+        if (viajesValidos.length > 0) {
+            try {
+                const viajesInsertados = await Viaje.insertMany(viajesValidos, { 
+                    ordered: false // Continuar aunque haya errores en algunos documentos
+                });
+                resultados.exitosos = viajesInsertados.length;
+            } catch (bulkError) {
+                // Manejo de errores en la inserción masiva
+                logger.error('Error en inserción masiva:', bulkError);
+                
+                // Si hay algún viaje insertado a pesar del error
+                if (bulkError.insertedDocs && bulkError.insertedDocs.length > 0) {
+                    resultados.exitosos = bulkError.insertedDocs.length;
+                }
+                
+                // Si hay errores específicos de duplicados no detectados anteriormente
+                if (bulkError.writeErrors) {
+                    for (const err of bulkError.writeErrors) {
+                        if (err.err && err.err.op) {
+                            resultados.errores.push({
+                                indice: viajes.findIndex(v => v.dt === err.err.op.dt),
+                                dt: err.err.op.dt,
+                                error: 'Error en la inserción: ' + (err.err.errmsg || 'Documento duplicado o inválido')
+                            });
+                        }
+                    }
+                }
             }
         }
 
