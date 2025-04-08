@@ -5,38 +5,26 @@ import logger from '../utils/logger';
 
 export const AuthContext = createContext(null);
 
-const setAuthToken = (token) => {
-    if (token) {
-        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        localStorage.setItem('token', token);
-    } else {
-        delete axiosInstance.defaults.headers.common['Authorization'];
-        localStorage.removeItem('token');
-    }
-};
-
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // Verificar si hay un token guardado al cargar la aplicación
+    // Verificar si hay sesión al cargar la aplicación
     useEffect(() => {
         const checkAuth = async () => {
-            const token = localStorage.getItem('token');
-            if (token) {
-                try {
-                    setAuthToken(token);
-                    const response = await axiosInstance.get('/api/auth/me');
-                    if (response.data.user) {
-                        setUser(response.data.user);
-                        setIsAuthenticated(true);
-                    }
-                } catch (error) {
-                    logger.error('Error al verificar autenticación:', error);
-                    setAuthToken(null);
+            try {
+                // Intentar obtener los datos del usuario
+                // La cookie se enviará automáticamente si existe
+                const response = await axiosInstance.get('/api/auth/me');
+                if (response.data.user) {
+                    setUser(response.data.user);
+                    setIsAuthenticated(true);
                 }
+            } catch (error) {
+                logger.error('Error al verificar autenticación:', error);
+                // Si hay error, considerar que no hay sesión
             }
             setLoading(false);
         };
@@ -47,8 +35,8 @@ export const AuthProvider = ({ children }) => {
     const login = async (credentials) => {
         try {
             const response = await axiosInstance.post('/api/auth/login', credentials);
-            const { token, user } = response.data;
-            setAuthToken(token);
+            const { user } = response.data;
+            // No necesitamos almacenar el token, la cookie se guarda automáticamente
             setUser(user);
             setIsAuthenticated(true);
             navigate('/');
@@ -62,8 +50,14 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
-        setAuthToken(null);
+    const logout = async () => {
+        try {
+            // Llamar al endpoint de logout para eliminar la cookie
+            await axiosInstance.post('/api/auth/logout');
+        } catch (error) {
+            logger.error('Error en logout:', error);
+        }
+        
         setUser(null);
         setIsAuthenticated(false);
         navigate('/login');

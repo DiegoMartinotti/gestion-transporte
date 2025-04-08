@@ -4,63 +4,44 @@
  */
 
 const logger = require('../utils/logger');
+const { AppError } = require('../utils/errors');
 
 /**
  * Middleware para manejar errores 404 (rutas no encontradas)
  */
 const notFoundHandler = (req, res, next) => {
-  logger.warn(`Ruta no encontrada: ${req.method} ${req.originalUrl}`);
-  
-  res.status(404).json({
-    exito: false,
-    mensaje: 'La ruta solicitada no existe',
-    codigo: 'RUTA_NO_ENCONTRADA',
-    ruta: req.originalUrl
-  });
+  const error = new Error(`Ruta no encontrada - ${req.originalUrl}`);
+  error.statusCode = 404;
+  next(error);
 };
 
 /**
  * Middleware para manejar errores generales de la aplicación
  */
 const errorHandler = (err, req, res, next) => {
-  // Obtener detalles del error
+  // Registrar el error
+  logger.error(`Error: ${err.message}`, {
+    url: req.originalUrl,
+    method: req.method,
+    statusCode: err.statusCode || 500,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+
+  // Preparar respuesta de error
   const statusCode = err.statusCode || 500;
-  const mensaje = err.message || 'Error interno del servidor';
-  const codigo = err.codigo || 'ERROR_INTERNO';
-  const metodo = req.method;
-  const ruta = req.originalUrl;
-  const ip = req.ip;
-  const usuario = req.user ? req.user.id : 'no autenticado';
-  const stack = process.env.NODE_ENV === 'production' ? null : err.stack;
-  
-  // Crear log estructurado
-  const logData = {
-    tipo: statusCode >= 500 ? 'ERROR' : 'ADVERTENCIA',
-    mensaje,
-    codigo,
-    metodo,
-    ruta,
-    ip,
-    usuario,
-    timestamp: new Date().toISOString(),
-    detalles: err.detalles || null
+  const errorResponse = {
+    success: false,
+    message: err.message || 'Error del servidor',
+    errors: err.errors || undefined
   };
   
-  // Registrar el error apropiadamente
-  if (statusCode >= 500) {
-    logger.error(`Error ${statusCode} en ${metodo} ${ruta}: ${mensaje}`, err);
-  } else {
-    logger.warn(`Error ${statusCode} en ${metodo} ${ruta}: ${mensaje}`);
+  // En desarrollo, incluir la pila de llamadas
+  if (process.env.NODE_ENV === 'development') {
+    errorResponse.stack = err.stack;
   }
 
   // Enviar respuesta al cliente
-  res.status(statusCode).json({
-    exito: false,
-    mensaje,
-    codigo,
-    detalles: err.detalles || null,
-    stack
-  });
+  res.status(statusCode).json(errorResponse);
 };
 
 /**

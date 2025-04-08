@@ -31,7 +31,11 @@ exports.getTramosByCliente = async (req, res) => {
         const { cliente } = req.params;
         const { desde, hasta, incluirHistoricos } = req.query;
         
-        logger.debug(`Parámetros de filtro: desde=${desde}, hasta=${hasta}, incluirHistoricos=${incluirHistoricos}`);
+        // Parámetros de paginación
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20; // Límite por defecto
+        
+        logger.debug(`Parámetros de filtro: desde=${desde}, hasta=${hasta}, incluirHistoricos=${incluirHistoricos}, page=${page}, limit=${limit}`);
         
         // Obtener todos los tramos del cliente
         const todosLosTramos = await Tramo.find({ cliente })
@@ -130,11 +134,22 @@ exports.getTramosByCliente = async (req, res) => {
             // Convertir el mapa a array
             const tramosHistoricos = Array.from(tramosUnicos.values());
             
-            logger.debug(`Devolviendo ${tramosHistoricos.length} tramos históricos filtrados por fecha`);
+            // Aplicar paginación en memoria
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const tramosHistoricosPaginados = tramosHistoricos.slice(startIndex, endIndex);
+            
+            logger.debug(`Devolviendo ${tramosHistoricosPaginados.length} tramos históricos filtrados por fecha (página ${page})`);
             
             return res.status(200).json({
                 success: true,
-                data: tramosHistoricos,
+                data: tramosHistoricosPaginados,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(tramosHistoricos.length / limit),
+                    totalItems: tramosHistoricos.length,
+                    limit: limit
+                },
                 metadata: {
                     totalTramos: todosLosTramos.length,
                     tramosHistoricos: tramosHistoricos.length
@@ -218,12 +233,23 @@ exports.getTramosByCliente = async (req, res) => {
             return (a.tipo || 'TRMC').localeCompare(b.tipo || 'TRMC');
         });
         
-        logger.debug(`Enviando ${resultado.length} tramos únicos de ${todosLosTramos.length} totales`);
+        // Aplicar paginación en memoria
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const resultadoPaginado = resultado.slice(startIndex, endIndex);
+        
+        logger.debug(`Enviando ${resultadoPaginado.length} tramos únicos de ${resultado.length} (página ${page})`);
         
         // Enviar respuesta con metadata
         res.json({
             success: true,
-            data: resultado,
+            data: resultadoPaginado,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(resultado.length / limit),
+                totalItems: resultado.length,
+                limit: limit
+            },
             metadata: {
                 totalTramos: todosLosTramos.length,
                 tramosUnicos: resultado.length,
@@ -655,13 +681,30 @@ exports.getTramoById = async (req, res) => {
 
 exports.getAllTramos = async (req, res) => {
     try {
+        // Parámetros de paginación
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20; // Límite por defecto
+        const skip = (page - 1) * limit;
+        
+        // Contar el total de tramos para la metadata
+        const totalTramos = await Tramo.countDocuments();
+        
+        // Obtener tramos con paginación
         const tramos = await Tramo.find()
             .populate('origen', 'Site')
-            .populate('destino', 'Site');
+            .populate('destino', 'Site')
+            .skip(skip)
+            .limit(limit);
             
         res.json({
             success: true,
-            data: tramos
+            data: tramos,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalTramos / limit),
+                totalItems: totalTramos,
+                limit: limit
+            }
         });
     } catch (error) {
         logger.error('Error al obtener todos los tramos:', error);

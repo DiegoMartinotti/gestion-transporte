@@ -8,27 +8,24 @@ import logger from '../../utils/logger';
 
 // Crear instancia de axios con configuración base
 const instance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL,
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
   timeout: 30000, // 30 segundos de timeout
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true // Esto es crucial para enviar cookies en solicitudes cross-origin
 });
 
 // Log de configuración base
 logger.debug('Configuración API:', {
-  baseURL: process.env.REACT_APP_API_URL,
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
   nodeEnv: process.env.NODE_ENV
 });
 
-// Agregar interceptor para incluir el token de autenticación en cada petición
+// Agregar interceptor para mostrar logs de las peticiones en desarrollo
 instance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
+    // Ya no necesitamos añadir el token manualmente, se enviará automáticamente con las cookies
     if (process.env.NODE_ENV === 'development') {
       logger.debug(`${config.method.toUpperCase()} ${config.url}`, config.params || config.data);
     }
@@ -52,9 +49,10 @@ instance.interceptors.response.use(
       // que cae fuera del rango de 2xx
       logger.error(`Error ${error.response.status}:`, error.response.data);
       
-      // Si recibimos un 401 (Unauthorized), probablemente el token expiró
+      // Si recibimos un 401 (Unauthorized), probablemente la sesión expiró
       if (error.response.status === 401) {
-        localStorage.removeItem('token');
+        // No necesitamos eliminar tokens del localStorage
+        // Simplemente redireccionamos al login
         window.location.href = '/login';
       }
       

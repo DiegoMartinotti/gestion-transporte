@@ -7,6 +7,7 @@ const Usuario = require('../models/Usuario');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
+const config = require('../config/config');
 
 /**
  * Autentica a un usuario y genera un token JWT
@@ -59,25 +60,20 @@ exports.login = async (req, res) => {
                 userId: usuario._id,
                 email: usuario.email 
             },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            config.jwtSecret,
+            { expiresIn: config.jwtExpiration }
         );
-
-        // Asegurar que los headers CORS estén presentes
-        res.header('Access-Control-Allow-Credentials', 'true');
-        res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
 
         // Set token in HTTP-only cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: config.env === 'production',
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: config.jwtCookieMaxAge
         });
 
         res.json({
             success: true,
-            token,
             user: {
                 id: usuario._id,
                 email: usuario.email,

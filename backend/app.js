@@ -5,13 +5,18 @@ const cookieParser = require('cookie-parser');
 const { connectDB } = require('./config/database');
 const logger = require('./utils/logger');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+const config = require('./config/config');
+const validateEnv = require('./config/validateEnv');
+
+// Validar variables de entorno
+validateEnv();
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = config.port;
 
 // CORS Configuration - Must be first
 const corsOptions = {
-    origin: 'http://localhost:3000',
+    origin: config.allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -22,7 +27,7 @@ app.use(cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({
-    limit: '50mb',
+    limit: config.bodyLimits.json,
     verify: (req, res, buf) => {
         try {
             JSON.parse(buf);
@@ -35,19 +40,15 @@ app.use(express.json({
 
 app.use(express.urlencoded({
     extended: true,
-    limit: '50mb',
-    parameterLimit: 50000
+    limit: config.bodyLimits.urlencoded,
+    parameterLimit: config.bodyLimits.parameterLimit
 }));
 
 app.use(cookieParser());
 
-// Security headers
-app.use((req, res, next) => {
-    res.header('X-Content-Type-Options', 'nosniff');
-    res.header('X-Frame-Options', 'DENY');
-    res.header('X-XSS-Protection', '1; mode=block');
-    next();
-});
+// Importar y configurar middleware de seguridad
+const securityMiddleware = require('./middleware/security');
+app.use(securityMiddleware);
 
 // Improved request logging
 app.use((req, res, next) => {
@@ -78,9 +79,18 @@ const authRouter = require('./routes/auth');
 const apiRoutes = require('./routes/index');
 const proxyRouter = require('./routes/proxy');
 
+// Rate Limiter específico para Proxy
+const proxyLimiter = require('express-rate-limit')({
+    windowMs: config.rateLimiting.proxy.windowMs,
+    max: config.rateLimiting.proxy.max,
+    message: { error: 'Demasiadas solicitudes de geocodificación, por favor intente más tarde' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Public routes
 app.use('/api/auth', authRouter);
-app.use('/api/proxy', proxyRouter);
+app.use('/api/proxy', proxyLimiter, proxyRouter); // Aplicar limiter específico aquí
 
 // Protected routes
 app.use('/api', apiRoutes);
