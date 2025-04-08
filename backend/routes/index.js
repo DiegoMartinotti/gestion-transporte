@@ -20,27 +20,6 @@ const proxyRouter = require('./proxy');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const logger = require('../utils/logger');
 
-// Log de rutas protegidas solo en caso de error
-router.use((req, res, next) => {
-    // En producción, solo registrar errores
-    if (process.env.NODE_ENV === 'production') {
-        res.on('finish', () => {
-            if (res.statusCode >= 400) {
-                logger.error(`[API Error] ${req.method} ${req.originalUrl} - Status: ${res.statusCode}`);
-            }
-        });
-    } else {
-        logger.debug(`[API] Ruta accedida: ${req.method} ${req.originalUrl}`);
-        logger.debug('Ruta protegida accedida:', {
-            path: req.path,
-            method: req.method,
-            query: req.query,
-            headers: req.headers
-        });
-    }
-    next();
-});
-
 // Rutas públicas (no requieren autenticación)
 router.use('/auth', authRoutes);
 router.use('/proxy', proxyRouter);

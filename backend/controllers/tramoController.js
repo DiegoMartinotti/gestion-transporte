@@ -12,6 +12,7 @@ const { calcularTarifaPaletConFormula } = require('../utils/formulaParser'); // 
 const { calcularDistanciaRuta } = require('../services/routingService'); // Importamos el servicio de cálculo de distancias
 const logger = require('../utils/logger');
 const mongoose = require('mongoose');
+const tarifaService = require('../services/tarifaService'); // Importamos el servicio de tarifas
 
 /**
  * Obtiene todos los tramos asociados a un cliente específico
@@ -35,16 +36,53 @@ exports.getTramosByCliente = async (req, res) => {
         // Parámetros de paginación
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 20; // Límite por defecto
+        const skip = (page - 1) * limit;
         
         logger.debug(`Parámetros de filtro: desde=${desde}, hasta=${hasta}, incluirHistoricos=${incluirHistoricos}, page=${page}, limit=${limit}`);
         
-        // Obtener todos los tramos del cliente
-        const todosLosTramos = await Tramo.find({ cliente })
-            .populate('origen', 'Site location')
-            .populate('destino', 'Site location')
-            .lean();  // Usar lean() para mejor rendimiento
+        // Construir el pipeline de agregación
+        const pipeline = [];
         
-        logger.debug(`Encontrados ${todosLosTramos.length} tramos totales para cliente ${cliente}`);
+        // Etapa 1: Filtrado inicial por cliente
+        // Seleccionamos solo los tramos que pertenecen al cliente solicitado
+        pipeline.push({ $match: { cliente: mongoose.Types.ObjectId(cliente) } });
+        
+        // Etapa 2: Lookup para enriquecer datos de origen y destino
+        // Realizamos una operación de join con la colección de sites para obtener
+        // la información completa de los sitios de origen y destino
+        pipeline.push(
+            { 
+                $lookup: {
+                    from: 'sites',
+                    localField: 'origen',
+                    foreignField: '_id',
+                    as: 'origenData'
+                }
+            },
+            { 
+                $lookup: {
+                    from: 'sites',
+                    localField: 'destino',
+                    foreignField: '_id',
+                    as: 'destinoData'
+                }
+            },
+            // Desempaquetar los arrays resultantes del lookup
+            // Convertimos los arrays de un solo elemento a objetos directos
+            { 
+                $addFields: {
+                    origen: { $arrayElemAt: ['$origenData', 0] },
+                    destino: { $arrayElemAt: ['$destinoData', 0] }
+                }
+            },
+            // Eliminamos los campos temporales que ya no necesitamos
+            {
+                $project: {
+                    origenData: 0,
+                    destinoData: 0
+                }
+            }
+        );
         
         // Si se solicitan tramos históricos con filtro de fecha
         if (desde && hasta && incluirHistoricos === 'true') {
@@ -56,213 +94,252 @@ exports.getTramosByCliente = async (req, res) => {
             
             logger.debug(`Filtrando tramos por rango de fechas: ${desdeDate.toISOString().split('T')[0]} - ${hastaDate.toISOString().split('T')[0]}`);
             
-            // Crear un mapa para almacenar solo el tramo más reciente por cada combinación
-            const tramosUnicos = new Map();
-            
-            // Procesar cada tramo
-            todosLosTramos.forEach(tramo => {
-                if (!tramo || !tramo.origen || !tramo.destino) {
-                    return;
-                }
-                
-                // Verificar si el tramo tiene tarifas históricas
-                if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-                    // Filtrar tarifas que se superpongan con el rango de fechas solicitado
-                    const tarifasEnRango = tramo.tarifasHistoricas.filter(tarifa => {
-                        const tarifaDesde = new Date(tarifa.vigenciaDesde);
-                        const tarifaHasta = new Date(tarifa.vigenciaHasta);
-                        
-                        // Verificar si la tarifa se superpone con el rango de fechas
-                        return tarifaDesde <= hastaDate && tarifaHasta >= desdeDate;
-                    });
-                    
-                    // Agrupar por tipo de tarifa
-                    const tiposTarifa = new Set(tarifasEnRango.map(t => t.tipo));
-                    
-                    // Para cada tipo de tarifa, encontrar la más reciente en el rango
-                    tiposTarifa.forEach(tipo => {
-                        // Filtrar tarifas por tipo
-                        const tarifasDeTipo = tarifasEnRango.filter(t => t.tipo === tipo);
-                        
-                        // Ordenar por fecha de vigencia (más reciente primero)
-                        tarifasDeTipo.sort((a, b) => 
-                            new Date(b.vigenciaHasta) - new Date(a.vigenciaHasta)
-                        );
-                        
-                        if (tarifasDeTipo.length > 0) {
-                            // Crear una copia del tramo con la tarifa específica
-                            const tramoConTarifa = {
-                                ...tramo,
-                                tipo: tipo, // Asignar el tipo de la tarifa al tramo
-                                metodoCalculo: tarifasDeTipo[0].metodoCalculo,
-                                valor: tarifasDeTipo[0].valor,
-                                valorPeaje: tarifasDeTipo[0].valorPeaje,
-                                vigenciaDesde: tarifasDeTipo[0].vigenciaDesde,
-                                vigenciaHasta: tarifasDeTipo[0].vigenciaHasta,
-                                // Mantener la referencia a todas las tarifas históricas
-                                tarifasHistoricas: tramo.tarifasHistoricas
-                            };
-                            
-                            // Clave única que incluye origen, destino y tipo
-                            const key = `${tramo.origen.Site}-${tramo.destino.Site}-${tipo}`;
-                            
-                            // Guardar en el mapa
-                            if (!tramosUnicos.has(key) || 
-                                new Date(tarifasDeTipo[0].vigenciaHasta) > new Date(tramosUnicos.get(key).vigenciaHasta)) {
-                                tramosUnicos.set(key, tramoConTarifa);
+            // Etapa 3a: Procesamiento de tramos históricos con facet
+            // Usamos $facet para procesar en paralelo dos tipos de tramos:
+            // 1. Tramos con tarifasHistoricas (modelo nuevo)
+            // 2. Tramos sin tarifasHistoricas (modelo antiguo)
+            pipeline.push(
+                {
+                    $facet: {
+                        // Procesamiento de tramos con tarifasHistoricas (modelo nuevo)
+                        tramosConHistorico: [
+                            // Seleccionamos solo tramos que tienen tarifas históricas
+                            { $match: { tarifasHistoricas: { $exists: true, $ne: [] } } },
+                            // Desplegar el array tarifasHistoricas para procesar cada tarifa independientemente
+                            { $unwind: '$tarifasHistoricas' },
+                            // Filtrado por fechas de vigencia: solo tarifas que se superponen con el rango solicitado
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            { $lte: [{ $toDate: '$tarifasHistoricas.vigenciaDesde' }, hastaDate] },
+                                            { $gte: [{ $toDate: '$tarifasHistoricas.vigenciaHasta' }, desdeDate] }
+                                        ]
+                                    }
+                                }
+                            },
+                            // Transferimos propiedades de la tarifa histórica al documento principal
+                            // para facilitar el procesamiento posterior
+                            {
+                                $addFields: {
+                                    tipo: '$tarifasHistoricas.tipo',
+                                    metodoCalculo: '$tarifasHistoricas.metodoCalculo',
+                                    valor: '$tarifasHistoricas.valor',
+                                    valorPeaje: '$tarifasHistoricas.valorPeaje',
+                                    vigenciaDesde: '$tarifasHistoricas.vigenciaDesde',
+                                    vigenciaHasta: '$tarifasHistoricas.vigenciaHasta'
+                                }
+                            },
+                            // Ordenamos para asegurar que obtenemos la tarifa más reciente primero
+                            {
+                                $sort: { 'tarifasHistoricas.vigenciaHasta': -1 }
+                            },
+                            // Agrupamos por origen-destino-tipo para obtener un solo tramo por cada combinación
+                            // (el primero será el más reciente debido al ordenamiento previo)
+                            {
+                                $group: {
+                                    _id: {
+                                        origenSite: '$origen.Site',
+                                        destinoSite: '$destino.Site',
+                                        tipo: { $ifNull: ['$tarifasHistoricas.tipo', 'TRMC'] }
+                                    },
+                                    tramo: { $first: '$$ROOT' }
+                                }
+                            },
+                            // Reemplazamos el documento raíz con el tramo completo
+                            {
+                                $replaceRoot: { newRoot: '$tramo' }
                             }
-                        }
-                    });
-                } else if (tramo.vigenciaDesde && tramo.vigenciaHasta) {
-                    // Para tramos con formato antiguo
-                    const tramoDesde = new Date(tramo.vigenciaDesde);
-                    const tramoHasta = new Date(tramo.vigenciaHasta);
-                    
-                    // Verificar si el tramo se superpone con el rango de fechas
-                    if (tramoDesde <= hastaDate && tramoHasta >= desdeDate) {
-                        // Clave única que incluye origen, destino y tipo
-                        const key = `${tramo.origen.Site}-${tramo.destino.Site}-${tramo.tipo || 'TRMC'}`;
-                        
-                        // Si no existe un tramo para esta clave o este tramo tiene una fecha más reciente
-                        if (!tramosUnicos.has(key) || 
-                            tramoHasta > new Date(tramosUnicos.get(key).vigenciaHasta)) {
-                            tramosUnicos.set(key, tramo);
-                        }
+                        ],
+                        // Procesamiento de tramos con formato antiguo (sin tarifasHistoricas)
+                        tramosAntiguos: [
+                            // Seleccionamos tramos sin tarifas históricas pero con campos de vigencia
+                            {
+                                $match: {
+                                    $or: [
+                                        { tarifasHistoricas: { $exists: false } },
+                                        { tarifasHistoricas: { $size: 0 } }
+                                    ],
+                                    vigenciaDesde: { $exists: true },
+                                    vigenciaHasta: { $exists: true }
+                                }
+                            },
+                            // Filtrado por fechas de vigencia: solo tramos que se superponen con el rango solicitado
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            { $lte: [{ $toDate: '$vigenciaDesde' }, hastaDate] },
+                                            { $gte: [{ $toDate: '$vigenciaHasta' }, desdeDate] }
+                                        ]
+                                    }
+                                }
+                            },
+                            // Ordenamos para asegurar que obtenemos el tramo más reciente primero
+                            {
+                                $sort: { vigenciaHasta: -1 }
+                            },
+                            // Agrupamos por origen-destino-tipo para obtener un solo tramo por cada combinación
+                            {
+                                $group: {
+                                    _id: {
+                                        origenSite: '$origen.Site',
+                                        destinoSite: '$destino.Site',
+                                        tipo: { $ifNull: ['$tipo', 'TRMC'] }
+                                    },
+                                    tramo: { $first: '$$ROOT' }
+                                }
+                            },
+                            // Reemplazamos el documento raíz con el tramo completo
+                            {
+                                $replaceRoot: { newRoot: '$tramo' }
+                            }
+                        ]
                     }
-                }
-            });
-            
-            // Convertir el mapa a array
-            const tramosHistoricos = Array.from(tramosUnicos.values());
-            
-            // Aplicar paginación en memoria
-            const startIndex = (page - 1) * limit;
-            const endIndex = startIndex + limit;
-            const tramosHistoricosPaginados = tramosHistoricos.slice(startIndex, endIndex);
-            
-            logger.debug(`Devolviendo ${tramosHistoricosPaginados.length} tramos históricos filtrados por fecha (página ${page})`);
-            
-            return res.status(200).json({
-                success: true,
-                data: tramosHistoricosPaginados,
-                pagination: {
-                    currentPage: page,
-                    totalPages: Math.ceil(tramosHistoricos.length / limit),
-                    totalItems: tramosHistoricos.length,
-                    limit: limit
                 },
-                metadata: {
-                    totalTramos: todosLosTramos.length,
-                    tramosHistoricos: tramosHistoricos.length
-                }
-            });
+                // Combinamos los resultados de ambos facets en un solo array
+                {
+                    $project: {
+                        combinedResults: { $concatArrays: ['$tramosConHistorico', '$tramosAntiguos'] }
+                    }
+                },
+                // Desenrollamos el array de resultados combinados
+                { $unwind: '$combinedResults' },
+                // Reemplazamos el documento raíz con cada resultado
+                { $replaceRoot: { newRoot: '$combinedResults' } }
+            );
+        } else {
+            // Etapa 3b: Procesamiento normal (sin filtro de fechas históricas)
+            // Similar al procesamiento histórico pero sin filtrar por fechas de vigencia
+            pipeline.push(
+                {
+                    $facet: {
+                        // Procesamiento de tramos con tarifasHistoricas
+                        tramosConHistorico: [
+                            { $match: { tarifasHistoricas: { $exists: true, $ne: [] } } },
+                            // Desplegar el array tarifasHistoricas
+                            { $unwind: '$tarifasHistoricas' },
+                            // Transferir propiedades de la tarifa al tramo principal
+                            {
+                                $addFields: {
+                                    tipo: '$tarifasHistoricas.tipo',
+                                    metodoCalculo: '$tarifasHistoricas.metodoCalculo',
+                                    valor: '$tarifasHistoricas.valor',
+                                    valorPeaje: '$tarifasHistoricas.valorPeaje',
+                                    vigenciaDesde: '$tarifasHistoricas.vigenciaDesde',
+                                    vigenciaHasta: '$tarifasHistoricas.vigenciaHasta'
+                                }
+                            },
+                            // Agrupar por origen, destino y tipo para obtener solo el más reciente
+                            {
+                                $sort: { 'tarifasHistoricas.vigenciaHasta': -1 }
+                            },
+                            {
+                                $group: {
+                                    _id: {
+                                        origenSite: '$origen.Site',
+                                        destinoSite: '$destino.Site',
+                                        tipo: { $ifNull: ['$tarifasHistoricas.tipo', 'TRMC'] }
+                                    },
+                                    tramo: { $first: '$$ROOT' }
+                                }
+                            },
+                            {
+                                $replaceRoot: { newRoot: '$tramo' }
+                            }
+                        ],
+                        // Procesar tramos con formato antiguo
+                        tramosAntiguos: [
+                            {
+                                $match: {
+                                    $or: [
+                                        { tarifasHistoricas: { $exists: false } },
+                                        { tarifasHistoricas: { $size: 0 } }
+                                    ],
+                                    tipo: { $exists: true }
+                                }
+                            },
+                            // Agrupar por origen, destino y tipo para obtener solo el más reciente
+                            {
+                                $sort: { vigenciaHasta: -1 }
+                            },
+                            {
+                                $group: {
+                                    _id: {
+                                        origenSite: '$origen.Site',
+                                        destinoSite: '$destino.Site',
+                                        tipo: { $ifNull: ['$tipo', 'TRMC'] }
+                                    },
+                                    tramo: { $first: '$$ROOT' }
+                                }
+                            },
+                            {
+                                $replaceRoot: { newRoot: '$tramo' }
+                            }
+                        ]
+                    }
+                },
+                // Unir los resultados de ambos facets
+                {
+                    $project: {
+                        combinedResults: { $concatArrays: ['$tramosConHistorico', '$tramosAntiguos'] }
+                    }
+                },
+                { $unwind: '$combinedResults' },
+                { $replaceRoot: { newRoot: '$combinedResults' } }
+            );
         }
         
-        // Si no hay filtros de fecha o no se solicitan históricos, continuar con el comportamiento normal
-        // Crear un mapa para almacenar solo el tramo más reciente por cada combinación
-        const tramosUnicos = new Map();
-        
-        // Procesar cada tramo
-        todosLosTramos.forEach(tramo => {
-            if (!tramo || !tramo.origen || !tramo.destino) {
-                logger.error('Tramo inválido o sin origen/destino:', tramo);
-                return;
-            }
-            
-            // Verificar si el tramo tiene tarifas históricas
-            if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-                // Procesar cada tarifa histórica como un tramo separado
-                tramo.tarifasHistoricas.forEach(tarifa => {
-                    // Crear una copia del tramo para cada tarifa
-                    const tramoConTarifa = {
-                        ...tramo,
-                        tipo: tarifa.tipo || 'TRMC',
-                        metodoCalculo: tarifa.metodoCalculo,
-                        valor: tarifa.valor,
-                        valorPeaje: tarifa.valorPeaje,
-                        vigenciaDesde: tarifa.vigenciaDesde,
-                        vigenciaHasta: tarifa.vigenciaHasta,
-                        // Mantener la referencia a todas las tarifas históricas
-                        tarifasHistoricas: tramo.tarifasHistoricas
-                    };
-                    
-                    // Crear una clave única que incluya origen, destino y tipo
-                    const clave = `${tramo.origen.Site}-${tramo.destino.Site}-${tarifa.tipo || 'TRMC'}`;
-                    
-                    // Convertir vigenciaHasta a Date para comparación
-                    const vigenciaHasta = new Date(tarifa.vigenciaHasta);
-                    
-                    // Si no existe un tramo para esta clave o este tramo tiene una fecha más reciente
-                    if (!tramosUnicos.has(clave) || 
-                        vigenciaHasta > new Date(tramosUnicos.get(clave).vigenciaHasta)) {
-                        tramosUnicos.set(clave, tramoConTarifa);
-                        logger.debug(`Actualizado tramo para ${clave} con vigencia hasta ${vigenciaHasta.toISOString()}`);
-                    }
-                });
-            } else if (tramo.tipo) {
-                // Para tramos con formato antiguo (sin tarifasHistoricas)
-                // Crear una clave única que incluya origen, destino y tipo
-                const clave = `${tramo.origen.Site}-${tramo.destino.Site}-${tramo.tipo || 'TRMC'}`;
-                
-                // Convertir vigenciaHasta a Date para comparación
-                const vigenciaHasta = new Date(tramo.vigenciaHasta);
-                
-                // Si no existe un tramo para esta clave o este tramo tiene una fecha más reciente
-                if (!tramosUnicos.has(clave) || 
-                    vigenciaHasta > new Date(tramosUnicos.get(clave).vigenciaHasta)) {
-                    tramosUnicos.set(clave, tramo);
-                    logger.debug(`Actualizado tramo para ${clave} con vigencia hasta ${vigenciaHasta.toISOString()}`);
+        // Etapa 4: Ordenamiento final de los resultados
+        // Organizamos los tramos por origen, destino y tipo para una visualización consistente
+        pipeline.push(
+            {
+                $sort: {
+                    'origen.Site': 1,
+                    'destino.Site': 1,
+                    tipo: 1
                 }
             }
-        });
+        );
         
-        // Convertir el mapa a array y ordenar
-        const resultado = Array.from(tramosUnicos.values()).sort((a, b) => {
-            // Primero ordenar por origen
-            const origenA = a.origen?.Site || '';
-            const origenB = b.origen?.Site || '';
-            if (origenA < origenB) return -1;
-            if (origenA > origenB) return 1;
-            
-            // Si origen es igual, ordenar por destino
-            const destinoA = a.destino?.Site || '';
-            const destinoB = b.destino?.Site || '';
-            if (destinoA < destinoB) return -1;
-            if (destinoA > destinoB) return 1;
-            
-            // Si origen y destino son iguales, ordenar por tipo
-            return (a.tipo || 'TRMC').localeCompare(b.tipo || 'TRMC');
-        });
+        // Etapa 5: Paginación y metadatos
+        // Calculamos el total de documentos y aplicamos skip/limit para paginación
+        pipeline.push(
+            {
+                $facet: {
+                    metadata: [{ $count: 'total' }],
+                    data: [{ $skip: skip }, { $limit: limit }]
+                }
+            }
+        );
         
-        // Aplicar paginación en memoria
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        const resultadoPaginado = resultado.slice(startIndex, endIndex);
+        // Ejecutar la agregación
+        const [result] = await Tramo.aggregate(pipeline);
         
-        logger.debug(`Enviando ${resultadoPaginado.length} tramos únicos de ${resultado.length} (página ${page})`);
+        // Extraer los datos y metadata
+        const totalTramos = result.metadata[0]?.total || 0;
+        const tramos = result.data;
         
-        // Enviar respuesta con metadata
+        logger.debug(`Encontrados ${totalTramos} tramos totales para cliente ${cliente}`);
+        logger.debug(`Enviando ${tramos.length} tramos (página ${page})`);
+        
+        // Enviar respuesta
         res.json({
             success: true,
-            data: resultadoPaginado,
+            data: tramos,
             pagination: {
                 currentPage: page,
-                totalPages: Math.ceil(resultado.length / limit),
-                totalItems: resultado.length,
+                totalPages: Math.ceil(totalTramos / limit),
+                totalItems: totalTramos,
                 limit: limit
-            },
-            metadata: {
-                totalTramos: todosLosTramos.length,
-                tramosUnicos: resultado.length,
-                combinacionesUnicas: tramosUnicos.size
             }
         });
-        
     } catch (error) {
-        logger.error('Error al obtener tramos:', error);
-        res.status(500).json({ 
+        logger.error('Error al obtener tramos por cliente:', error);
+        res.status(500).json({
             success: false,
-            message: error.message 
+            message: 'Error al obtener tramos',
+            error: error.message
         });
     }
 };
@@ -1251,19 +1328,8 @@ exports.updateVigenciaMasiva = async (req, res) => {
  * @async
  * @function calcularTarifa
  * @param {Object} req - Objeto de solicitud Express
- * @param {Object} req.body - Cuerpo de la solicitud
- * @param {string} req.body.cliente - Nombre del cliente
- * @param {string} req.body.origen - ID del sitio de origen
- * @param {string} req.body.destino - ID del sitio de destino
- * @param {Date} req.body.fecha - Fecha para la cual calcular la tarifa
- * @param {number} req.body.palets - Cantidad de palets
- * @param {string} req.body.tipoUnidad - Tipo de unidad (Sider/Bitren)
- * @param {string} req.body.tipoTramo - Tipo de tramo (TRMC/TRMI)
- * @param {boolean} req.body.permitirTramoNoVigente - Permitir calcular la tarifa de un tramo no vigente
- * @param {string} req.body.tramoId - ID del tramo para calcular la tarifa
  * @param {Object} res - Objeto de respuesta Express
- * @returns {Promise<Object>} Tarifa calculada con detalles
- * @throws {Error} Error 404 si no se encuentra el tramo
+ * @returns {Promise<Object>} Tarifa calculada
  * @throws {Error} Error 500 si hay un error en el servidor
  */
 exports.calcularTarifa = async (req, res) => {
@@ -1328,55 +1394,35 @@ exports.calcularTarifa = async (req, res) => {
 
         // Obtenemos la información del cliente para sus fórmulas personalizadas
         const cliente = await Cliente.findOne({ Cliente: clienteNombre });
-
-        // Calcular tarifa según el método de cálculo
-        let tarifaBase = 0;
-        let peaje = tarifaVigente ? Number(tarifaVigente.valorPeaje) || 0 : 0;
-        let total = 0;
         const numPalets = Number(palets) || 1;
         const tipoDeUnidad = tipoUnidad || 'Sider'; // Valor por defecto: Sider
 
-        if (tarifaVigente) {
-            switch (tarifaVigente.metodoCalculo) {
-                case 'Palet':
-                    // Si es tipo Palet, verificamos si el cliente tiene una fórmula personalizada para el tipo de unidad
-                    if (cliente) {
-                        const formulaKey = tipoDeUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
-                        const formulaPersonalizada = cliente[formulaKey];
-                        
-                        // Si hay una fórmula personalizada, la usamos para calcular la tarifa
-                        if (formulaPersonalizada) {
-                            logger.debug(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${formulaPersonalizada}`);
-                            const resultado = calcularTarifaPaletConFormula(tarifaVigente.valor, peaje, numPalets, formulaPersonalizada);
-                            tarifaBase = resultado.tarifaBase;
-                            peaje = resultado.peaje;
-                            total = resultado.total;
-                            break;
-                        }
-                    }
-                    // Si no hay fórmula personalizada, usa el cálculo por defecto
-                    tarifaBase = tarifaVigente.valor * numPalets;
-                    total = tarifaBase + peaje;
-                    break;
-                case 'Kilometro':
-                    tarifaBase = tarifaVigente.valor * tramo.distancia;
-                    total = tarifaBase + peaje;
-                    break;
-                case 'Fijo':
-                    tarifaBase = tarifaVigente.valor;
-                    total = tarifaBase + peaje;
-                    break;
-                default:
-                    tarifaBase = 0;
-                    total = peaje;
+        // Preparar los datos para el cálculo
+        const tramoConTarifa = {
+            ...tramo.toObject(),
+            valor: tarifaVigente ? tarifaVigente.valor : tramo.valor,
+            valorPeaje: tarifaVigente ? tarifaVigente.valorPeaje : tramo.valorPeaje,
+            metodoCalculo: tarifaVigente ? tarifaVigente.metodoCalculo : tramo.metodoCalculo,
+            tipo: tarifaVigente ? tarifaVigente.tipo : tipoTramo
+        };
+
+        // Añadir la fórmula personalizada del cliente si existe
+        if (cliente && tramoConTarifa.metodoCalculo === 'Palet') {
+            const formulaKey = tipoDeUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
+            if (cliente[formulaKey]) {
+                tramoConTarifa.metodoCalculo = cliente[formulaKey];
+                logger.debug(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${cliente[formulaKey]}`);
             }
         }
 
+        // Usar el servicio para calcular la tarifa
+        const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
+
         // Convertir los resultados a números fijos con 2 decimales
         const resultadoFinal = {
-            tarifaBase: Math.round(tarifaBase * 100) / 100,
-            peaje: Math.round(peaje * 100) / 100,
-            total: Math.round(total * 100) / 100,
+            tarifaBase: resultado.tarifaBase,
+            peaje: resultado.peaje,
+            total: resultado.total,
             detalles: {
                 origen: tramo.origen.Site,
                 destino: tramo.destino.Site,

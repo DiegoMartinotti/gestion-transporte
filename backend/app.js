@@ -101,17 +101,30 @@ app.use(notFoundHandler);
 // Middleware para manejo de errores
 app.use(errorHandler);
 
-// JSON parse error handler
+// Middleware global para manejo de errores
+// Este middleware debe colocarse después de todas las rutas y otros middleware
 app.use((err, req, res, next) => {
+    // Loguear el error
+    logger.error('Error no controlado:', err);
+    
+    // Determinar código de estado HTTP
+    // Usar statusCode si existe (errores personalizados) o 500 por defecto
+    const statusCode = err.statusCode || 500;
+    
+    // Determinar mensaje de error
+    let errorMessage = err.message || 'Error interno del servidor';
+    
+    // Para errores de sintaxis JSON, personalizar el mensaje
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        logger.error(`Error al analizar JSON: ${err.message}`);
-        return res.status(400).json({
-            success: false,
-            message: 'JSON inválido',
-            error: err.message
-        });
+        errorMessage = 'JSON inválido';
     }
-    next(err);
+    
+    // Enviar respuesta estandarizada
+    res.status(statusCode).json({
+        success: false,
+        message: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
 });
 
 async function startServer() {
