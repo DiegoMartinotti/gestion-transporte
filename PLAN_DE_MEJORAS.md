@@ -468,7 +468,7 @@
         };
         ```
 *   **Verificación:** Configura diferentes orígenes en la variable de entorno y verifica que las solicitudes desde esos orígenes son permitidas y desde otros son bloqueadas.
-*   **Estado:** Pendiente
+*   **Estado:** Completado
 
 ### 3.2 Consolidar Logging
 
@@ -513,7 +513,7 @@
     </replace_in_file>
     ```
 *   **Verificación:** Revisa los logs del servidor al hacer peticiones y confirma que no hay mensajes duplicados provenientes de `app.js` y `routes/index.js`.
-*   **Estado:** Pendiente
+*   **Estado:** Completado
 
 ### 3.3 Reforzar Autorización (Requiere Análisis Funcional)
 
@@ -524,7 +524,7 @@
     2.  En los controladores relevantes (especialmente en `update` y `delete`, pero también en `getById` o listas filtradas), añade lógica para verificar que el `req.user` (obtenido del token JWT) tiene permiso para operar sobre el recurso solicitado (comparando IDs de usuario, cliente, empresa, etc.).
     3.  Considera usar el middleware `authorizeRoles` (de `authMiddleware.js`) si la autorización se basa en roles definidos.
 *   **Verificación:** Crea usuarios con diferentes roles/permisos e intenta realizar acciones que no deberían poder hacer. Verifica que reciben errores 403 (Forbidden).
-*   **Estado:** Pendiente (Requiere Análisis Funcional)
+*   **Estado:** Parcialmente Completado
 
 ### 3.4 Optimizar Consultas (`getTramosByCliente`)
 
@@ -532,7 +532,7 @@
 *   **Archivos Afectados:** `backend/controllers/tramoController.js`.
 *   **Instrucciones Precisas:** Reemplaza la lógica actual de `find().lean()` seguido de procesamiento en memoria con una pipeline de agregación de MongoDB. Esto probablemente involucrará etapas como `$match` (para cliente), `$unwind` (para `tarifasHistoricas`), `$match` (para filtrar por fecha y tipo), `$sort`, `$group` (para obtener la tarifa más reciente por origen/destino/tipo), y `$lookup` (para poblar origen/destino). Esta es una tarea compleja.
 *   **Verificación:** Compara los resultados de la nueva consulta de agregación con los resultados de la lógica anterior para asegurar que sean idénticos. Mide el rendimiento con un cliente que tenga muchos tramos.
-*   **Estado:** Pendiente
+*   **Estado:** Completado
 
 ### 3.5 Refactorizar Controladores Complejos (Opcional/Largo Plazo)
 
@@ -540,6 +540,6 @@
 *   **Archivos Afectados:** `backend/controllers/tramoController.js`, `backend/services/` (crear nuevos archivos).
 *   **Instrucciones Precisas:** Identifica bloques de lógica (ej. cálculo de tarifas, cálculo de distancias, validación compleja) y extráelos a funciones en módulos separados dentro de `backend/services/`. El controlador se limitará a recibir la solicitud, llamar al servicio y formatear la respuesta.
 *   **Verificación:** Pruebas unitarias y de integración para asegurar que la funcionalidad no ha cambiado después del refactor.
-*   **Estado:** Pendiente
+*   **Estado:** Parcialmente Completado
 
 ---
