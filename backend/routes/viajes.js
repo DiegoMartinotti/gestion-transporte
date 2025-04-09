@@ -8,7 +8,6 @@ const {
     deleteViaje, 
     bulkCreateViajes 
 } = require('../controllers/viajeController');
-const verifyToken = require('../middleware/verifyToken');
 const logger = require('../utils/logger');
 
 // Middleware para debugging de solicitudes grandes
@@ -38,11 +37,11 @@ router.use('/bulk', (req, res, next) => {
 });
 
 // Rutas
-router.get('/', verifyToken, getViajes);
-router.get('/:id', verifyToken, getViajeById);
-router.post('/', verifyToken, createViaje);
-router.post('/bulk', verifyToken, bulkCreateViajes);
-router.put('/:id', verifyToken, updateViaje);
-router.delete('/:id', verifyToken, deleteViaje);
+router.get('/', getViajes);
+router.get('/:id', getViajeById);
+router.post('/', createViaje);
+router.post('/bulk', bulkCreateViajes);
+router.put('/:id', updateViaje);
+router.delete('/:id', deleteViaje);
 
 module.exports = router;

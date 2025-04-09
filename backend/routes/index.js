@@ -14,6 +14,7 @@ const empresasRoutes = require('./empresas');
 const vehiculosRoutes = require('./vehiculos');
 const vehiculoRoutes = require('./vehiculo.routes');
 const personalRoutes = require('./personal');
+const formulaClienteRoutes = require('./formulaClienteRoutes');
 const proxyRouter = require('./proxy');
 
 // Middleware
@@ -36,7 +37,8 @@ const protectedRoutes = [
   { path: '/empresas', router: empresasRoutes },
   { path: '/vehiculos', router: vehiculosRoutes },
   { path: '/vehiculo', router: vehiculoRoutes },
-  { path: '/personal', router: personalRoutes }
+  { path: '/personal', router: personalRoutes },
+  { path: '/formulas', router: formulaClienteRoutes }
 ];
 
 // Registrar todas las rutas protegidas

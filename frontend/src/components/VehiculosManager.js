@@ -137,11 +137,11 @@ const VehiculosManager = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await fetch(`${API_URL}/api/vehiculos/empresa/${empresaId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        // headers: { // No necesario con cookies
+        //   'Authorization': `Bearer ${token}`
+        // }
       });
       
       if (!response.ok) {
@@ -161,12 +161,12 @@ const VehiculosManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await fetch(`${API_URL}/api/vehiculos`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(formData)
       });
@@ -183,12 +183,12 @@ const VehiculosManager = () => {
 
   const handleUpdate = async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await fetch(`${API_URL}/api/vehiculos/${id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(formData)
       });
@@ -207,12 +207,12 @@ const VehiculosManager = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este vehículo?')) {
       try {
-        const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
         const response = await fetch(`${API_URL}/api/vehiculos/${id}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          // headers: { // No necesario con cookies
+          //   'Authorization': `Bearer ${token}`
+          // }
         });
 
         if (!response.ok) throw new Error('Error al eliminar vehículo');
@@ -557,12 +557,12 @@ const VehiculosManager = () => {
           }
 
           // Enviar los datos al servidor
-          const token = localStorage.getItem('token');
+          // const token = localStorage.getItem('token'); // No necesario con cookies
           const response = await fetch(`${API_URL}/api/vehiculos/bulk`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json'
+              // 'Authorization': `Bearer ${token}` // No necesario con cookies
             },
             body: JSON.stringify({ vehiculos: vehiculosData })
           });

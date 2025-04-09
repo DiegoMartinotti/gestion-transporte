@@ -69,10 +69,8 @@ const CalcularTarifa = () => {
 
   const fetchClientes = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/clientes', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // const token = localStorage.getItem('token'); // No necesario con cookies
+      const response = await axios.get('/api/clientes'); // Headers no necesarios
       setClientes(response.data);
     } catch (error) {
       setError('Error al cargar clientes: ' + error.message);
@@ -81,10 +79,8 @@ const CalcularTarifa = () => {
 
   const fetchSites = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/sites?cliente=${selectedCliente}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // const token = localStorage.getItem('token'); // No necesario con cookies
+      const response = await axios.get(`/api/sites?cliente=${selectedCliente}`); // Headers no necesarios
       setSites(response.data.data || []);
     } catch (error) {
       setError('Error al cargar sites: ' + error.message);
@@ -93,10 +89,8 @@ const CalcularTarifa = () => {
 
   const fetchTramos = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`/api/tramos/cliente/${selectedCliente}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // const token = localStorage.getItem('token'); // No necesario con cookies
+      const response = await axios.get(`/api/tramos/cliente/${selectedCliente}`); // Headers no necesarios
       setTramos(response.data.data || []);
     } catch (error) {
       setError('Error al cargar tramos: ' + error.message);
@@ -115,7 +109,7 @@ const CalcularTarifa = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       
       // Verificar que tenemos un tramo seleccionado con tarifa
       if (!selectedTramo || !selectedTramo.tarifaActual) {
@@ -135,9 +129,7 @@ const CalcularTarifa = () => {
         tipoTramo: tipoTramo,
         permitirTramoNoVigente: tramoNoVigente,
         tramoId: selectedTramo._id
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      }); // Headers no necesarios
 
       if (response.data.error) {
         setError(response.data.error);

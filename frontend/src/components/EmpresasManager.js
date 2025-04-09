@@ -43,10 +43,9 @@ const EmpresasManager = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/empresas`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
       });
       
@@ -67,12 +66,11 @@ const EmpresasManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/empresas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(formData)
       });
@@ -100,12 +98,11 @@ const EmpresasManager = () => {
 
   const handleUpdate = async (id) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/empresas/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(formData)
       });
@@ -135,11 +132,10 @@ const EmpresasManager = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta empresa?')) {
       try {
-        const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/api/empresas/${id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${token}`
+            // 'Authorization': `Bearer ${token}` // No necesario con cookies
           }
         });
 

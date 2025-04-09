@@ -6,7 +6,6 @@
 const express = require('express');
 const router = express.Router();
 const tramoController = require('../controllers/tramo');
-const verifyToken = require('../middleware/verifyToken');
 const logger = require('../utils/logger');
 
 // Middleware para debugging de solicitudes grandes
@@ -36,8 +35,8 @@ router.use('/bulk', (req, res, next) => {
 });
 
 // Rutas específicas
-router.get('/cliente/:cliente', verifyToken, tramoController.getTramosByCliente);
-router.get('/distancias', verifyToken, tramoController.getDistanciasCalculadas);
+router.get('/cliente/:cliente', tramoController.getTramosByCliente);
+router.get('/distancias', tramoController.getDistanciasCalculadas);
 
 // Exportar el router
 module.exports = router; 

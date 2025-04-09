@@ -30,14 +30,10 @@ const SitesManager = ({ cliente, onBack }) => {
     const fetchSites = useCallback(async () => {
         try {
             logger.debug('Intentando obtener sites para cliente:', cliente);
-            const token = localStorage.getItem('token');
-            
+            // Token handling removed for cookie-based auth
             // Asegurarnos de que la URL sea correcta
             const response = await axios.get(`/api/sites`, {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
+                // headers removed, handled by cookies
                 params: { cliente }
             });
 
@@ -87,10 +83,8 @@ const SitesManager = ({ cliente, onBack }) => {
         if (!window.confirm('¿Está seguro de eliminar este site?')) return;
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`/api/sites/${siteId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            // const token = localStorage.getItem('token'); // No necesario con cookies
+            await axios.delete(`/api/sites/${siteId}`); // Headers no necesarios
             fetchSites();
         } catch (error) {
             logger.error('Error al eliminar:', error);
@@ -100,11 +94,11 @@ const SitesManager = ({ cliente, onBack }) => {
 
     const handleSave = async () => {
         try {
-            const token = localStorage.getItem('token');
+            // const token = localStorage.getItem('token'); // No necesario con cookies
             await axios.put(
                 `/api/sites/${editingSite._id}`,
-                { ...formData, Cliente: cliente },
-                { headers: { 'Authorization': `Bearer ${token}` } }
+                { ...formData, Cliente: cliente }
+                // Headers no necesarios
             );
             setDialogOpen(false);
             fetchSites();

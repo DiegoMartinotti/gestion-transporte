@@ -33,10 +33,10 @@ const EnhancedTable = () => {
   const [clienteSites, setClienteSites] = useState([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    // const token = localStorage.getItem('token'); // No necesario con cookies
     fetch(`${API_URL}/api/viajes`, {
       headers: {
-        'Authorization': `Bearer ${token}`
+        // 'Authorization': `Bearer ${token}` // No necesario con cookies
       }
     })
       .then(res => res.json())
@@ -110,7 +110,7 @@ const EnhancedTable = () => {
     if (!editCell) return;
 
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const updatedData = { [editCell.field]: editValue };
 
       // Si el campo es numérico, convertir a número
@@ -128,7 +128,7 @@ const EnhancedTable = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            // 'Authorization': `Bearer ${token}` // No necesario con cookies
           },
           body: JSON.stringify(updatedData)
         }
@@ -157,7 +157,7 @@ const EnhancedTable = () => {
     // Recargar los datos después de una carga masiva exitosa
     fetch(`${API_URL}/api/viajes`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        // 'Authorization': `Bearer ${localStorage.getItem('token')}` // No necesario con cookies
       }
     })
       .then(res => res.json())
@@ -169,7 +169,7 @@ const EnhancedTable = () => {
     if (!deleteConfirm.row) return;
 
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const { dt, cliente } = deleteConfirm.row;
 
       const response = await fetch(
@@ -177,7 +177,7 @@ const EnhancedTable = () => {
         {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${token}`, // Asegurarse de que el token tenga el prefijo "Bearer"
+            // 'Authorization': `Bearer ${token}`, // No necesario con cookies
             'Content-Type': 'application/json'
           }
         }
@@ -204,10 +204,10 @@ const EnhancedTable = () => {
 
   const fetchSitesForCliente = async (cliente) => {
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await fetch(`${API_URL}/api/sites/cliente/${encodeURIComponent(cliente)}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
       });
       
@@ -226,7 +226,7 @@ const EnhancedTable = () => {
     
     // Esperar a que se actualice el estado antes de guardar
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const updatedData = { [editCell.field]: newValue };
 
       const response = await fetch(
@@ -235,7 +235,7 @@ const EnhancedTable = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            // 'Authorization': `Bearer ${token}` // No necesario con cookies
           },
           body: JSON.stringify(updatedData)
         }

@@ -59,10 +59,9 @@ const PersonalManager = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/personal?empresaId=${empresaId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
       });
       
@@ -97,12 +96,11 @@ const PersonalManager = () => {
         }];
       }
       
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/personal`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(personalData)
       });
@@ -129,12 +127,11 @@ const PersonalManager = () => {
         empresa: empresaId
       };
       
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/personal/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(personalData)
       });
@@ -157,11 +154,10 @@ const PersonalManager = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este personal?')) {
       try {
-        const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/api/personal/${id}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${token}`
+            // 'Authorization': `Bearer ${token}` // No necesario con cookies
           }
         });
 

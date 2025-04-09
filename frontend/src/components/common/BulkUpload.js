@@ -201,12 +201,12 @@ const BulkUpload = ({
       } 
       // De lo contrario, usar la URL y endpoint predeterminados
       else if (apiUrl && apiEndpoint) {
-        const token = localStorage.getItem('token');
+        // const token = localStorage.getItem('token'); // No necesario con cookies
         const response = await fetch(`${apiUrl}/${apiEndpoint}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            // 'Authorization': `Bearer ${token}` // No necesario con cookies
           },
           body: JSON.stringify({ items: processedData })
         });

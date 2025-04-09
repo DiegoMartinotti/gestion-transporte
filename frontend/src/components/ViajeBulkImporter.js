@@ -135,10 +135,7 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
             for (let i = 0; i < batches.length; i++) {
                 const batch = batches[i];
                 try {
-                    const token = localStorage.getItem('token');
-                    if (!token) {
-                        throw new Error('No hay token de autenticación');
-                    }
+                    // Verificación de token eliminada, manejada por cookies
 
                     const response = await axios.post(
                         '/api/viajes/bulk',
@@ -148,7 +145,7 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
                         },
                         { 
                             headers: { 
-                                Authorization: `Bearer ${token}`,
+                                // Authorization: `Bearer ${token}`, // No necesario con cookies
                                 'Content-Type': 'application/json'
                             },
                             timeout: 30000
