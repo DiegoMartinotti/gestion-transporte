@@ -1349,8 +1349,10 @@ exports.calcularTarifa = async (req, res) => {
             palets, 
             tipoUnidad, 
             tipoTramo, 
+            metodoCalculo,
             permitirTramoNoVigente,
-            tramoId
+            tramoId,
+            tarifaHistoricaId
         } = req.body;
 
         if (!clienteNombre || !origen || !destino || !fecha || !tipoTramo) {
@@ -1389,14 +1391,68 @@ exports.calcularTarifa = async (req, res) => {
             });
         }
 
-        // Buscar la tarifa histórica vigente para la fecha y tipo especificados
-        const tarifaVigente = tramo.getTarifaVigente(fechaConsulta, tipoTramo);
+        // Buscar la tarifa histórica vigente para la fecha y tipo especificados o usar la tarifa específica si se proporciona su ID
+        let tarifaSeleccionada;
         
-        if (!tarifaVigente && !permitirTramoNoVigente) {
-            return res.status(404).json({
-                success: false,
-                message: `No se encontró una tarifa vigente de tipo ${tipoTramo} para la fecha ${fecha}`
-            });
+        if (tarifaHistoricaId && tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
+            // Si se proporciona un ID específico de tarifa histórica, usarla directamente
+            logger.debug(`Buscando tarifa histórica específica por ID: ${tarifaHistoricaId}`);
+            tarifaSeleccionada = tramo.tarifasHistoricas.find(t => t._id.toString() === tarifaHistoricaId.toString());
+            
+            if (tarifaSeleccionada) {
+                logger.debug(`Usando tarifa histórica específica con ID ${tarifaHistoricaId}:`, {
+                    tipo: tarifaSeleccionada.tipo,
+                    metodo: tarifaSeleccionada.metodoCalculo,
+                    valor: tarifaSeleccionada.valor,
+                    peaje: tarifaSeleccionada.valorPeaje,
+                    vigencia: `${new Date(tarifaSeleccionada.vigenciaDesde).toISOString()} - ${new Date(tarifaSeleccionada.vigenciaHasta).toISOString()}`
+                });
+            } else {
+                logger.warn(`No se encontró la tarifa histórica con ID ${tarifaHistoricaId}`);
+            }
+        }
+        
+        // Si no se encuentra la tarifa específica, usar la lógica existente
+        if (!tarifaSeleccionada) {
+            const tarifaVigente = tramo.getTarifaVigente(fechaConsulta, tipoTramo);
+            
+            if (!tarifaVigente && !permitirTramoNoVigente) {
+                return res.status(404).json({
+                    success: false,
+                    message: `No se encontró una tarifa vigente de tipo ${tipoTramo} para la fecha ${fecha}`
+                });
+            }
+            
+            tarifaSeleccionada = tarifaVigente;
+            
+            // Si se especificó un método de cálculo, buscar una tarifa con ese método
+            if (metodoCalculo && tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
+                logger.debug(`Buscando tarifa con método de cálculo: ${metodoCalculo} y tipo: ${tipoTramo}`);
+                
+                // Primero buscar una tarifa vigente con el método de cálculo específico
+                const tarifaEspecifica = tramo.tarifasHistoricas.find(t => 
+                    t.tipo === tipoTramo && 
+                    t.metodoCalculo === metodoCalculo &&
+                    new Date(t.vigenciaDesde) <= fechaConsulta &&
+                    new Date(t.vigenciaHasta) >= fechaConsulta
+                );
+                
+                // Si no hay una vigente, usar cualquier tarifa con el método y tipo especificados
+                if (!tarifaEspecifica && permitirTramoNoVigente) {
+                    const tarifaNoVigente = tramo.tarifasHistoricas.find(t => 
+                        t.tipo === tipoTramo && 
+                        t.metodoCalculo === metodoCalculo
+                    );
+                    
+                    if (tarifaNoVigente) {
+                        tarifaSeleccionada = tarifaNoVigente;
+                        logger.debug(`Usando tarifa no vigente con método: ${metodoCalculo}`);
+                    }
+                } else if (tarifaEspecifica) {
+                    tarifaSeleccionada = tarifaEspecifica;
+                    logger.debug(`Usando tarifa vigente con método: ${metodoCalculo}`);
+                }
+            }
         }
 
         // Obtenemos la información del cliente para sus fórmulas personalizadas
@@ -1407,58 +1463,242 @@ exports.calcularTarifa = async (req, res) => {
         // Preparar los datos para el cálculo
         const tramoConTarifa = {
             ...tramo.toObject(),
-            valor: tarifaVigente ? tarifaVigente.valor : tramo.valor,
-            valorPeaje: tarifaVigente ? tarifaVigente.valorPeaje : tramo.valorPeaje,
-            metodoCalculo: tarifaVigente ? tarifaVigente.metodoCalculo : tramo.metodoCalculo,
-            tipo: tarifaVigente ? tarifaVigente.tipo : tipoTramo
+            valor: tarifaSeleccionada ? tarifaSeleccionada.valor : (tramo.valor || 0),
+            valorPeaje: tarifaSeleccionada ? tarifaSeleccionada.valorPeaje : (tramo.valorPeaje || 0),
+            metodoCalculo: metodoCalculo || (tarifaSeleccionada ? tarifaSeleccionada.metodoCalculo : 'No disponible'),
+            tipo: tarifaSeleccionada ? tarifaSeleccionada.tipo : tipoTramo
         };
+
+        // Para asegurar que se utilicen exactamente los valores de la tarifa seleccionada, 
+        // forzamos estos valores explícitamente
+        if (tarifaSeleccionada) {
+            logger.debug(`Aplicando valores exactos de la tarifa seleccionada (ID: ${tarifaSeleccionada._id}): valor=${tarifaSeleccionada.valor}, peaje=${tarifaSeleccionada.valorPeaje}`);
+            tramoConTarifa.valor = tarifaSeleccionada.valor;
+            tramoConTarifa.valorPeaje = tarifaSeleccionada.valorPeaje;
+            tramoConTarifa.metodoCalculo = tarifaSeleccionada.metodoCalculo || tramoConTarifa.metodoCalculo;
+        }
+
+        logger.debug(`Datos de cálculo: método=${tramoConTarifa.metodoCalculo}, valor=${tramoConTarifa.valor}, peaje=${tramoConTarifa.valorPeaje}`);
 
         // Obtener la fórmula aplicable usando el nuevo servicio
         const clienteId = cliente ? cliente._id : null;
         if (clienteId && tramoConTarifa.metodoCalculo === 'Palet') {
-            // Obtener la fecha para el cálculo (usar la fecha de la solicitud)
-            const fechaDeCalculo = fechaConsulta;
-            
-            // Obtener la fórmula aplicable para este cliente, unidad y fecha
-            const formulaAplicable = await formulaClienteService.getFormulaAplicable(
-                clienteId, 
-                tipoDeUnidad, 
-                fechaDeCalculo
-            );
-            
-            logger.debug(`Fórmula aplicable para cliente ${clienteNombre}, unidad ${tipoDeUnidad}, fecha ${fechaDeCalculo.toISOString()}: ${formulaAplicable}`);
-            
-            // Usar el servicio de tarifa con la fórmula aplicable
-            const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo, formulaAplicable);
-            
-            // Convertir los resultados a números fijos con 2 decimales
-            const resultadoFinal = {
-                tarifaBase: resultado.tarifaBase,
-                peaje: resultado.peaje,
-                total: resultado.total,
-                detalles: {
-                    origen: tramo.origen.Site,
-                    destino: tramo.destino.Site,
-                    distancia: tramo.distancia,
-                    metodoCalculo: tarifaVigente ? tarifaVigente.metodoCalculo : 'No disponible',
-                    tipo: tarifaVigente ? tarifaVigente.tipo : tipoTramo,
-                    tipoUnidad: tipoDeUnidad,
-                    valor: tarifaVigente ? tarifaVigente.valor : 0,
-                    valorPeaje: tarifaVigente ? tarifaVigente.valorPeaje : 0,
-                    vigenciaDesde: tarifaVigente ? tarifaVigente.vigenciaDesde : null,
-                    vigenciaHasta: tarifaVigente ? tarifaVigente.vigenciaHasta : null
-                },
-                formula: formulaAplicable
-            };
-            
-            res.json({
-                success: true,
-                data: resultadoFinal
-            });
-            return;
+            try {
+                // Usar la fecha de vigencia de la tarifa seleccionada si está disponible
+                // o la fecha de la consulta como respaldo
+                let fechaDeCalculo;
+                
+                // Usar diferentes fechas en orden de prioridad
+                if (tarifaSeleccionada && tarifaSeleccionada.vigenciaDesde) {
+                    // 1. Usar la fecha específica de la tarifa
+                    fechaDeCalculo = new Date(tarifaSeleccionada.vigenciaDesde);
+                    logger.debug(`Usando fecha de vigencia de tarifa: ${fechaDeCalculo.toISOString()}`);
+                } else if (fechaConsulta) {
+                    // 2. Usar la fecha de consulta
+                    fechaDeCalculo = fechaConsulta;
+                    logger.debug(`Usando fecha de consulta: ${fechaDeCalculo.toISOString()}`);
+                } else {
+                    // 3. Usar fecha actual
+                    fechaDeCalculo = new Date();
+                    logger.debug(`Usando fecha actual: ${fechaDeCalculo.toISOString()}`);
+                }
+                
+                logger.debug(`Información de tarifa seleccionada:
+                    ID: ${tarifaSeleccionada?._id}
+                    Tipo: ${tarifaSeleccionada?.tipo}
+                    Método: ${tarifaSeleccionada?.metodoCalculo}
+                    Valor: ${tarifaSeleccionada?.valor}
+                    Vigencia: ${new Date(tarifaSeleccionada?.vigenciaDesde || 0).toISOString()} - ${new Date(tarifaSeleccionada?.vigenciaHasta || 0).toISOString()}`);
+                
+                try {
+                    // Obtener la fórmula aplicable para este cliente, unidad y fecha
+                    const formulaAplicable = await formulaClienteService.getFormulaAplicable(
+                        clienteId, 
+                        tipoDeUnidad, 
+                        fechaDeCalculo
+                    );
+                    
+                    logger.debug(`Fórmula aplicable para cliente ${clienteNombre}, unidad ${tipoDeUnidad}, fecha ${fechaDeCalculo.toISOString()}: ${formulaAplicable}`);
+                    
+                    // Verificar si la fórmula es válida antes de usarla
+                    let formulaAplicableCorregida = formulaAplicable;
+                    if (!formulaAplicableCorregida) {
+                        logger.warn(`No se encontró una fórmula personalizada específica, usando fórmula estándar`);
+                        formulaAplicableCorregida = formulaClienteService.FORMULA_ESTANDAR;
+                    }
+                    
+                    // Asegurarse de que los valores del tramo son correctos
+                    if (!tramoConTarifa.valor || tramoConTarifa.valor === 0) {
+                        if (tarifaSeleccionada && tarifaSeleccionada.valor) {
+                            tramoConTarifa.valor = tarifaSeleccionada.valor;
+                            logger.debug(`Actualizando valor de tarifa a: ${tramoConTarifa.valor}`);
+                        }
+                    }
+                    
+                    // Usar el servicio de tarifa con la fórmula aplicable
+                    const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo, formulaAplicableCorregida);
+                    
+                    logger.debug(`Resultado del cálculo:
+                        tarifaBase: ${resultado.tarifaBase}
+                        peaje: ${resultado.peaje}
+                        total: ${resultado.total}`);
+                        
+                    // Asegurar que el total no sea NaN
+                    if (isNaN(resultado.total)) {
+                        logger.warn('El cálculo resultó en NaN, corrigiendo...');
+                        resultado.total = resultado.tarifaBase + resultado.peaje;
+                        logger.debug(`Total corregido: ${resultado.total}`);
+                    }
+                    
+                    // Si el total es 0, intentar con el método estándar
+                    if (resultado.total === 0) {
+                        logger.warn(`El cálculo con fórmula resultó en 0, intentando con método estándar`);
+                        const resultadoEstandar = tarifaService.calcularTarifaTramo({
+                            ...tramoConTarifa,
+                            metodoCalculo: 'Palet'
+                        }, numPalets, tipoTramo);
+                        
+                        if (resultadoEstandar.total > 0) {
+                            logger.debug(`Usando resultado de cálculo estándar: ${resultadoEstandar.total}`);
+                            resultado.tarifaBase = resultadoEstandar.tarifaBase;
+                            resultado.peaje = resultadoEstandar.peaje;
+                            resultado.total = resultadoEstandar.total;
+                        }
+                    }
+                    
+                    // Verificar una vez más si el total es NaN
+                    if (isNaN(resultado.total)) {
+                        logger.warn('El total sigue siendo NaN, usando cálculo básico');
+                        resultado.tarifaBase = tramoConTarifa.valor * numPalets;
+                        resultado.total = resultado.tarifaBase + resultado.peaje;
+                    }
+                    
+                    // Convertir los resultados a números fijos con 2 decimales
+                    const resultadoFinal = {
+                        tarifaBase: resultado.tarifaBase,
+                        peaje: resultado.peaje,
+                        total: resultado.total,
+                        detalles: {
+                            origen: tramo.origen.Site,
+                            destino: tramo.destino.Site,
+                            distancia: tramo.distancia,
+                            metodoCalculo: tramoConTarifa.metodoCalculo,
+                            tipo: tramoConTarifa.tipo,
+                            tipoUnidad: tipoDeUnidad,
+                            valor: tramoConTarifa.valor,
+                            valorPeaje: tramoConTarifa.valorPeaje,
+                            vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
+                            vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
+                        },
+                        formula: formulaAplicableCorregida,
+                        tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
+                    };
+                    
+                    res.json({
+                        success: true,
+                        data: resultadoFinal
+                    });
+                    return;
+                } catch (error) {
+                    logger.error(`Error al calcular tarifa con fórmula personalizada: ${error.message}`, error);
+                    // Si llegamos aquí, es porque no se usó una fórmula personalizada o hubo un error
+                    // Vamos a asegurarnos de que los valores en tramoConTarifa son correctos
+                    
+                    // Verificar si los valores son 0 o nulos, y tratar de obtenerlos de la tarifa seleccionada
+                    if (!tramoConTarifa.valor || tramoConTarifa.valor === 0) {
+                        if (tarifaSeleccionada && tarifaSeleccionada.valor) {
+                            tramoConTarifa.valor = tarifaSeleccionada.valor;
+                            logger.debug(`Usando valor de tarifa seleccionada: ${tramoConTarifa.valor}`);
+                        }
+                    }
+                    
+                    // Calcular usando el método estándar correspondiente
+                    logger.debug(`Realizando cálculo estándar con método: ${tramoConTarifa.metodoCalculo}`);
+                    const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
+                    
+                    logger.debug(`Resultado del cálculo estándar:
+                        tarifaBase: ${resultado.tarifaBase}
+                        peaje: ${resultado.peaje}
+                        total: ${resultado.total}`);
+                        
+                    // Convertir los resultados a números fijos con 2 decimales
+                    const resultadoFinal = {
+                        tarifaBase: resultado.tarifaBase,
+                        peaje: resultado.peaje,
+                        total: resultado.total,
+                        detalles: {
+                            origen: tramo.origen.Site,
+                            destino: tramo.destino.Site,
+                            distancia: tramo.distancia,
+                            metodoCalculo: tramoConTarifa.metodoCalculo,
+                            tipo: tramoConTarifa.tipo,
+                            tipoUnidad: tipoDeUnidad,
+                            valor: tramoConTarifa.valor,
+                            valorPeaje: tramoConTarifa.valorPeaje,
+                            vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
+                            vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
+                        },
+                        formula: 'Estándar',
+                        tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
+                    };
+
+                    res.json({
+                        success: true,
+                        data: resultadoFinal
+                    });
+                }
+            } catch (error) {
+                logger.error(`Error al calcular tarifa con fórmula personalizada: ${error.message}`, error);
+                // Si llegamos aquí, es porque no se usó una fórmula personalizada o hubo un error
+                // Vamos a asegurarnos de que los valores en tramoConTarifa son correctos
+                
+                // Verificar si los valores son 0 o nulos, y tratar de obtenerlos de la tarifa seleccionada
+                if (!tramoConTarifa.valor || tramoConTarifa.valor === 0) {
+                    if (tarifaSeleccionada && tarifaSeleccionada.valor) {
+                        tramoConTarifa.valor = tarifaSeleccionada.valor;
+                        logger.debug(`Usando valor de tarifa seleccionada: ${tramoConTarifa.valor}`);
+                    }
+                }
+                
+                // Calcular usando el método estándar correspondiente
+                logger.debug(`Realizando cálculo estándar con método: ${tramoConTarifa.metodoCalculo}`);
+                const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
+                
+                logger.debug(`Resultado del cálculo estándar:
+                    tarifaBase: ${resultado.tarifaBase}
+                    peaje: ${resultado.peaje}
+                    total: ${resultado.total}`);
+                    
+                // Convertir los resultados a números fijos con 2 decimales
+                const resultadoFinal = {
+                    tarifaBase: resultado.tarifaBase,
+                    peaje: resultado.peaje,
+                    total: resultado.total,
+                    detalles: {
+                        origen: tramo.origen.Site,
+                        destino: tramo.destino.Site,
+                        distancia: tramo.distancia,
+                        metodoCalculo: tramoConTarifa.metodoCalculo,
+                        tipo: tramoConTarifa.tipo,
+                        tipoUnidad: tipoDeUnidad,
+                        valor: tramoConTarifa.valor,
+                        valorPeaje: tramoConTarifa.valorPeaje,
+                        vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
+                        vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
+                    },
+                    formula: 'Estándar',
+                    tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
+                };
+
+                res.json({
+                    success: true,
+                    data: resultadoFinal
+                });
+            }
         }
 
         // Usar el servicio para calcular la tarifa con el método original
+        logger.debug(`Realizando cálculo estándar final con valores directos de tarifa: valor=${tramoConTarifa.valor}, peaje=${tramoConTarifa.valorPeaje}, método=${tramoConTarifa.metodoCalculo}`);
         const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
 
         // Convertir los resultados a números fijos con 2 decimales
@@ -1470,15 +1710,16 @@ exports.calcularTarifa = async (req, res) => {
                 origen: tramo.origen.Site,
                 destino: tramo.destino.Site,
                 distancia: tramo.distancia,
-                metodoCalculo: tarifaVigente ? tarifaVigente.metodoCalculo : 'No disponible',
-                tipo: tarifaVigente ? tarifaVigente.tipo : tipoTramo,
+                metodoCalculo: tramoConTarifa.metodoCalculo,
+                tipo: tramoConTarifa.tipo,
                 tipoUnidad: tipoDeUnidad,
-                valor: tarifaVigente ? tarifaVigente.valor : 0,
-                valorPeaje: tarifaVigente ? tarifaVigente.valorPeaje : 0,
-                vigenciaDesde: tarifaVigente ? tarifaVigente.vigenciaDesde : null,
-                vigenciaHasta: tarifaVigente ? tarifaVigente.vigenciaHasta : null
+                valor: tramoConTarifa.valor,
+                valorPeaje: tramoConTarifa.valorPeaje,
+                vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
+                vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
             },
-            formula: 'Estándar'
+            formula: 'Estándar',
+            tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
         };
 
         res.json({

@@ -38,6 +38,8 @@ const CalcularTarifa = () => {
   const [tramos, setTramos] = useState([]);
   const [selectedTramo, setSelectedTramo] = useState(null);
   const [tramoNoVigente, setTramoNoVigente] = useState(false);
+  const [metodoCalculo, setMetodoCalculo] = useState('');
+  const [metodosCalculoDisponibles, setMetodosCalculoDisponibles] = useState([]);
 
   useEffect(() => {
     fetchClientes();
@@ -97,6 +99,27 @@ const CalcularTarifa = () => {
     }
   };
 
+  // Función para actualizar métodos de cálculo disponibles
+  const actualizarMetodosCalculo = (tramoSeleccionado) => {
+    if (tramoSeleccionado && tramoSeleccionado.tarifasHistoricas && tramoSeleccionado.tarifasHistoricas.length > 0) {
+      const metodos = [...new Set(tramoSeleccionado.tarifasHistoricas.map(tarifa => tarifa.metodoCalculo))];
+      setMetodosCalculoDisponibles(metodos);
+      
+      // Si solo hay un método disponible, seleccionarlo automáticamente
+      if (metodos.length === 1) {
+        setMetodoCalculo(metodos[0]);
+      } else if (metodos.length > 0 && tramoSeleccionado.tarifaActual) {
+        // Si hay varios métodos y una tarifa actual, seleccionar su método
+        setMetodoCalculo(tramoSeleccionado.tarifaActual.metodoCalculo || '');
+      } else {
+        setMetodoCalculo('');
+      }
+    } else {
+      setMetodosCalculoDisponibles([]);
+      setMetodoCalculo('');
+    }
+  };
+
   const handleCalcular = async () => {
     setLoading(true);
     setResultado(null);
@@ -125,8 +148,10 @@ const CalcularTarifa = () => {
         palets: palets,
         tipoUnidad: tipoUnidad,
         tipoTramo: tipoTramo,
+        metodoCalculo: metodoCalculo,
         permitirTramoNoVigente: tramoNoVigente,
-        tramoId: selectedTramo._id
+        tramoId: selectedTramo._id,
+        tarifaHistoricaId: selectedTramo.tarifaActual._id
       }, { 
         withCredentials: true 
       });
@@ -134,12 +159,20 @@ const CalcularTarifa = () => {
       if (response.data.error) {
         setError(response.data.error);
       } else {
-        setResultado({
+        // Crear una copia del objeto de respuesta y asegurarnos de que tenga el método de cálculo correcto
+        const resultadoData = {
           ...response.data.data,
           tramo: selectedTramo,
           origen: sites.find(s => s._id === origen),
           destino: sites.find(s => s._id === destino)
-        });
+        };
+        
+        // Si el método de cálculo en la respuesta es "No disponible", usar el seleccionado en la UI
+        if (resultadoData.detalles && resultadoData.detalles.metodoCalculo === 'No disponible') {
+          resultadoData.detalles.metodoCalculo = metodoCalculo;
+        }
+        
+        setResultado(resultadoData);
       }
     } catch (error) {
       logger.error("Error al calcular tarifa:", error);
@@ -154,6 +187,8 @@ const CalcularTarifa = () => {
     setDestino(''); // Limpiar el destino cuando cambia el origen
     setTiposDisponibles([]); // Limpiar tipos disponibles
     setTipoTramo(''); // Limpiar tipo seleccionado
+    setMetodosCalculoDisponibles([]);
+    setMetodoCalculo('');
   };
 
   // Función para verificar si un tramo está vigente
@@ -208,6 +243,9 @@ const CalcularTarifa = () => {
           });
           setTramoNoVigente(false);
           
+          // Actualizar métodos de cálculo disponibles
+          actualizarMetodosCalculo(tramoSeleccionado);
+          
           // Si solo hay un tipo de tramo disponible, seleccionarlo automáticamente
           if (tiposDisponibles.length === 1) {
             setTipoTramo(tiposDisponibles[0]);
@@ -240,6 +278,9 @@ const CalcularTarifa = () => {
             tarifaActual: tarifasOrdenadas[0]
           });
           
+          // Actualizar métodos de cálculo disponibles
+          actualizarMetodosCalculo(tramoSeleccionado);
+          
           setTramoNoVigente(true);
           setError('Advertencia: No hay tramos vigentes para esta ruta.');
           
@@ -252,12 +293,16 @@ const CalcularTarifa = () => {
         setSelectedTramo(null);
         setTiposDisponibles([]);
         setTipoTramo('');
+        setMetodosCalculoDisponibles([]);
+        setMetodoCalculo('');
         setError('No hay tramos definidos para esta ruta.');
       }
     } else {
       setSelectedTramo(null);
       setTiposDisponibles([]);
       setTipoTramo('');
+      setMetodosCalculoDisponibles([]);
+      setMetodoCalculo('');
     }
   };
 
@@ -269,35 +314,128 @@ const CalcularTarifa = () => {
     if (selectedTramo && selectedTramo.tarifasHistoricas) {
       const hoy = dayjs();
       
+      // Primero buscar las tarifas que coinciden con el tipo seleccionado
+      const tarifasDelTipo = selectedTramo.tarifasHistoricas.filter(tarifa => 
+        tarifa.tipo === nuevoTipo
+      );
+      
+      // Ordenar por fecha de vigencia (más reciente primero)
+      const tarifasOrdenadas = [...tarifasDelTipo].sort((a, b) => 
+        dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
+      );
+
+      // Log para depuración
+      console.log(`Encontradas ${tarifasDelTipo.length} tarifas para el tipo ${nuevoTipo}`);
+      console.log('Tarifas disponibles:', tarifasDelTipo);
+      
       // Buscar primero una tarifa vigente del tipo seleccionado
-      const tarifaVigente = selectedTramo.tarifasHistoricas.find(tarifa => 
-        tarifa.tipo === nuevoTipo && 
+      const tarifaVigente = tarifasDelTipo.find(tarifa => 
         hoy.isAfter(dayjs(tarifa.vigenciaDesde)) && 
         hoy.isBefore(dayjs(tarifa.vigenciaHasta))
       );
       
       if (tarifaVigente) {
         // Hay una tarifa vigente para este tipo
+        console.log('Encontrada tarifa vigente:', tarifaVigente);
         setSelectedTramo({
           ...selectedTramo,
           tarifaActual: tarifaVigente
         });
         setTramoNoVigente(false);
-      } else {
-        // No hay tarifa vigente, buscar tarifas de este tipo y ordenarlas por fecha (más reciente primero)
-        const tarifasDeTipo = selectedTramo.tarifasHistoricas
-          .filter(tarifa => tarifa.tipo === nuevoTipo)
-          .sort((t1, t2) => dayjs(t2.vigenciaHasta).diff(dayjs(t1.vigenciaHasta)));
         
-        if (tarifasDeTipo.length > 0) {
+        // Actualizar métodos de cálculo disponibles
+        const metodos = [...new Set(tarifasDelTipo.map(tarifa => tarifa.metodoCalculo))];
+        setMetodosCalculoDisponibles(metodos);
+        
+        // Si la tarifa vigente tiene un método de cálculo, seleccionarlo
+        if (tarifaVigente.metodoCalculo) {
+          setMetodoCalculo(tarifaVigente.metodoCalculo);
+          console.log(`Seleccionado método de cálculo: ${tarifaVigente.metodoCalculo}`);
+        } else if (metodos.length === 1) {
+          setMetodoCalculo(metodos[0]);
+          console.log(`Seleccionado único método disponible: ${metodos[0]}`);
+        } else {
+          setMetodoCalculo('');
+        }
+      } else {
+        // No hay tarifa vigente, usar la más reciente
+        if (tarifasOrdenadas.length > 0) {
+          console.log('No hay tarifa vigente, usando la más reciente:', tarifasOrdenadas[0]);
           setSelectedTramo({
             ...selectedTramo,
-            tarifaActual: tarifasDeTipo[0]
+            tarifaActual: tarifasOrdenadas[0]
           });
           setTramoNoVigente(true);
           setError('Advertencia: No hay tarifas vigentes para este tipo de tramo.');
+          
+          // Actualizar métodos de cálculo disponibles
+          const metodos = [...new Set(tarifasOrdenadas.map(tarifa => tarifa.metodoCalculo))];
+          setMetodosCalculoDisponibles(metodos);
+          
+          // Si la tarifa tiene un método de cálculo, seleccionarlo
+          if (tarifasOrdenadas[0].metodoCalculo) {
+            setMetodoCalculo(tarifasOrdenadas[0].metodoCalculo);
+            console.log(`Seleccionado método de cálculo de tarifa no vigente: ${tarifasOrdenadas[0].metodoCalculo}`);
+          } else if (metodos.length === 1) {
+            setMetodoCalculo(metodos[0]);
+            console.log(`Seleccionado único método disponible: ${metodos[0]}`);
+          } else {
+            setMetodoCalculo('');
+          }
         } else {
           setError('No se encontró ninguna tarifa para este tipo de tramo.');
+          setMetodosCalculoDisponibles([]);
+          setMetodoCalculo('');
+        }
+      }
+    }
+  };
+
+  // Nuevo handler para el cambio de método de cálculo
+  const handleMetodoCalculoChange = (event) => {
+    const nuevoMetodo = event.target.value;
+    setMetodoCalculo(nuevoMetodo);
+    console.log(`Método de cálculo cambiado a: ${nuevoMetodo}`);
+    
+    // Si tenemos un tramo seleccionado, buscar una tarifa que coincida con el método y tipo seleccionados
+    if (selectedTramo && selectedTramo.tarifasHistoricas && tipoTramo) {
+      const tarifasCoincidentes = selectedTramo.tarifasHistoricas.filter(tarifa => 
+        tarifa.tipo === tipoTramo && 
+        tarifa.metodoCalculo === nuevoMetodo
+      );
+      
+      console.log(`Encontradas ${tarifasCoincidentes.length} tarifas con método ${nuevoMetodo} y tipo ${tipoTramo}`);
+      
+      if (tarifasCoincidentes.length > 0) {
+        // Ordenar por fecha de vigencia (más reciente primero)
+        const tarifasOrdenadas = [...tarifasCoincidentes].sort((a, b) => 
+          dayjs(b.vigenciaHasta).diff(dayjs(a.vigenciaHasta))
+        );
+        
+        // Verificar si hay alguna tarifa vigente
+        const hoy = dayjs();
+        const tarifaVigente = tarifasCoincidentes.find(tarifa => 
+          hoy.isAfter(dayjs(tarifa.vigenciaDesde)) && 
+          hoy.isBefore(dayjs(tarifa.vigenciaHasta))
+        );
+        
+        if (tarifaVigente) {
+          // Usar la tarifa vigente
+          console.log('Encontrada tarifa vigente con el método seleccionado:', tarifaVigente);
+          setSelectedTramo({
+            ...selectedTramo,
+            tarifaActual: tarifaVigente
+          });
+          setTramoNoVigente(false);
+        } else {
+          // Usar la tarifa más reciente
+          console.log('No hay tarifa vigente con el método seleccionado, usando la más reciente:', tarifasOrdenadas[0]);
+          setSelectedTramo({
+            ...selectedTramo,
+            tarifaActual: tarifasOrdenadas[0]
+          });
+          setTramoNoVigente(true);
+          setError('Advertencia: No hay tarifas vigentes para este método de cálculo.');
         }
       }
     }
@@ -306,6 +444,7 @@ const CalcularTarifa = () => {
   // Referencias para los componentes
   const destinoInputRef = useRef(null);
   const tipoTramoInputRef = useRef(null);
+  const metodoCalculoInputRef = useRef(null);
 
   // Función mejorada para manejar las teclas en Autocomplete
   const handleAutoCompleteKeyDown = (event, options, onChange, nextFieldRef) => {
@@ -465,7 +604,7 @@ const CalcularTarifa = () => {
             </Grid>
           )}
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <FormControl fullWidth>
               <InputLabel>Tipo de Unidad</InputLabel>
               <Select
@@ -479,7 +618,7 @@ const CalcularTarifa = () => {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <FormControl fullWidth>
               <InputLabel>Tipo de Tramo</InputLabel>
               <Select
@@ -492,6 +631,25 @@ const CalcularTarifa = () => {
                 {tiposDisponibles.map((tipo) => (
                   <MenuItem key={tipo} value={tipo}>
                     {tipo}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Método de Cálculo</InputLabel>
+              <Select
+                value={metodoCalculo}
+                onChange={handleMetodoCalculoChange}
+                label="Método de Cálculo"
+                disabled={!origen || !destino || !tipoTramo || metodosCalculoDisponibles.length === 0}
+                inputRef={metodoCalculoInputRef}
+              >
+                {metodosCalculoDisponibles.map((metodo) => (
+                  <MenuItem key={metodo} value={metodo}>
+                    {metodo}
                   </MenuItem>
                 ))}
               </Select>
@@ -514,7 +672,7 @@ const CalcularTarifa = () => {
               variant="contained"
               color="primary"
               onClick={handleCalcular}
-              disabled={loading || !selectedCliente || !origen || !destino || !tipoTramo}
+              disabled={loading || !selectedCliente || !origen || !destino || !tipoTramo || !metodoCalculo}
               fullWidth
             >
               {loading ? 'Calculando...' : 'Calcular Tarifa'}
@@ -542,20 +700,24 @@ const CalcularTarifa = () => {
                       Distancia: {resultado.detalles?.distancia} km
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Método de cálculo: {resultado.detalles?.metodoCalculo}
-                      {resultado.detalles?.metodoCalculo === 'Kilometro' && 
+                      Método de cálculo: {
+                        resultado.detalles?.metodoCalculo !== 'No disponible' 
+                          ? resultado.detalles?.metodoCalculo 
+                          : metodoCalculo
+                      }
+                      {(resultado.detalles?.metodoCalculo === 'Kilometro' || metodoCalculo === 'Kilometro') && 
                         ` (${resultado.detalles?.distancia} km)`}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Tipo: {resultado.detalles?.tipo}
+                      Tipo: {resultado.detalles?.tipo || tipoTramo}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Unidad: {resultado.detalles?.tipoUnidad || tipoUnidad}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Valor base: ${formatMoney(resultado.detalles?.valor)} 
-                      {resultado.detalles?.metodoCalculo === 'Kilometro' ? '/km' : 
-                       resultado.detalles?.metodoCalculo === 'Palet' ? '/palet' : ''}
+                      {(resultado.detalles?.metodoCalculo === 'Kilometro' || metodoCalculo === 'Kilometro') ? '/km' : 
+                       (resultado.detalles?.metodoCalculo === 'Palet' || metodoCalculo === 'Palet') ? '/palet' : ''}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Valor peaje: ${formatMoney(resultado.detalles?.valorPeaje)}
