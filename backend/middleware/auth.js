@@ -1,20 +1,22 @@
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
+const config = require('../config/config');
 
 const authMiddleware = (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        logger.debug('Auth header:', authHeader);
-
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            logger.debug('Token no proporcionado o formato inválido');
+        // Verificar la existencia del token en la cookie
+        const token = req.cookies.token;
+        
+        if (!token) {
+            logger.debug('Token no proporcionado en cookies');
             return res.status(401).json({ 
-                message: 'No autorizado - Token no proporcionado o inválido' 
+                message: 'No autorizado - Token no proporcionado' 
             });
         }
-
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Verificar el token
+        const jwtSecret = config.jwtSecret || process.env.JWT_SECRET;
+        const decoded = jwt.verify(token, jwtSecret);
         logger.debug('Token decodificado:', decoded);
         
         req.user = decoded;

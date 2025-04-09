@@ -18,6 +18,9 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import logger from '../utils/logger';
 
+// Configurar axios para usar credenciales en todas las solicitudes
+axios.defaults.withCredentials = true;
+
 const CalcularTarifa = () => {
   const [clientes, setClientes] = useState([]);
   const [sites, setSites] = useState([]);
@@ -69,8 +72,7 @@ const CalcularTarifa = () => {
 
   const fetchClientes = async () => {
     try {
-      // const token = localStorage.getItem('token'); // No necesario con cookies
-      const response = await axios.get('/api/clientes'); // Headers no necesarios
+      const response = await axios.get('/api/clientes', { withCredentials: true });
       setClientes(response.data);
     } catch (error) {
       setError('Error al cargar clientes: ' + error.message);
@@ -79,8 +81,7 @@ const CalcularTarifa = () => {
 
   const fetchSites = async () => {
     try {
-      // const token = localStorage.getItem('token'); // No necesario con cookies
-      const response = await axios.get(`/api/sites?cliente=${selectedCliente}`); // Headers no necesarios
+      const response = await axios.get(`/api/sites?cliente=${selectedCliente}`, { withCredentials: true });
       setSites(response.data.data || []);
     } catch (error) {
       setError('Error al cargar sites: ' + error.message);
@@ -89,8 +90,7 @@ const CalcularTarifa = () => {
 
   const fetchTramos = async () => {
     try {
-      // const token = localStorage.getItem('token'); // No necesario con cookies
-      const response = await axios.get(`/api/tramos/cliente/${selectedCliente}`); // Headers no necesarios
+      const response = await axios.get(`/api/tramos/cliente/${selectedCliente}`, { withCredentials: true });
       setTramos(response.data.data || []);
     } catch (error) {
       setError('Error al cargar tramos: ' + error.message);
@@ -109,8 +109,6 @@ const CalcularTarifa = () => {
     }
 
     try {
-      // const token = localStorage.getItem('token'); // No necesario con cookies
-      
       // Verificar que tenemos un tramo seleccionado con tarifa
       if (!selectedTramo || !selectedTramo.tarifaActual) {
         setError('No se encontró un tramo válido para esta ruta y tipo.');
@@ -118,7 +116,7 @@ const CalcularTarifa = () => {
         return;
       }
       
-      // Hacer la consulta con el tramo seleccionado
+      // Hacer la consulta con el tramo seleccionado y withCredentials para enviar cookies
       const response = await axios.post('/api/tramos/calcular-tarifa', {
         origen: origen,
         destino: destino,
@@ -129,7 +127,9 @@ const CalcularTarifa = () => {
         tipoTramo: tipoTramo,
         permitirTramoNoVigente: tramoNoVigente,
         tramoId: selectedTramo._id
-      }); // Headers no necesarios
+      }, { 
+        withCredentials: true 
+      });
 
       if (response.data.error) {
         setError(response.data.error);
