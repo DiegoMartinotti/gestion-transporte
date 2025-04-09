@@ -64,14 +64,17 @@ exports.login = async (req, res) => {
             { expiresIn: config.jwtExpiration }
         );
 
-        // Set token in HTTP-only cookie
+        // Set token in HTTP-only cookie con configuración de seguridad mejorada
         res.cookie('token', token, {
-            httpOnly: true,
-            secure: config.env === 'production',
-            sameSite: 'strict',
-            maxAge: config.jwtCookieMaxAge
+            httpOnly: true, // Impide acceso por JavaScript del cliente
+            secure: config.env === 'production' || config.env === 'staging', // HTTPS en producción y staging
+            sameSite: 'strict', // Previene CSRF
+            maxAge: config.jwtCookieMaxAge, // Tiempo de vida en milisegundos
+            path: '/', // La cookie es válida para todo el dominio
+            domain: config.cookieDomain || undefined // Dominio específico si está configurado
         });
 
+        // No enviar el token en la respuesta JSON, solo información del usuario
         res.json({
             success: true,
             user: {
