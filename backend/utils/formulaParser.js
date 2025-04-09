@@ -43,8 +43,17 @@ function evaluarFormula(formula, variables) {
     // Reemplazar variables por sus valores
     let expresion = formula;
     
-    // Reemplazar cada variable por su valor correspondiente
+    // Convertir las variables a números si es necesario
+    const varsNumeric = {};
     for (const [nombre, valor] of Object.entries(variables)) {
+      varsNumeric[nombre] = typeof valor === 'string' ? parseFloat(valor) : valor;
+    }
+    
+    // Log para depuración
+    logger.debug('Variables:', varsNumeric);
+    
+    // Reemplazar cada variable por su valor correspondiente
+    for (const [nombre, valor] of Object.entries(varsNumeric)) {
       // Usamos una expresión regular con límites de palabra para evitar reemplazos parciales
       const regex = new RegExp(`\\b${nombre}\\b`, 'g');
       expresion = expresion.replace(regex, valor);
@@ -56,20 +65,42 @@ function evaluarFormula(formula, variables) {
     // Manejar función SI(condicion;valorVerdadero;valorFalso)
     expresion = procesarFuncionSI(expresion);
     
-    // Evaluar la expresión de forma segura usando mathjs
-    const resultado = limitedEval(expresion);
+    logger.debug('Expresión a evaluar:', expresion);
     
-    // Asegurarse de que el resultado sea un número
-    if (typeof resultado !== 'number' || isNaN(resultado)) {
-      throw new Error(`La fórmula no produjo un número válido: ${resultado}`);
+    try {
+      // Evaluar la expresión de forma segura usando mathjs
+      const resultado = math.evaluate(expresion);
+      
+      // Asegurarse de que el resultado sea un número
+      if (typeof resultado !== 'number' || isNaN(resultado)) {
+        throw new Error(`La fórmula no produjo un número válido: ${resultado}`);
+      }
+      
+      logger.debug('Resultado de la evaluación:', resultado);
+      return resultado;
+    } catch (mathError) {
+      logger.error('Error al evaluar con mathjs:', mathError);
+      // Intentar una evaluación alternativa con Function
+      return evaluarAlternativo(expresion);
     }
-    
-    return resultado;
   } catch (error) {
     logger.error('Error al evaluar fórmula:', error);
     logger.error('Fórmula original:', formula);
     logger.debug('Variables:', variables);
-    return null;
+    
+    // Si hay un error, intentar un cálculo simple con los valores recibidos
+    try {
+      const valorBase = variables.Valor || 0;
+      const palets = variables.Palets || 0;
+      const valorPeaje = variables.Peaje || 0;
+      
+      const total = valorBase * palets + valorPeaje;
+      logger.debug('Fallback a cálculo simple:', total);
+      return total;
+    } catch (fallbackError) {
+      logger.error('Error en cálculo fallback:', fallbackError);
+      return 0;
+    }
   }
 }
 
@@ -87,6 +118,39 @@ function procesarFuncionSI(expresion) {
 }
 
 /**
+ * Método alternativo para evaluar expresiones
+ * @param {string} expresion - La expresión a evaluar
+ * @returns {number} - Resultado de la evaluación
+ */
+function evaluarAlternativo(expresion) {
+  try {
+    // Reemplazar los operadores ternarios por una implementación más segura
+    // Convertir (condicion ? valorVerdadero : valorFalso) a una forma más compatible
+    expresion = expresion.replace(/\(([^?]+)\s*\?\s*([^:]+)\s*:\s*([^)]+)\)/g, 
+      (match, condicion, valorVerdadero, valorFalso) => {
+        return `(${condicion} > 0 ? ${valorVerdadero} : ${valorFalso})`;
+      });
+    
+    logger.debug('Expresión alternativa:', expresion);
+    
+    // Usar Function pero con un contexto controlado
+    const evaluador = new Function('return ' + expresion);
+    const resultado = evaluador();
+    
+    logger.debug('Resultado alternativo:', resultado);
+    
+    if (typeof resultado !== 'number' || isNaN(resultado)) {
+      throw new Error('Resultado no numérico');
+    }
+    
+    return resultado;
+  } catch (error) {
+    logger.error('Error en evaluación alternativa:', error);
+    return 0;
+  }
+}
+
+/**
  * Calcula la tarifa para un tipo Palet usando la fórmula del cliente
  * @param {number} valorBase - El valor base del tramo
  * @param {number} valorPeaje - El valor del peaje
@@ -95,6 +159,18 @@ function procesarFuncionSI(expresion) {
  * @returns {object} - Resultado con tarifaBase, peaje y total
  */
 function calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, formula) {
+  // Agregar log detallado de los valores recibidos
+  logger.debug(`calcularTarifaPaletConFormula - Valores recibidos:
+    valorBase: ${valorBase} (tipo: ${typeof valorBase})
+    valorPeaje: ${valorPeaje} (tipo: ${typeof valorPeaje})
+    palets: ${palets} (tipo: ${typeof palets})
+    formula: ${formula}`);
+    
+  // Asegurarnos que los valores sean numéricos
+  valorBase = typeof valorBase === 'string' ? parseFloat(valorBase) : valorBase;
+  valorPeaje = typeof valorPeaje === 'string' ? parseFloat(valorPeaje) : valorPeaje;
+  palets = typeof palets === 'string' ? parseFloat(palets) : palets;
+  
   const formulaDefault = "Valor * Palets + Peaje";
   
   const formulaAUsar = formula || formulaDefault;

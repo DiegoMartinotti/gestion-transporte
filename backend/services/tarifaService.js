@@ -17,25 +17,28 @@ const logger = require('../utils/logger');
  */
 function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null) {
     try {
+        // Log para ver los parámetros que llegan a la función
+        logger.debug(`calcularTarifaTramo - Parámetros recibidos: 
+            tramo.valor: ${tramo.valor}
+            tramo.valorPeaje: ${tramo.valorPeaje}
+            tramo.metodoCalculo: ${tramo.metodoCalculo}
+            palets: ${palets}
+            tipo: ${tipo}
+            formulaCliente: ${formulaCliente}`);
+
         // Si se proporciona una fórmula específica del cliente, usarla directamente
         if (formulaCliente) {
             logger.debug(`Usando fórmula de cliente proporcionada: ${formulaCliente}`);
-            // Necesitamos valorBase y valorPeaje del tramo para el parser
-            let valorBaseTramo, valorPeajeTramo;
-            if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-                const tarifaEspecifica = tramo.tarifasHistoricas.find(t => t.tipo === tipo);
-                if (tarifaEspecifica) {
-                    valorBaseTramo = tarifaEspecifica.valor || 0;
-                    valorPeajeTramo = tarifaEspecifica.valorPeaje || 0;
-                } else {
-                    valorBaseTramo = tramo.valor || 0;
-                    valorPeajeTramo = tramo.valorPeaje || 0;
-                }
-            } else {
-                valorBaseTramo = tramo.valor || 0;
-                valorPeajeTramo = tramo.valorPeaje || 0;
-            }
-            // Llamar al parser con los valores del tramo y la fórmula del cliente
+            // Usar directamente los valores del tramo que se han pasado
+            const valorBaseTramo = tramo.valor || 0;
+            const valorPeajeTramo = tramo.valorPeaje || 0;
+            
+            logger.debug(`Valores exactos para cálculo con fórmula personalizada: 
+                valorBase: ${valorBaseTramo}
+                valorPeaje: ${valorPeajeTramo}
+                palets: ${palets}`);
+                
+            // Llamar al parser con los valores exactos del tramo y la fórmula del cliente
             return calcularTarifaPaletConFormula(valorBaseTramo, valorPeajeTramo, palets, formulaCliente);
         }
         
@@ -49,7 +52,8 @@ function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null
             if (tarifaEspecifica) {
                 valorBase = tarifaEspecifica.valor || 0;
                 valorPeaje = tarifaEspecifica.valorPeaje || 0;
-                metodoCalculo = tarifaEspecifica.metodoCalculo;
+                // Si el tramo ya tiene un método de cálculo definido, usarlo en lugar de obtenerlo de la tarifa
+                metodoCalculo = tramo.metodoCalculo || tarifaEspecifica.metodoCalculo;
             } else {
                 // Si no hay tarifa específica, usar valores del tramo
                 valorBase = tramo.valor || 0;
@@ -65,11 +69,25 @@ function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null
             metodoCalculo = tramo.metodoCalculo;
         }
 
+        // Verificar que los valores no sean null, undefined o NaN
+        valorBase = valorBase || 0;
+        valorPeaje = valorPeaje || 0;
+
+        // Registrar el método de cálculo y valores que se están utilizando
+        logger.debug(`Datos para cálculo de tarifa:
+            metodoCalculo: ${metodoCalculo}
+            valorBase: ${valorBase}
+            valorPeaje: ${valorPeaje}
+            palets: ${palets}
+            distancia: ${tramo.distancia || 0}
+            tramo._id: ${tramo._id || 'nuevo'}`);
+
         // Determinar el cálculo según el método
         if (metodoCalculo === 'Kilometro' && tramo.distancia) {
             // Para cálculo por kilómetro, multiplicamos el valor base por la distancia
             const tarifaBase = valorBase * tramo.distancia;
             const peaje = valorPeaje;
+            logger.debug(`Cálculo por Kilometro: valorBase(${valorBase}) * distancia(${tramo.distancia}) = ${tarifaBase}`);
             return {
                 tarifaBase: Math.round(tarifaBase * 100) / 100,
                 peaje: Math.round(peaje * 100) / 100,
@@ -79,6 +97,7 @@ function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null
             // Para tarifa fija, el valor base ya es el precio total sin considerar palets
             const tarifaBase = valorBase;
             const peaje = valorPeaje;
+            logger.debug(`Cálculo Fijo: valorBase(${valorBase})`);
             return {
                 tarifaBase: Math.round(tarifaBase * 100) / 100,
                 peaje: Math.round(peaje * 100) / 100,
@@ -88,6 +107,7 @@ function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null
             // Para cálculo por palet, multiplicamos el valor base por la cantidad de palets
             const tarifaBase = valorBase * palets;
             const peaje = valorPeaje;
+            logger.debug(`Cálculo por Palet: valorBase(${valorBase}) * palets(${palets}) = ${tarifaBase}`);
             return {
                 tarifaBase: Math.round(tarifaBase * 100) / 100,
                 peaje: Math.round(peaje * 100) / 100,
@@ -95,6 +115,7 @@ function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null
             };
         } else {
             // Para fórmulas personalizadas o cualquier otro método, usar el parser de fórmulas
+            logger.debug(`Utilizando método personalizado/fórmula para el cálculo: ${metodoCalculo}`);
             return calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, metodoCalculo);
         }
     } catch (error) {
