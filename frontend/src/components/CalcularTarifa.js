@@ -213,12 +213,33 @@ const CalcularTarifa = () => {
             setTipoTramo(tiposDisponibles[0]);
           }
         } else {
-          // No hay tramos vigentes, seleccionar el primero y su primera tarifa
-          const tramoSeleccionado = tramosCoincidentes[0];
+          // No hay tramos vigentes, ordenar los tramos por fecha de vigencia (más reciente primero)
+          const tramosOrdenados = [...tramosCoincidentes].sort((a, b) => {
+            // Ordenar por la fecha de vigencia más reciente en las tarifas históricas
+            const ultimaTarifaA = a.tarifasHistoricas.sort((t1, t2) => 
+              dayjs(t2.vigenciaHasta).diff(dayjs(t1.vigenciaHasta))
+            )[0];
+            
+            const ultimaTarifaB = b.tarifasHistoricas.sort((t1, t2) => 
+              dayjs(t2.vigenciaHasta).diff(dayjs(t1.vigenciaHasta))
+            )[0];
+            
+            return dayjs(ultimaTarifaB.vigenciaHasta).diff(dayjs(ultimaTarifaA.vigenciaHasta));
+          });
+          
+          // Seleccionar el tramo más reciente
+          const tramoSeleccionado = tramosOrdenados[0];
+          
+          // Ordenar las tarifas por fecha y seleccionar la más reciente
+          const tarifasOrdenadas = [...tramoSeleccionado.tarifasHistoricas].sort((t1, t2) => 
+            dayjs(t2.vigenciaHasta).diff(dayjs(t1.vigenciaHasta))
+          );
+          
           setSelectedTramo({
             ...tramoSeleccionado,
-            tarifaActual: tramoSeleccionado.tarifasHistoricas[0]
+            tarifaActual: tarifasOrdenadas[0]
           });
+          
           setTramoNoVigente(true);
           setError('Advertencia: No hay tramos vigentes para esta ruta.');
           
@@ -263,15 +284,15 @@ const CalcularTarifa = () => {
         });
         setTramoNoVigente(false);
       } else {
-        // No hay tarifa vigente, buscar cualquier tarifa de este tipo
-        const tarifaTipo = selectedTramo.tarifasHistoricas.find(tarifa => 
-          tarifa.tipo === nuevoTipo
-        );
+        // No hay tarifa vigente, buscar tarifas de este tipo y ordenarlas por fecha (más reciente primero)
+        const tarifasDeTipo = selectedTramo.tarifasHistoricas
+          .filter(tarifa => tarifa.tipo === nuevoTipo)
+          .sort((t1, t2) => dayjs(t2.vigenciaHasta).diff(dayjs(t1.vigenciaHasta)));
         
-        if (tarifaTipo) {
+        if (tarifasDeTipo.length > 0) {
           setSelectedTramo({
             ...selectedTramo,
-            tarifaActual: tarifaTipo
+            tarifaActual: tarifasDeTipo[0]
           });
           setTramoNoVigente(true);
           setError('Advertencia: No hay tarifas vigentes para este tipo de tramo.');
