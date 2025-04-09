@@ -41,9 +41,9 @@ const ViajesManager = () => {
 
   const fetchViajes = async () => {
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await axios.get(`${API_URL}/api/viajes`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        // headers: { 'Authorization': `Bearer ${token}` } // No necesario con cookies
       });
       setViajes(response.data);
       setError(null);
@@ -57,9 +57,9 @@ const ViajesManager = () => {
 
   const fetchSites = async () => {
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await axios.get(`${API_URL}/api/sites`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        // headers: { 'Authorization': `Bearer ${token}` } // No necesario con cookies
       });
       setSites(response.data);
     } catch (error) {
@@ -79,10 +79,8 @@ const ViajesManager = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Está seguro que desea eliminar este viaje?')) {
       try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`/api/viajes/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // const token = localStorage.getItem('token'); // No necesario con cookies
+        await axios.delete(`/api/viajes/${id}`); // Headers no necesarios
         fetchViajes(); // Recargar la lista
         setSuccessMessage('Viaje eliminado correctamente');
       } catch (error) {
@@ -106,16 +104,12 @@ const ViajesManager = () => {
 
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       if (selectedViaje) {
-        await axios.put(`${API_URL}/api/viajes/${selectedViaje._id}`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.put(`${API_URL}/api/viajes/${selectedViaje._id}`, formData); // Headers no necesarios
         setSuccessMessage('Viaje actualizado correctamente');
       } else {
-        await axios.post(`${API_URL}/api/viajes`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(`${API_URL}/api/viajes`, formData); // Headers no necesarios
         setSuccessMessage('Viaje creado correctamente');
       }
       handleCloseDialog();

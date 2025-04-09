@@ -1,28 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const tramoController = require('../controllers/tramoController');
-const { verifyToken } = require('../middleware/verifyToken');
 const logger = require('../utils/logger');
 
 // CRUD básico
-router.get('/', verifyToken, tramoController.getAllTramos);
-router.get('/:id', verifyToken, tramoController.getTramoById);
-router.post('/', verifyToken, tramoController.createTramo);
-router.put('/:id', verifyToken, tramoController.updateTramo);
-router.delete('/:id', verifyToken, tramoController.deleteTramo);
+router.get('/', tramoController.getAllTramos);
+router.get('/:id', tramoController.getTramoById);
+router.post('/', tramoController.createTramo);
+router.put('/:id', tramoController.updateTramo);
+router.delete('/:id', tramoController.deleteTramo);
 
 // Rutas específicas
-router.get('/cliente/:cliente', verifyToken, tramoController.getTramosByCliente);
-router.get('/vigentes/:fecha', verifyToken, tramoController.getVigentesByFecha);
-router.post('/bulk', verifyToken, tramoController.bulkCreateTramos);
-router.post('/verificar-duplicados', verifyToken, tramoController.verificarPosiblesDuplicados);
-router.post('/normalizar-tipos', verifyToken, tramoController.normalizarTiposTramos);
+router.get('/cliente/:cliente', tramoController.getTramosByCliente);
+router.get('/vigentes/:fecha', tramoController.getVigentesByFecha);
+router.post('/bulk', tramoController.bulkCreateTramos);
+router.post('/verificar-duplicados', tramoController.verificarPosiblesDuplicados);
+router.post('/normalizar-tipos', tramoController.normalizarTiposTramos);
 
 // Ruta de prueba para la funcionalidad de tipos
-router.post('/test-tipos', verifyToken, tramoController.testImportacionTipos);
+router.post('/test-tipos', tramoController.testImportacionTipos);
 
 // Diagnóstico específico para el problema de tipos
-router.post('/diagnose-tipos', verifyToken, async (req, res) => {
+router.post('/diagnose-tipos', async (req, res) => {
     try {
         // Requerir origen, destino, cliente como parámetros
         const { origen, destino, cliente } = req.body;
@@ -81,12 +80,12 @@ router.post('/diagnose-tipos', verifyToken, async (req, res) => {
 });
 
 // Ruta para actualización masiva de vigencias
-router.post('/updateVigenciaMasiva', verifyToken, tramoController.updateVigenciaMasiva);
+router.post('/updateVigenciaMasiva', tramoController.updateVigenciaMasiva);
 
 // Ruta para calcular tarifa
-router.post('/calcular-tarifa', verifyToken, tramoController.calcularTarifa);
+router.post('/calcular-tarifa', tramoController.calcularTarifa);
 
 // Ruta para obtener distancias calculadas
-router.get('/distancias', verifyToken, tramoController.getDistanciasCalculadas);
+router.get('/distancias', tramoController.getDistanciasCalculadas);
 
 module.exports = router;

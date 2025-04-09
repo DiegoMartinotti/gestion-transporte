@@ -41,10 +41,9 @@ const ExtrasManager = ({ cliente, onBack }) => {
   const fetchExtras = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/extras?cliente=${cliente}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
       });
       if (!response.ok) throw new Error('Error al obtener extras');
@@ -110,7 +109,6 @@ const ExtrasManager = ({ cliente, onBack }) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const url = selectedExtra 
         ? `${API_URL}/api/extras/${selectedExtra._id}`
         : `${API_URL}/api/extras`;
@@ -152,7 +150,7 @@ const ExtrasManager = ({ cliente, onBack }) => {
         method: selectedExtra ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(dataToSend)
       });
@@ -178,11 +176,10 @@ const ExtrasManager = ({ cliente, onBack }) => {
     if (!window.confirm('¿Está seguro de eliminar este extra?')) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/extras/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
       });
 

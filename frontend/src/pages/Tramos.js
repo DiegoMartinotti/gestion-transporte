@@ -29,12 +29,10 @@ const Tramos = () => {
     const fetchClientes = async () => {
       try {
         setLoadingClientes(true);
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No hay token de autenticación');
+        // const token = localStorage.getItem('token'); // No necesario con cookies
+        // if (!token) throw new Error('No hay token de autenticación'); // La cookie maneja esto
         
-        const response = await axios.get('/api/clientes', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get('/api/clientes'); // Headers no necesarios
         
         setClientes(response.data);
       } catch (error) {
@@ -58,12 +56,10 @@ const Tramos = () => {
     const fetchSites = async () => {
       try {
         setLoadingSites(true);
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No hay token de autenticación');
+        // const token = localStorage.getItem('token'); // No necesario con cookies
+        // if (!token) throw new Error('No hay token de autenticación'); // La cookie maneja esto
         
-        const response = await axios.get(`/api/sites/cliente/${selectedCliente}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get(`/api/sites/cliente/${selectedCliente}`); // Headers no necesarios
         
         setSites(response.data || []);
       } catch (error) {

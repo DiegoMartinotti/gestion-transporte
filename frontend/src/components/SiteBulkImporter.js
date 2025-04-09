@@ -27,10 +27,10 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
   // Función para obtener dirección a partir de coordenadas
   const obtenerDireccion = useCallback(async (lat, lng) => {
     try {
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await axios.get(`${API_URL}/api/proxy/geocode`, {
-        params: { lat, lng },
-        headers: { 'Authorization': `Bearer ${token}` }
+        params: { lat, lng }
+        // No necesario con cookies
       });
 
       const { address } = response.data;
@@ -119,11 +119,11 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
       }
       
       // Enviar datos al servidor
-      const token = localStorage.getItem('token');
+      // const token = localStorage.getItem('token'); // No necesario con cookies
       const response = await axios.post(
         `${API_URL}/api/sites/bulk`,
         { sites: processedSites },
-        { headers: { Authorization: `Bearer ${token}` } }
+        // Headers no necesarios con cookies
       );
 
       const exitosos = response.data.insertados || 0;

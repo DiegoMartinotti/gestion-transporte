@@ -12,10 +12,33 @@ const logger = require('../utils/logger');
  * @param {Object} tramo - Objeto tramo completo con toda la información
  * @param {number} palets - Cantidad de palets
  * @param {string} [tipo='TRMC'] - Tipo de tramo
+ * @param {string} [formulaCliente=null] - Fórmula personalizada del cliente
  * @returns {Object} Objeto con tarifaBase, peaje y total
  */
-function calcularTarifaTramo(tramo, palets, tipo = 'TRMC') {
+function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null) {
     try {
+        // Si se proporciona una fórmula específica del cliente, usarla directamente
+        if (formulaCliente) {
+            logger.debug(`Usando fórmula de cliente proporcionada: ${formulaCliente}`);
+            // Necesitamos valorBase y valorPeaje del tramo para el parser
+            let valorBaseTramo, valorPeajeTramo;
+            if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
+                const tarifaEspecifica = tramo.tarifasHistoricas.find(t => t.tipo === tipo);
+                if (tarifaEspecifica) {
+                    valorBaseTramo = tarifaEspecifica.valor || 0;
+                    valorPeajeTramo = tarifaEspecifica.valorPeaje || 0;
+                } else {
+                    valorBaseTramo = tramo.valor || 0;
+                    valorPeajeTramo = tramo.valorPeaje || 0;
+                }
+            } else {
+                valorBaseTramo = tramo.valor || 0;
+                valorPeajeTramo = tramo.valorPeaje || 0;
+            }
+            // Llamar al parser con los valores del tramo y la fórmula del cliente
+            return calcularTarifaPaletConFormula(valorBaseTramo, valorPeajeTramo, palets, formulaCliente);
+        }
+        
         let valorBase, valorPeaje, metodoCalculo;
 
         // Determinar qué tarifa usar dependiendo del tipo

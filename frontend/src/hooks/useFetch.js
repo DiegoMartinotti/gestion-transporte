@@ -30,9 +30,9 @@ const useFetch = (url, { immediate = false, initialData = null, headers = {} } =
 
   // Preparar cabeceras con token de autenticación si existe
   const getHeaders = useCallback(() => {
-    const token = localStorage.getItem('token');
-    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
-    return { ...authHeaders, ...headers };
+    // const token = localStorage.getItem('token'); // No necesario con cookies
+    // const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}; // No necesario con cookies
+    return { ...headers }; // Devolver solo las cabeceras personalizadas si las hay
   }, [headers]);
 
   /**

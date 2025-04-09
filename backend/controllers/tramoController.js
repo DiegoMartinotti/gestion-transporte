@@ -13,6 +13,13 @@ const { calcularDistanciaRuta } = require('../services/routingService'); // Impo
 const logger = require('../utils/logger');
 const mongoose = require('mongoose');
 const tarifaService = require('../services/tarifaService'); // Importamos el servicio de tarifas
+const formulaClienteService = require('../services/formulaClienteService'); // Importar el servicio de fórmulas personalizadas
+const Extra = require('../models/Extra');
+const path = require('path');
+const fs = require('fs');
+const util = require('util');
+const streamPipeline = util.promisify(require('stream').pipeline);
+const axios = require('axios');
 
 /**
  * Obtiene todos los tramos asociados a un cliente específico
@@ -1406,16 +1413,52 @@ exports.calcularTarifa = async (req, res) => {
             tipo: tarifaVigente ? tarifaVigente.tipo : tipoTramo
         };
 
-        // Añadir la fórmula personalizada del cliente si existe
-        if (cliente && tramoConTarifa.metodoCalculo === 'Palet') {
-            const formulaKey = tipoDeUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
-            if (cliente[formulaKey]) {
-                tramoConTarifa.metodoCalculo = cliente[formulaKey];
-                logger.debug(`Usando fórmula personalizada para ${clienteNombre} (${tipoDeUnidad}): ${cliente[formulaKey]}`);
-            }
+        // Obtener la fórmula aplicable usando el nuevo servicio
+        const clienteId = cliente ? cliente._id : null;
+        if (clienteId && tramoConTarifa.metodoCalculo === 'Palet') {
+            // Obtener la fecha para el cálculo (usar la fecha de la solicitud)
+            const fechaDeCalculo = fechaConsulta;
+            
+            // Obtener la fórmula aplicable para este cliente, unidad y fecha
+            const formulaAplicable = await formulaClienteService.getFormulaAplicable(
+                clienteId, 
+                tipoDeUnidad, 
+                fechaDeCalculo
+            );
+            
+            logger.debug(`Fórmula aplicable para cliente ${clienteNombre}, unidad ${tipoDeUnidad}, fecha ${fechaDeCalculo.toISOString()}: ${formulaAplicable}`);
+            
+            // Usar el servicio de tarifa con la fórmula aplicable
+            const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo, formulaAplicable);
+            
+            // Convertir los resultados a números fijos con 2 decimales
+            const resultadoFinal = {
+                tarifaBase: resultado.tarifaBase,
+                peaje: resultado.peaje,
+                total: resultado.total,
+                detalles: {
+                    origen: tramo.origen.Site,
+                    destino: tramo.destino.Site,
+                    distancia: tramo.distancia,
+                    metodoCalculo: tarifaVigente ? tarifaVigente.metodoCalculo : 'No disponible',
+                    tipo: tarifaVigente ? tarifaVigente.tipo : tipoTramo,
+                    tipoUnidad: tipoDeUnidad,
+                    valor: tarifaVigente ? tarifaVigente.valor : 0,
+                    valorPeaje: tarifaVigente ? tarifaVigente.valorPeaje : 0,
+                    vigenciaDesde: tarifaVigente ? tarifaVigente.vigenciaDesde : null,
+                    vigenciaHasta: tarifaVigente ? tarifaVigente.vigenciaHasta : null
+                },
+                formula: formulaAplicable
+            };
+            
+            res.json({
+                success: true,
+                data: resultadoFinal
+            });
+            return;
         }
 
-        // Usar el servicio para calcular la tarifa
+        // Usar el servicio para calcular la tarifa con el método original
         const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
 
         // Convertir los resultados a números fijos con 2 decimales
@@ -1435,8 +1478,7 @@ exports.calcularTarifa = async (req, res) => {
                 vigenciaDesde: tarifaVigente ? tarifaVigente.vigenciaDesde : null,
                 vigenciaHasta: tarifaVigente ? tarifaVigente.vigenciaHasta : null
             },
-            formula: cliente && tarifaVigente && tarifaVigente.metodoCalculo === 'Palet' ? 
-                (tipoDeUnidad === 'Bitren' ? cliente.formulaPaletBitren : cliente.formulaPaletSider) : 'Estándar'
+            formula: 'Estándar'
         };
 
         res.json({

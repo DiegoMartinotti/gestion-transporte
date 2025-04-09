@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-
+const config = require('../config/config'); // Importar la configuración centralizada
 function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Formato: "Bearer <token>"
@@ -9,7 +9,7 @@ function verifyToken(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.jwtSecret); // Usar la clave secreta de la configuración
     req.user = decoded; // Guarda la información del token (por ejemplo, el id del usuario)
     next();
   } catch (error) {

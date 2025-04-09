@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Tramo = require('../models/Tramo');
-const verifyToken = require('../middleware/verifyToken');
 const Site = require('../models/Site');
 const Cliente = require('../models/Cliente');
 const tramoController = require('../controllers/tramoController');
@@ -53,7 +52,7 @@ router.use(async (req, res, next) => {
 
 // IMPORTANTE: Primero las rutas específicas
 // Obtener tramos vigentes a una fecha determinada
-router.get('/vigentes/:fecha', verifyToken, async (req, res) => {
+router.get('/vigentes/:fecha', async (req, res) => {
   try {
     const fecha = new Date(req.params.fecha);
     
@@ -74,7 +73,7 @@ router.get('/vigentes/:fecha', verifyToken, async (req, res) => {
 });
 
 // Mejorar la ruta para obtener tramos por cliente
-router.get('/cliente/:cliente', verifyToken, async (req, res) => {
+router.get('/cliente/:cliente', async (req, res) => {
   try {
     logger.info('Buscando tramos para cliente:', req.params.cliente);
     
@@ -100,7 +99,7 @@ router.get('/cliente/:cliente', verifyToken, async (req, res) => {
 });
 
 // Obtener un tramo específico
-router.get('/:id', verifyToken, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const tramo = await Tramo.findById(req.params.id)
       .populate('origen')
@@ -238,7 +237,7 @@ router.get('/', auth, tramoController.getAllTramos);
 router.post('/', auth, tramoController.createTramo);
 
 // Mejorada la ruta bulk para manejar errores mejor
-router.post('/bulk', verifyToken, async (req, res) => {
+router.post('/bulk', async (req, res) => {
     try {
         logger.debug('Bulk import - Headers:', {
             contentType: req.headers['content-type'],
@@ -295,7 +294,7 @@ router.post('/bulk', verifyToken, async (req, res) => {
 });
 
 // Nueva ruta para diagnóstico de duplicados
-router.post('/diagnostico-tipos', verifyToken, async (req, res) => {
+router.post('/diagnostico-tipos', async (req, res) => {
     try {
         const { cliente, origen, destino, metodoCalculo } = req.body;
         
@@ -391,7 +390,7 @@ router.post('/diagnostico-tipos', verifyToken, async (req, res) => {
 });
 
 // Nuevo endpoint para corregir tipos de tramos
-router.post('/corregir-tipos', verifyToken, async (req, res) => {
+router.post('/corregir-tipos', async (req, res) => {
     try {
         const { tramoIds, nuevoTipo } = req.body;
         
@@ -505,7 +504,7 @@ router.put('/:id', auth, tramoController.updateTramo);
 router.delete('/:id', auth, tramoController.deleteTramo);
 
 // Ruta para verificar posibles duplicados
-router.post('/verificarDuplicados', verifyToken, tramoController.verificarPosiblesDuplicados);
+router.post('/verificarDuplicados', tramoController.verificarPosiblesDuplicados);
 
 // Ruta para actualización masiva de vigencias
 /**
@@ -593,6 +592,6 @@ router.post('/calcular-tarifa', auth, tramoController.calcularTarifa);
  *                       distancia:
  *                         type: number
  */
-router.get('/distancias', verifyToken, tramoController.getDistanciasCalculadas);
+router.get('/distancias', tramoController.getDistanciasCalculadas);
 
 module.exports = router;

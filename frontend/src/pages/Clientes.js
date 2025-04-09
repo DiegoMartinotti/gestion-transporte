@@ -6,6 +6,7 @@ import ClienteBulkImporter from '../components/clientes/ClienteBulkImporter';
 import SitesManager from '../components/SitesManager';
 import TarifarioViewer from '../components/tarifario/TarifarioViewer';
 import ExtrasManager from '../components/ExtrasManager';
+import FormulaPersonalizadaManager from '../components/formulas/FormulaPersonalizadaManager';
 import useNotification from '../hooks/useNotification';
 
 /**
@@ -18,8 +19,8 @@ const Clientes = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [tarifarioOpen, setTarifarioOpen] = useState(false);
   const [selectedClienteTarifario, setSelectedClienteTarifario] = useState(null);
-  const [formulaDialogOpen, setFormulaDialogOpen] = useState(false);
-  const [currentClienteFormulas, setCurrentClienteFormulas] = useState(null);
+  const [formulasManagerOpen, setFormulasManagerOpen] = useState(false);
+  const [selectedClienteFormulas, setSelectedClienteFormulas] = useState(null);
   const [extrasManagerOpen, setExtrasManagerOpen] = useState(false);
   const [selectedClienteExtras, setSelectedClienteExtras] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -63,17 +64,12 @@ const Clientes = () => {
   };
 
   /**
-   * Abre el editor de fórmulas para un cliente
+   * Abre el gestor de fórmulas personalizadas para un cliente
    * @param {Object} cliente - Cliente seleccionado
    */
   const handleFormulas = (cliente) => {
-    setCurrentClienteFormulas({
-      _id: cliente._id,
-      Cliente: cliente.Cliente,
-      formulaPaletSider: cliente.formulaPaletSider || 'Valor * Palets + Peaje',
-      formulaPaletBitren: cliente.formulaPaletBitren || 'Valor * Palets + Peaje'
-    });
-    setFormulaDialogOpen(true);
+    setSelectedClienteFormulas(cliente);
+    setFormulasManagerOpen(true);
   };
 
   /**
@@ -116,6 +112,17 @@ const Clientes = () => {
       onBack={() => {
         setTarifarioOpen(false);
         setSelectedClienteTarifario(null);
+      }} 
+    />;
+  }
+
+  if (formulasManagerOpen && selectedClienteFormulas) {
+    return <FormulaPersonalizadaManager 
+      clienteId={selectedClienteFormulas._id}
+      clienteNombre={selectedClienteFormulas.Cliente}
+      onBack={() => {
+        setFormulasManagerOpen(false);
+        setSelectedClienteFormulas(null);
       }} 
     />;
   }
@@ -188,21 +195,6 @@ const Clientes = () => {
             );
           }}
         />
-        
-        {/* Diálogo de edición de fórmulas (pendiente extraer a componente) */}
-        {currentClienteFormulas && (
-          <ClienteForm 
-            open={formulaDialogOpen}
-            cliente={currentClienteFormulas}
-            onClose={() => {
-              setFormulaDialogOpen(false);
-              setCurrentClienteFormulas(null);
-            }}
-            onSave={() => {
-              showNotification('Fórmulas actualizadas con éxito', 'success');
-            }}
-          />
-        )}
       </Box>
     </Container>
   );

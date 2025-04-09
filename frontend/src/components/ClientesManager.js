@@ -42,10 +42,9 @@ const ClientesManager = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/clientes`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
       });
       
@@ -66,12 +65,11 @@ const ClientesManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/clientes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(formData)
       });
@@ -93,12 +91,11 @@ const ClientesManager = () => {
 
   const handleUpdate = async (id) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/clientes/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify(formData)
       });
@@ -120,12 +117,11 @@ const ClientesManager = () => {
 
   const handleUpdateFormulas = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/clientes/${currentClienteFormulas._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         },
         body: JSON.stringify({
           formulaPaletSider: currentClienteFormulas.formulaPaletSider,
@@ -147,11 +143,10 @@ const ClientesManager = () => {
     if (!window.confirm('¿Está seguro de eliminar este cliente?')) return;
     
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/clientes/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
       });
 
