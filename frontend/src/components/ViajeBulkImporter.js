@@ -28,6 +28,9 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
   // Funciones auxiliares para manejar diferentes estructuras de datos
   const getSiteId = (site) => site._id || site.id || '';
   
+  // Nueva función para obtener el Código del cliente
+  const getSiteCodigo = (site) => site.Codigo || '';
+  
   const getSiteName = (site) => {
     // La imagen muestra que el nombre del sitio está bajo la propiedad "Site"
     if (site.Site) return site.Site;
@@ -257,16 +260,16 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     {
       name: 'Sitios',
       data: [
-        ['ID', 'Nombre', 'Localidad', 'Provincia', 'Dirección'],
+        ['Código', 'Nombre', 'Localidad', 'Provincia', 'Dirección'],
         ...sites.map(site => [
-          getSiteId(site),
+          getSiteCodigo(site),
           getSiteName(site),
           getSiteLocality(site),
           getSiteProvince(site),
           getSiteAddress(site)
         ])
       ],
-      columnWidths: [{ wch: 24 }, { wch: 30 }, { wch: 25 }, { wch: 25 }, { wch: 40 }]
+      columnWidths: [{ wch: 15 }, { wch: 30 }, { wch: 25 }, { wch: 25 }, { wch: 40 }]
     },
     {
       name: 'Instrucciones',

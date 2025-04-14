@@ -8,6 +8,7 @@ const Site = require('../../models/Site');
 const { tryCatch } = require('../../utils/errorHandler');
 const { ValidationError } = require('../../utils/errors');
 const { getAddressFromCoords } = require('../../services/geocodingService');
+const bulkDeleteSites = require('./bulkDeleteSites');
 
 /**
  * Obtiene todos los sitios con paginación y filtros opcionales
@@ -433,5 +434,6 @@ module.exports = {
   updateSite,
   deleteSite,
   geocodeDireccion,
-  reprocessAddressesByCliente
+  reprocessAddressesByCliente,
+  bulkDeleteSites
 }; 
