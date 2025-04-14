@@ -137,9 +137,10 @@ const SitesManager = ({ cliente, onBack }) => {
             setDeletingAll(false);
             setConfirmDeleteAllOpen(false);
             fetchSites();
+            showNotification('Todos los sites del cliente han sido eliminados.', 'success');
         } catch (error) {
             logger.error('Error al eliminar todos los sites:', error);
-            setError('Error al eliminar los sites');
+            showNotification(`Error al eliminar los sites: ${error.response?.data?.message || error.message}`, 'error');
             setDeletingAll(false);
             setConfirmDeleteAllOpen(false);
         }

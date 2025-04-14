@@ -119,6 +119,7 @@ exports.bulkCreateSites = async (req, res) => {
 
                 const nuevoSite = new Site({
                     Site: siteData.site,
+                    Codigo: siteData.codigo || '',
                     Cliente: siteData.cliente,
                     Direccion: siteData.direccion || '-',
                     Localidad: siteData.localidad || '',
