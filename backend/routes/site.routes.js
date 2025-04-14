@@ -252,4 +252,69 @@ router.post('/geocode', authenticateToken, async (req, res) => {
   return await siteController.geocodeDireccion(req, res);
 });
 
+/**
+ * @swagger
+ * /api/site/bulk/cliente/{cliente}:
+ *   delete:
+ *     summary: Elimina masivamente sitios por cliente
+ *     description: Elimina todos los sitios asociados a un cliente específico
+ *     tags: [Sites]
+ *     parameters:
+ *       - in: path
+ *         name: cliente
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Nombre del cliente cuyos sitios se eliminarán
+ *     responses:
+ *       200:
+ *         description: Sitios eliminados correctamente
+ *       400:
+ *         description: Parámetros inválidos
+ *       500:
+ *         description: Error del servidor
+ */
+router.delete('/bulk/cliente/:cliente', authenticateToken, async (req, res) => {
+  logger.debug(`DELETE /api/site/bulk/cliente/${req.params.cliente}`);
+  return await siteController.bulkDeleteSites(req, res);
+});
+
+/**
+ * @swagger
+ * /api/site/reprocess-addresses/{cliente}:
+ *   post:
+ *     summary: Reprocesa direcciones de sitios para un cliente
+ *     description: Obtiene y actualiza la dirección, localidad y provincia de todos los sitios de un cliente usando sus coordenadas.
+ *     tags: [Sites]
+ *     parameters:
+ *       - in: path
+ *         name: cliente
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Nombre o identificador del cliente
+ *     responses:
+ *       200:
+ *         description: Direcciones reprocesadas correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 actualizados:
+ *                   type: number
+ *                 fallidos:
+ *                   type: number
+ *       404:
+ *         description: Cliente no encontrado o sin sitios
+ *       500:
+ *         description: Error del servidor durante el reprocesamiento
+ */
+router.post('/reprocess-addresses/:cliente', authenticateToken, async (req, res) => {
+  logger.debug(`POST /api/site/reprocess-addresses/${req.params.cliente}`);
+  return await siteController.reprocessAddressesByCliente(req, res);
+});
+
 module.exports = router; 

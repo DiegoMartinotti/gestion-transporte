@@ -48,6 +48,7 @@ const ExcelImportTemplate = ({
   validateRow,
   instructionSheets = [],
   additionalContent,
+  additionalActions,
   exampleData = []
 }) => {
   const [loading, setLoading] = useState(false);
@@ -252,6 +253,7 @@ const ExcelImportTemplate = ({
               action: 'validate',
               data: jsonData,
               validateRowFn: validateRow ? validateRow.toString() : null,
+              excelHeaders: excelHeaders,
               batchSize: 50 // Procesar en lotes de 50 filas
             });
           } else {
@@ -291,9 +293,6 @@ const ExcelImportTemplate = ({
               await handleProcessValidData(validRows);
             }
           }
-          
-          // Liberar memoria
-          e.target.result = null;
         } catch (error) {
           logger.error('Error al procesar el archivo Excel:', error);
           setError([`Error al procesar el archivo Excel: ${error.message}`]);
@@ -372,72 +371,93 @@ const ExcelImportTemplate = ({
   }, [error]);
 
   return (
-    <Dialog
-      open={open}
-      onClose={loading ? undefined : handleClose}
-      fullWidth
+    <Dialog 
+      open={open} 
+      onClose={!loading ? onClose : undefined} 
+      fullWidth 
       maxWidth="md"
-      aria-labelledby="import-dialog-title"
+      disableEscapeKeyDown={loading}
     >
-      <DialogTitle id="import-dialog-title">{title}</DialogTitle>
+      <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="body1" gutterBottom>
-            Para importar datos, descargue la plantilla Excel, complete los datos y luego suba el archivo.
-          </Typography>
-        </Box>
-
-        <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={handleDownloadTemplate}
-          >
-            Descargar Plantilla Excel
-          </Button>
-          
-          <Button
-            variant="contained"
-            component="label"
-            startIcon={<UploadIcon />}
-            disabled={loading}
-          >
-            Subir Archivo Excel
-            <input
-              type="file"
-              hidden
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-              key={fileKey}
-              ref={fileInputRef}
-            />
-          </Button>
-        </Box>
-
+        {error && (
+          <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
+            {Array.isArray(error) ? (
+              <ul>
+                {error.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            ) : (
+              error
+            )}
+          </Alert>
+        )}
+        
         {loading && (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" gutterBottom>
+          <Box sx={{ width: '100%', mb: 2, mt: 1 }}>
+            <LinearProgress variant="determinate" value={progress} />
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
               {processingStatus}
-            </Typography>
-            <LinearProgress 
-              variant="determinate" 
-              value={progress} 
-              sx={{ height: 10, borderRadius: 1 }} 
-            />
-            <Typography variant="caption" textAlign="right" display="block" sx={{ mt: 1 }}>
-              {`${Math.round(progress)}%`}
             </Typography>
           </Box>
         )}
-
-        {errorContent}
-
+        
+        <Box sx={{ mb: 2, mt: 2 }}>
+          <Typography variant="body1" gutterBottom>
+            Para importar datos, siga estos pasos:
+          </Typography>
+          <Typography component="div" variant="body2">
+            <ol>
+              <li>Descargue la plantilla de Excel haciendo clic en el botón "Descargar Plantilla"</li>
+              <li>Complete los datos en la hoja "Datos"</li>
+              <li>Guarde el archivo y cárguelo usando el botón "Seleccionar Archivo"</li>
+            </ol>
+          </Typography>
+        </Box>
+        
         {additionalContent}
+        
+        <input
+          type="file"
+          accept=".xlsx, .xls"
+          style={{ display: 'none' }}
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          key={fileKey} // Para resetear el input después de cargar
+        />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>
+      <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
+        <Box>
+          {additionalActions}
+        </Box>
+        <Box>
+          <Button
+            onClick={handleDownloadTemplate}
+            startIcon={<DownloadIcon />}
+            color="secondary"
+            disabled={loading}
+            sx={{ mr: 1 }}
+          >
+            Descargar Plantilla
+          </Button>
+          <Button
+            onClick={() => fileInputRef.current.click()}
+            startIcon={<UploadIcon />}
+            variant="contained"
+            color="primary"
+            disabled={loading}
+            sx={{ mr: 1 }}
+          >
+            Seleccionar Archivo
+          </Button>
+          <Button 
+            onClick={onClose} 
+            disabled={loading}
+          >
+            Cerrar
+          </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   );
@@ -478,17 +498,15 @@ ExcelImportTemplate.propTypes = {
       /** Nombre de la hoja */
       name: PropTypes.string.isRequired,
       /** Datos de la hoja */
-      data: PropTypes.arrayOf(PropTypes.array).isRequired,
+      data: PropTypes.array.isRequired,
       /** Anchos de columna */
-      columnWidths: PropTypes.arrayOf(
-        PropTypes.shape({
-          wch: PropTypes.number
-        })
-      )
+      columnWidths: PropTypes.array
     })
   ),
   /** Contenido adicional para mostrar en el diálogo */
   additionalContent: PropTypes.node,
+  /** Botones de acción adicionales */
+  additionalActions: PropTypes.node,
   /** Datos de ejemplo para incluir en la plantilla */
   exampleData: PropTypes.array
 };

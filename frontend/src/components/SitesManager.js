@@ -3,12 +3,13 @@ import {
     Container, Typography, Paper, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, CircularProgress, Alert,
     IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TextField, Box
+    Button, TextField, Box, DialogContentText
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import axios from 'axios';
 import SiteBulkImporter from './SiteBulkImporter';
 import logger from '../utils/logger';
+import useNotification from '../hooks/useNotification';
 
 // Configuración de la URL base de la API
 const API_URL = process.env.REACT_APP_API_URL || '';
@@ -20,8 +21,14 @@ const SitesManager = ({ cliente, onBack }) => {
     const [editingSite, setEditingSite] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [importerOpen, setImporterOpen] = useState(false);
+    const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [confirmReprocessOpen, setConfirmReprocessOpen] = useState(false);
+    const [reprocessing, setReprocessing] = useState(false);
+    const { showNotification } = useNotification();
     const [formData, setFormData] = useState({
         Site: '',
+        Codigo: '',
         Direccion: '',
         Localidad: '',
         Provincia: ''
@@ -72,6 +79,7 @@ const SitesManager = ({ cliente, onBack }) => {
         setEditingSite(site);
         setFormData({
             Site: site.Site,
+            Codigo: site.Codigo || '',
             Direccion: site.Direccion || '',
             Localidad: site.Localidad || '',
             Provincia: site.Provincia || ''
@@ -122,6 +130,54 @@ const SitesManager = ({ cliente, onBack }) => {
         return '-';
     };
 
+    const handleDeleteAll = async () => {
+        try {
+            setDeletingAll(true);
+            await axios.delete(`/api/site/bulk/cliente/${cliente}`);
+            setDeletingAll(false);
+            setConfirmDeleteAllOpen(false);
+            fetchSites();
+        } catch (error) {
+            logger.error('Error al eliminar todos los sites:', error);
+            setError('Error al eliminar los sites');
+            setDeletingAll(false);
+            setConfirmDeleteAllOpen(false);
+        }
+    };
+
+    // Función para reprocesar direcciones
+    const handleReprocessAddresses = async () => {
+        try {
+            setReprocessing(true);
+            setConfirmReprocessOpen(false);
+            
+            // Simular llamada al backend (reemplazar con llamada real cuando exista)
+            // const response = await axios.post(`/api/sites/reprocess-addresses/${cliente}`);
+            // await new Promise(resolve => setTimeout(resolve, 2000)); // Simular delay del backend
+            
+            // TODO: Cambiar esta parte por la llamada real al endpoint POST /api/sites/reprocess-addresses/${cliente}
+            // Simulación de éxito por ahora
+            showNotification('Solicitud de reprocesamiento enviada. Los sitios se actualizarán en breve.', 'info'); 
+            // Idealmente, el backend podría tardar, por lo que la actualización podría no ser inmediata.
+            // Opcionalmente, se puede hacer polling o usar websockets para saber cuándo terminó.
+            // Por simplicidad, recargamos después de un delay simulado
+            
+            // Simulación de llamada real y actualización
+            // Asegúrate de manejar la URL y el token/cookies según tu configuración
+            await axios.post(`/api/site/reprocess-addresses/${cliente}`); 
+            showNotification('Las direcciones se han reprocesado correctamente.', 'success');
+            fetchSites(); // Recargar los sitios para ver los cambios
+
+        } catch (error) {
+            logger.error('Error al reprocesar direcciones:', error.response || error);
+            const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+            showNotification(`Error al reprocesar direcciones: ${errorMessage}`, 'error');
+            setError('Error al reprocesar las direcciones'); // Puedes usar setError también si prefieres
+        } finally {
+            setReprocessing(false);
+        }
+    };
+
     if (loading) return <CircularProgress />;
     if (error) return <Alert severity="error">{error}</Alert>;
 
@@ -143,10 +199,30 @@ const SitesManager = ({ cliente, onBack }) => {
                 <Box sx={{ flexGrow: 1 }} />
                 
                 <Button 
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => setConfirmReprocessOpen(true)}
+                    sx={{ ml: 1, mr: 1 }}
+                    disabled={sites.length === 0 || reprocessing}
+                >
+                    {reprocessing ? 'Reprocesando...' : 'Reprocesar Direcciones'}
+                </Button>
+                
+                <Button 
+                    variant="outlined" 
+                    color="error"
+                    onClick={() => setConfirmDeleteAllOpen(true)}
+                    sx={{ ml: 2, mr: 1 }}
+                    disabled={sites.length === 0}
+                >
+                    Eliminar Todos
+                </Button>
+                
+                <Button 
                     variant="contained" 
                     color="primary"
                     onClick={() => setImporterOpen(true)}
-                    sx={{ ml: 2 }}
+                    sx={{ ml: 1 }}
                 >
                     Importar Sites
                 </Button>
@@ -164,6 +240,7 @@ const SitesManager = ({ cliente, onBack }) => {
                     <TableHead>
                         <TableRow>
                             <TableCell>Site</TableCell>
+                            <TableCell>Código</TableCell>
                             <TableCell>Dirección</TableCell>
                             <TableCell>Localidad</TableCell>
                             <TableCell>Provincia</TableCell>
@@ -174,7 +251,7 @@ const SitesManager = ({ cliente, onBack }) => {
                     <TableBody>
                         {!Array.isArray(sites) || sites.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} align="center">
+                                <TableCell colSpan={7} align="center">
                                     No hay sites registrados
                                 </TableCell>
                             </TableRow>
@@ -182,6 +259,7 @@ const SitesManager = ({ cliente, onBack }) => {
                             sites.map((site) => (
                                 <TableRow key={site._id || Math.random()}>
                                     <TableCell>{site?.Site || '-'}</TableCell>
+                                    <TableCell>{site?.Codigo || '-'}</TableCell>
                                     <TableCell>{site?.Direccion || '-'}</TableCell>
                                     <TableCell>{site?.Localidad || '-'}</TableCell>
                                     <TableCell>{site?.Provincia || '-'}</TableCell>
@@ -213,6 +291,13 @@ const SitesManager = ({ cliente, onBack }) => {
                     />
                     <TextField
                         margin="dense"
+                        label="Código"
+                        fullWidth
+                        value={formData.Codigo}
+                        onChange={handleChange('Codigo')}
+                    />
+                    <TextField
+                        margin="dense"
                         label="Dirección"
                         fullWidth
                         value={formData.Direccion}
@@ -237,6 +322,69 @@ const SitesManager = ({ cliente, onBack }) => {
                     <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
                     <Button onClick={handleSave} variant="contained">
                         Guardar
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={confirmDeleteAllOpen}
+                onClose={() => !deletingAll && setConfirmDeleteAllOpen(false)}
+            >
+                <DialogTitle>Confirmar eliminación masiva</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        ¿Está seguro que desea eliminar TODOS los sites del cliente <strong>{cliente}</strong>?
+                        <br /><br />
+                        Esta acción no se puede deshacer y podría afectar a otros datos relacionados.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button 
+                        onClick={() => setConfirmDeleteAllOpen(false)} 
+                        disabled={deletingAll}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button 
+                        onClick={handleDeleteAll} 
+                        color="error" 
+                        variant="contained"
+                        disabled={deletingAll}
+                    >
+                        {deletingAll ? 'Eliminando...' : 'Eliminar todos los sites'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Diálogo de confirmación para reprocesar direcciones */}
+            <Dialog
+                open={confirmReprocessOpen}
+                onClose={() => !reprocessing && setConfirmReprocessOpen(false)}
+            >
+                <DialogTitle>Confirmar Reprocesamiento</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        ¿Está seguro que desea reprocesar las direcciones para TODOS los sites del cliente <strong>{cliente}</strong>?
+                        <br /><br />
+                        Esto utilizará las coordenadas de cada sitio para obtener la dirección, localidad y provincia actualizadas mediante un servicio de geocodificación.
+                        <br />
+                        Este proceso puede tardar varios segundos o minutos dependiendo de la cantidad de sitios y podría sobrescribir datos existentes.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button 
+                        onClick={() => setConfirmReprocessOpen(false)} 
+                        disabled={reprocessing}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button 
+                        onClick={handleReprocessAddresses} 
+                        color="primary" 
+                        variant="contained"
+                        disabled={reprocessing}
+                    >
+                        {reprocessing ? 'Reprocesando...' : 'Confirmar Reprocesamiento'}
                     </Button>
                 </DialogActions>
             </Dialog>

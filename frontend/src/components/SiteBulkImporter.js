@@ -4,12 +4,17 @@ import ExcelImportTemplate from './common/ExcelImportTemplate';
 import useNotification from '../hooks/useNotification';
 import axios from 'axios';
 import logger from '../utils/logger';
+import { Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+
+// Función de utilidad para crear un retraso
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 // Definición de las cabeceras del Excel
 const EXCEL_HEADERS = [
   { field: 'site', label: 'Site*', required: true },
+  { field: 'codigo', label: 'Código', required: false },
   { field: 'coordenadas', label: 'Coordenadas (lat,lng)*', required: true },
   { field: 'direccion', label: 'Dirección', required: false },
   { field: 'localidad', label: 'Localidad', required: false },
@@ -22,6 +27,8 @@ const EXCEL_HEADERS = [
  * @component
  */
 const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { showNotification } = useNotification();
   
   // Función para obtener dirección a partir de coordenadas
@@ -46,7 +53,7 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
   }, []);
 
   // Validación de cada fila del Excel
-  const validateRow = (row, index) => {
+  const validateRow = (row, index, EXCEL_HEADERS) => {
     const errors = [];
     
     // Validar campos requeridos
@@ -98,10 +105,14 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
             direccion = row.direccion || geocodeData.direccion;
             localidad = row.localidad || geocodeData.localidad;
             provincia = row.provincia || geocodeData.provincia;
+            
+            // Añadir un retraso para evitar error 429
+            await delay(1000); // Esperar 1 segundo
           }
           
           processedSites.push({
             site: row.site,
+            codigo: row.codigo || '',
             cliente,
             coordenadas: { lat, lng },
             direccion,
@@ -150,6 +161,31 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
     }
   };
 
+  // Función para eliminar todos los sites del cliente
+  const handleBulkDelete = async () => {
+    setDeleting(true);
+    try {
+      const response = await axios.delete(`${API_URL}/api/site/bulk/cliente/${cliente}`);
+      
+      setDeleting(false);
+      setConfirmDeleteOpen(false);
+      
+      if (response.data.success) {
+        showNotification(`${response.data.eliminados} sites del cliente ${cliente} eliminados correctamente`, 'success');
+        if (onComplete) {
+          onComplete();
+        }
+      } else {
+        showNotification('No se pudieron eliminar los sites', 'error');
+      }
+    } catch (error) {
+      setDeleting(false);
+      setConfirmDeleteOpen(false);
+      logger.error('Error en eliminación masiva:', error);
+      showNotification('Error al eliminar los sites: ' + (error.response?.data?.message || error.message), 'error');
+    }
+  };
+
   // Instrucciones para la plantilla
   const instructionSheets = [
     {
@@ -161,7 +197,8 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
         ['2. Los campos marcados con asterisco (*) son obligatorios'],
         ['3. El formato de coordenadas debe ser "latitud,longitud" (ejemplo: -34.603722,-58.381592)'],
         ['4. Si no proporciona dirección, localidad o provincia, el sistema intentará obtenerlas automáticamente'],
-        ['5. El campo "Tipo" puede ser: CLIENTE, PLANTA, DEPÓSITO, PUERTO (por defecto se usará CLIENTE)']
+        ['5. El campo "Código" es opcional y debe ser único por cliente cuando se proporciona'],
+        ['6. El campo "Tipo" puede ser: CLIENTE, PLANTA, DEPÓSITO, PUERTO (por defecto se usará CLIENTE)']
       ],
       columnWidths: [{ wch: 80 }]
     },
@@ -170,6 +207,7 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
       data: [
         ['CAMPO', 'FORMATO', 'DESCRIPCIÓN'],
         ['Site*', 'Texto', 'Nombre del sitio (debe ser único)'],
+        ['Código', 'Texto', 'Código asignado por el cliente (único por cliente si se proporciona)'],
         ['Coordenadas*', 'lat,lng', 'Coordenadas geográficas en formato decimal (latitud,longitud)'],
         ['Dirección', 'Texto', 'Dirección física del sitio (se autocompletará si está vacío)'],
         ['Localidad', 'Texto', 'Localidad o ciudad (se autocompletará si está vacío)'],
@@ -184,6 +222,7 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
   const exampleData = [
     {
       site: 'Planta Centro',
+      codigo: 'PC001',
       coordenadas: '-34.603722,-58.381592',
       direccion: 'Av. Corrientes 456',
       localidad: 'CABA',
@@ -192,6 +231,7 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
     },
     {
       site: 'Depósito Norte',
+      codigo: 'DN002',
       coordenadas: '-34.550722,-58.463592',
       direccion: 'Av. General Paz 1500',
       localidad: 'Vicente López',
@@ -201,18 +241,61 @@ const SiteBulkImporter = ({ open, onClose, cliente, onComplete }) => {
   ];
 
   return (
-    <ExcelImportTemplate
-      title="Importación de Sites mediante Excel"
-      open={open}
-      onClose={onClose}
-      onComplete={onComplete}
-      excelHeaders={EXCEL_HEADERS}
-      processDataCallback={processExcelData}
-      templateFileName="Plantilla_Importacion_Sites.xlsx"
-      validateRow={validateRow}
-      instructionSheets={instructionSheets}
-      exampleData={exampleData}
-    />
+    <>
+      <ExcelImportTemplate
+        title="Importación de Sites mediante Excel"
+        open={open}
+        onClose={onClose}
+        onComplete={onComplete}
+        excelHeaders={EXCEL_HEADERS}
+        processDataCallback={processExcelData}
+        templateFileName="Plantilla_Importacion_Sites.xlsx"
+        validateRow={validateRow}
+        instructionSheets={instructionSheets}
+        exampleData={exampleData}
+        additionalActions={
+          <Button 
+            variant="outlined" 
+            color="error" 
+            onClick={() => setConfirmDeleteOpen(true)}
+            sx={{ mr: 1 }}
+          >
+            Eliminar Todos
+          </Button>
+        }
+      />
+
+      {/* Diálogo de confirmación para eliminación masiva */}
+      <Dialog
+        open={confirmDeleteOpen}
+        onClose={() => !deleting && setConfirmDeleteOpen(false)}
+      >
+        <DialogTitle>Confirmar eliminación masiva</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro que desea eliminar TODOS los sites del cliente <strong>{cliente}</strong>?
+            <br /><br />
+            Esta acción no se puede deshacer y podría afectar a otros datos relacionados.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setConfirmDeleteOpen(false)} 
+            disabled={deleting}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleBulkDelete} 
+            color="error" 
+            variant="contained"
+            disabled={deleting}
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar todos los sites'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

@@ -34,6 +34,7 @@ const bulkCreateSites = tryCatch(async (req, res) => {
                 Direccion: siteData.direccion || '-',
                 Localidad: siteData.localidad || '',
                 Provincia: siteData.provincia || '',
+                Codigo: siteData.codigo || '',
                 location
             });
 

@@ -7,6 +7,7 @@ const logger = require('../../utils/logger');
 const Site = require('../../models/Site');
 const { tryCatch } = require('../../utils/errorHandler');
 const { ValidationError } = require('../../utils/errors');
+const { getAddressFromCoords } = require('../../services/geocodingService');
 
 /**
  * Obtiene todos los sitios con paginación y filtros opcionales
@@ -326,6 +327,103 @@ const geocodeDireccion = tryCatch(async (req, res) => {
   });
 });
 
+// Función de utilidad para crear un retraso
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Reprocesa las direcciones de todos los sitios de un cliente utilizando sus coordenadas.
+ */
+const reprocessAddressesByCliente = tryCatch(async (req, res) => {
+    const { cliente } = req.params;
+    let actualizados = 0;
+    let fallidos = 0;
+    const erroresDetallados = [];
+
+    try {
+        logger.info(`Iniciando reprocesamiento de direcciones para cliente: ${cliente}`);
+
+        // Buscar todos los sitios del cliente que tengan coordenadas
+        // Adaptado para buscar en 'location.coordinates' (GeoJSON)
+        const sites = await Site.find({
+            Cliente: cliente, 
+            'location.coordinates': { $exists: true, $ne: [] } 
+        });
+
+        if (!sites || sites.length === 0) {
+            logger.warn(`No se encontraron sitios con coordenadas para el cliente: ${cliente}`);
+            return res.status(404).json({ message: 'No se encontraron sitios con coordenadas para este cliente.' });
+        }
+
+        logger.info(`Reprocesando ${sites.length} sitios para el cliente: ${cliente}`);
+
+        // Iterar sobre cada sitio y obtener la dirección
+        for (const site of sites) {
+            try {
+                // Extraer coordenadas del formato GeoJSON
+                if (!site.location || !Array.isArray(site.location.coordinates) || site.location.coordinates.length < 2) {
+                    fallidos++;
+                    erroresDetallados.push(`Sitio ${site.Site} (${site._id}) no tiene coordenadas válidas.`);
+                    continue; 
+                }
+
+                const [lng, lat] = site.location.coordinates; // Nota: GeoJSON es [lng, lat]
+                
+                // Llamar al servicio de geocodificación inversa
+                const addressData = await getAddressFromCoords(lat, lng);
+
+                // Actualizar el sitio si se obtuvo información válida
+                if (addressData) {
+                    site.Direccion = addressData.direccion || site.Direccion; // Mantener si no hay nueva
+                    site.Localidad = addressData.localidad || site.Localidad;
+                    site.Provincia = addressData.provincia || site.Provincia;
+                    
+                    await site.save();
+                    actualizados++;
+                    logger.debug(`Sitio ${site.Site} (${site._id}) actualizado.`);
+                } else {
+                     fallidos++;
+                     erroresDetallados.push(`No se pudo obtener dirección para sitio ${site.Site} (${site._id}) con coords ${lat},${lng}.`);
+                     logger.warn(`Fallo al geocodificar sitio ${site.Site} (${site._id})`);
+                }
+
+                // ¡Importante! Añadir retraso para no saturar el servicio de geocodificación
+                await delay(1000); // Esperar 1 segundo entre llamadas
+
+            } catch (error) {
+                fallidos++;
+                const errorMsg = `Error procesando sitio ${site.Site} (${site._id}): ${error.message}`;
+                logger.error(errorMsg, error);
+                erroresDetallados.push(errorMsg);
+                // Continuar con el siguiente sitio aunque uno falle
+                 await delay(1000); // Esperar incluso si hay error
+            }
+        }
+
+        logger.info(`Reprocesamiento para cliente ${cliente} completado. Actualizados: ${actualizados}, Fallidos: ${fallidos}`);
+        
+        const responseMessage = `Reprocesamiento completado. Sitios actualizados: ${actualizados}. Sitios fallidos: ${fallidos}.`;
+        
+        if (fallidos > 0) {
+             return res.status(207).json({ // 207 Multi-Status si hubo errores parciales
+                message: responseMessage,
+                actualizados,
+                fallidos,
+                detalles_error: erroresDetallados 
+             });
+        } else {
+             return res.status(200).json({ 
+                message: responseMessage,
+                actualizados,
+                fallidos 
+             });
+        }
+
+    } catch (error) {
+        logger.error(`Error general durante el reprocesamiento para cliente ${cliente}: ${error.message}`, error);
+        return res.status(500).json({ message: 'Error interno del servidor durante el reprocesamiento.', error: error.message });
+    }
+});
+
 // Exportar todas las funciones del controlador
 module.exports = {
   getAllSites,
@@ -334,5 +432,6 @@ module.exports = {
   createSite,
   updateSite,
   deleteSite,
-  geocodeDireccion
+  geocodeDireccion,
+  reprocessAddressesByCliente
 }; 

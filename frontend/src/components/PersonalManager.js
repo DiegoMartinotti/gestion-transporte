@@ -60,6 +60,7 @@ const PersonalManager = () => {
       setLoading(true);
       setError(null);
       const response = await fetch(`${API_URL}/api/personal?empresaId=${empresaId}`, {
+        credentials: 'include',
         headers: {
           // 'Authorization': `Bearer ${token}` // No necesario con cookies
         }
@@ -98,6 +99,7 @@ const PersonalManager = () => {
       
       const response = await fetch(`${API_URL}/api/personal`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           // 'Authorization': `Bearer ${token}` // No necesario con cookies
@@ -129,6 +131,7 @@ const PersonalManager = () => {
       
       const response = await fetch(`${API_URL}/api/personal/${id}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           // 'Authorization': `Bearer ${token}` // No necesario con cookies
@@ -156,6 +159,7 @@ const PersonalManager = () => {
       try {
         const response = await fetch(`${API_URL}/api/personal/${id}`, {
           method: 'DELETE',
+          credentials: 'include',
           headers: {
             // 'Authorization': `Bearer ${token}` // No necesario con cookies
           }
