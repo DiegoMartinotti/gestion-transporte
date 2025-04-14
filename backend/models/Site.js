@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
  * @property {string} [Direccion] - Address
  * @property {string} [Localidad] - City
  * @property {string} [Provincia] - State/Province
+ * @property {string} [Codigo] - Client assigned code
  * @property {Object} [location] - Geolocation data
  */
 const siteSchema = new mongoose.Schema({
@@ -18,6 +19,10 @@ const siteSchema = new mongoose.Schema({
     Cliente: {
         type: String,
         required: [true, 'El cliente es requerido']
+    },
+    Codigo: {
+        type: String,
+        default: ''
     },
     location: {
         type: {
@@ -70,6 +75,7 @@ siteSchema.pre('save', async function(next) {
         if (this.Direccion) this.Direccion = this.Direccion.trim();
         if (this.Localidad) this.Localidad = this.Localidad.trim();
         if (this.Provincia) this.Provincia = this.Provincia.trim();
+        if (this.Codigo) this.Codigo = this.Codigo.trim();
 
         next();
     } catch (error) {
@@ -84,6 +90,15 @@ siteSchema.index({ Site: 1, Cliente: 1 }, {
 });
 siteSchema.index({ Cliente: 1 });
 siteSchema.index({ Localidad: 1, Provincia: 1 });
+// Índice para garantizar Codigo único por Cliente (solo cuando Codigo existe)
+siteSchema.index({ 
+    Cliente: 1, 
+    Codigo: 1 
+}, { 
+    unique: true, 
+    collation: { locale: 'es', strength: 2 },
+    partialFilterExpression: { Codigo: { $exists: true, $ne: '' } }
+});
 
 // Métodos de instancia
 siteSchema.methods.getDireccionCompleta = function() {

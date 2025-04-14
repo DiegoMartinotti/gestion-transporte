@@ -4,19 +4,19 @@
  */
 
 // Función para evaluar una función de validación en formato string
-const evaluateValidation = (functionString, row, index) => {
+const evaluateValidation = (functionString, row, index, EXCEL_HEADERS) => {
   // eslint-disable-next-line no-new-func
-  const validationFunction = new Function('return ' + functionString)();
-  return validationFunction(row, index);
+  const validationFunction = new Function('row', 'index', 'EXCEL_HEADERS', 'return (' + functionString + ')(row, index, EXCEL_HEADERS)');
+  return validationFunction(row, index, EXCEL_HEADERS);
 };
 
 // Mensaje principal recibido del hilo principal
 self.onmessage = function(e) {
-  const { data, validateRowFn, action, batchSize = 50 } = e.data;
+  const { data, validateRowFn, action, batchSize = 50, excelHeaders } = e.data;
   
   switch (action) {
     case 'validate': {
-      processValidation(data, validateRowFn, batchSize);
+      processValidation(data, validateRowFn, batchSize, excelHeaders);
       break;
     }
     case 'transform': {
@@ -37,8 +37,9 @@ self.onmessage = function(e) {
  * @param {Array} data - Los datos a validar
  * @param {string} validateRowFn - Función de validación serializada como string
  * @param {number} batchSize - Tamaño del lote para procesar
+ * @param {Array} excelHeaders - Definición de las cabeceras del Excel
  */
-function processValidation(data, validateRowFn, batchSize) {
+function processValidation(data, validateRowFn, batchSize, excelHeaders) {
   let processedRows = 0;
   const totalRows = data.length;
   const errors = [];
@@ -56,7 +57,7 @@ function processValidation(data, validateRowFn, batchSize) {
           
           // Validar la fila si hay función de validación
           if (validateRowFn) {
-            const rowErrors = evaluateValidation(validateRowFn, row, i);
+            const rowErrors = evaluateValidation(validateRowFn, row, i, excelHeaders);
             if (rowErrors && rowErrors.length > 0) {
               errors.push(...rowErrors);
             } else {

@@ -25,20 +25,69 @@ const EXCEL_HEADERS = [
 const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) => {
   const { showNotification } = useNotification();
   
+  // Funciones auxiliares para manejar diferentes estructuras de datos
+  const getSiteId = (site) => site._id || site.id || '';
+  
+  const getSiteName = (site) => {
+    // La imagen muestra que el nombre del sitio está bajo la propiedad "Site"
+    if (site.Site) return site.Site;
+    // Alternativas por si la estructura es diferente
+    return site.nombre || site.name || '';
+  };
+  
+  const getSiteLocality = (site) => {
+    // La imagen muestra que la localidad está bajo "Localidad"
+    if (site.Localidad) return site.Localidad;
+    // Alternativas
+    return site.localidad || '';
+  };
+  
+  const getSiteAddress = (site) => {
+    // La imagen muestra que la dirección está como "-" o vacía
+    if (site.Direccion) return site.Direccion || '-';
+    // Alternativas
+    return site.direccion || site.address || '-';
+  };
+  
+  const getSiteProvince = (site) => {
+    // La imagen muestra que hay una columna Provincia
+    if (site.Provincia) return site.Provincia;
+    return site.provincia || '';
+  };
+  
+  // Registro detallado para verificar los sitios recibidos
+  logger.debug(`ViajeBulkImporter recibió ${sites.length} sitios para el cliente: ${cliente}`);
+  
+  // Imprimir los 3 primeros sitios para depuración (evitar log demasiado largo)
+  if (sites.length > 0) {
+    logger.debug('Primeros sitios recibidos:');
+    sites.slice(0, 3).forEach((site, index) => {
+      logger.debug(`Sitio ${index + 1}:`, site);
+    });
+  } else {
+    logger.warn('No se recibieron sitios para el cliente seleccionado');
+  }
+  
   // Crear mapa de sitios para búsquedas rápidas
   const sitesMap = {};
-  sites.forEach(site => {
-    sitesMap[site.Site.toLowerCase()] = site;
+  sites.forEach((site, index) => {
+    const nombreSite = getSiteName(site);
+    if (nombreSite) {
+      sitesMap[nombreSite.toLowerCase()] = site;
+    }
   });
-
-    // Función para convertir números con formato español/europeo (coma decimal) a formato válido para JavaScript
-    const parseSpanishNumber = (value) => {
-        if (!value) return 0;
-        
-        // Reemplazar coma por punto para el separador decimal
-        const normalizedValue = String(value).replace(',', '.');
-        return parseFloat(normalizedValue) || 0;
-    };
+  
+  // Mostrar cuántos sitios se mapearon correctamente
+  logger.debug(`Se mapearon ${Object.keys(sitesMap).length} sitios para validación y procesamiento`);
+  
+  // Función para convertir números con formato español/europeo (coma decimal) a formato válido para JavaScript
+  const parseSpanishNumber = (value) => {
+    if (!value) return 0;
+    
+    // Reemplazar coma por punto para el separador decimal
+    const normalizedValue = String(value).replace(',', '.');
+    return parseFloat(normalizedValue) || 0;
+  };
 
   // Validación de cada fila del Excel
   const validateRow = (row, index) => {
@@ -54,7 +103,10 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     // Validar sitios existentes
     if (row.origen) {
       const origenEncontrado = Object.values(sitesMap).find(
-        site => site.Site.toLowerCase() === row.origen.toLowerCase()
+        site => {
+          const siteName = getSiteName(site).toLowerCase();
+          return siteName === row.origen.toLowerCase();
+        }
       );
       if (!origenEncontrado) {
         errors.push(`Fila ${index + 1}: Sitio de origen "${row.origen}" no encontrado`);
@@ -63,7 +115,10 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     
     if (row.destino) {
       const destinoEncontrado = Object.values(sitesMap).find(
-        site => site.Site.toLowerCase() === row.destino.toLowerCase()
+        site => {
+          const siteName = getSiteName(site).toLowerCase();
+          return siteName === row.destino.toLowerCase();
+        }
       );
       if (!destinoEncontrado) {
         errors.push(`Fila ${index + 1}: Sitio de destino "${row.destino}" no encontrado`);
@@ -93,23 +148,29 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
       const processedData = data.map(row => {
         // Encontrar IDs de origen y destino
         const origen = Object.values(sitesMap).find(
-          site => site.Site.toLowerCase() === row.origen.toLowerCase()
+          site => {
+            const siteName = getSiteName(site).toLowerCase();
+            return siteName === row.origen.toLowerCase();
+          }
         );
         
         const destino = Object.values(sitesMap).find(
-          site => site.Site.toLowerCase() === row.destino.toLowerCase()
+          site => {
+            const siteName = getSiteName(site).toLowerCase();
+            return siteName === row.destino.toLowerCase();
+          }
         );
 
-            // Convertir fecha de DD/MM/YYYY a YYYY-MM-DD
+        // Convertir fecha de DD/MM/YYYY a YYYY-MM-DD
         let fechaFormateada = row.fecha;
         if (row.fecha && row.fecha.includes('/')) {
           const [dia, mes, anio] = row.fecha.split('/');
-                fechaFormateada = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
-            }
+          fechaFormateada = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+        }
 
-            return {
+        return {
           dt: row.dt,
-                fecha: fechaFormateada,
+          fecha: fechaFormateada,
           origen: origen?._id,
           origenNombre: row.origen,
           destino: destino?._id,
@@ -118,65 +179,65 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
           tipoUnidad: row.tipoUnidad || 'Sider',
           paletas: parseSpanishNumber(row.paletas),
           observaciones: row.observaciones || ''
-            };
-        });
+        };
+      });
 
       // Dividir en lotes para evitar problemas de tamaño
-            const BATCH_SIZE = 20;
-            const batches = [];
+      const BATCH_SIZE = 20;
+      const batches = [];
       
       for (let i = 0; i < processedData.length; i += BATCH_SIZE) {
         batches.push(processedData.slice(i, i + BATCH_SIZE));
+      }
+
+      let exitosos = 0;
+      let errores = [];
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        try {
+          // Verificación de token eliminada, manejada por cookies
+
+          const response = await axios.post(
+            '/api/viajes/bulk',
+            { 
+              cliente, 
+              viajes: batch
+            },
+            { 
+              headers: { 
+                // Authorization: `Bearer ${token}`, // No necesario con cookies
+                'Content-Type': 'application/json'
+              },
+              timeout: 30000
             }
-
-            let exitosos = 0;
-            let errores = [];
-
-            for (let i = 0; i < batches.length; i++) {
-                const batch = batches[i];
-                try {
-                    // Verificación de token eliminada, manejada por cookies
-
-                    const response = await axios.post(
-                        '/api/viajes/bulk',
-                        { 
-                            cliente, 
-                            viajes: batch
-                        },
-                        { 
-                            headers: { 
-                                // Authorization: `Bearer ${token}`, // No necesario con cookies
-                                'Content-Type': 'application/json'
-                            },
-                            timeout: 30000
-                        }
-                    );
+          );
 
           exitosos += response.data.exitosos || 0;
           if (response.data.errores && response.data.errores.length > 0) {
-                        errores = [...errores, ...response.data.errores];
-                    }
-                } catch (error) {
+            errores = [...errores, ...response.data.errores];
+          }
+        } catch (error) {
           logger.error(`Error procesando lote ${i+1}:`, error);
-                    batch.forEach((viaje, index) => {
-                        errores.push({
-                            indice: i * BATCH_SIZE + index,
-                            dt: viaje.dt,
-                            error: error.message
-                        });
-                    });
-                }
-            }
+          batch.forEach((viaje, index) => {
+            errores.push({
+              indice: i * BATCH_SIZE + index,
+              dt: viaje.dt,
+              error: error.message
+            });
+          });
+        }
+      }
 
       const resultMessage = `Importación completada: ${exitosos} viajes importados exitosamente, ${errores.length} con errores`;
-            
-            if (errores.length > 0) {
+      
+      if (errores.length > 0) {
         showNotification(
           `Importación completada con ${errores.length} errores. Se importaron ${exitosos} viajes.`, 
           'warning'
         );
         console.error('Errores en importación:', errores);
-            } else {
+      } else {
         showNotification(resultMessage, 'success');
       }
       
@@ -196,14 +257,16 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     {
       name: 'Sitios',
       data: [
-        ['ID', 'Nombre', 'Tipo'],
+        ['ID', 'Nombre', 'Localidad', 'Provincia', 'Dirección'],
         ...sites.map(site => [
-          site._id,
-          site.Site,
-          site.Tipo || ''
+          getSiteId(site),
+          getSiteName(site),
+          getSiteLocality(site),
+          getSiteProvince(site),
+          getSiteAddress(site)
         ])
       ],
-      columnWidths: [{ wch: 24 }, { wch: 40 }, { wch: 15 }]
+      columnWidths: [{ wch: 24 }, { wch: 30 }, { wch: 25 }, { wch: 25 }, { wch: 40 }]
     },
     {
       name: 'Instrucciones',
@@ -244,8 +307,8 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     {
       dt: 'DT001234',
       fecha: '22/03/2024',
-      origen: sites.length > 0 ? sites[0].Site : 'Origen Ejemplo',
-      destino: sites.length > 1 ? sites[1].Site : 'Destino Ejemplo',
+      origen: sites.length > 0 ? getSiteName(sites[0]) : 'Origen Ejemplo',
+      destino: sites.length > 1 ? getSiteName(sites[1]) : 'Destino Ejemplo',
       tipoTramo: 'TRMC',
       tipoUnidad: 'Sider',
       paletas: '24',
@@ -254,8 +317,8 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     {
       dt: 'DT005678',
       fecha: '23/03/2024',
-      origen: sites.length > 1 ? sites[1].Site : 'Origen Ejemplo 2',
-      destino: sites.length > 2 ? sites[2].Site : (sites.length > 0 ? sites[0].Site : 'Destino Ejemplo 2'),
+      origen: sites.length > 1 ? getSiteName(sites[1]) : 'Origen Ejemplo 2',
+      destino: sites.length > 2 ? getSiteName(sites[2]) : (sites.length > 0 ? getSiteName(sites[0]) : 'Destino Ejemplo 2'),
       tipoTramo: 'TRMI',
       tipoUnidad: 'Bitren',
       paletas: '36',
@@ -263,10 +326,10 @@ const ViajeBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     }
   ];
 
-    return (
+  return (
     <ExcelImportTemplate
       title="Importación de Viajes mediante Excel"
-            open={open} 
+      open={open} 
       onClose={onClose}
       onComplete={onComplete}
       excelHeaders={EXCEL_HEADERS}

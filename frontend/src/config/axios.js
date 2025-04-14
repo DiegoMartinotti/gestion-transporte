@@ -17,10 +17,10 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      logger.warn('Error de autenticación - Redirigiendo a login');
+      logger.warn('Error de autenticación - Error propagado');
       
-      // Redirigir a la página de login
-      window.location.href = '/login';
+      // Ya no redirigimos aquí para evitar bucles infinitos
+      // La redirección debe ser manejada por ProtectedRoute
       
       // Mostrar mensaje al usuario (opcional)
       // toast.error('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
