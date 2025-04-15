@@ -14,6 +14,7 @@ const logger = require('../utils/logger');
 const mongoose = require('mongoose');
 const tarifaService = require('../services/tarifaService'); // Importamos el servicio de tarifas
 const formulaClienteService = require('../services/formulaClienteService'); // Importar el servicio de fórmulas personalizadas
+const tramoService = require('../services/tramo/tramoService'); // Importar el servicio de tramos
 const Extra = require('../models/Extra');
 const path = require('path');
 const fs = require('fs');
@@ -432,8 +433,18 @@ exports.bulkCreateTramos = async (req, res) => {
         logger.debug(`Procesando ${tramos.length} tramos para cliente ${cliente}`);
         logger.debug(`Opciones: reutilizarDistancias=${reutilizarDistancias}, actualizarExistentes=${actualizarExistentes}`);
         
-        // Resultados
-        const resultados = {
+        // Dividir en lotes para evitar problemas de tamaño en la petición
+        const BATCH_SIZE = 50;
+        const batches = [];
+        
+        for (let i = 0; i < tramos.length; i += BATCH_SIZE) {
+            batches.push(tramos.slice(i, i + BATCH_SIZE));
+        }
+        
+        logger.debug(`Dividiendo ${tramos.length} tramos en ${batches.length} lotes de máximo ${BATCH_SIZE} tramos`);
+        
+        // Resultados consolidados
+        const resultadosConsolidados = {
             total: tramos.length,
             exitosos: 0,
             errores: [],
@@ -441,266 +452,61 @@ exports.bulkCreateTramos = async (req, res) => {
             tramosActualizados: 0
         };
         
-        // Cargar todos los tramos existentes para este cliente
-        const tramosExistentes = await Tramo.find({ 
-            cliente: cliente 
-        });
-        
-        logger.debug(`Se encontraron ${tramosExistentes.length} tramos existentes para el cliente ${cliente}`);
-        
-        // Crear un mapa para búsqueda rápida de tramos existentes
-        const mapaTramos = {};
-        tramosExistentes.forEach(tramo => {
-            // Incluir el tipo en la clave para diferenciar entre TRMC y TRMI
-            if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-                // Crear una entrada para cada tipo de tarifa histórica
-                const tiposUnicos = new Set(tramo.tarifasHistoricas.map(t => t.tipo));
-                tiposUnicos.forEach(tipo => {
-                    const key = `${tramo.origen}-${tramo.destino}-${tipo}`;
-                    mapaTramos[key] = tramo;
-                });
-            } else {
-                // Si no tiene tarifas históricas, usar la clave básica
-                const key = `${tramo.origen}-${tramo.destino}`;
-                mapaTramos[key] = tramo;
-            }
-        });
-        
-        // Procesar cada tramo
-        for (let i = 0; i < tramos.length; i++) {
+        // Procesar cada lote
+        for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            
             try {
-                const tramoData = tramos[i];
+                logger.debug(`Procesando lote ${i + 1} de ${batches.length} (${batch.length} tramos)`);
                 
-                // Validación básica
-                if (!tramoData.origen) {
-                    throw new Error(`Origen no definido en tramo #${i+1}`);
-                }
-
-                if (!tramoData.destino) {
-                    throw new Error(`Destino no definido en tramo #${i+1}`);
-                }
+                // Llamar al servicio para procesar el lote
+                const resultados = await tramoService.bulkImportTramos(
+                    cliente, 
+                    batch, 
+                    reutilizarDistancias, 
+                    actualizarExistentes
+                );
                 
-                // Verificar si tenemos una tarifa histórica
-                if (!tramoData.tarifaHistorica) {
-                    // Compatibilidad con formato antiguo
-                    if (tramoData.tipo && (tramoData.vigenciaDesde || tramoData.vigenciaHasta)) {
-                        tramoData.tarifaHistorica = {
-                            tipo: tramoData.tipo,
-                            metodoCalculo: tramoData.metodoCalculo || 'Kilometro',
-                            valor: parseFloat(tramoData.valor) || 0,
-                            valorPeaje: parseFloat(tramoData.valorPeaje) || 0,
-                            vigenciaDesde: tramoData.vigenciaDesde,
-                            vigenciaHasta: tramoData.vigenciaHasta
-                        };
-                    } else {
-                        throw new Error(`Datos de tarifa no definidos en tramo #${i+1}`);
-                    }
-                }
+                // Consolidar resultados
+                resultadosConsolidados.exitosos += resultados.exitosos;
+                resultadosConsolidados.tramosCreados += resultados.tramosCreados;
+                resultadosConsolidados.tramosActualizados += resultados.tramosActualizados;
                 
-                // Validar datos de la tarifa
-                if (!tramoData.tarifaHistorica.vigenciaDesde) {
-                    throw new Error(`Fecha inicio vigencia no definida en tramo #${i+1}`);
-                }
-
-                if (!tramoData.tarifaHistorica.vigenciaHasta) {
-                    throw new Error(`Fecha fin vigencia no definida en tramo #${i+1}`);
-                }
+                // Añadir referencia del lote a cada error
+                const erroresConLote = resultados.errores.map(error => ({
+                    ...error,
+                    lote: i + 1
+                }));
                 
-                // Normalizar tipo de tramo
-                tramoData.tarifaHistorica.tipo = tramoData.tarifaHistorica.tipo?.toUpperCase() || 'TRMC';
+                resultadosConsolidados.errores.push(...erroresConLote);
                 
-                // Procesar fechas
-                let fechaDesde = new Date(tramoData.tarifaHistorica.vigenciaDesde);
-                let fechaHasta = new Date(tramoData.tarifaHistorica.vigenciaHasta);
+                logger.debug(`Lote ${i + 1} procesado: ${resultados.exitosos} exitosos, ${resultados.errores.length} errores`);
                 
-                if (isNaN(fechaDesde.getTime())) {
-                    throw new Error(`Fecha de inicio inválida en tramo #${i+1}: ${tramoData.tarifaHistorica.vigenciaDesde}`);
-                }
-                
-                if (isNaN(fechaHasta.getTime())) {
-                    throw new Error(`Fecha de fin inválida en tramo #${i+1}: ${tramoData.tarifaHistorica.vigenciaHasta}`);
-                }
-                
-                // Verificar si ya existe un tramo con el mismo origen y destino
-                const tramoKey = `${tramoData.origen}-${tramoData.destino}-${tramoData.tarifaHistorica.tipo}`;
-                const tramoExistente = mapaTramos[tramoKey];
-                
-                if (tramoExistente && actualizarExistentes) {
-                    logger.debug(`Encontrado tramo existente para ${tramoData.origenNombre || tramoData.origen} → ${tramoData.destinoNombre || tramoData.destino}`);
-                    logger.debug(`Tarifas existentes: ${tramoExistente.tarifasHistoricas.length}`);
-                    
-                    // Verificar si ya existe una tarifa con el mismo tipo, método y fechas superpuestas
-                    const nuevaTarifa = {
-                        tipo: tramoData.tarifaHistorica.tipo,
-                        metodoCalculo: tramoData.tarifaHistorica.metodoCalculo || 'Kilometro',
-                        valor: parseFloat(tramoData.tarifaHistorica.valor) || 0,
-                        valorPeaje: parseFloat(tramoData.tarifaHistorica.valorPeaje) || 0,
-                        vigenciaDesde: fechaDesde,
-                        vigenciaHasta: fechaHasta
-                    };
-                    
-                    logger.debug(`Nueva tarifa a agregar: ${nuevaTarifa.tipo}/${nuevaTarifa.metodoCalculo} - Vigencia: ${format(nuevaTarifa.vigenciaDesde, 'dd/MM/yyyy')} - ${format(nuevaTarifa.vigenciaHasta, 'dd/MM/yyyy')}`);
-                    
-                    // Verificar si hay superposición con tarifas existentes
-                    let hayConflicto = false;
-                    for (const tarifaExistente of tramoExistente.tarifasHistoricas) {
-                        // Agregar logging para depurar el problema
-                        logger.debug(`Comparando tarifas - Nueva: ${nuevaTarifa.tipo}/${nuevaTarifa.metodoCalculo}, Existente: ${tarifaExistente.tipo}/${tarifaExistente.metodoCalculo}`);
-                        
-                        // Solo verificamos conflicto si tienen el mismo tipo y método de cálculo
-                        if (tarifaExistente.tipo === nuevaTarifa.tipo && 
-                            tarifaExistente.metodoCalculo === nuevaTarifa.metodoCalculo) {
-                            
-                            logger.debug(`Verificando superposición con tarifa existente: ${tarifaExistente.tipo}/${tarifaExistente.metodoCalculo} - Vigencia: ${format(tarifaExistente.vigenciaDesde, 'dd/MM/yyyy')} - ${format(tarifaExistente.vigenciaHasta, 'dd/MM/yyyy')}`);
-                            
-                            // Verificar superposición de fechas
-                            if (fechasSuperpuestas(
-                                nuevaTarifa.vigenciaDesde,
-                                nuevaTarifa.vigenciaHasta,
-                                tarifaExistente.vigenciaDesde,
-                                tarifaExistente.vigenciaHasta
-                            )) {
-                                hayConflicto = true;
-                                
-                                // Registrar el error con más detalles para depuración
-                                const errorMsg = `Conflicto de fechas con tarifa existente: ${format(tarifaExistente.vigenciaDesde, 'dd/MM/yyyy')} - ${format(tarifaExistente.vigenciaHasta, 'dd/MM/yyyy')} para tramo ${tramoData.origenNombre || tramoData.origen} → ${tramoData.destinoNombre || tramoData.destino} (${nuevaTarifa.tipo}/${nuevaTarifa.metodoCalculo})`;
-                                
-                                logger.error(errorMsg);
-                                
-                                resultados.errores.push({
-                                    tramo: i+1,
-                                    error: errorMsg,
-                                    detalles: {
-                                        origen: tramoData.origenNombre || tramoData.origen,
-                                        destino: tramoData.destinoNombre || tramoData.destino,
-                                        tipo: nuevaTarifa.tipo,
-                                        metodoCalculo: nuevaTarifa.metodoCalculo,
-                                        vigenciaDesdeNueva: format(nuevaTarifa.vigenciaDesde, 'dd/MM/yyyy'),
-                                        vigenciaHastaNueva: format(nuevaTarifa.vigenciaHasta, 'dd/MM/yyyy'),
-                                        vigenciaDesdeExistente: format(tarifaExistente.vigenciaDesde, 'dd/MM/yyyy'),
-                                        vigenciaHastaExistente: format(tarifaExistente.vigenciaHasta, 'dd/MM/yyyy')
-                                    }
-                                });
-                                
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (!hayConflicto) {
-                        // Agregar la nueva tarifa al tramo existente
-                        tramoExistente.tarifasHistoricas.push(nuevaTarifa);
-                        
-                        // Guardar el tramo actualizado
-                        await tramoExistente.save();
-                        
-                        resultados.exitosos++;
-                        resultados.tramosActualizados++;
-                        logger.debug(`Tramo #${i+1} actualizado exitosamente con nueva tarifa: ${tramoData.origenNombre || tramoData.origen} → ${tramoData.destinoNombre || tramoData.destino} (${nuevaTarifa.tipo}/${nuevaTarifa.metodoCalculo})`);
-                    } else {
-                        logger.error(`Conflicto de fechas en tramo #${i+1}: ${tramoData.origenNombre || tramoData.origen} → ${tramoData.destinoNombre || tramoData.destino}`);
-                        throw new Error(`Conflicto de fechas con tarifa existente en tramo #${i+1}`);
-                    }
-                } else if (tramoExistente && !actualizarExistentes) {
-                    // Si existe pero no queremos actualizar, reportar error
-                    resultados.errores.push({
-                        tramo: i+1,
-                        error: `Ya existe un tramo con el mismo origen y destino para este cliente`
-                    });
-                    
-                    logger.error(`Tramo duplicado #${i+1}: ${tramoData.origenNombre || tramoData.origen} → ${tramoData.destinoNombre || tramoData.destino}`);
-                } else {
-                    // Crear un nuevo tramo
-                    // Obtener información de los sitios para calcular distancia si es necesario
-                    const origenSite = await Site.findById(tramoData.origen).select('Site location');
-                    const destinoSite = await Site.findById(tramoData.destino).select('Site location');
-                    
-                    if (!origenSite) {
-                        throw new Error(`Sitio de origen no encontrado: ${tramoData.origen}`);
-                    }
-                    
-                    if (!destinoSite) {
-                        throw new Error(`Sitio de destino no encontrado: ${tramoData.destino}`);
-                    }
-                    
-                    // Crear el objeto de tramo
-                    const nuevoTramo = new Tramo({
-                        origen: tramoData.origen,
-                        destino: tramoData.destino,
-                        cliente,
-                        distancia: tramoData.distanciaPreCalculada || 0,
-                        tarifasHistoricas: [{
-                            tipo: tramoData.tarifaHistorica.tipo,
-                            metodoCalculo: tramoData.tarifaHistorica.metodoCalculo || 'Kilometro',
-                            valor: parseFloat(tramoData.tarifaHistorica.valor) || 0,
-                            valorPeaje: parseFloat(tramoData.tarifaHistorica.valorPeaje) || 0,
-                            vigenciaDesde: fechaDesde,
-                            vigenciaHasta: fechaHasta
-                        }]
-                    });
-                    
-                    // Si no tenemos distancia pre-calculada y tenemos coordenadas, calcular distancia
-                    if ((!nuevoTramo.distancia || nuevoTramo.distancia === 0) && 
-                        origenSite?.location?.coordinates?.length === 2 && 
-                        destinoSite?.location?.coordinates?.length === 2) {
-                        
-                        try {
-                            const distanciaKm = await calcularDistanciaRuta(
-                                origenSite.location.coordinates, 
-                                destinoSite.location.coordinates
-                            );
-                            
-                            nuevoTramo.distancia = distanciaKm;
-                            logger.debug(`Distancia calculada para tramo #${i+1}: ${distanciaKm} km`);
-                        } catch (routeError) {
-                            logger.error(`Error calculando distancia para tramo #${i+1}:`, routeError);
-                            // No interrumpimos el guardado si falla el cálculo de distancia
-                        }
-                    }
-                    
-                    // Guardar el nuevo tramo
-                    await nuevoTramo.save();
-                    
-                    // Actualizar el mapa de tramos existentes
-                    // Actualizar el mapa de tramos existentes con el nuevo tipo específico
-                     const nuevoTipo = tramoData.tarifaHistorica.tipo;
-                     const nuevoTramoKey = `${tramoData.origen}-${tramoData.destino}-${nuevoTipo}`;
-                     mapaTramos[nuevoTramoKey] = nuevoTramo;
-                    
-                    resultados.exitosos++;
-                    resultados.tramosCreados++;
-                    logger.debug(`Tramo #${i+1} creado exitosamente`);
-                }
             } catch (error) {
-                logger.error(`Error procesando tramo #${i+1}:`, error);
-                logger.error(`Detalles del error:`, error);
-                logger.error(`Datos del tramo con error:`, JSON.stringify(tramos[i]));
+                logger.error(`Error procesando lote ${i + 1}:`, error);
                 
-                resultados.errores.push({
-                    tramo: i+1,
-                    error: error.message || 'Error desconocido'
+                // Añadir error del lote completo a los resultados
+                resultadosConsolidados.errores.push({
+                    lote: i + 1,
+                    error: `Error procesando lote: ${error.message}`
                 });
             }
         }
         
-        // Mejor información en la respuesta
-        res.json({
+        // Enviar respuesta final consolidada
+        logger.info(`Importación masiva completada para cliente ${cliente}: ${resultadosConsolidados.exitosos} exitosos, ${resultadosConsolidados.errores.length} errores.`);
+        res.status(200).json({
             success: true,
-            mensaje: `Importación completada: ${resultados.exitosos} de ${resultados.total} tramos procesados (${resultados.tramosCreados} creados, ${resultados.tramosActualizados} actualizados)`,
-            exitosos: resultados.exitosos,
-            errores: resultados.errores,
-            total: resultados.total,
-            tramosCreados: resultados.tramosCreados,
-            tramosActualizados: resultados.tramosActualizados,
-            porcentajeExito: resultados.total > 0 ? 
-                Math.round((resultados.exitosos / resultados.total) * 100) : 0
+            message: `Proceso completado: ${resultadosConsolidados.exitosos} exitosos, ${resultadosConsolidados.errores.length} errores.`,
+            ...resultadosConsolidados
         });
-    } catch (error) {
-        logger.error('Error en importación masiva:', error);
-        res.status(500).json({ 
+        
+    } catch (error) { // Captura errores generales del controlador
+        logger.error('Error general en bulkCreateTramos:', error);
+        res.status(500).json({
             success: false,
-            message: 'Error en la importación masiva',
-            error: error.message
+            message: 'Error interno del servidor durante la importación masiva',
+            error: error.message // Enviar mensaje de error para depuración
         });
     }
 };
@@ -1112,7 +918,11 @@ exports.testImportacionTipos = async (req, res) => {
 
 exports.updateVigenciaMasiva = async (req, res) => {
     try {
-        const { tramosIds, vigenciaDesde, vigenciaHasta, cliente, tipoTramo } = req.body;
+        // Modificado para aceptar tramoIds (lo que el frontend envía) en lugar de tramosIds
+        const tramosIds = req.body.tramoIds;
+        const vigenciaDesde = req.body.vigenciaDesde;
+        const vigenciaHasta = req.body.vigenciaHasta;
+        const tipoTramo = req.body.tipoTramo; // Opcional
 
         if (!tramosIds || !Array.isArray(tramosIds) || tramosIds.length === 0) {
             return res.status(400).json({
@@ -1128,8 +938,12 @@ exports.updateVigenciaMasiva = async (req, res) => {
             });
         }
 
+        // Modificamos la creación de fechas para asegurar formato UTC
         const fechaDesde = new Date(vigenciaDesde);
+        fechaDesde.setUTCHours(12, 0, 0, 0); // Mediodía UTC para evitar problemas de zona horaria
+
         const fechaHasta = new Date(vigenciaHasta);
+        fechaHasta.setUTCHours(12, 0, 0, 0); // Mediodía UTC para evitar problemas de zona horaria
 
         if (fechaHasta < fechaDesde) {
             return res.status(400).json({
@@ -1140,190 +954,101 @@ exports.updateVigenciaMasiva = async (req, res) => {
 
         const actualizados = [];
         const conflictos = [];
+        const noEncontrados = [];
 
-        // Si se especificó un tipo de tramo, verificamos conflictos primero
-        if (tipoTramo) {
-            // Verificamos conflictos de fechas para el tipo específico
-            const tramosConflicto = await Tramo.aggregate([
-                { 
-                    $match: { 
-                        _id: { $in: tramosIds.map(id => mongoose.Types.ObjectId(id)) } 
-                    } 
-                },
-                { $unwind: '$tarifasHistoricas' },
-                {
-                    $match: {
-                        'tarifasHistoricas.tipo': tipoTramo,
-                        $or: [
-                            // Buscar tarifas del mismo tipo que podrían generar conflictos
-                            {
-                                $and: [
-                                    { 'tarifasHistoricas.vigenciaDesde': { $lte: fechaHasta } },
-                                    { 'tarifasHistoricas.vigenciaHasta': { $gte: fechaDesde } },
-                                    // Excluir la que estamos actualizando actual (si existe)
-                                    { 
-                                        $or: [
-                                            { 'tarifasHistoricas._id': { $exists: false } },
-                                            // Aquí no podemos filtrar por _id específico porque no lo conocemos
-                                            // Verificaremos conflictos tramo por tramo más adelante
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
+        // Iterar sobre cada ID de tramo para procesarlo individualmente
+        for (const tramoId of tramosIds) {
+            try {
+                const tramo = await Tramo.findById(tramoId);
+
+                if (!tramo) {
+                    noEncontrados.push(tramoId);
+                    logger.warn(`Tramo con ID ${tramoId} no encontrado para actualización masiva.`);
+                    continue; // Pasar al siguiente ID
+                }
+
+                let tarifasModificadas = false;
+
+                // Iterar sobre las tarifas históricas del tramo
+                for (let i = 0; i < tramo.tarifasHistoricas.length; i++) {
+                    const tarifa = tramo.tarifasHistoricas[i];
+
+                    // Si se especificó un tipoTramo, solo modificar las tarifas de ese tipo
+                    if (tipoTramo && tarifa.tipo !== tipoTramo) {
+                        continue;
                     }
-                },
-                {
-                    $group: {
-                        _id: '$_id',
-                        conflictos: { $push: '$tarifasHistoricas' }
+
+                    // Verificar conflicto ANTES de modificar:
+                    // ¿Existe OTRA tarifa (j != i) del MISMO tipo y método que se superponga con las NUEVAS fechas?
+                    const hayConflicto = tramo.tarifasHistoricas.some((otraTarifa, j) => 
+                        i !== j && // No comparar consigo misma
+                        otraTarifa.tipo === tarifa.tipo && 
+                        otraTarifa.metodoCalculo === tarifa.metodoCalculo &&
+                        // Comprobar superposición de fechas:
+                        otraTarifa.vigenciaDesde <= fechaHasta && 
+                        otraTarifa.vigenciaHasta >= fechaDesde
+                    );
+
+                    if (hayConflicto) {
+                        // Si encontramos un conflicto potencial con las nuevas fechas, registramos y saltamos esta tarifa
+                        const errorMsg = `Conflicto potencial de fechas al actualizar tarifa (${tarifa.tipo}/${tarifa.metodoCalculo}) en tramo ${tramoId}.`;
+                        logger.error(errorMsg);
+                        conflictos.push({ id: tramoId, tarifaId: tarifa._id, error: errorMsg });
+                        // Importante: No modificamos esta tarifa y continuamos el bucle interno
+                        // para ver si otras tarifas del mismo tramo SÍ se pueden actualizar.
+                    } else {
+                        // No hay conflicto para ESTA tarifa con las nuevas fechas, la modificamos.
+                        tramo.tarifasHistoricas[i].vigenciaDesde = fechaDesde;
+                        tramo.tarifasHistoricas[i].vigenciaHasta = fechaHasta;
+                        tarifasModificadas = true;
                     }
                 }
-            ]);
-            
-            // Marcar los tramos con conflictos
-            const tramosConConflicto = new Set(tramosConflicto.map(t => t._id.toString()));
-            
-            // Procesar cada tramo individualmente cuando hay un tipo específico
-            // porque necesitamos identificar exactamente qué tarifa actualizar y verificar conflictos más detalladamente
-            for (const tramoId of tramosIds) {
-                try {
-                    if (tramosConConflicto.has(tramoId.toString())) {
-                        // Verificar si tiene múltiples tarifas del mismo tipo que generarían conflicto
-                        const tramo = await Tramo.findById(tramoId);
-                        
-                        if (!tramo) {
-                            conflictos.push({ id: tramoId, error: 'Tramo no encontrado' });
-                            continue;
-                        }
-                        
-                        // Encontrar la tarifa a actualizar
-                        const tarifaIndex = tramo.tarifasHistoricas.findIndex(t => t.tipo === tipoTramo);
-                        
-                        if (tarifaIndex === -1) {
-                            conflictos.push({ 
-                                id: tramoId, 
-                                error: `No se encontró una tarifa con tipo ${tipoTramo}` 
-                            });
-                            continue;
-                        }
-                        
-                        // Verificar conflictos con otras tarifas del mismo tipo
-                        const hayConflicto = tramo.tarifasHistoricas.some((t, i) => 
-                            i !== tarifaIndex && 
-                            t.tipo === tipoTramo && 
-                            t.vigenciaDesde <= fechaHasta && 
-                            t.vigenciaHasta >= fechaDesde
-                        );
-                        
-                        if (hayConflicto) {
-                            conflictos.push({
-                                id: tramoId,
-                                error: `Ya existe una tarifa con tipo ${tipoTramo} y fechas que se superponen`
-                            });
-                            continue;
-                        }
-                        
-                        // Actualizar la tarifa específica
-                        tramo.tarifasHistoricas[tarifaIndex].vigenciaDesde = fechaDesde;
-                        tramo.tarifasHistoricas[tarifaIndex].vigenciaHasta = fechaHasta;
+
+                // Si se modificó al menos una tarifa y no hubo errores de conflicto *durante la iteración anterior* 
+                // (los conflictos detectados ya están en el array `conflictos`)
+                // intentamos guardar el tramo. La validación pre-save actuará como doble chequeo.
+                if (tarifasModificadas) {
+                    try {
                         await tramo.save();
                         actualizados.push(tramoId);
-                    } else {
-                        // No hay conflictos, podemos actualizar directamente
-                        await Tramo.updateOne(
-                            { 
-                                _id: tramoId,
-                                'tarifasHistoricas.tipo': tipoTramo 
-                            },
-                            { 
-                                $set: { 
-                                    'tarifasHistoricas.$.vigenciaDesde': fechaDesde,
-                                    'tarifasHistoricas.$.vigenciaHasta': fechaHasta 
-                                } 
-                            }
-                        );
-                        actualizados.push(tramoId);
+                        logger.debug(`Tramo ${tramoId} actualizado correctamente.`);
+                    } catch (saveError) {
+                        // Error al guardar (probablemente validación del modelo)
+                        logger.error(`Error al guardar tramo ${tramoId} tras actualización masiva: ${saveError.message}`);
+                        conflictos.push({ id: tramoId, error: `Error al guardar: ${saveError.message}` });
+                        // Si falló el save(), el tramo no se agrega a `actualizados`
                     }
-                } catch (error) {
-                    logger.error(`Error actualizando tramo ${tramoId}:`, error);
-                    conflictos.push({ id: tramoId, error: error.message });
-                }
-            }
-        } else {
-            // Si no se especificó tipo, actualizamos todas las tarifas de todos los tramos en una operación
-            // (no hay riesgo de conflicto interno porque todas las tarifas tendrán la misma vigencia)
-            try {
-                // Para tramos con modelo nuevo (tarifasHistoricas)
-                const resultTarifasHistoricas = await Tramo.updateMany(
-                    { 
-                        _id: { $in: tramosIds },
-                        tarifasHistoricas: { $exists: true, $not: { $size: 0 } }
-                    },
-                    {
-                        $set: {
-                            'tarifasHistoricas.$[].vigenciaDesde': fechaDesde,
-                            'tarifasHistoricas.$[].vigenciaHasta': fechaHasta
-                        }
-                    }
-                );
-                
-                // Para tramos con modelo antiguo (campos directos)
-                const resultTramoAntiguo = await Tramo.updateMany(
-                    { 
-                        _id: { $in: tramosIds },
-                        $or: [
-                            { tarifasHistoricas: { $exists: false } },
-                            { tarifasHistoricas: { $size: 0 } }
-                        ]
-                    },
-                    {
-                        $set: {
-                            vigenciaDesde: fechaDesde,
-                            vigenciaHasta: fechaHasta
-                        }
-                    }
-                );
-                
-                // Marcar todos como actualizados
-                const totalActualizados = (resultTarifasHistoricas.modifiedCount || 0) + 
-                                         (resultTramoAntiguo.modifiedCount || 0);
-                
-                if (totalActualizados > 0) {
-                    actualizados.push(...tramosIds);
+                } else if (conflictos.some(c => c.id === tramoId)) {
+                    // Si no se modificó nada PERO hubo conflictos reportados para este tramoId
+                    logger.warn(`Tramo ${tramoId} no actualizado debido a conflictos de fechas detectados.`);
                 } else {
-                    // Si no se actualizó ninguno, verificar si los tramos existen
-                    const tramosExistentes = await Tramo.find({ _id: { $in: tramosIds } }).select('_id');
-                    const idsExistentes = new Set(tramosExistentes.map(t => t._id.toString()));
-                    
-                    // Agregar a conflictos los que no existen
-                    for (const tramoId of tramosIds) {
-                        if (!idsExistentes.has(tramoId.toString())) {
-                            conflictos.push({ id: tramoId, error: 'Tramo no encontrado' });
-                        }
-                    }
+                    // No se modificó ninguna tarifa (quizás no había del tipo especificado)
+                    logger.info(`Tramo ${tramoId}: No se encontraron tarifas ${tipoTramo ? `del tipo ${tipoTramo} ` : ''}para actualizar.`);
+                    // Opcionalmente, podrías agregarlo a una lista de 'no aplicables'
                 }
+
             } catch (error) {
-                logger.error('Error en actualización masiva de vigencia:', error);
-                conflictos.push({
-                    fase: 'actualizacionMasiva',
-                    error: error.message
-                });
+                // Error al buscar o procesar un tramo individual
+                logger.error(`Error procesando tramo ${tramoId} en actualización masiva:`, error);
+                conflictos.push({ id: tramoId, error: error.message });
             }
         }
 
         res.json({
             success: true,
-            actualizados,
-            conflictos,
-            mensaje: `Se actualizaron ${actualizados.length} tramos. ${conflictos.length} tramos presentaron conflictos.`
+            data: {
+                actualizados,
+                conflictos,
+                noEncontrados,
+                mensaje: `Proceso completado: ${actualizados.length} tramos actualizados, ${conflictos.length} conflictos, ${noEncontrados.length} no encontrados.`
+            }
         });
 
     } catch (error) {
-        logger.error('Error en actualización masiva:', error);
+        logger.error('Error general en actualización masiva de vigencia:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al actualizar la vigencia de los tramos',
+            message: 'Error interno al actualizar la vigencia de los tramos',
             error: error.message
         });
     }

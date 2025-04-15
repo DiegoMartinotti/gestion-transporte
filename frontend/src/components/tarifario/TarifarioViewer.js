@@ -112,7 +112,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
     };
     
     // Optimizar el procesamiento de tramos con debounce para grandes conjuntos
-    const procesarTramos = useCallback((tramosData) => {
+    const procesarTramos = useCallback((tramosData, filtroDesde, filtroHasta) => {
         if (!tramosData || !Array.isArray(tramosData) || tramosData.length === 0) {
             return [];
         }
@@ -120,7 +120,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         // Para conjuntos grandes, procesamos por lotes para evitar bloquear el hilo principal
         if (tramosData.length > 1000) {
             logger.debug('Procesando conjunto grande de tramos por lotes');
-            return procesarTramosPorLotes(tramosData);
+            return procesarTramosPorLotes(tramosData, filtroDesde, filtroHasta);
         }
         
         // Usar flatMap para mejor rendimiento (reduce una iteración)
@@ -131,8 +131,8 @@ const TarifarioViewer = ({ cliente, onBack }) => {
             // Obtener tarifa actual o histórica según filtro
             const tarifasActuales = obtenerTarifasVigentes(
                 tramo,
-                filtroVigencia.desde,
-                filtroVigencia.hasta
+                filtroDesde,
+                filtroHasta
             );
             
             // Si no hay tarifas, no generamos filas
@@ -144,13 +144,13 @@ const TarifarioViewer = ({ cliente, onBack }) => {
             return tarifasActuales.map(tarifaActual => ({
                 ...tramo,
                 tarifaActual,
-                _idCompuesto: `${tramo._id}-${tarifaActual.tipo || 'TRMC'}`
+                _idCompuesto: `${tramo._id}-${tarifaActual._id || tarifaActual.tipo || 'TRMC'}`
             }));
         });
-    }, [filtroVigencia]);
+    }, []);
     
     // Procesamiento por lotes para conjuntos grandes
-    const procesarTramosPorLotes = useCallback((tramosData) => {
+    const procesarTramosPorLotes = useCallback((tramosData, filtroDesde, filtroHasta) => {
         const resultado = [];
         // Reducir el tamaño del lote para mejorar la respuesta de la UI
         const tamanoLote = 100; 
@@ -169,8 +169,8 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                 
                 const tarifasActuales = obtenerTarifasVigentes(
                     tramo,
-                    filtroVigencia.desde,
-                    filtroVigencia.hasta
+                    filtroDesde,
+                    filtroHasta
                 );
                 
                 if (!tarifasActuales || tarifasActuales.length === 0) {
@@ -180,7 +180,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                 return tarifasActuales.map(tarifaActual => ({
                     ...tramo,
                     tarifaActual,
-                    _idCompuesto: `${tramo._id}-${tarifaActual.tipo || 'TRMC'}`
+                    _idCompuesto: `${tramo._id}-${tarifaActual._id || tarifaActual.tipo || 'TRMC'}`
                 }));
             });
             
@@ -197,7 +197,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         procesarSiguienteLote(0);
         
         return resultado;
-    }, [filtroVigencia]);
+    }, []);
     
     // Filtrado por lotes para conjuntos muy grandes
     const filtrarTramosPorLotes = useCallback((tramosData, desdeStr, hastaStr) => {
@@ -251,7 +251,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
             setError(null);
         }
         
-        return procesarTramos(tramosEnRango);
+        return procesarTramos(tramosEnRango, desdeStr, hastaStr);
     }, [procesarTramos]);
     
     // Aplicar filtros optimizados
@@ -266,7 +266,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         
         // Si no hay filtros de fecha, mostrar todos los tramos sin procesar
         if (!filtroVigencia.desde || !filtroVigencia.hasta) {
-            const tramosConId = procesarTramos(tramos);
+            const tramosConId = procesarTramos(tramos, null, null);
             
             // Eliminar duplicados usando Map para mayor eficiencia
             const tramosUnicos = new Map();
@@ -374,7 +374,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         }
         
         // Procesar los tramos filtrados y eliminar duplicados
-        const tramosConId = procesarTramos(tramosEnRango);
+        const tramosConId = procesarTramos(tramosEnRango, desdeStr, hastaStr);
         
         // Eliminar duplicados
         const tramosUnicos = new Map();
@@ -468,15 +468,21 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                 const tramosRecibidos = response.data || [];
                 logger.debug(`Recibidos ${tramosRecibidos.length} tramos del servidor`);
                 
-                if (tramosRecibidos.length === 0) {
+                // Procesar tramos recibidos con validación para evitar errores
+                const tramosValidos = tramosRecibidos.filter(t => t && t.origen && t.destino);
+
+                if (tramosValidos.length === 0) {
+                    logger.info('No se encontraron tramos válidos para mostrar después del filtro frontend.');
                     setTramos([]);
                     setTramosOriginal([]);
                     setFilteredTramos([]);
-                    return;
+                    // Mostrar mensaje informativo usando el estado de error existente
+                    setError('No se encontraron tramos con origen y destino definidos para mostrar.'); 
+                    return; // Salir temprano
                 }
                 
-                // Procesar tramos recibidos con validación para evitar errores
-                const tramosOrdenados = [...tramosRecibidos].filter(t => t && t.origen && t.destino).sort((a, b) => {
+                // Si hay tramos válidos, ordenarlos
+                const tramosOrdenados = [...tramosValidos].sort((a, b) => {
                     // Ordenar primero por origen y luego por destino
                     if (a.origen?.nombre === b.origen?.nombre) {
                         return a.destino?.nombre?.localeCompare(b.destino?.nombre || '') || 0;
@@ -488,21 +494,25 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                 
                 setTramos(tramosOrdenados);
                 setTramosOriginal(tramosOrdenados);
-                
-                setError(null);
-            } else if (Array.isArray(response)) {
-                // Si tenemos un formato de respuesta sin "success", pero con los datos directamente
+                setError(null); // Limpiar cualquier mensaje/error previo si hay tramos válidos
+
+            } else if (Array.isArray(response)) { // Manejo del formato antiguo si aún es necesario
                 logger.debug(`Recibidos ${response.length} tramos del servidor (formato array)`);
-                
-                if (response.length === 0) {
+
+                // Procesar tramos recibidos con validación
+                const tramosValidos = response.filter(t => t && t.origen && t.destino);
+
+                if (tramosValidos.length === 0) {
+                    logger.info('No se encontraron tramos válidos para mostrar después del filtro frontend (formato array).');
                     setTramos([]);
                     setTramosOriginal([]);
                     setFilteredTramos([]);
-                    return;
+                    setError('No se encontraron tramos con origen y destino definidos para mostrar.');
+                    return; // Salir temprano
                 }
                 
-                // Procesar tramos recibidos con validación
-                const tramosOrdenados = [...response].filter(t => t && t.origen && t.destino).sort((a, b) => {
+                // Si hay tramos válidos, ordenarlos
+                const tramosOrdenados = [...tramosValidos].sort((a, b) => {
                     // Ordenar primero por origen y luego por destino
                     if (a.origen?.nombre === b.origen?.nombre) {
                         return a.destino?.nombre?.localeCompare(b.destino?.nombre || '') || 0;
@@ -512,10 +522,13 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                 
                 setTramos(tramosOrdenados);
                 setTramosOriginal(tramosOrdenados);
-                
-                setError(null);
+                setError(null); // Limpiar cualquier mensaje/error previo
+
             } else {
-                setError(response?.message || 'Formato de respuesta no reconocido');
+                // La respuesta no fue exitosa o el formato es incorrecto
+                const errorMessage = response?.message || 'Formato de respuesta no reconocido o error en la solicitud';
+                logger.error(`Error o formato no reconocido: ${errorMessage}`);
+                setError(`No se pudieron cargar los tramos: ${errorMessage}`);
                 setTramos([]);
                 setTramosOriginal([]);
                 setFilteredTramos([]);
@@ -723,6 +736,19 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         }
     };
 
+    // Calcular total de tarifas ANTES de filtrar
+    const totalTarifas = useMemo(() => {
+        // Procesamos la lista original SIN filtros de fecha para obtener el total
+        return procesarTramos(tramosOriginal, null, null).length;
+    }, [tramosOriginal, procesarTramos]);
+
+    // Actualizar filteredTramos cuando cambian los tramos originales o el filtro
+    useEffect(() => {
+        const tramosProcesados = procesarTramos(tramosOriginal, filtroVigencia.desde, filtroVigencia.hasta);
+        setFilteredTramos(tramosProcesados);
+        setPaginaActual(1); // Resetear a la primera página al cambiar el filtro
+    }, [tramosOriginal, filtroVigencia, procesarTramos]);
+
     // Renderización del componente
     return (
         <Paper sx={{ width: '100%', p: 2 }}>
@@ -772,7 +798,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                             startIcon={<CloudUploadIcon />}
                             onClick={handleOpenImporter}
                             size="small"
-                            disabled={loading || loadingOperation}
+                            disabled={loading || loadingOperation || sites.length === 0}
                         >
                             Importar
                         </Button>
@@ -807,12 +833,12 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                     <Chip 
                         icon={<InfoIcon />} 
-                        label={`Total: ${metadata.tramosUnicos || 0} tramos`} 
+                        label={`Total: ${totalTarifas} tarifas`}
                         variant="outlined" 
                     />
                     {filteredTramos.length > 0 && (
                         <Chip 
-                            label={`Mostrando: ${filteredTramos.length} tramos`} 
+                            label={`Mostrando: ${filteredTramos.length} tarifas`}
                             variant="outlined" 
                             color="primary"
                         />
@@ -964,6 +990,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                             fetchTramos();
                         }}
                         cliente={cliente}
+                        sites={sites}
                     />
                 )}
             </Suspense>
