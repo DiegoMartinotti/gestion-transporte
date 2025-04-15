@@ -382,34 +382,48 @@ const TramoBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
   // Función para convertir número de serie de Excel a objeto Dayjs UTC
   const excelSerialToDate = (serial) => {
     if (typeof serial !== 'number') return null;
-    // Corrección: Excel considera 1900 bisiesto, pero no lo fue.
-    // Si el número de serie es mayor que 59 (28/Feb/1900), restamos 1 día.
-    const offsetDays = serial > 59 ? 1 : 0; 
-    const epochStartDays = 25569; // Días desde 30/12/1899 a 01/01/1970
     
-    const totalDays = serial - (epochStartDays - offsetDays);
-    const milliseconds = totalDays * 86400 * 1000;
-
-    // Crear objeto Dayjs directamente en UTC
-    const dateUtc = dayjs.utc(milliseconds);
+    // Corrección para el bug del año bisiesto ficticio de Excel (1900)
+    const offsetDays = serial > 59 ? 1 : 0;
     
-    // Validar si la fecha es válida antes de devolverla
-    return dateUtc.isValid() ? dateUtc : null;
+    // Obtener fecha base (0 en Excel es 31/12/1899)
+    const baseDate = new Date(1899, 11, 31);
+    
+    // Calcular nueva fecha añadiendo días (ajustando por el offset)
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const targetDate = new Date(baseDate.getTime() + ((serial - offsetDays) * msPerDay));
+    
+    // Extraer componentes de fecha (año, mes, día)
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth();
+    const day = targetDate.getDate();
+    
+    // Crear fecha UTC con dayjs usando los componentes exactos
+    return dayjs.utc().year(year).month(month).date(day).startOf('day');
   }
 
   // Función para procesar una fecha en formato DD/MM/YYYY a objeto Dayjs UTC
   const processDate = (dateString) => {
     if (!dateString || typeof dateString !== 'string') return null;
     
-    // Usar dayjs para parsear la fecha en el formato esperado
-    // Lo parseamos asumiendo que es una fecha local y luego la convertimos a UTC
-    // manteniendo la misma hora (00:00:00) pero ahora en UTC.
-    // O parsear directamente como UTC si el formato lo permite.
+    // Primero verificar si la fecha ya está en formato ISO (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+      return dayjs.utc(dateString);
+    }
     
-    // Intenta parsear estrictamente con el formato DD/MM/YYYY
-    const dateUtc = dayjs.utc(dateString, 'DD/MM/YYYY', true); // El true activa el modo estricto
+    // Intentar parsear con el formato DD/MM/YYYY
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Los meses en JS son 0-11
+      const year = parseInt(parts[2], 10);
+      
+      // Crear fecha UTC explícitamente con los componentes
+      return dayjs.utc().year(year).month(month).date(day).startOf('day');
+    }
     
-    // Validar si la fecha es válida después del parseo
+    // Último intento con el formato estándar
+    const dateUtc = dayjs.utc(dateString, 'DD/MM/YYYY', true);
     return dateUtc.isValid() ? dateUtc : null;
   };
 
