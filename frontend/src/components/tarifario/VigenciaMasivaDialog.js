@@ -37,10 +37,17 @@ const VigenciaMasivaDialog = ({
     };
 
     const handleSubmit = () => {
-        // Formatear fechas
+        // Formatear fechas con hora en UTC para evitar problemas de zona horaria
         const dataToSend = {
-            vigenciaDesde: vigenciaData.vigenciaDesde.format('YYYY-MM-DD'),
-            vigenciaHasta: vigenciaData.vigenciaHasta.format('YYYY-MM-DD'),
+            // Asegurarnos de que la fecha se envía con formato YYYY-MM-DD
+            // y establecer la hora a mediodía (12:00) en UTC para evitar cualquier
+            // problema de zona horaria que pueda cambiar el día
+            vigenciaDesde: vigenciaData.vigenciaDesde
+                .hour(12).minute(0).second(0).millisecond(0)
+                .format('YYYY-MM-DD'),
+            vigenciaHasta: vigenciaData.vigenciaHasta
+                .hour(12).minute(0).second(0).millisecond(0)
+                .format('YYYY-MM-DD'),
         };
         
         onUpdate(tramosSeleccionados, dataToSend);

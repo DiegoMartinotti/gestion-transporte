@@ -21,13 +21,24 @@ export const formatMoney = (value) => {
 };
 
 /**
- * Formatea una fecha ISO a formato legible
+ * Formatea una fecha ISO a formato legible, asegurando que se use UTC
+ * para evitar problemas de un día menos por zona horaria.
  * @param {string} dateString - Fecha en formato ISO
  * @returns {string} Fecha formateada
  */
 export const formatDate = (dateString) => {
     if (!dateString) return '';
-    return dayjs(dateString).format(DATE_FORMAT);
+    
+    // Crear una fecha en UTC sin importar la zona horaria
+    const date = new Date(dateString);
+    
+    // Extraer los componentes de la fecha en UTC
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;  // En JavaScript los meses empiezan en 0
+    const day = date.getUTCDate();
+    
+    // Formatear con padding de ceros y según formato DD/MM/YYYY
+    return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
 };
 
 /**

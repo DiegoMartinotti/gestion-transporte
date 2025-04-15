@@ -215,20 +215,6 @@ tramoSchema.pre('save', async function(next) {
             }
         }
         
-        // Verificar que no exista otro tramo con la misma configuración base
-        if (this.isNew) {
-            const tramoExistente = await this.constructor.findOne({
-                origen: this.origen,
-                destino: this.destino,
-                cliente: this.cliente,
-                _id: { $ne: this._id }
-            });
-            
-            if (tramoExistente) {
-                throw new Error(`Ya existe un tramo con la misma configuración para este cliente.`);
-            }
-        }
-        
         logger.debug('[VALIDACIÓN] ✅ Validación exitosa, no hay conflictos');
         next();
     } catch (error) {

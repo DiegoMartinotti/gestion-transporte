@@ -16,18 +16,32 @@ const getSitesByCliente = tryCatch(async (req, res) => {
         throw new ValidationError('ID de cliente es requerido');
     }
 
-    const sites = await Site.find({ cliente: clienteId })
-        .populate('cliente', 'nombre')
-        .sort({ nombre: 1 })
+    // Buscar por Cliente (ojo: en el modelo es Cliente, no cliente)
+    const sites = await Site.find({ Cliente: clienteId })
         .lean()
+        .sort({ Site: 1 })
         .exec();
 
-    logger.debug(`Sites por cliente ${clienteId}: ${sites.length} encontrados`);
+    // Mapear los campos para que el frontend reciba nombre, tipo y codigo
+    const sitesFormateados = sites.map(site => ({
+        _id: site._id,
+        nombre: site.Site,
+        tipo: site.Tipo || '',
+        codigo: site.Codigo || '',
+        direccion: site.Direccion || '',
+        localidad: site.Localidad || '',
+        provincia: site.Provincia || '',
+        coordenadas: site.location && Array.isArray(site.location.coordinates)
+            ? { lng: site.location.coordinates[0], lat: site.location.coordinates[1] }
+            : null
+    }));
+
+    logger.debug(`Sites por cliente ${clienteId}: ${sitesFormateados.length} encontrados`);
     
     res.json({
         success: true,
-        count: sites.length,
-        data: sites
+        count: sitesFormateados.length,
+        data: sitesFormateados
     });
 });
 

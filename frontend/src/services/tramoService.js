@@ -50,7 +50,7 @@ class TramoService {
    * @returns {Promise} - Promesa con el resultado de la importación
    */
   async bulkImportTramos(clienteId, tramos, reutilizarDistancias = true, actualizarExistentes = false) {
-    return await api.post('/tramos/bulk', {
+    return await api.post('/api/tramos/bulk', {
       cliente: clienteId,
       tramos,
       reutilizarDistancias,

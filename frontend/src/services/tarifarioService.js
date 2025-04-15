@@ -225,10 +225,47 @@ const guardarTramo = async (tramo) => {
   }
 };
 
+/**
+ * Actualiza la vigencia de múltiples tramos
+ * @param {Array<string>} tramoIds - IDs de los tramos a actualizar
+ * @param {Object} vigenciaData - Objeto con vigenciaDesde y vigenciaHasta
+ * @returns {Promise<Object>} Resultado de la operación
+ */
+const updateVigenciaMasiva = async (tramoIds, vigenciaData) => {
+  if (!Array.isArray(tramoIds) || tramoIds.length === 0) {
+    throw new Error('Se requiere un array de IDs de tramos');
+  }
+  if (!vigenciaData || !vigenciaData.vigenciaDesde || !vigenciaData.vigenciaHasta) {
+    throw new Error('Se requieren las fechas de vigencia');
+  }
+
+  const url = `${BASE_URL}/tramos/updateVigenciaMasiva`;
+  logger.debug(`POST ${url}`, { tramoIds, ...vigenciaData });
+
+  try {
+    const response = await api.post(url, { tramoIds, ...vigenciaData });
+    
+    if (!response || !response.data) {
+      logger.error('Respuesta vacía al actualizar vigencia masiva');
+      throw new Error('No se recibió respuesta del servidor');
+    }
+    
+    logger.debug('Respuesta de actualización masiva:', response.data);
+    return response.data;
+
+  } catch (error) {
+    const processedError = errorService.processError(error, {
+      context: 'tarifarioService.updateVigenciaMasiva'
+    });
+    throw processedError;
+  }
+};
+
 // Exportar todas las funciones del servicio
 export default {
   getTramosByCliente,
   getSitesByCliente,
   calcularDistancia,
-  guardarTramo
+  guardarTramo,
+  updateVigenciaMasiva
 }; 

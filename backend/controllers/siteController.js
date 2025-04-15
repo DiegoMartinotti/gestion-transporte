@@ -20,18 +20,19 @@ exports.getSites = tryCatch(async (req, res) => {
         .lean()
         .exec();
 
-    const sitesFormateados = sites.map(site => {
-        // Convertir coordenadas de GeoJSON a formato lat/lng
-        const coordenadas = site.location && Array.isArray(site.location.coordinates) ? {
-            lng: site.location.coordinates[0],
-            lat: site.location.coordinates[1]
-        } : null;
-
-        return {
-            ...site,
-            coordenadas
-        };
-    });
+    // Mapear los campos para que el frontend reciba nombre, tipo y codigo
+    const sitesFormateados = sites.map(site => ({
+        _id: site._id,
+        nombre: site.Site,
+        tipo: site.Tipo || '',
+        codigo: site.Codigo || '',
+        direccion: site.Direccion || '',
+        localidad: site.Localidad || '',
+        provincia: site.Provincia || '',
+        coordenadas: site.location && Array.isArray(site.location.coordinates)
+            ? { lng: site.location.coordinates[0], lat: site.location.coordinates[1] }
+            : null
+    }));
 
     logger.debug('Sites procesados:', sitesFormateados);
 

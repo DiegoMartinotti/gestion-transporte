@@ -34,6 +34,7 @@ import logger from '../../utils/logger';
  * @param {Array<{name: string, data: Array<Array<string>>, columnWidths: Array<{wch: number}>}>} [props.instructionSheets=[]] - Hojas adicionales para instrucciones
  * @param {React.ReactNode} [props.additionalContent] - Contenido adicional para mostrar en el diálogo
  * @param {Array<Object>} [props.exampleData=[]] - Datos de ejemplo para incluir en la plantilla
+ * @param {any} [props.validationContext=null] - Contexto de validación para el worker
  * @returns {React.ReactElement} Componente ExcelImportTemplate
  */
 const ExcelImportTemplate = ({ 
@@ -49,7 +50,8 @@ const ExcelImportTemplate = ({
   instructionSheets = [],
   additionalContent,
   additionalActions,
-  exampleData = []
+  exampleData = [],
+  validationContext = null
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -240,6 +242,18 @@ const ExcelImportTemplate = ({
             jsonData.shift();
           }
           
+          // --- Limpieza de datos numéricos (reemplazar comas) ---
+          jsonData.forEach(row => {
+            if (typeof row.valor === 'string') {
+              row.valor = row.valor.replace(',', '.');
+            }
+            if (typeof row.valorPeaje === 'string') {
+              row.valorPeaje = row.valorPeaje.replace(',', '.');
+            }
+            // También podríamos convertir a número aquí, pero parseFloat en la validación debería bastar
+          });
+          // --- Fin Limpieza ---
+          
           if (jsonData.length === 0) {
             throw new Error('El archivo no contiene datos para importar');
           }
@@ -254,6 +268,7 @@ const ExcelImportTemplate = ({
               data: jsonData,
               validateRowFn: validateRow ? validateRow.toString() : null,
               excelHeaders: excelHeaders,
+              validationContext: validationContext,
               batchSize: 50 // Procesar en lotes de 50 filas
             });
           } else {
@@ -266,7 +281,7 @@ const ExcelImportTemplate = ({
               // Validar si es necesario
               if (validateRow) {
                 try {
-                  const rowErrors = validateRow(row, i);
+                  const rowErrors = validateRow(row, i, excelHeaders, validationContext);
                   if (rowErrors && rowErrors.length > 0) {
                     errors.push(...rowErrors);
                   } else {
@@ -311,7 +326,7 @@ const ExcelImportTemplate = ({
       setError([`Error al procesar el archivo: ${error.message}`]);
       setLoading(false);
     }
-  }, [excelHeaders, validateRow, handleProcessValidData]);
+  }, [excelHeaders, validateRow, handleProcessValidData, validationContext]);
 
   // Función para manejar la carga del archivo
   const handleFileUpload = useCallback((event) => {
@@ -508,7 +523,9 @@ ExcelImportTemplate.propTypes = {
   /** Botones de acción adicionales */
   additionalActions: PropTypes.node,
   /** Datos de ejemplo para incluir en la plantilla */
-  exampleData: PropTypes.array
+  exampleData: PropTypes.array,
+  /** Contexto de validación para el worker */
+  validationContext: PropTypes.any
 };
 
 export default ExcelImportTemplate; 
