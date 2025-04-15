@@ -462,7 +462,7 @@ const CalcularTarifa = () => {
       // Obtener las opciones filtradas según el texto ingresado
       const inputValue = event.target.value.toLowerCase();
       const filteredOptions = options.filter(option => 
-        option.Site.toLowerCase().includes(inputValue)
+        (option?.Site || option?.nombre || '').toLowerCase().includes(inputValue)
       );
 
       // Si hay una opción válida resaltada, seleccionarla
@@ -527,14 +527,22 @@ const CalcularTarifa = () => {
 
           <Grid item xs={12} md={6}>
             <Autocomplete
-              options={sites.sort((a, b) => a.Site.localeCompare(b.Site))}
-              getOptionLabel={(option) => option.Site || ''}
+              options={sites.sort((a, b) => (a?.Site || a?.nombre || '').localeCompare(b?.Site || b?.nombre || ''))}
+              getOptionLabel={(option) => option.Site || option.nombre || ''}
+              getOptionKey={(option) => option._id}
               value={sites.find(site => site._id === origen) || null}
               onChange={handleOrigenChange}
               disabled={!selectedCliente}
               onKeyDown={(e) => handleAutoCompleteKeyDown(e, sites, handleOrigenChange, destinoInputRef)}
               blurOnSelect={false}
               selectOnFocus={true}
+              sx={{
+                '& .MuiAutocomplete-listbox li': {
+                  color: (theme) => theme.palette.text.primary,
+                  backgroundColor: (theme) => theme.palette.background.paper,
+                  padding: '6px 16px',
+                }
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -545,7 +553,7 @@ const CalcularTarifa = () => {
               isOptionEqualToValue={(option, value) => option._id === value._id}
               filterOptions={(options, { inputValue }) => 
                 options.filter(option =>
-                  option.Site.toLowerCase().includes(inputValue.toLowerCase())
+                  (option?.Site || option?.nombre || '').toLowerCase().includes(inputValue.toLowerCase())
                 )
               }
             />
@@ -553,14 +561,22 @@ const CalcularTarifa = () => {
 
           <Grid item xs={12} md={6}>
             <Autocomplete
-              options={destinosDisponibles.sort((a, b) => a.Site.localeCompare(b.Site))}
-              getOptionLabel={(option) => option.Site || ''}
+              options={destinosDisponibles.sort((a, b) => (a?.Site || a?.nombre || '').localeCompare(b?.Site || b?.nombre || ''))}
+              getOptionLabel={(option) => option.Site || option.nombre || ''}
+              getOptionKey={(option) => option._id}
               value={destinosDisponibles.find(site => site._id === destino) || null}
               onChange={handleDestinoChange}
               disabled={!origen || destinosDisponibles.length === 0}
               onKeyDown={(e) => handleAutoCompleteKeyDown(e, destinosDisponibles, handleDestinoChange, tipoTramoInputRef)}
               blurOnSelect={false}
               selectOnFocus={true}
+              sx={{
+                '& .MuiAutocomplete-listbox li': {
+                  color: (theme) => theme.palette.text.primary,
+                  backgroundColor: (theme) => theme.palette.background.paper,
+                  padding: '6px 16px',
+                }
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -572,7 +588,7 @@ const CalcularTarifa = () => {
               isOptionEqualToValue={(option, value) => option._id === value._id}
               filterOptions={(options, { inputValue }) => 
                 options.filter(option =>
-                  option.Site.toLowerCase().includes(inputValue.toLowerCase())
+                  (option?.Site || option?.nombre || '').toLowerCase().includes(inputValue.toLowerCase())
                 )
               }
             />
