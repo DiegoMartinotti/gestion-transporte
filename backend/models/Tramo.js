@@ -53,7 +53,8 @@ const tramoSchema = new Schema({
         required: [true, 'El destino es obligatorio']
     },
     cliente: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Cliente',
         required: [true, 'El cliente es obligatorio']
     },
     distancia: {
@@ -224,11 +225,23 @@ tramoSchema.pre('save', async function(next) {
 });
 
 // Método para crear una descripción humanizada del tramo
-tramoSchema.virtual('descripcion').get(function() {
-    const tarifaActual = this.getTarifaVigente();
-    const tipoStr = tarifaActual ? tarifaActual.tipo : 'Sin tipo';
-    const metodoCalculo = tarifaActual ? tarifaActual.metodoCalculo : 'Sin tarifa vigente';
-    return `${this.origen} → ${this.destino} (${tipoStr}/${metodoCalculo})`;
+tramoSchema.virtual('descripcion').get(async function() {
+    try {
+        // Poblar relaciones para obtener nombres
+        await this.populate('origen destino cliente'); 
+        const nombreOrigen = this.origen ? this.origen.Site : 'ID Origen Desc.';
+        const nombreDestino = this.destino ? this.destino.Site : 'ID Destino Desc.';
+        const nombreCliente = this.cliente ? this.cliente.Cliente : 'ID Cliente Desc.';
+        
+        const tarifaActual = this.getTarifaVigente();
+        const tipoStr = tarifaActual ? tarifaActual.tipo : 'Sin tipo';
+        const metodoCalculo = tarifaActual ? tarifaActual.metodoCalculo : 'Sin tarifa';
+        
+        return `${nombreOrigen} → ${nombreDestino} (${nombreCliente} - ${tipoStr}/${metodoCalculo})`;
+    } catch (error) {
+        logger.error('Error generando descripción del tramo:', error);
+        return 'Error al generar descripción';
+    }
 });
 
 // Validaciones adicionales

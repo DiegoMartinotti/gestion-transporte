@@ -212,28 +212,39 @@ viajeSchema.pre('save', async function (next) {
         throw new Error('Cliente no encontrado');
       }
       
-      // Buscar el tramo correspondiente
+      // Buscar el tramo correspondiente usando el ObjectId del cliente
       const tramo = await Tramo.findOne({
-        cliente: clienteDoc.Cliente,
+        cliente: clienteDoc._id, // Cambiado para usar el ObjectId
         origen: this.origen,
-        destino: this.destino,
-        tipo: this.tipoTramo,
-        vigenciaDesde: { $lte: this.fecha },
-        vigenciaHasta: { $gte: this.fecha }
-      }).populate('origen destino');
+        destino: this.destino
+      }).populate('tarifasHistoricas'); // Poblar las tarifas para acceder a sus datos
       
       if (!tramo) {
-        throw new Error(`No se encontró un tramo válido para el viaje de ${clienteDoc.Cliente} desde ${this.origen} hasta ${this.destino}`);
+        // Intentar poblar nombres para un mensaje de error más claro
+        await this.populate('origen destino');
+        const origenNombre = this.origen ? this.origen.Site : 'ID desconocido';
+        const destinoNombre = this.destino ? this.destino.Site : 'ID desconocido';
+        throw new Error(`No se encontró un tramo válido para el cliente ${clienteDoc.Cliente} (${clienteDoc._id}) desde ${origenNombre} hasta ${destinoNombre} para la fecha ${this.fecha.toISOString().split('T')[0]}`);
+      }
+
+      // Encontrar la tarifa vigente para el tipo de tramo y fecha
+      const tarifaVigente = tramo.getTarifaVigente(this.fecha, this.tipoTramo);
+
+      if (!tarifaVigente) {
+        await this.populate('origen destino');
+        const origenNombre = this.origen ? this.origen.Site : 'ID desconocido';
+        const destinoNombre = this.destino ? this.destino.Site : 'ID desconocido';
+        throw new Error(`No se encontró una tarifa ${this.tipoTramo} vigente para el tramo ${origenNombre} → ${destinoNombre} (Cliente: ${clienteDoc.Cliente}) en la fecha ${this.fecha.toISOString().split('T')[0]}`);
       }
       
-      // Asignar el peaje del tramo
-      this.peaje = Number(tramo.valorPeaje) || 0;
+      // Asignar el peaje de la tarifa vigente
+      this.peaje = Number(tarifaVigente.valorPeaje) || 0;
       
-      // Calcular tarifa según el método de cálculo del tramo
+      // Calcular tarifa base según el método de cálculo de la tarifa vigente
       let tarifaBase = 0;
       const numPalets = Number(this.paletas) || 0;
       
-      switch (tramo.metodoCalculo) {
+      switch (tarifaVigente.metodoCalculo) {
         case 'Palet':
           // Verificar si el cliente tiene una fórmula personalizada para el tipo de unidad
           const formulaKey = this.tipoUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
@@ -245,16 +256,24 @@ viajeSchema.pre('save', async function (next) {
             tarifaBase = resultado.tarifaBase;
           } else {
             // Cálculo por defecto
-            tarifaBase = tramo.valor * numPalets;
+            tarifaBase = tarifaVigente.valor * numPalets;
           }
           break;
           
         case 'Kilometro':
-          tarifaBase = tramo.valor * tramo.distancia;
+          // Asegurarse que la distancia está cargada en el tramo
+          if (!tramo.distancia || tramo.distancia <= 0) {
+             logger.warn(`[TARIFA] El tramo ${tramo._id} no tiene distancia calculada para tarifa por Km.`);
+             // Opcional: Lanzar error o usar valor por defecto
+             // throw new Error(`El tramo ${tramo._id} no tiene distancia calculada.`);
+             tarifaBase = 0; // O algún valor por defecto o manejo específico
+          } else {
+            tarifaBase = tarifaVigente.valor * tramo.distancia;
+          }
           break;
           
         case 'Fijo':
-          tarifaBase = tramo.valor;
+          tarifaBase = tarifaVigente.valor;
           break;
           
         default:

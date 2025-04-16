@@ -54,6 +54,32 @@ exports.getTramosByCliente = async (req, res) => {
         // Etapa 1: Filtrado inicial por cliente
         // Seleccionamos solo los tramos que pertenecen al cliente solicitado
         pipeline.push({ $match: { cliente: mongoose.Types.ObjectId(cliente) } });
+
+        // Etapa 1.5: Lookup para enriquecer datos del cliente
+        // Unimos con la colección 'clientes' para obtener los detalles del cliente
+        pipeline.push(
+            {
+                $lookup: {
+                    from: 'clientes', // Nombre de la colección de clientes
+                    localField: 'cliente',
+                    foreignField: '_id',
+                    as: 'clienteData'
+                }
+            },
+            // Desempaquetar el array resultante y reemplazar el campo 'cliente'
+            {
+                $addFields: {
+                    // Reemplaza el ObjectId de cliente con el primer (y único) documento encontrado
+                    cliente: { $arrayElemAt: ['$clienteData', 0] }
+                }
+            },
+            // Opcional: Eliminar el campo temporal si no se necesita más adelante
+            {
+                $project: {
+                    clienteData: 0
+                }
+            }
+        );
         
         // Etapa 2: Lookup para enriquecer datos de origen y destino
         // Realizamos una operación de join con la colección de sites para obtener

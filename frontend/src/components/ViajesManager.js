@@ -11,7 +11,7 @@ import { Edit as EditIcon, Delete as DeleteIcon, CloudUpload as CloudUploadIcon 
 import logger from '../utils/logger';
 import ViajeBulkImporter from './ViajeBulkImporter';
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || '';
 
 const ViajesManager = () => {
   const [viajes, setViajes] = useState([]);
@@ -32,6 +32,9 @@ const ViajesManager = () => {
   const [sites, setSites] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [selectedCliente, setSelectedCliente] = useState('');
+  const [personalList, setPersonalList] = useState([]);
+  const [vehiculosList, setVehiculosList] = useState([]);
+  const [loadingImporterData, setLoadingImporterData] = useState(false);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -54,7 +57,6 @@ const ViajesManager = () => {
       logger.debug('Clientes recibidos:', clientesData);
       setClientes(clientesData);
       
-      // Solo establecer un cliente por defecto si hay clientes disponibles
       if (clientesData && clientesData.length > 0) {
         const primerCliente = clientesData[0]._id || '';
         logger.debug('Seleccionando cliente por defecto:', primerCliente);
@@ -78,7 +80,7 @@ const ViajesManager = () => {
     } catch (error) {
       logger.error('Error al obtener viajes:', error);
       setError('Error al cargar los viajes');
-      setViajes([]); // Inicializar como array vacío en caso de error
+      setViajes([]);
     } finally {
       setLoading(false);
     }
@@ -88,22 +90,19 @@ const ViajesManager = () => {
     try {
       logger.debug(`Obteniendo sitios para cliente: ${selectedCliente}`);
       
-      // Obtener el nombre del cliente de la lista de clientes
       const clienteSeleccionado = clientes.find(c => c._id === selectedCliente);
       const nombreCliente = clienteSeleccionado ? clienteSeleccionado.Cliente : '';
       
       logger.debug(`Nombre del cliente: ${nombreCliente}`);
       
-      // Hacer una sola petición al endpoint correcto
       const response = await axios.get(`${API_URL}/api/site`, {
         params: { 
-          cliente: nombreCliente  // Usar el nombre del cliente
+          cliente: nombreCliente
         }
       });
       
       logger.debug('Respuesta de sitios:', response.data);
       
-      // Procesar la respuesta
       let sitesData = [];
       if (response.data) {
         if (response.data.data && Array.isArray(response.data.data)) {
@@ -113,11 +112,9 @@ const ViajesManager = () => {
         }
       }
       
-      // Si no hay sitios, usar los sitios de la imagen como fallback
       if (sitesData.length === 0) {
         logger.warn('No se encontraron sitios para este cliente, usando fallback');
         
-        // Sitios reales mostrados en la imagen
         sitesData = [
           { 
             _id: 'site1', 
@@ -146,14 +143,12 @@ const ViajesManager = () => {
         ];
       }
       
-      // Establecer los sitios
       logger.debug(`Sitios encontrados: ${sitesData.length}`);
       setSites(sitesData);
       
     } catch (error) {
       logger.error('Error al obtener sitios:', error);
       
-      // Sitios fallback en caso de error
       const sitiosFallback = [
         { _id: 'site1', Site: 'CABELMA', Localidad: 'General Pacheco', Provincia: 'Buenos Aires', Direccion: '-' },
         { _id: 'site2', Site: 'CATTORINI', Localidad: 'Quilmes', Provincia: 'Buenos Aires', Direccion: '-' },
@@ -161,6 +156,32 @@ const ViajesManager = () => {
       ];
       
       setSites(sitiosFallback);
+    }
+  };
+
+  const fetchPersonalActivo = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/personal`, { params: { activo: true } });
+      const personalData = response.data?.data || response.data || [];
+      logger.debug('Personal activo recibido:', personalData);
+      setPersonalList(personalData.map(p => ({...p, legajo: p.numeroLegajo || p.legajo })));
+    } catch (error) {
+      logger.error('Error al obtener personal activo:', error);
+      setError('Error al cargar lista de personal para importación.');
+      setPersonalList([]);
+    }
+  };
+
+  const fetchVehiculos = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/vehiculos`);
+      const vehiculosData = response.data?.data || response.data || [];
+      logger.debug('Vehículos recibidos:', vehiculosData);
+      setVehiculosList(vehiculosData.map(v => ({...v, patente: v.dominio || v.patente })));
+    } catch (error) {
+      logger.error('Error al obtener vehículos:', error);
+      setError('Error al cargar lista de vehículos para importación.');
+      setVehiculosList([]);
     }
   };
 
@@ -180,8 +201,8 @@ const ViajesManager = () => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Está seguro que desea eliminar este viaje?')) {
       try {
-        await axios.delete(`/api/viajes/${id}`); // Headers no necesarios
-        fetchViajes(); // Recargar la lista
+        await axios.delete(`/api/viajes/${id}`);
+        fetchViajes();
         setSuccessMessage('Viaje eliminado correctamente');
       } catch (error) {
         setError('Error al eliminar el viaje: ' + (error.response?.data?.message || error.message));
@@ -193,7 +214,7 @@ const ViajesManager = () => {
     setIsModalOpen(false);
     setSelectedViaje(null);
     setFormData({
-      cliente: selectedCliente, // Usar el cliente seleccionado actualmente
+      cliente: selectedCliente,
       fecha: '',
       origen: '',
       destino: '',
@@ -205,10 +226,10 @@ const ViajesManager = () => {
   const handleSubmit = async () => {
     try {
       if (selectedViaje) {
-        await axios.put(`${API_URL}/api/viajes/${selectedViaje._id}`, formData); // Headers no necesarios
+        await axios.put(`${API_URL}/api/viajes/${selectedViaje._id}`, formData);
         setSuccessMessage('Viaje actualizado correctamente');
       } else {
-        await axios.post(`${API_URL}/api/viajes`, formData); // Headers no necesarios
+        await axios.post(`${API_URL}/api/viajes`, formData);
         setSuccessMessage('Viaje creado correctamente');
       }
       handleCloseDialog();
@@ -227,7 +248,25 @@ const ViajesManager = () => {
 
   const handleImportComplete = () => {
     fetchViajes();
-    setSuccessMessage('Importación completada correctamente');
+    setSuccessMessage('Importación procesada. Revisa los resultados.');
+    setIsImporterOpen(false);
+  };
+
+  const handleOpenImporter = async () => {
+    if (!selectedCliente) {
+        setError('Por favor, seleccione un cliente primero.');
+        return;
+    }
+    setLoadingImporterData(true);
+    setError(null);
+    try {
+        await Promise.all([fetchPersonalActivo(), fetchVehiculos()]);
+        setIsImporterOpen(true);
+    } catch (error) {
+        logger.error('Error al cargar datos para el importador', error)
+    } finally {
+        setLoadingImporterData(false);
+    }
   };
 
   if (loading) return <CircularProgress />;
@@ -273,6 +312,7 @@ const ViajesManager = () => {
           variant="contained" 
           color="primary" 
           onClick={() => setIsModalOpen(true)}
+          disabled={!selectedCliente}
         >
           Nuevo Viaje
         </Button>
@@ -280,10 +320,11 @@ const ViajesManager = () => {
         <Button
           variant="contained"
           color="secondary"
-          onClick={() => setIsImporterOpen(true)}
-          startIcon={<CloudUploadIcon />}
+          onClick={handleOpenImporter}
+          startIcon={loadingImporterData ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
+          disabled={!selectedCliente || loadingImporterData}
         >
-          Importar Viajes
+          {loadingImporterData ? 'Cargando Datos...' : 'Importar Viajes'}
         </Button>
       </Box>
 
@@ -302,9 +343,9 @@ const ViajesManager = () => {
           <TableBody>
             {viajes.map((viaje) => (
               <TableRow key={viaje._id}>
-                <TableCell>{viaje.cliente}</TableCell>
+                <TableCell>{viaje.cliente?.Cliente}</TableCell> {/* Mostrar nombre del cliente */}
                 <TableCell>{new Date(viaje.fecha).toLocaleDateString()}</TableCell>
-                <TableCell>{viaje.origen}</TableCell>
+                <TableCell>{viaje.origen}</TableCell> {/* TODO: Poblar origen/destino si son IDs */}
                 <TableCell>{viaje.destino}</TableCell>
                 <TableCell>{viaje.estado}</TableCell>
                 <TableCell>
@@ -321,8 +362,7 @@ const ViajesManager = () => {
         </Table>
       </TableContainer>
 
-      {/* Dialog para crear/editar viajes */}
-      <Dialog open={isModalOpen} onClose={handleCloseDialog}>
+      <Dialog open={isModalOpen} onClose={handleCloseDialog} fullWidth maxWidth="sm">
         <DialogTitle>
           {selectedViaje ? 'Editar Viaje' : 'Nuevo Viaje'}
         </DialogTitle>
@@ -409,16 +449,18 @@ const ViajesManager = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Componente de importación masiva */}
-      <ViajeBulkImporter
-        open={isImporterOpen}
-        onClose={() => setIsImporterOpen(false)}
-        cliente={selectedCliente} // Usar el cliente seleccionado
-        onComplete={handleImportComplete}
-        sites={sites}
-      />
+      {isImporterOpen && (
+          <ViajeBulkImporter
+            open={isImporterOpen}
+            onClose={() => setIsImporterOpen(false)}
+            cliente={selectedCliente}
+            onComplete={handleImportComplete}
+            sites={sites}
+            personal={personalList}
+            vehiculos={vehiculosList}
+          />
+      )}
 
-      {/* Snackbar para mensajes de éxito */}
       <Snackbar
         open={!!successMessage}
         autoHideDuration={6000}
