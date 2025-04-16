@@ -92,7 +92,8 @@ const EnhancedTable = () => {
     // No permitir edición de dt y cliente
     if (field === 'dt' || field === 'cliente') return;
     
-    const rowId = `${row.dt}_${row.cliente}`;
+    // Usar el _id del cliente para asegurar unicidad del rowId
+    const rowId = `${row.dt}_${row.cliente?._id}`;
     setEditCell({ rowId, field, value });
     setEditValue(value);
   };
@@ -123,7 +124,8 @@ const EnhancedTable = () => {
       }
 
       const response = await fetch(
-        `${API_URL}/api/viajes?dt=${encodeURIComponent(row.dt)}&cliente=${encodeURIComponent(row.cliente)}`,
+        // Pasar el _id del cliente en la URL
+        `${API_URL}/api/viajes?dt=${encodeURIComponent(row.dt)}&cliente=${encodeURIComponent(row.cliente?._id)}`,
         {
           method: 'PUT',
           headers: {
@@ -138,7 +140,8 @@ const EnhancedTable = () => {
 
       const updatedRow = await response.json();
       setData(prev => prev.map(item => 
-        item.dt === row.dt && item.cliente === row.cliente ? updatedRow : item
+        // Comparar por _id del cliente para la actualización local
+        item.dt === row.dt && item.cliente?._id === row.cliente?._id ? updatedRow : item
       ));
     } catch (error) {
       logger.error('Error:', error);
@@ -170,10 +173,12 @@ const EnhancedTable = () => {
 
     try {
       // const token = localStorage.getItem('token'); // No necesario con cookies
+      // Usar el _id del cliente para la eliminación
       const { dt, cliente } = deleteConfirm.row;
+      const clienteId = cliente?._id;
 
       const response = await fetch(
-        `${API_URL}/api/viajes?dt=${encodeURIComponent(dt)}&cliente=${encodeURIComponent(cliente)}`,
+        `${API_URL}/api/viajes?dt=${encodeURIComponent(dt)}&cliente=${encodeURIComponent(clienteId)}`,
         {
           method: 'DELETE',
           headers: {
@@ -190,7 +195,8 @@ const EnhancedTable = () => {
 
       // Actualizar la tabla eliminando el viaje
       setData(prev => prev.filter(item => 
-        !(item.dt === dt && item.cliente === cliente)
+        // Comparar por _id del cliente para el filtrado local
+        !(item.dt === dt && item.cliente?._id === clienteId)
       ));
       
       // Cerrar el diálogo solo si la eliminación fue exitosa
@@ -230,7 +236,8 @@ const EnhancedTable = () => {
       const updatedData = { [editCell.field]: newValue };
 
       const response = await fetch(
-        `${API_URL}/api/viajes?dt=${encodeURIComponent(row.dt)}&cliente=${encodeURIComponent(row.cliente)}`,
+        // Pasar el _id del cliente en la URL
+        `${API_URL}/api/viajes?dt=${encodeURIComponent(row.dt)}&cliente=${encodeURIComponent(row.cliente?._id)}`,
         {
           method: 'PUT',
           headers: {
@@ -245,7 +252,8 @@ const EnhancedTable = () => {
 
       const updatedRow = await response.json();
       setData(prev => prev.map(item => 
-        item.dt === row.dt && item.cliente === row.cliente ? updatedRow : item
+        // Comparar por _id del cliente para la actualización local
+        item.dt === row.dt && item.cliente?._id === row.cliente?._id ? updatedRow : item
       ));
       setEditCell(null);
     } catch (error) {
@@ -254,11 +262,16 @@ const EnhancedTable = () => {
   };
 
   const renderCell = (row, field, value) => {
-    const rowId = `${row.dt}_${row.cliente}`;
+    // Usar el _id del cliente para asegurar unicidad del rowId
+    const rowId = `${row.dt}_${row.cliente?._id}`;
     const isEditing = editCell?.rowId === rowId && editCell?.field === field;
 
-    if (field === 'dt' || field === 'cliente') {
+    if (field === 'dt') {
       return value;
+    }
+    if (field === 'cliente') {
+      // Acceder al nombre dentro del objeto cliente poblado
+      return value?.Cliente || '';
     }
 
     if (isEditing) {
@@ -324,7 +337,8 @@ const EnhancedTable = () => {
       <div
         onClick={() => {
           if (field === 'origen' || field === 'destino') {
-            fetchSitesForCliente(row.cliente).then(() => {
+            // Pasar el nombre del cliente a fetchSitesForCliente, ya que Site usa String
+            fetchSitesForCliente(row.cliente?.Cliente).then(() => {
               handleClick(row, field, value);
             });
           } else {
@@ -385,7 +399,7 @@ const EnhancedTable = () => {
           {deleteConfirm.row && (
             <div style={{ marginTop: '10px' }}>
               <strong>DT:</strong> {deleteConfirm.row.dt}<br />
-              <strong>Cliente:</strong> {deleteConfirm.row.cliente}<br />
+              <strong>Cliente:</strong> {deleteConfirm.row.cliente?.Cliente}<br /> {/* Mostrar nombre */}
               <strong>Origen:</strong> {deleteConfirm.row.origen}<br />
               <strong>Destino:</strong> {deleteConfirm.row.destino}
             </div>

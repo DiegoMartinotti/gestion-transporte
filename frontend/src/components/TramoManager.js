@@ -343,7 +343,7 @@ const TramoManager = () => {
                 </TableCell>
                 <TableCell>{getSiteName(tramo.origen)}</TableCell>
                 <TableCell>{getSiteName(tramo.destino)}</TableCell>
-                <TableCell>{tramo.cliente}</TableCell>
+                <TableCell>{tramo.cliente?.Cliente}</TableCell> {/* Mostrar nombre del cliente */}
                 <TableCell>{tramo.tipo}</TableCell>
                 <TableCell>{tramo.distancia}</TableCell>
                 <TableCell>{tramo.metodoCalculo}</TableCell>
