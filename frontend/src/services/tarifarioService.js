@@ -90,65 +90,52 @@ const getSitesByCliente = async (clienteId) => {
     throw new Error('ID de cliente requerido');
   }
   
-  // Intentar primero con la nueva ruta modularizada
-  const urls = [
-    `${BASE_URL}/site/cliente/${clienteId}`,  // Nueva ruta modularizada
-    `${BASE_URL}/sites?cliente=${clienteId}`  // Ruta antigua como fallback
-  ];
+  // Usar directamente la ruta que funciona según los logs
+  const url = `${BASE_URL}/sites?cliente=${clienteId}`;
   
-  let lastError = null;
+  logger.debug(`Solicitando sitios: ${url}`);
   
-  // Obtener sitios por cliente
-  for (const url of urls) {
-    logger.debug(`Solicitando sitios: ${url}`);
+  try {
+    const response = await api.get(url);
     
-    try {
-      const response = await api.get(url);
-      
-      // Verificar si la respuesta es válida
-      if (!response) {
-        logger.warn(`Respuesta vacía al obtener sitios desde ${url}`);
-        continue; // Intentar con la siguiente URL
-      }
-      
-      // Manejar diferentes formatos de respuesta
-      if (Array.isArray(response)) {
-        // Respuesta es directamente un array
-        logger.debug(`Sitios recibidos (array directo): ${response.length}`);
-        return response;
-      } else if (Array.isArray(response.data)) {
-        // data es directamente un array
-        logger.debug(`Sitios recibidos (array directo): ${response.data.length}`);
-        return response.data;
-      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        // formato anidado: response.data.data es un array
-        logger.debug(`Sitios recibidos (formato objeto): ${response.data.data.length}`);
-        return response.data.data;
-      } else if (response.success === true) {
-        // Nuevo formato estándar del backend
-        logger.debug(`Sitios recibidos (formato nuevo): ${response.data?.length || 0}`);
-        return response.data || [];
-      }
-      
-      logger.warn('Formato de respuesta no reconocido para sitios', response);
-      
-    } catch (error) {
-      logger.warn(`Error al obtener sitios desde ${url}:`, error);
-      lastError = error;
-      // Continuar con la siguiente URL
+    // Verificar si la respuesta es válida
+    if (!response) {
+      logger.warn(`Respuesta vacía al obtener sitios desde ${url}`);
+      // Lanzar error si la respuesta es vacía desde la URL principal
+      throw new Error('No se recibió respuesta del servidor');
     }
+    
+    // Manejar diferentes formatos de respuesta
+    if (Array.isArray(response)) {
+      // Respuesta es directamente un array
+      logger.debug(`Sitios recibidos (array directo): ${response.length}`);
+      return response;
+    } else if (Array.isArray(response.data)) {
+      // data es directamente un array
+      logger.debug(`Sitios recibidos (array directo): ${response.data.length}`);
+      return response.data;
+    } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      // formato anidado: response.data.data es un array
+      logger.debug(`Sitios recibidos (formato objeto): ${response.data.data.length}`);
+      return response.data.data;
+    } else if (response.success === true) {
+      // Nuevo formato estándar del backend
+      logger.debug(`Sitios recibidos (formato nuevo): ${response.data?.length || 0}`);
+      return response.data || [];
+    }
+    
+    logger.warn('Formato de respuesta no reconocido para sitios', response);
+    throw new Error('Formato de respuesta no reconocido');
+    
+  } catch (error) {
+    // Usar el servicio de errores para procesar el error
+    const processedError = errorService.processError(error, {
+      context: 'tarifarioService.getSitesByCliente'
+    });
+    
+    // Lanzar el error procesado
+    throw processedError;
   }
-  
-  // Si llegamos aquí, ninguna URL funcionó
-  logger.error('Todas las URLs para obtener sitios fallaron');
-  
-  // Usar el servicio de errores para procesar el último error
-  const processedError = errorService.processError(lastError || new Error('No se pudo obtener sitios de ninguna URL'), {
-    context: 'tarifarioService.getSitesByCliente'
-  });
-  
-  // Lanzar el error procesado
-  throw processedError;
 };
 
 /**

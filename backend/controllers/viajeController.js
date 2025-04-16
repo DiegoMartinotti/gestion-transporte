@@ -21,17 +21,31 @@ exports.getViajes = async (req, res) => {
         const limit = parseInt(req.query.limit, 10) || 20; // Límite por defecto
         const skip = (page - 1) * limit;
         
-        // Contar el total de viajes para la metadata
-        const totalViajes = await Viaje.countDocuments();
+        // Construir el objeto de filtro
+        const filter = {};
+        if (req.query.cliente && mongoose.Types.ObjectId.isValid(req.query.cliente)) {
+            filter.cliente = req.query.cliente;
+            logger.debug(`Filtrando viajes por cliente: ${req.query.cliente}`);
+        } else {
+            logger.debug('No se proporcionó un cliente válido para filtrar o no se proporcionó cliente. Devolviendo todos los viajes (paginados).');
+            // Opcional: podrías decidir devolver un array vacío o un error si un cliente es obligatorio
+            // return res.status(400).json({ message: 'Cliente ID es requerido para ver los viajes' });
+        }
+
+        // Contar el total de viajes para la metadata (considerando el filtro)
+        const totalViajes = await Viaje.countDocuments(filter);
         
-        // Obtener viajes con paginación y poblar datos del cliente
-        const viajes = await Viaje.find()
-                                .populate('cliente') // Añadido para incluir datos del cliente
-                                .sort({ fecha: -1 })
-                                .skip(skip)
-                                .limit(limit);
+        // Obtener viajes con paginación, filtro y poblar datos relacionados
+        const viajes = await Viaje.find(filter)
+                               .populate({ path: 'cliente', select: 'Cliente' }) // Poblar solo el nombre del cliente
+                               .populate({ path: 'origen', select: 'Site nombre' }) // Poblar campos relevantes de origen
+                               .populate({ path: 'destino', select: 'Site nombre' }) // Poblar campos relevantes de destino
+                               .sort({ fecha: -1 })
+                               .skip(skip)
+                               .limit(limit)
+                               .lean(); // Usar lean para mejor rendimiento si no necesitamos métodos del modelo
                                
-        logger.debug(`${viajes.length} viajes encontrados (página ${page} de ${Math.ceil(totalViajes / limit)})`);
+        logger.debug(`${viajes.length} viajes encontrados (página ${page} de ${Math.ceil(totalViajes / limit)}) con filtro:`, filter);
         
         // Devolver los viajes con metadata de paginación
         res.json({
@@ -170,7 +184,7 @@ exports.bulkCreateViajes = async (req, res) => {
 
         const dtsExistentes = await Viaje.find({ cliente: clienteId, dt: { $in: [...allDtSet] } }).select('dt').lean();
         const dtsExistentesSet = new Set(dtsExistentes.map(v => v.dt));
-
+        
         const choferesDocs = await Personal.find({ 
             activo: true, // Asegurar que solo buscamos activos
             $or: [
@@ -410,7 +424,10 @@ exports.bulkCreateViajes = async (req, res) => {
                     tipoTramo: tipoTramoFinal,
                     paletas: Number(viajeData.paletas) || 0,
                     dt: dtNormalizado,
-                    estado: 'Pendiente'
+                    estado: 'Pendiente',
+                    // Asignar tarifa y peaje directamente desde la tarifa encontrada
+                    tarifa: Number(tarifaSeleccionada.valor) || 0,
+                    peaje: Number(tarifaSeleccionada.valorPeaje) || 0
                 });
 
                 const viajeGuardado = await viajeParaGuardar.save({ session });
@@ -449,9 +466,9 @@ exports.bulkCreateViajes = async (req, res) => {
         session.endSession();
         logger.error('Error fatal durante la importación bulk de viajes:', error);
         res.status(500).json({ 
-            success: false, 
+            success: false,
             message: 'Error interno del servidor durante la importación.', 
-            error: error.message 
+            error: error.message
         });
     }
 };

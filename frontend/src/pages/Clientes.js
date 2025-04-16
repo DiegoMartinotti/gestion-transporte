@@ -108,7 +108,7 @@ const Clientes = () => {
 
   if (tarifarioOpen && selectedClienteTarifario) {
     return <TarifarioViewer 
-      cliente={selectedClienteTarifario.Cliente} 
+      cliente={selectedClienteTarifario} 
       onBack={() => {
         setTarifarioOpen(false);
         setSelectedClienteTarifario(null);

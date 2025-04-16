@@ -259,11 +259,11 @@ const SitesManager = ({ cliente, onBack }) => {
                         ) : (
                             sites.map((site) => (
                                 <TableRow key={site._id || Math.random()}>
-                                    <TableCell>{site?.Site || '-'}</TableCell>
-                                    <TableCell>{site?.Codigo || '-'}</TableCell>
-                                    <TableCell>{site?.Direccion || '-'}</TableCell>
-                                    <TableCell>{site?.Localidad || '-'}</TableCell>
-                                    <TableCell>{site?.Provincia || '-'}</TableCell>
+                                    <TableCell>{site?.nombre || '-'}</TableCell>
+                                    <TableCell>{site?.codigo || '-'}</TableCell>
+                                    <TableCell>{site?.direccion || '-'}</TableCell>
+                                    <TableCell>{site?.localidad || '-'}</TableCell>
+                                    <TableCell>{site?.provincia || '-'}</TableCell>
                                     <TableCell>{formatCoordenadas(site)}</TableCell>
                                     <TableCell>
                                         <IconButton onClick={() => handleEdit(site)}>
