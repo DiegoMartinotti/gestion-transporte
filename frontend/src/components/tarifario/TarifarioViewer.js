@@ -420,18 +420,21 @@ const TarifarioViewer = ({ cliente, onBack }) => {
 
     // Cargar sitios
     const fetchSites = useCallback(async () => {
-        if (!cliente) return;
+        // Asegurarse que cliente y cliente._id existen
+        if (!cliente || !cliente._id) return;
         
         try {
-            logger.debug('Obteniendo sitios para cliente:', cliente);
+            logger.debug('Obteniendo sitios para cliente ID:', cliente._id);
             setLoading(true);
-            const sitesData = await tarifarioService.getSitesByCliente(cliente);
+            // Pasar cliente._id al servicio
+            const sitesData = await tarifarioService.getSitesByCliente(cliente._id);
             setSites(sitesData);
-            logger.debug(`${sitesData.length} sitios obtenidos`);
+            logger.debug(`${sitesData.length} sitios obtenidos para cliente ID: ${cliente._id}`);
         } catch (error) {
             // Usar el servicio de errores para procesar y mostrar un mensaje amigable
             const processedError = errorService.processError(error, {
-                context: 'TarifarioViewer.cargarSitios'
+                context: 'TarifarioViewer.cargarSitios',
+                payload: { clienteId: cliente._id }
             });
             
             logger.error('Error al obtener sitios:', processedError);
@@ -443,7 +446,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         } finally {
             setLoading(false);
         }
-    }, [cliente]);
+    }, [cliente?._id]);
 
     // Cargar tramos con optimización
     const fetchTramos = useCallback(async () => {
@@ -451,16 +454,20 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         setError(null);
         
         try {
-            if (!cliente) {
-                setError('Cliente no especificado');
+            // Asegurarse que cliente y cliente._id existen
+            if (!cliente || !cliente._id) {
+                setError('ID de Cliente no especificado');
                 setTramos([]);
+                setTramosOriginal([]);
+                setFilteredTramos([]);
                 return;
             }
             
             // Intentamos obtener los tramos con manejo de errores mejorado
-            logger.debug(`Llamando a tarifarioService.getTramosByCliente(${cliente}, ${JSON.stringify(filtroVigencia)})`);
+            logger.debug(`Llamando a tarifarioService.getTramosByCliente(${cliente._id}, ${JSON.stringify(filtroVigencia)})`);
             
-            const response = await tarifarioService.getTramosByCliente(cliente, filtroVigencia);
+            // Pasar cliente._id al servicio
+            const response = await tarifarioService.getTramosByCliente(cliente._id, filtroVigencia);
             logger.debug('Respuesta recibida:', { success: response.success, dataLength: response.data?.length });
             
             // La respuesta ahora es el objeto completo con los datos
@@ -554,13 +561,25 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         // Resetear selección y página
         setSelectedTramos([]);
         setPaginaActual(1);
-    }, [cliente, filtroVigencia]);
+    }, [cliente?._id, filtroVigencia]);
 
     // Efecto para cargar datos iniciales
     useEffect(() => {
-        fetchSites();
-        fetchTramos();
-    }, [fetchSites, fetchTramos]);
+        // Solo ejecutar si hay un cliente con _id
+        if (cliente && cliente._id) {
+          logger.debug('useEffect[fetchSites, fetchTramos] disparado con cliente ID:', cliente._id);
+          fetchSites();
+          fetchTramos();
+        } else {
+          logger.debug('useEffect[fetchSites, fetchTramos] disparado SIN cliente ID, limpiando datos.');
+          // Opcional: limpiar estados si no hay cliente o _id
+          setSites([]);
+          setTramos([]);
+          setTramosOriginal([]);
+          setFilteredTramos([]);
+          setError(null); // Limpiar error previo
+        }
+    }, [fetchSites, fetchTramos, cliente?._id]);
 
     // Función para mostrar mensajes de error con más contexto y opciones de acción
     const handleError = useCallback((errorMsg, source, retryAction = null) => {
@@ -579,12 +598,14 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         try {
             setLoadingOperation(true);
             
-            // Añadir el cliente al tramo
+            // Añadir el cliente._id al tramo
             const tramoConCliente = {
                 ...tramoData,
-                cliente
+                // Asegurarse de enviar el ObjectId del cliente
+                cliente: cliente._id 
             };
             
+            // El servicio createTramo debería esperar el ObjectId en el campo cliente
             await tarifarioService.createTramo(tramoConCliente);
             
             setShowAddForm(false);
@@ -715,7 +736,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         }
         
         try {
-            ExcelExporter.exportarSeleccionados(tramosParaExportar, cliente);
+            ExcelExporter.exportarSeleccionados(tramosParaExportar, cliente._id);
             setSuccessMessage(`${tramosParaExportar.length} tramos exportados correctamente`);
         } catch (error) {
             handleError(error.message, 'Error al exportar a Excel');
@@ -729,7 +750,7 @@ const TarifarioViewer = ({ cliente, onBack }) => {
         }
         
         try {
-            ExcelExporter.exportarTodos(filteredTramos, cliente);
+            ExcelExporter.exportarTodos(filteredTramos, cliente._id);
             setSuccessMessage(`${filteredTramos.length} tramos exportados correctamente`);
         } catch (error) {
             handleError(error.message, 'Error al exportar a Excel');
@@ -989,7 +1010,8 @@ const TarifarioViewer = ({ cliente, onBack }) => {
                             setShowImporter(false);
                             fetchTramos();
                         }}
-                        cliente={cliente}
+                        // Pasar el ObjectId del cliente al importer
+                        clienteId={cliente?._id}
                         sites={sites}
                     />
                 )}

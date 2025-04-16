@@ -75,7 +75,7 @@ const ViajesManager = () => {
       const response = await axios.get(`${API_URL}/api/viajes`, {
         params: { cliente: selectedCliente }
       });
-      setViajes(Array.isArray(response.data) ? response.data : []);
+      setViajes(response.data?.data && Array.isArray(response.data.data) ? response.data.data : []);
       setError(null);
     } catch (error) {
       logger.error('Error al obtener viajes:', error);
@@ -345,8 +345,8 @@ const ViajesManager = () => {
               <TableRow key={viaje._id}>
                 <TableCell>{viaje.cliente?.Cliente}</TableCell> {/* Mostrar nombre del cliente */}
                 <TableCell>{new Date(viaje.fecha).toLocaleDateString()}</TableCell>
-                <TableCell>{viaje.origen}</TableCell> {/* TODO: Poblar origen/destino si son IDs */}
-                <TableCell>{viaje.destino}</TableCell>
+                <TableCell>{viaje.origen?.Site || viaje.origen?.nombre || 'Origen Desc.'}</TableCell>
+                <TableCell>{viaje.destino?.Site || viaje.destino?.nombre || 'Destino Desc.'}</TableCell>
                 <TableCell>{viaje.estado}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleEdit(viaje._id)}>
