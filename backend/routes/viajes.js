@@ -1,47 +1,75 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    getViajes, 
-    getViajeById, 
-    createViaje, 
-    updateViaje, 
-    deleteViaje, 
-    bulkCreateViajes 
-} = require('../controllers/viajeController');
+const viajeController = require('../controllers/viajeController'); // Importar todo el controlador
 const logger = require('../utils/logger');
+// Eliminar la siguiente línea:
+// const { upload } = require('../middleware/fileUpload'); // Importar middleware de subida
 
-// Middleware para debugging de solicitudes grandes
-router.use('/bulk', (req, res, next) => {
-    logger.debug('Recibiendo solicitud bulk import de viajes:');
-    logger.debug('- Headers:', req.headers);
-    logger.debug('- Cliente:', req.body?.cliente);
-    logger.debug('- Cantidad viajes:', req.body?.viajes?.length || 0);
-    
-    if (!req.body || !req.body.viajes) {
-        logger.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
-        logger.error('Content-Type:', req.headers['content-type']);
-        logger.error('Content-Length:', req.headers['content-length']);
-        return res.status(400).json({
-            success: false,
-            message: 'Datos de solicitud vacíos o inválidos',
-            debug: {
-                contentType: req.headers['content-type'],
-                contentLength: req.headers['content-length'],
-                bodyEmpty: !req.body,
-                viajesEmpty: !req.body?.viajes
-            }
-        });
-    }
-    
-    next();
-});
+// Añadir configuración de multer
+const multer = require('multer');
+const storage = multer.memoryStorage(); // Usar almacenamiento en memoria
+const upload = multer({ storage: storage });
 
-// Rutas
-router.get('/', getViajes);
-router.get('/:id', getViajeById);
-router.post('/', createViaje);
-router.post('/bulk', bulkCreateViajes);
-router.put('/:id', updateViaje);
-router.delete('/:id', deleteViaje);
+// --- Rutas CRUD estándar ---
+router.get('/', viajeController.getViajes);
+router.get('/:id', viajeController.getViajeById);
+router.post('/', viajeController.createViaje);
+router.put('/:id', viajeController.updateViaje);
+router.delete('/:id', viajeController.deleteViaje);
+
+// --- Rutas para Importación Masiva Mejorada ---
+
+// Etapa 1: Iniciar la importación y obtener estado inicial/fallos
+router.post('/bulk/iniciar', 
+    // --- Insertar la lógica de validación AQUÍ, en línea ---
+    (req, res, next) => {
+        logger.debug('Middleware inline para /bulk/iniciar:');
+        logger.debug('- Cliente:', req.body?.cliente);
+        logger.debug('- Cantidad viajes:', req.body?.viajes?.length || 0);
+        
+        if (!req.body || !Array.isArray(req.body.viajes) || req.body.viajes.length === 0) {
+            logger.error('⚠️ CUERPO DE LA SOLICITUD /bulk/iniciar VACÍO O INCOMPLETO (inline)');
+            logger.error('Content-Type:', req.headers['content-type']);
+            return res.status(400).json({
+                success: false,
+                message: 'Datos de solicitud vacíos, inválidos o sin array \'viajes\' para iniciar importación',
+                debug: {
+                    contentType: req.headers['content-type'],
+                    bodyEmpty: !req.body,
+                    viajesIsArray: Array.isArray(req.body?.viajes),
+                    viajesLength: req.body?.viajes?.length
+                }
+            });
+        }
+        next(); // Si la validación pasa, continuar al controlador
+    },
+    // --- Fin de la lógica inline ---
+    viajeController.iniciarBulkImportViajes // Controlador principal
+);
+
+// Descargar plantillas pre-rellenadas para corrección
+router.get(
+    '/bulk/template/:importId/:templateType',
+    viajeController.descargarPlantillaCorreccion
+);
+
+// Procesar una plantilla de corrección subida (Site, Personal, Vehiculo, Tramo)
+router.post(
+    '/bulk/process-template/:importId/:templateType',
+    upload.single('templateFile'), // Middleware para manejar el archivo subido
+    viajeController.procesarPlantillaCorreccion // Controlador (Asegúrate que esté implementado)
+);
+
+// Etapa 2: Reintentar la importación de viajes fallidos después de procesar correcciones
+router.post(
+    '/bulk/retry/:importId',
+    viajeController.reintentarImportacionViajes // Controlador (Asegúrate que esté implementado)
+);
+
+// Descargar archivo Excel/CSV con los viajes que fallaron definitivamente
+router.get(
+    '/bulk/fallback/:importId',
+    viajeController.descargarFallbackViajes // Controlador (Asegúrate que esté implementado)
+);
 
 module.exports = router;
