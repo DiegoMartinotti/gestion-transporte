@@ -628,9 +628,279 @@ async function getDistanciasCalculadas() {
     return distancias;
 }
 
+/**
+ * Crea o actualiza tramos masivamente desde la plantilla de corrección.
+ * Resuelve los sitios (origen y destino) por nombre.
+ * Crea tarifas históricas iniciales para cada tramo.
+ *
+ * @param {Array<Object>} tramosData - Array con datos de tramos extraídos de la plantilla.
+ * @param {Object} options - Opciones, incluye la session de mongoose.
+ * @returns {Promise<Object>} - Resultado con insertados, actualizados y errores.
+ */
+const createTramosBulk = async (tramosData, options = {}) => {
+    const session = options.session;
+    let insertados = 0;
+    let actualizados = 0;
+    const errores = [];
+    const operations = [];
+
+    if (!Array.isArray(tramosData) || tramosData.length === 0) {
+        return { success: false, insertados, actualizados, errores: [{ message: 'No tramo data provided for bulk operation.' }] };
+    }
+    logger.info(`[createTramosBulk] Iniciando proceso para ${tramosData.length} tramos.`);
+
+    // 1. Extraer todos los nombres de sitios necesarios para consulta
+    const sitiosNecesarios = [...new Set([
+        ...tramosData.map(t => t.origenNombre),
+        ...tramosData.map(t => t.destinoNombre)
+    ])].filter(nombre => nombre);
+
+    // 2. Buscar los sitios por nombre
+    const sitios = await Site.find({
+        $or: [
+            { Site: { $in: sitiosNecesarios } },
+            { nombre: { $in: sitiosNecesarios } }
+        ]
+    }).session(session).lean();
+
+    // 3. Crear mapas para búsqueda rápida
+    const sitiosPorNombre = new Map();
+    sitios.forEach(sitio => {
+        if (sitio.Site) sitiosPorNombre.set(sitio.Site.toLowerCase(), sitio);
+        if (sitio.nombre) sitiosPorNombre.set(sitio.nombre.toLowerCase(), sitio);
+    });
+    logger.debug(`[createTramosBulk] Sitios encontrados: ${sitiosPorNombre.size} de ${sitiosNecesarios.length} necesarios.`);
+
+    // 4. Obtener los tramos existentes para determinar si actualizar o crear
+    const origenesDest = [];
+    const clienteIds = new Set();
+
+    // Construir pares de origen-destino para buscar tramos existentes
+    for (const tramo of tramosData) {
+        const origen = sitiosPorNombre.get(tramo.origenNombre?.toLowerCase());
+        const destino = sitiosPorNombre.get(tramo.destinoNombre?.toLowerCase());
+        
+        if (origen && destino) {
+            origenesDest.push({ origen: origen._id, destino: destino._id });
+            if (origen.Cliente) clienteIds.add(origen.Cliente.toString());
+            if (destino.Cliente) clienteIds.add(destino.Cliente.toString());
+        }
+    }
+
+    // Buscar tramos existentes
+    const tramosExistentes = await Tramo.find({
+        $or: origenesDest.map(par => ({
+            origen: par.origen,
+            destino: par.destino
+        })),
+        cliente: { $in: [...clienteIds] }
+    }).session(session).lean();
+
+    // Crear mapa de tramos existentes para búsqueda rápida
+    const tramosPorOrigenDestino = new Map();
+    tramosExistentes.forEach(tramo => {
+        const key = `${tramo.origen.toString()}-${tramo.destino.toString()}-${tramo.cliente.toString()}`;
+        tramosPorOrigenDestino.set(key, tramo);
+    });
+    logger.debug(`[createTramosBulk] Tramos existentes encontrados: ${tramosPorOrigenDestino.size}.`);
+
+    // 5. Procesar cada tramo
+    for (const [index, tramoData] of tramosData.entries()) {
+        try {
+            // Validar campos básicos
+            if (!tramoData.origenNombre || !tramoData.destinoNombre || !tramoData.tipoTarifa || 
+                !tramoData.metodoCalculo || isNaN(tramoData.valorTarifa) || 
+                !tramoData.vigenciaDesde || !tramoData.vigenciaHasta) {
+                errores.push({ 
+                    index, 
+                    message: 'Faltan campos requeridos en el tramo', 
+                    data: tramoData 
+                });
+                continue;
+            }
+
+            // Buscar sitios
+            const origenSite = sitiosPorNombre.get(tramoData.origenNombre.toLowerCase());
+            const destinoSite = sitiosPorNombre.get(tramoData.destinoNombre.toLowerCase());
+
+            if (!origenSite) {
+                errores.push({ 
+                    index, 
+                    message: `Sitio origen "${tramoData.origenNombre}" no encontrado`, 
+                    data: tramoData 
+                });
+                continue;
+            }
+
+            if (!destinoSite) {
+                errores.push({ 
+                    index, 
+                    message: `Sitio destino "${tramoData.destinoNombre}" no encontrado`, 
+                    data: tramoData 
+                });
+                continue;
+            }
+
+            // Determinar el cliente (usar el del sitio origen o destino)
+            const clienteId = origenSite.Cliente || destinoSite.Cliente;
+            if (!clienteId) {
+                errores.push({ 
+                    index, 
+                    message: 'No se pudo determinar el cliente para el tramo', 
+                    data: tramoData 
+                });
+                continue;
+            }
+
+            // Procesar fechas
+            let fechaDesde, fechaHasta;
+            try {
+                fechaDesde = new Date(tramoData.vigenciaDesde);
+                fechaHasta = new Date(tramoData.vigenciaHasta);
+                
+                // Validar fechas
+                if (isNaN(fechaDesde.getTime()) || isNaN(fechaHasta.getTime()) || fechaDesde > fechaHasta) {
+                    throw new Error('Fechas de vigencia inválidas o rango incorrecto');
+                }
+            } catch (fechaError) {
+                errores.push({ 
+                    index, 
+                    message: `Error en fechas: ${fechaError.message}`, 
+                    data: tramoData 
+                });
+                continue;
+            }
+
+            // Validar valores numéricos
+            const valorTarifa = parseFloat(tramoData.valorTarifa);
+            const valorPeaje = parseFloat(tramoData.valorPeaje || 0);
+            
+            if (isNaN(valorTarifa) || valorTarifa <= 0) {
+                errores.push({ 
+                    index, 
+                    message: 'Valor de tarifa inválido o menor/igual a cero', 
+                    data: tramoData 
+                });
+                continue;
+            }
+
+            // Crear la nueva tarifa histórica
+            const nuevaTarifa = {
+                tipo: tramoData.tipoTarifa.toUpperCase(),
+                metodoCalculo: tramoData.metodoCalculo,
+                valor: valorTarifa,
+                valorPeaje: valorPeaje,
+                vigenciaDesde: fechaDesde,
+                vigenciaHasta: fechaHasta
+            };
+
+            // Verificar si el tramo ya existe
+            const tramoKey = `${origenSite._id.toString()}-${destinoSite._id.toString()}-${clienteId.toString()}`;
+            const tramoExistente = tramosPorOrigenDestino.get(tramoKey);
+
+            if (tramoExistente) {
+                // Verificar conflictos de fechas si el tramo existe
+                let conflictoDetectado = false;
+
+                if (tramoExistente.tarifasHistoricas && tramoExistente.tarifasHistoricas.length > 0) {
+                    for (const tarifaExistente of tramoExistente.tarifasHistoricas) {
+                        // Solo verificar conflictos para tarifas del mismo tipo y método
+                        if (tarifaExistente.tipo === nuevaTarifa.tipo && 
+                            tarifaExistente.metodoCalculo === nuevaTarifa.metodoCalculo) {
+                            
+                            // Verificar superposición de fechas
+                            if (fechasSuperpuestas(
+                                nuevaTarifa.vigenciaDesde, nuevaTarifa.vigenciaHasta,
+                                tarifaExistente.vigenciaDesde, tarifaExistente.vigenciaHasta
+                            )) {
+                                conflictoDetectado = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (conflictoDetectado) {
+                    errores.push({
+                        index,
+                        message: 'Conflicto de fechas con tarifa existente del mismo tipo',
+                        data: tramoData
+                    });
+                } else {
+                    // Actualizar tramo existente con nueva tarifa
+                    operations.push({
+                        updateOne: {
+                            filter: { _id: tramoExistente._id },
+                            update: { $push: { tarifasHistoricas: nuevaTarifa } }
+                        }
+                    });
+                }
+            } else {
+                // Crear nuevo tramo con tarifa inicial
+                operations.push({
+                    insertOne: {
+                        document: {
+                            origen: origenSite._id,
+                            destino: destinoSite._id,
+                            cliente: clienteId,
+                            distancia: 0, // Se podría calcular a futuro
+                            tarifasHistoricas: [nuevaTarifa]
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            logger.error(`[createTramosBulk] Error procesando tramo en índice ${index}:`, error);
+            errores.push({
+                index,
+                message: `Error procesando tramo: ${error.message}`,
+                data: tramoData
+            });
+        }
+    }
+
+    // 6. Ejecutar operaciones bulkWrite
+    if (operations.length > 0) {
+        try {
+            const result = await Tramo.bulkWrite(operations, { session, ordered: false });
+            insertados = result.insertedCount;
+            actualizados = result.modifiedCount;
+            logger.info(`[createTramosBulk] BulkWrite completado. Insertados: ${insertados}, Actualizados: ${actualizados}`);
+
+            // Manejar errores de escritura
+            if (result.hasWriteErrors && result.hasWriteErrors()) {
+                const writeErrors = result.getWriteErrors();
+                logger.warn(`[createTramosBulk] ${writeErrors.length} errores durante bulkWrite.`);
+                
+                writeErrors.forEach(err => {
+                    errores.push({
+                        index: 'N/A', // Es difícil mapear el error al índice original
+                        message: `Error en operación: ${err.errmsg}`,
+                        code: err.code,
+                        data: err.op
+                    });
+                });
+            }
+        } catch (error) {
+            logger.error('[createTramosBulk] Error durante bulkWrite:', error);
+            errores.push({ message: `Error general durante bulkWrite: ${error.message}` });
+        }
+    } else {
+        logger.info('[createTramosBulk] No se prepararon operaciones válidas.');
+    }
+
+    return {
+        success: errores.length === 0,
+        insertados,
+        actualizados,
+        errores
+    };
+};
+
 // Exportar las funciones públicas
 module.exports = {
     bulkImportTramos,
     getTramosByCliente,
     getDistanciasCalculadas,
+    createTramosBulk
 }; 

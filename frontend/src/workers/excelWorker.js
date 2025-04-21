@@ -25,13 +25,34 @@ const normalizeText = (text) => {
   return trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
 
+// --- Funciones de Ayuda para Validación (Replicadas y usadas en construcción del mapa) ---
+const getSiteName = (site) => {
+  // Primero busca en el campo 'Site' (como viene de algunos sitios)
+  if (site && typeof site.Site === 'string' && site.Site.trim() !== '') {
+      return site.Site.trim();
+  }
+  // Si no, busca en 'nombre' (como viene de otros sitios)
+  if (site && typeof site.nombre === 'string' && site.nombre.trim() !== '') {
+      return site.nombre.trim();
+  }
+  // Fallback si ninguno existe o está vacío
+  return site && site.name ? String(site.name).trim() : '';
+};
+
+const parseSpanishNumber = (value) => {
+    if (!value) return 0;
+    const normalizedValue = String(value).replace(',', '.');
+    return parseFloat(normalizedValue) || 0;
+};
+// --- Fin Funciones de Ayuda ---
+
 // Mensaje principal recibido del hilo principal
 self.onmessage = function(e) {
-  const { data, validateRowFn, action, batchSize = 50, excelHeaders, validationContext } = e.data;
+  const { data, action, batchSize = 50, excelHeaders, validationContext } = e.data;
   
   switch (action) {
     case 'validate': {
-      processValidation(data, validateRowFn, batchSize, excelHeaders, validationContext);
+      processValidation(data, batchSize, excelHeaders, validationContext);
       break;
     }
     case 'transform': {
@@ -50,77 +71,61 @@ self.onmessage = function(e) {
 /**
  * Procesa la validación de los datos en lotes
  * @param {Array} data - Los datos a validar
- * @param {string} validateRowFn - Función de validación serializada como string
  * @param {number} batchSize - Tamaño del lote para procesar
  * @param {Array} excelHeaders - Definición de las cabeceras del Excel
  * @param {any} validationContext - Contexto adicional (array 'sites')
  */
-function processValidation(data, validateRowFn, batchSize, excelHeaders, validationContext) {
+function processValidation(data, batchSize, excelHeaders, validationContext) {
   // --- Construir sitesMap desde validationContext (array sites) ---
   const sitesMap = {};
   const sites = validationContext || []; // Usar el array recibido o uno vacío
 
   console.log('[Worker] Iniciando validación. Total Sites recibidos:', Array.isArray(sites) ? sites.length : 'No es array');
-  // Log detallado del validationContext recibido
-  console.log('[Worker] ValidationContext recibido:', JSON.stringify(sites.slice(0, 5))); // Loguear los primeros 5 para inspección
+  console.log('[Worker] ValidationContext recibido (primeros 5): ', JSON.stringify(sites.slice(0, 5))); 
 
-  // Determinar si validationContext ya es un objeto mapa o un array de sitios
   if (Array.isArray(sites)) {
-    // Es un array de sitios, construir el mapa
-    console.log('[Worker] Procesando sitios para crear sitesMap...'); // Log inicio bucle
+    console.log('[Worker] Procesando sitios para crear sitesMap...');
     sites.forEach((site, idx) => {
-      // Log para cada sitio procesado
-      // console.log(`[Worker] Index ${idx}: Procesando sitio ${site?.Site || '(Sin Site)'}`); 
+      const siteName = getSiteName(site); // Usa Site o nombre
       
-      if (site && typeof site.Site === 'string') {
-        const siteNameUpper = site.Site; 
-        const keysAdded = []; // Rastrear claves añadidas para este sitio
+      if (siteName) { 
+        const siteNameLower = siteName.toLowerCase();
+        const normalizedName = normalizeText(siteName);
+        const siteCode = site?.Codigo?.trim();
+        const siteCodeLower = siteCode?.toLowerCase();
         
-        // 1. Agregar por nombre original (MAYÚSCULAS)
-        sitesMap[siteNameUpper] = site;
-        keysAdded.push(siteNameUpper);
-        
-        // 2. Agregar por nombre normalizado (minúsculas, sin acentos)
-        const normalizedName = normalizeText(siteNameUpper); 
-        if (normalizedName !== siteNameUpper.toLowerCase()) { 
-          sitesMap[normalizedName] = site;
-          keysAdded.push(normalizedName);
+        // Añadir todas las claves relevantes, sobrescribiendo si es necesario (apuntan al mismo objeto)
+        sitesMap[siteName] = site; // Clave Original (e.g., "ZARATE")
+        sitesMap[siteNameLower] = site; // Clave Minúsculas (e.g., "zarate")
+        if (normalizedName !== siteNameLower) { // Solo añadir normalizada si es diferente de minúsculas
+            sitesMap[normalizedName] = site; 
         }
-        // Agregar también la versión en minúsculas del nombre original si es diferente de la normalizada y no existe ya
-        const siteNameLower = siteNameUpper.toLowerCase();
-        if (siteNameLower !== normalizedName && !sitesMap.hasOwnProperty(siteNameLower)) {
-           sitesMap[siteNameLower] = site;
-           keysAdded.push(siteNameLower);
-        } else if (!sitesMap.hasOwnProperty(siteNameLower)) { // Asegurarse que la minúscula exista si es igual a la normalizada
-            sitesMap[siteNameLower] = site;
-            keysAdded.push(siteNameLower);
-        }
-        
-        // 3. Agregar por código (Codigo con C mayúscula) si existe
-        if (site.Codigo && typeof site.Codigo === 'string') {
-          const siteCode = site.Codigo.trim(); 
-          if (siteCode) { 
-            const siteCodeLower = siteCode.toLowerCase();
-            sitesMap[siteCodeLower] = site; 
-            keysAdded.push(siteCodeLower);
-            if (siteCode !== siteCodeLower) {
-                sitesMap[siteCode] = site;
-                keysAdded.push(siteCode);
-            }
-          }
-        }
-        // Log detallado SOLO para el sitio problemático o uno similar
-        if (siteNameUpper.includes('CORRIENTES')) {
-             console.log(`[Worker] Sitio ${siteNameUpper} (Index ${idx}): Claves añadidas a sitesMap: [${keysAdded.join(', ')}]`);
+        if (siteCode) {
+            sitesMap[siteCode] = site; // Código Original
+            sitesMap[siteCodeLower] = site; // Código Minúsculas
         }
 
+        // Log de verificación INMEDIATA para ZARATE
+        if (siteName === 'ZARATE') {
+            console.log(`[Worker] CONSTRUCCIÓN MAPA - Sitio ZARATE (Index ${idx}):`);
+            console.log(`  - ¿sitesMap["ZARATE"] existe?`, sitesMap.hasOwnProperty("ZARATE"));
+            console.log(`  - ¿sitesMap["zarate"] existe?`, sitesMap.hasOwnProperty("zarate"));
+            if (siteCode) {
+                 console.log(`  - ¿sitesMap["${siteCode}"] existe?`, sitesMap.hasOwnProperty(siteCode));
+                 console.log(`  - ¿sitesMap["${siteCodeLower}"] existe?`, sitesMap.hasOwnProperty(siteCodeLower));
+            }
+        }
+        // Log detallado anterior (opcional ahora, pero lo dejamos por si acaso)
+        // if (siteName.toUpperCase().includes('ZARATE') || siteName.toUpperCase().includes('CORRIENTES')) {
+        //      console.log(`[Worker] Sitio ${siteName} (Index ${idx}): Claves añadidas a sitesMap: ...`);
+        // }
       } else {
-        // console.warn(`[Worker] Sitio en índice ${idx} no tiene campo 'Site' o no es string:`, site);
+        // Log si un sitio es inválido o no tiene nombre usable
+         console.warn(`[Worker] Sitio en índice ${idx} ignorado (sin nombre válido en 'Site' o 'nombre'):`, site);
       }
     });
-    console.log('[Worker] Fin procesamiento sitios.'); // Log fin bucle
+    console.log('[Worker] Fin procesamiento sitios.');
   } else if (typeof sites === 'object' && sites !== null) {
-    // Ya es un objeto mapa, usarlo directamente
     Object.assign(sitesMap, sites);
   }
   
@@ -145,20 +150,101 @@ function processValidation(data, validateRowFn, batchSize, excelHeaders, validat
       for (let i = startIndex; i < endIndex; i++) {
         try {
           const row = data[i];
-          
-          // Validar la fila si hay función de validación
-          if (validateRowFn) {
-            const rowErrors = evaluateValidation(validateRowFn, row, i, excelHeaders, sitesMap);
-            if (rowErrors && rowErrors.length > 0) {
-              errors.push(...rowErrors);
-            } else {
-              validRows.push(row);
+          const rowIndexForError = i + 1; // User-friendly index (1-based)
+          const rowErrors = [];
+
+          // --- INICIO: Lógica de validación (Replicada de ViajeBulkImporter.validateRow) ---
+          // Validar campos requeridos
+          excelHeaders.forEach(header => {
+            if (header.required && !row[header.field] && header.field !== 'paletas') {
+              rowErrors.push(`Fila ${rowIndexForError}: El campo ${header.label} es requerido`);
             }
+          });
+          
+          // Validar sitios existentes
+          if (row.origen) {
+            const origenInput = String(row.origen);
+            const origenLower = origenInput.toLowerCase();
+            const origenNormalized = normalizeText(origenInput);
+            
+            // --- Inicio: Logs de depuración para origen ---
+            console.log(`[Worker] Fila ${rowIndexForError} - Validando Origen:`);
+            console.log(`  - Input Excel (row.origen):`, row.origen);
+            console.log(`  - Clave Original (origenInput): "${origenInput}"`);
+            console.log(`  - Clave Minúsculas (origenLower): "${origenLower}"`);
+            console.log(`  - Clave Normalizada (origenNormalized): "${origenNormalized}"`);
+            console.log(`  - Existe en sitesMap[Original]?`, sitesMap.hasOwnProperty(origenInput));
+            console.log(`  - Existe en sitesMap[Minúsculas]?`, sitesMap.hasOwnProperty(origenLower));
+            console.log(`  - Existe en sitesMap[Normalizada]?`, sitesMap.hasOwnProperty(origenNormalized));
+            // --- Fin: Logs de depuración para origen ---
+            
+            // Buscar usando original, minúsculas y normalizado
+            if (!sitesMap[origenInput] && !sitesMap[origenLower] && !sitesMap[origenNormalized]) {
+              rowErrors.push(`Fila ${rowIndexForError}: Sitio de origen "${row.origen}" no encontrado`);
+            }
+          } else if (excelHeaders.find(h => h.field === 'origen' && h.required)) {
+             // Añadir error si es requerido y está vacío (esto ya lo cubre la validación de requeridos)
+             // rowErrors.push(`Fila ${rowIndexForError}: El campo Origen* es requerido`);
+          }
+          
+          if (row.destino) {
+            const destinoInput = String(row.destino);
+            const destinoLower = destinoInput.toLowerCase();
+            const destinoNormalized = normalizeText(destinoInput);
+
+            // --- Inicio: Logs de depuración para destino ---
+            console.log(`[Worker] Fila ${rowIndexForError} - Validando Destino:`);
+            console.log(`  - Input Excel (row.destino):`, row.destino);
+            console.log(`  - Clave Original (destinoInput): "${destinoInput}"`);
+            console.log(`  - Clave Minúsculas (destinoLower): "${destinoLower}"`);
+            console.log(`  - Clave Normalizada (destinoNormalized): "${destinoNormalized}"`);
+            console.log(`  - Existe en sitesMap[Original]?`, sitesMap.hasOwnProperty(destinoInput));
+            console.log(`  - Existe en sitesMap[Minúsculas]?`, sitesMap.hasOwnProperty(destinoLower));
+            console.log(`  - Existe en sitesMap[Normalizada]?`, sitesMap.hasOwnProperty(destinoNormalized));
+            // --- Fin: Logs de depuración para destino ---
+            
+            // Buscar usando original, minúsculas y normalizado
+            if (!sitesMap[destinoInput] && !sitesMap[destinoLower] && !sitesMap[destinoNormalized]) {
+              rowErrors.push(`Fila ${rowIndexForError}: Sitio de destino "${row.destino}" no encontrado`);
+            }
+          } else if (excelHeaders.find(h => h.field === 'destino' && h.required)) {
+            // Añadir error si es requerido y está vacío
+             // rowErrors.push(`Fila ${rowIndexForError}: El campo Destino* es requerido`);
+          }
+          
+          // Validar formato de fecha
+          if (row.fecha) {
+            const fechaRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+            if (!fechaRegex.test(String(row.fecha))) {
+              rowErrors.push(`Fila ${rowIndexForError}: Formato de fecha inválido. Use DD/MM/YYYY`);
+            }
+          }
+          
+          // Validar formato de Vehículos (cadena no vacía)
+          if (row.vehiculo && typeof row.vehiculo === 'string' && row.vehiculo.trim() === '') {
+            rowErrors.push(`Fila ${rowIndexForError}: El campo Vehículos no puede estar vacío.`);
+          } else if (row.vehiculo) {
+            const patentes = String(row.vehiculo).split(',').map(p => p.trim()).filter(p => p !== '');
+            if (patentes.length === 0) {
+                rowErrors.push(`Fila ${rowIndexForError}: Debe ingresar al menos una patente válida en Vehículos.`);
+            }
+          }
+
+          // Validar valores numéricos para paletas si se proporciona
+          if (row.paletas && row.paletas !== '' && isNaN(parseSpanishNumber(row.paletas))) {
+            rowErrors.push(`Fila ${rowIndexForError}: El valor de paletas debe ser un número`);
+          }
+          // --- FIN: Lógica de validación --- 
+
+          // Acumular errores o añadir fila válida
+          if (rowErrors.length > 0) {
+            errors.push(...rowErrors);
           } else {
             validRows.push(row);
           }
         } catch (error) {
-          errors.push(`Error en fila ${i + 1}: ${error.message}`);
+          // Capturar errores inesperados durante la validación de una fila específica
+          errors.push(`Error procesando fila ${i + 1}: ${error.message}`);
         }
       }
       
@@ -196,7 +282,7 @@ function processValidation(data, validateRowFn, batchSize, excelHeaders, validat
   } catch (error) {
     self.postMessage({ 
       type: 'error', 
-      error: `Error en procesamiento: ${error.message}` 
+      error: `Error en procesamiento de validación: ${error.message}` 
     });
   }
 }
@@ -212,6 +298,13 @@ function processTransformation(data, transformFn, batchSize) {
   const totalRows = data.length;
   const transformedData = [];
   
+  // Función auxiliar para evaluar la transformación (si es necesaria)
+  const evaluateTransform = (functionString, row, index) => {
+    // eslint-disable-next-line no-new-func
+    const func = new Function('row', 'index', 'return (' + functionString + ')(row, index)');
+    return func(row, index);
+  };
+
   try {
     // Función para procesar un lote de filas
     const processBatch = (startIndex) => {
@@ -224,9 +317,11 @@ function processTransformation(data, transformFn, batchSize) {
           
           // Transformar la fila
           if (transformFn) {
-            const transformedRow = evaluateValidation(transformFn, row, i);
+            // Declarar y asignar transformedRow aquí
+            const transformedRow = evaluateTransform(transformFn, row, i);
             transformedData.push(transformedRow);
           } else {
+            // Si no hay transformación, añadir la fila original
             transformedData.push(row);
           }
         } catch (error) {
@@ -234,7 +329,7 @@ function processTransformation(data, transformFn, batchSize) {
             type: 'error', 
             error: `Error en transformación de fila ${i + 1}: ${error.message}` 
           });
-          return;
+          return; // Detener si hay error en una fila
         }
       }
       
@@ -271,7 +366,7 @@ function processTransformation(data, transformFn, batchSize) {
   } catch (error) {
     self.postMessage({ 
       type: 'error', 
-      error: `Error en procesamiento: ${error.message}` 
+      error: `Error en procesamiento de transformación: ${error.message}` 
     });
   }
 } 

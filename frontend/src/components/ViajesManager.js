@@ -73,7 +73,10 @@ const ViajesManager = () => {
   const fetchViajes = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/viajes`, {
-        params: { cliente: selectedCliente }
+        params: { 
+          cliente: selectedCliente,
+          limit: 9999
+        }
       });
       setViajes(response.data?.data && Array.isArray(response.data.data) ? response.data.data : []);
       setError(null);
@@ -97,7 +100,8 @@ const ViajesManager = () => {
       
       const response = await axios.get(`${API_URL}/api/site`, {
         params: { 
-          cliente: nombreCliente
+          cliente: nombreCliente,
+          limit: 9999
         }
       });
       

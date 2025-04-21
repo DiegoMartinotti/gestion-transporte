@@ -425,6 +425,86 @@ const reprocessAddressesByCliente = tryCatch(async (req, res) => {
     }
 });
 
+// Función para creación masiva (usada por la importación)
+const createSitesBulk = async (sitesData, options = {}) => {
+    const session = options.session;
+    let insertados = 0;
+    const errores = [];
+
+    if (!Array.isArray(sitesData) || sitesData.length === 0) {
+        return { success: false, insertados: 0, errores: [{ message: 'No site data provided for bulk creation.' }] };
+    }
+
+    // Pre-procesar datos para asegurar formato correcto del modelo Mongoose
+    const sitesToInsert = sitesData.map((site, index) => {
+        // Validar datos esenciales
+        if (!site.Site || !site.location?.coordinates?.[0] || !site.location?.coordinates?.[1]) {
+            errores.push({ index, message: 'Faltan campos requeridos (Site, Longitud, Latitud)', data: site });
+            return null; // Marcar para filtrar
+        }
+        if (isNaN(site.location.coordinates[0]) || isNaN(site.location.coordinates[1])) {
+             errores.push({ index, message: 'Coordenadas inválidas', data: site });
+             return null;
+        }
+
+        return {
+            Site: site.Site, // Ya viene mapeado desde el controlador de viaje
+            Cliente: site.Cliente, // El cliente debería venir resuelto o ser validado aquí? Por ahora lo aceptamos.
+            Codigo: site.Codigo,
+            Direccion: site.Direccion,
+            Localidad: site.Localidad,
+            Provincia: site.Provincia,
+            location: {
+                type: 'Point',
+                coordinates: [site.location.coordinates[0], site.location.coordinates[1]]
+            }
+            // Añadir campos por defecto si son necesarios
+        };
+    }).filter(site => site !== null); // Filtrar los nulos por errores de validación previa
+
+    if (sitesToInsert.length === 0 && errores.length > 0) {
+         return { success: false, insertados: 0, errores };
+    }
+    if (sitesToInsert.length === 0) {
+        return { success: false, insertados: 0, errores: [{ message: 'No valid site data left after filtering.' }] };
+    }
+
+    try {
+        // Usar insertMany para eficiencia. ordered: false permite continuar si uno falla.
+        const result = await Site.insertMany(sitesToInsert, { session, ordered: false });
+        insertados = result.length;
+        logger.info(`[createSitesBulk] Insertados ${insertados} sitios correctamente.`);
+
+    } catch (error) {
+        logger.error('[createSitesBulk] Error durante insertMany:', error);
+        // Analizar el error de bulkWrite para identificar fallos específicos
+        if (error.name === 'MongoBulkWriteError' && error.writeErrors) {
+            error.writeErrors.forEach(err => {
+                const failedData = sitesToInsert[err.index]; 
+                errores.push({
+                    index: err.index,
+                    message: `Error al insertar sitio ${failedData?.Site}: ${err.errmsg}`,
+                    code: err.code,
+                    data: failedData
+                });
+            });
+             // Los que no dieron error se insertaron si ordered: false
+            insertados = error.result?.nInserted || (sitesToInsert.length - error.writeErrors.length); 
+            logger.warn(`[createSitesBulk] Completado con ${errores.length} errores. Insertados: ${insertados}`);
+        } else {
+            // Error general, no se insertó nada o error inesperado
+            errores.push({ message: `Error inesperado en bulk create: ${error.message}` });
+            insertados = 0; // Asumir que nada se insertó
+        }
+    }
+
+    return {
+        success: errores.length === 0,
+        insertados,
+        errores
+    };
+};
+
 // Exportar todas las funciones del controlador
 module.exports = {
   getAllSites,
@@ -435,5 +515,6 @@ module.exports = {
   deleteSite,
   geocodeDireccion,
   reprocessAddressesByCliente,
-  bulkDeleteSites
+  bulkDeleteSites,
+  createSitesBulk
 }; 

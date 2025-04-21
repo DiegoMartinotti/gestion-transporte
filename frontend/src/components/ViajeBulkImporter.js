@@ -1,10 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import ExcelImportTemplate from './common/ExcelImportTemplate';
+import ExcelImportTemplate from './common/ExcelImportTemplate'; // Para la carga inicial
+import CorrectionActionWidget from './common/CorrectionActionWidget'; // *** Importar el nuevo componente ***
 import useNotification from '../hooks/useNotification';
 import axios from 'axios';
 import { format } from 'date-fns';
 import logger from '../utils/logger';
+import {
+  Box,
+  Button,
+  Typography,
+  CircularProgress,
+  Link,
+  Alert,
+  Collapse,
+  Grid,
+  Paper,
+  Divider,
+  TextField, // Para input file (o usar input nativo)
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material'; // Asumiendo Material UI
+import { Download, UploadFile, CheckCircle, Error, CloudUpload } from '@mui/icons-material';
+import { saveAs } from 'file-saver'; // Para descargar archivos
 
 // Definición de las cabeceras del Excel actualizadas
 const EXCEL_HEADERS = [
@@ -31,8 +52,36 @@ const ViajeBulkImporter = ({
   vehiculos = [] // Nueva prop para vehículos
 }) => {
   const { showNotification } = useNotification();
-  
-  // Funciones auxiliares para manejar diferentes estructuras de datos
+  const [importId, setImportId] = useState(null);
+  const [importStatus, setImportStatus] = useState('idle'); // idle, uploading, processing_initial, pending_correction, processing_template_Site, processing_template_Personal, ..., retrying, completed, failed
+  const [initialResult, setInitialResult] = useState(null);
+  const [retryResult, setRetryResult] = useState(null);
+  const [templateFiles, setTemplateFiles] = useState({
+    Site: null,
+    Personal: null,
+    Vehiculo: null,
+    Tramo: null,
+  });
+  const [templateProcessingStatus, setTemplateProcessingStatus] = useState({}); // { Site: { status: 'success', message: 'OK'}, Personal: { status: 'error', message: '...' } }
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Limpiar estado al cerrar o cambiar cliente
+  useEffect(() => {
+    if (!open) {
+      setImportId(null);
+      setImportStatus('idle');
+      setInitialResult(null);
+      setRetryResult(null);
+      setTemplateFiles({ Site: null, Personal: null, Vehiculo: null, Tramo: null });
+      setTemplateProcessingStatus({});
+      setIsLoading(false);
+      setError(null);
+    }
+  }, [open]);
+
+
+  // Funciones auxiliares para manejar diferentes estructuras de datos (mantener las existentes)
   const getSiteId = (site) => site._id || site.id || '';
   
   // Nueva función para obtener el Código del cliente
@@ -164,9 +213,18 @@ const ViajeBulkImporter = ({
     return errors;
   };
 
-  // Procesar datos del Excel para enviar al servidor
-  const processExcelData = async (data) => {
+  // Procesar datos del Excel INICIAL para enviar al servidor
+  const processInitialExcelData = async (data) => {
+    setIsLoading(true);
+    setError(null);
+    setImportStatus('processing_initial');
+    setInitialResult(null); // Limpiar resultados previos
+    setRetryResult(null);
+    setTemplateFiles({ Site: null, Personal: null, Vehiculo: null, Tramo: null });
+    setTemplateProcessingStatus({});
+
     try {
+      // 1. Procesamiento Frontend (igual que antes)
       // Procesar y preparar los datos
       const processedData = data.map(row => {
         // Encontrar IDs de origen y destino
@@ -221,73 +279,61 @@ const ViajeBulkImporter = ({
         };
       });
 
-      // Dividir en lotes para evitar problemas de tamaño
-      const BATCH_SIZE = 20;
-      const batches = [];
-      
-      for (let i = 0; i < processedData.length; i += BATCH_SIZE) {
-        batches.push(processedData.slice(i, i + BATCH_SIZE));
-      }
-
-      let exitosos = 0;
-      let errores = [];
-
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        try {
-          // Verificación de token eliminada, manejada por cookies
-
-          const response = await axios.post(
-            '/api/viajes/bulk',
-            { 
-              cliente, 
-              viajes: batch
-            },
-            { 
-              headers: { 
-                // Authorization: `Bearer ${token}`, // No necesario con cookies
-                'Content-Type': 'application/json'
-              },
-              timeout: 30000
-            }
-          );
-
-          exitosos += response.data.exitosos || 0;
-          if (response.data.errores && response.data.errores.length > 0) {
-            errores = [...errores, ...response.data.errores];
-          }
-        } catch (error) {
-          logger.error(`Error procesando lote ${i+1}:`, error);
-          batch.forEach((viaje, index) => {
-            errores.push({
-              indice: i * BATCH_SIZE + index,
-              dt: viaje.dt,
-              error: error.message
-            });
-          });
+      // 2. Enviar TODOS los datos procesados al nuevo endpoint de inicio
+      logger.debug(`Enviando ${processedData.length} viajes al endpoint /iniciar`);
+      const response = await axios.post(
+        '/api/viajes/bulk/iniciar', // Nuevo endpoint
+        {
+          cliente: cliente, // Asegúrate que 'cliente' sea el ID
+          viajes: processedData
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 180000 // Aumentar timeout a 3 minutos (180000 ms)
         }
+      );
+
+      logger.info('Respuesta de importación inicial:', response.data);
+
+      // 3. Procesar la respuesta detallada
+      if (response.data && response.data.success) {
+        setImportId(response.data.importId);
+        setInitialResult({
+          successCount: response.data.successCount,
+          pendingCount: response.data.pendingCount,
+          criticalFailCount: response.data.criticalFailCount,
+          correctionNeeded: response.data.correctionNeeded,
+          criticalFailures: response.data.criticalFailures
+        });
+
+        if (response.data.status === 'completed') {
+          setImportStatus('completed');
+          showNotification(`Importación inicial completada: ${response.data.successCount} viajes importados exitosamente.`, 'success');
+          if (onComplete) onComplete();
+           // Mantener modal abierto para mostrar resultado? O cerrar? Por ahora mantenemos.
+           // onClose();
+        } else if (response.data.status === 'pending_correction') {
+          setImportStatus('pending_correction');
+          showNotification(`Importación inicial parcial: ${response.data.successCount} éxitos, ${response.data.criticalFailCount} fallos críticos y ${response.data.pendingCount} pendientes de corrección.`, 'warning');
+        } else {
+           // Estado inesperado
+           setError(`Estado inesperado recibido del servidor: ${response.data.status}`);
+           setImportStatus('failed');
+        }
+      } else {
+        throw new Error(response.data?.message || 'Error desconocido en la importación inicial.');
       }
 
-      const resultMessage = `Importación completada: ${exitosos} viajes importados exitosamente, ${errores.length} con errores`;
-      
-      if (errores.length > 0) {
-        showNotification(
-          `Importación completada con ${errores.length} errores. Se importaron ${exitosos} viajes.`, 
-          'warning'
-        );
-        console.error('Errores en importación:', errores);
-      } else {
-        showNotification(resultMessage, 'success');
-      }
-      
-      if (onComplete) {
-        onComplete();
-      }
-      
-      onClose();
-    } catch (error) {
-      logger.error('Error en importación:', error);
-      showNotification('Error al procesar la importación: ' + error.message, 'error');
+    } catch (err) {
+      logger.error('Error en la importación inicial:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Error al procesar la importación inicial.';
+      setError(errorMsg);
+      showNotification(errorMsg, 'error');
+      setImportStatus('failed');
+      // No cerrar automáticamente en caso de error para que el usuario vea el mensaje
+      // onClose();
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -408,20 +454,347 @@ const ViajeBulkImporter = ({
     }
   ];
 
-  return (
-    <ExcelImportTemplate
-      title="Importación de Viajes mediante Excel"
-      open={open} 
-      onClose={onClose}
-      onComplete={onComplete}
-      excelHeaders={EXCEL_HEADERS}
-      processDataCallback={processExcelData}
-      templateFileName="Plantilla_Importacion_Viajes.xlsx"
-      validateRow={validateRow}
-      instructionSheets={instructionSheets}
-      exampleData={exampleData}
-    />
-  );
+  // --- Nuevas Funciones para Etapa 2 ---
+
+  const handleTemplateFileChange = (event, templateType) => {
+    const file = event.target.files[0];
+    if (file) {
+      setTemplateFiles(prev => ({ ...prev, [templateType]: file }));
+      // Limpiar estado de procesamiento previo para este tipo
+      setTemplateProcessingStatus(prev => ({ ...prev, [templateType]: undefined }));
+    }
+  };
+
+  const handleDownloadTemplate = async (templateType) => {
+     if (!importId) return;
+     setIsLoading(true);
+     setError(null);
+     try {
+        const response = await axios.get(
+            `/api/viajes/bulk/template/${importId}/${templateType}`,
+            { responseType: 'blob' } // Importante para recibir el archivo
+        );
+        const suggestedFileName = `Plantilla_Correccion_${templateType}_${importId}.xlsx`;
+        saveAs(response.data, suggestedFileName); // Usar file-saver
+        showNotification(`Plantilla para ${templateType} descargada.`, 'success');
+     } catch (err) {
+        logger.error(`Error descargando plantilla ${templateType}:`, err);
+        const errorMsg = err.response?.data?.message || err.message || `Error al descargar plantilla ${templateType}.`;
+        setError(errorMsg);
+        showNotification(errorMsg, 'error');
+     } finally {
+        setIsLoading(false);
+     }
+  };
+
+ const handleProcessTemplate = async (templateType) => {
+    if (!importId || !templateFiles[templateType]) return;
+
+    setIsLoading(true);
+    setError(null);
+    setTemplateProcessingStatus(prev => ({ ...prev, [templateType]: { status: 'processing', message: 'Procesando...' } }));
+
+    const formData = new FormData();
+    formData.append('templateFile', templateFiles[templateType]);
+
+    try {
+      const response = await axios.post(
+        `/api/viajes/bulk/process-template/${importId}/${templateType}`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 120000 // Timeout más largo para procesamiento de archivos
+        }
+      );
+
+      logger.info(`Respuesta procesamiento plantilla ${templateType}:`, response.data);
+
+      if (response.data && response.data.success) {
+         setTemplateProcessingStatus(prev => ({
+             ...prev,
+             [templateType]: { status: 'success', message: response.data.message || `Plantilla ${templateType} procesada.` }
+         }));
+         showNotification(response.data.message || `Plantilla ${templateType} procesada con éxito.`, 'success');
+         // Opcional: mostrar detalles del resultado (response.data.result)
+      } else {
+        throw new Error(response.data?.message || `Error procesando plantilla ${templateType}.`);
+      }
+
+    } catch (err) {
+      logger.error(`Error procesando plantilla ${templateType}:`, err);
+      const errorMsg = err.response?.data?.message || err.message || `Error al procesar plantilla ${templateType}.`;
+      setError(errorMsg); // Mostrar error general también
+      setTemplateProcessingStatus(prev => ({
+          ...prev,
+          [templateType]: { status: 'error', message: errorMsg }
+      }));
+      showNotification(errorMsg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+ const handleRetryImport = async () => {
+    if (!importId) return;
+
+    setIsLoading(true);
+    setError(null);
+    setImportStatus('retrying');
+    setRetryResult(null);
+
+    try {
+        const response = await axios.post(`/api/viajes/bulk/retry/${importId}`);
+        logger.info('Respuesta reintento importación:', response.data);
+
+        if (response.data && response.data.success) {
+            setRetryResult(response.data.result); // { exitosos: X, errores: Y, fallosDetallados: [...] }
+            setImportStatus('completed');
+            const successMsg = `Reintento completado: ${response.data.result?.exitosos || 0} viajes adicionales importados.`;
+            const errorMsg = response.data.result?.errores > 0
+                ? `${response.data.result.errores} viajes no pudieron importarse definitivamente.`
+                : '';
+            showNotification(`${successMsg} ${errorMsg}`.trim(), response.data.result?.errores > 0 ? 'warning' : 'success');
+             if (onComplete) onComplete(); // Notificar finalización general
+        } else {
+             throw new Error(response.data?.message || 'Error en el reintento de importación.');
+        }
+
+    } catch (err) {
+        logger.error('Error en reintento de importación:', err);
+        const errorMsg = err.response?.data?.message || err.message || 'Error al reintentar la importación.';
+        setError(errorMsg);
+        showNotification(errorMsg, 'error');
+        setImportStatus('failed'); // O volver a 'pending_correction'? Quizás 'failed' es mejor.
+    } finally {
+        setIsLoading(false);
+    }
+ };
+
+ const handleDownloadFallback = async () => {
+     if (!importId) return;
+     setIsLoading(true);
+     setError(null);
+     try {
+        const response = await axios.get(
+            `/api/viajes/bulk/fallback/${importId}`,
+            { responseType: 'blob' }
+        );
+        const suggestedFileName = `Viajes_Fallidos_Importacion_${importId}.xlsx`;
+        saveAs(response.data, suggestedFileName);
+        showNotification('Archivo con viajes fallidos descargado.', 'success');
+     } catch (err) {
+        logger.error('Error descargando fallback:', err);
+        // Intentar leer mensaje de error si es JSON
+        let errorMsg = 'Error al descargar el archivo de viajes fallidos.';
+        if (err.response && err.response.data instanceof Blob && err.response.data.type === "application/json") {
+            try {
+                 const errorJson = JSON.parse(await err.response.data.text());
+                 errorMsg = errorJson.message || errorMsg;
+            } catch (parseError) {
+                 // Mantener mensaje genérico si no se puede parsear
+            }
+        } else {
+             errorMsg = err.response?.data?.message || err.message || errorMsg;
+        }
+        setError(errorMsg);
+        showNotification(errorMsg, 'error');
+     } finally {
+        setIsLoading(false);
+     }
+ };
+
+ // --- Renderizado Condicional ---
+
+ if (importStatus === 'idle' || importStatus === 'uploading' || importStatus === 'processing_initial') {
+    // Mostrar el template de carga inicial
+    return (
+      <ExcelImportTemplate
+        title="Importación de Viajes mediante Excel (Etapa 1)"
+        open={open}
+        onClose={onClose}
+        // onComplete no se usa directamente aquí, se maneja internamente
+        excelHeaders={EXCEL_HEADERS}
+        processDataCallback={processInitialExcelData} // Usar la nueva función
+        templateFileName="Plantilla_Importacion_Viajes.xlsx"
+        validationContext={sites}
+        instructionSheets={instructionSheets}
+        exampleData={exampleData}
+        isProcessing={isLoading || importStatus === 'processing_initial'} // Mostrar indicador de carga
+      />
+    );
+ }
+
+ // Mostrar resultados y opciones de corrección/reintento en un Dialog o Modal propio
+ // (ExcelImportTemplate no es adecuado para este UI complejo)
+ return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>Resultado Importación de Viajes</DialogTitle>
+        <DialogContent>
+            {isLoading && <CircularProgress sx={{ display: 'block', margin: '20px auto' }} />}
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+            {/* Resumen Inicial */}
+            {initialResult && (
+                <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+                    <Typography variant="h6" gutterBottom>Resumen Etapa 1</Typography>
+                    <Typography>Viajes procesados inicialmente: { (initialResult.successCount || 0) + (initialResult.pendingCount || 0) + (initialResult.criticalFailCount || 0) }</Typography>
+                    <Typography color="success.main">Importados exitosamente: {initialResult.successCount || 0}</Typography>
+                    {initialResult.pendingCount > 0 && (
+                        <Typography color="warning.main">
+                            Pendientes de corrección: {initialResult.pendingCount}
+                        </Typography>
+                    )}
+                    <Typography color={(initialResult.criticalFailCount || 0) > 0 ? 'error.main' : 'text.secondary'}>
+                        Fallaron (Errores Críticos): {initialResult.criticalFailCount || 0}
+                    </Typography>
+                </Paper>
+            )}
+
+            {/* Sección de Correcciones */}
+            {importStatus === 'pending_correction' && initialResult && initialResult.pendingCount > 0 && (
+                <Box>
+                    <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Acciones de Corrección Requeridas</Typography>
+                    <Grid container spacing={2}>
+                        {initialResult.correctionNeeded && Object.entries(initialResult.correctionNeeded).map(([type, details]) => {
+                            if (details.count > 0) {
+                                // Lógica mejorada para determinar templateType y isCorrectable
+                                let templateType = null;
+                                let isCorrectable = false;
+                                let errorLabel = `Fallos (${type}): ${details.count}`; // Label por defecto
+
+                                switch (type) {
+                                    case 'missingSites':
+                                        templateType = 'Site';
+                                        isCorrectable = true;
+                                        errorLabel = `Sitios Faltantes`; // Label sin count, se pasa aparte
+                                        break;
+                                    case 'missingPersonal':
+                                        templateType = 'Personal';
+                                        isCorrectable = true;
+                                        errorLabel = `Personal Faltante/Inactivo`;
+                                        break;
+                                    case 'missingVehiculos':
+                                        templateType = 'Vehiculo'; 
+                                        isCorrectable = true;
+                                        errorLabel = `Vehículos Faltantes`;
+                                        break;
+                                    case 'missingTramos':
+                                        templateType = 'Tramo';
+                                        isCorrectable = true;
+                                        errorLabel = `Tramos/Tarifas Faltantes`;
+                                        break;
+                                    case 'duplicateDt':
+                                        errorLabel = `DTs Duplicados`;
+                                        break;
+                                    case 'invalidData':
+                                        errorLabel = `Datos Inválidos`;
+                                        break;
+                                    default:
+                                        break;
+                                }
+
+                                // const processingInfo = templateType ? templateProcessingStatus[templateType] : null;
+
+                                return (
+                                    <Grid item xs={12} sm={6} key={type}>
+                                        {isCorrectable && templateType ? (
+                                            // *** Usar el nuevo Widget ***
+                                            <CorrectionActionWidget
+                                                templateType={templateType}
+                                                label={errorLabel} // Pasar label sin count
+                                                count={details.count} // Pasar count
+                                                onDownload={handleDownloadTemplate}
+                                                onFileChange={handleTemplateFileChange}
+                                                onProcess={handleProcessTemplate}
+                                                selectedFile={templateFiles[templateType]}
+                                                processingStatus={templateProcessingStatus[templateType]}
+                                                isLoading={isLoading}
+                                            />
+                                        ) : (
+                                            // Mostrar info para errores no corregibles por plantilla
+                                        <Paper elevation={1} sx={{ p: 2 }}>
+                                            <Typography variant="subtitle1" gutterBottom>
+                                                    {errorLabel}: {details.count}
+                                                        </Typography>
+                                                 <Typography variant="body2" color="text.secondary">
+                                                     {type === 'duplicateDt' ? 'Estos viajes no se pueden reintentar. Descargue el archivo fallback.' :
+                                                      type === 'invalidData' ? 'Corrija estos datos en el archivo original y vuelva a importar.' :
+                                                      'Este tipo de error requiere revisión manual.'}
+                                                 </Typography>
+                                            </Paper>
+                                            )}
+                                    </Grid>
+                                );
+                            }
+                            return null;
+                        })}
+                    </Grid>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                         <Button
+                             variant="contained"
+                             color="primary"
+                             onClick={handleRetryImport}
+                             disabled={isLoading || importStatus !== 'pending_correction'}
+                         >
+                             Reintentar Importación de Viajes Fallidos
+                         </Button>
+                         <Button
+                             variant="outlined"
+                             color="warning"
+                             startIcon={<Download />}
+                             onClick={handleDownloadFallback}
+                             disabled={isLoading}
+                         >
+                             Descargar Viajes Fallidos (Fallback)
+                         </Button>
+                    </Box>
+                </Box>
+            )}
+
+             {/* Resultado Reintento */}
+             {importStatus === 'completed' && retryResult && (
+                 <Paper elevation={2} sx={{ p: 2, mt: 2, backgroundColor: 'success.light' }}>
+                     <Typography variant="h6" gutterBottom>Resultado Reintento (Etapa 2)</Typography>
+                     <Typography>Viajes adicionales importados: {retryResult.exitosos}</Typography>
+                     <Typography color={retryResult.errores > 0 ? 'error.main' : 'inherit'}>
+                         Fallaron definitivamente: {retryResult.errores}
+                     </Typography>
+                     {retryResult.errores > 0 && (
+                         <Button
+                             variant="outlined"
+                             color="warning"
+                             startIcon={<Download />}
+                             onClick={handleDownloadFallback}
+                             disabled={isLoading}
+                             sx={{ mt: 1 }}
+                         >
+                             Descargar {retryResult.errores} Viajes Fallidos
+                         </Button>
+                     )}
+                 </Paper>
+             )}
+
+             {/* Mensaje Final Éxito (sin fallos pendientes) */}
+              {importStatus === 'completed' && (!retryResult || retryResult.errores === 0) && initialResult && (initialResult.criticalFailCount || 0) === 0 && (initialResult.pendingCount || 0) === 0 && (
+                 <Alert severity="success" sx={{ mt: 2 }}>
+                     ¡Importación completada exitosamente! Todos los viajes ({initialResult.successCount || 0}) fueron importados.
+                 </Alert>
+              )}
+              {importStatus === 'completed' && retryResult && retryResult.errores === 0 && initialResult && ((initialResult.criticalFailCount || 0) > 0 || (initialResult.pendingCount || 0) > 0) && (
+                 <Alert severity="success" sx={{ mt: 2 }}>
+                     ¡Importación completada! {initialResult.successCount || 0} viajes importados inicialmente y {retryResult.exitosos || 0} tras correcciones.
+                 </Alert>
+              )}
+
+
+        </DialogContent>
+        <DialogActions>
+            <Button onClick={onClose}>Cerrar</Button>
+        </DialogActions>
+    </Dialog>
+ );
+
 };
 
 ViajeBulkImporter.propTypes = {

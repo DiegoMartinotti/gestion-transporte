@@ -402,118 +402,164 @@ const getVehiculosVencidos = async () => {
 };
 
 /**
- * Crea múltiples vehículos en una operación (carga masiva) con transacción
- * @param {Array} vehiculos - Array de datos de vehículos a crear
+ * Crea o actualiza vehículos masivamente desde la plantilla de corrección.
+ * Resuelve la empresa por ID o Nombre.
+ * Usa 'patenteFaltante' para buscar; si existe, actualiza; si no, crea.
+ *
+ * @param {Array<Object>} vehiculosData - Array con datos de vehículos extraídos de la plantilla.
+ * @param {Object} options - Opciones, incluye la session de mongoose.
+ * @returns {Promise<Object>} - Resultado con insertados, actualizados y errores.
  */
-const createVehiculosBulk = async (vehiculos) => {
-  const session = await mongoose.startSession();
-  
-  try {
-    session.startTransaction();
-    logger.info('Iniciando transacción para carga masiva de vehículos');
-    
-    // Validaciones previas
-    if (!vehiculos || !Array.isArray(vehiculos) || vehiculos.length === 0) {
-      throw new Error('No se proporcionaron vehículos para cargar');
+const createVehiculosBulk = async (vehiculosData, options = {}) => {
+    const session = options.session;
+    let insertados = 0;
+    let actualizados = 0;
+    const errores = [];
+    const operations = []; // Array para bulkWrite [{updateOne: {...}}, {insertOne: {...}}]
+
+    if (!Array.isArray(vehiculosData) || vehiculosData.length === 0) {
+        return { success: false, insertados, actualizados, errores: [{ message: 'No vehicle data provided for bulk operation.' }] };
+    }
+    logger.info(`[createVehiculosBulk] Iniciando proceso para ${vehiculosData.length} vehículos.`);
+
+    // 1. Resolver Empresas
+    const empresaIdentifiers = [...new Set(vehiculosData.map(v => v.empresa).filter(e => e))];
+    const empresaIds = empresaIdentifiers.filter(id => mongoose.Types.ObjectId.isValid(id));
+    const empresaNombres = empresaIdentifiers.filter(id => !mongoose.Types.ObjectId.isValid(id));
+
+    const empresasFoundById = await Empresa.find({ _id: { $in: empresaIds } }).session(session).lean();
+    const empresasFoundByName = await Empresa.find({ nombre: { $in: empresaNombres } }).session(session).lean();
+    const empresaMap = new Map();
+    [...empresasFoundById, ...empresasFoundByName].forEach(emp => {
+        empresaMap.set(emp._id.toString(), emp._id);
+        if (emp.nombre) {
+            empresaMap.set(emp.nombre.toLowerCase(), emp._id);
+        }
+    });
+    logger.debug(`[createVehiculosBulk] Empresas resueltas: ${empresaMap.size} encontradas.`);
+
+    // 2. Buscar Vehículos Existentes por patenteFaltante (dominio)
+    const patentesFaltantes = vehiculosData.map(v => String(v.patenteFaltante || '').trim().toUpperCase()).filter(p => p);
+    const vehiculosExistentes = await Vehiculo.find({ dominio: { $in: patentesFaltantes } }).session(session).lean();
+    const vehiculosExistentesMap = new Map(vehiculosExistentes.map(v => [v.dominio, v]));
+    logger.debug(`[createVehiculosBulk] Vehículos existentes encontrados: ${vehiculosExistentesMap.size}`);
+
+    // 3. Procesar cada registro y preparar operaciones
+    for (const [index, item] of vehiculosData.entries()) {
+        const patente = String(item.patenteFaltante || '').trim().toUpperCase();
+
+        // Validar campos básicos (patente, tipo, empresa)
+        if (!patente || !item.tipo || !item.empresa) {
+            errores.push({ index, message: 'Faltan campos requeridos (Patente Faltante, Tipo, Empresa)', data: item });
+            continue;
+        }
+
+        // Resolver Empresa ID
+        let empresaId = null;
+        const empresaKey = typeof item.empresa === 'string' ? item.empresa.toLowerCase() : item.empresa;
+        if (mongoose.Types.ObjectId.isValid(item.empresa)) {
+            empresaId = empresaMap.get(item.empresa.toString());
+        } else if (typeof empresaKey === 'string') {
+            empresaId = empresaMap.get(empresaKey);
+        }
+
+        if (!empresaId) {
+            errores.push({ index, message: `Empresa '${item.empresa}' no encontrada o inválida`, data: item });
+            continue;
+        }
+
+        const vehiculoDataToSet = {
+            tipo: item.tipo,
+            marca: item.marca || null,
+            modelo: item.modelo || null,
+            anio: item.anio || null,
+            empresa: empresaId,
+            // Otros campos relevantes del modelo Vehiculo podrían ir aquí
+        };
+
+        const vehiculoExistente = vehiculosExistentesMap.get(patente);
+
+        if (vehiculoExistente) {
+            // Preparar actualización
+            operations.push({
+                updateOne: {
+                    filter: { _id: vehiculoExistente._id },
+                    update: { $set: vehiculoDataToSet }
+                }
+            });
+        } else {
+            // Preparar inserción
+            operations.push({
+                insertOne: {
+                    document: {
+                        dominio: patente, // Usar patenteFaltante como dominio
+                        ...vehiculoDataToSet
+                    }
+                }
+            });
+        }
     }
 
-    logger.info(`Procesando carga masiva de ${vehiculos.length} vehículos`);
+    // 4. Ejecutar bulkWrite
+    if (operations.length > 0) {
+        try {
+            const result = await Vehiculo.bulkWrite(operations, { session, ordered: false });
+            insertados = result.insertedCount;
+            actualizados = result.modifiedCount;
+            logger.info(`[createVehiculosBulk] BulkWrite completado. Insertados: ${insertados}, Actualizados: ${actualizados}`);
 
-    // Validar que todos los vehículos tengan los campos requeridos
-    const vehiculosInvalidos = vehiculos.filter(v => !v.dominio || !v.tipo || !v.empresa);
-    if (vehiculosInvalidos.length > 0) {
-      logger.warn(`Datos inválidos en carga masiva: ${vehiculosInvalidos.length} vehículos sin campos requeridos`);
-      throw new Error('Algunos vehículos no tienen los campos requeridos (dominio, tipo, empresa)');
-    }
+            // Manejar errores de escritura individuales
+            if (result.hasWriteErrors()) {
+                 result.getWriteErrors().forEach(err => {
+                     // Intentar mapear el error al índice original (puede ser complejo)
+                     const opType = err.op.insertOne ? 'insert' : 'update';
+                     const targetDomain = err.op.insertOne ? err.op.insertOne.document.dominio : err.op.updateOne?.filter?.dominio; // Puede ser _id
+                     const originalIndex = vehiculosData.findIndex(v => String(v.patenteFaltante || '').trim().toUpperCase() === targetDomain);
 
-    // Verificar que todas las empresas existan
-    const empresasIds = [...new Set(vehiculos.map(v => v.empresa))];
-    const empresasExistentes = await Empresa.find({ 
-      _id: { $in: empresasIds } 
-    }).session(session);
-    
-    if (empresasExistentes.length !== empresasIds.length) {
-      logger.warn('Empresas no encontradas en carga masiva');
-      throw new Error('Una o más empresas especificadas no existen');
-    }
+                    errores.push({
+                        index: originalIndex !== -1 ? originalIndex : 'N/A',
+                        message: `Error en operación ${opType} para patente ${targetDomain || 'desconocida'}: ${err.errmsg}`,
+                        code: err.code,
+                        data: err.op // Contiene la operación fallida
+                    });
+                 });
+                 logger.warn(`[createVehiculosBulk] ${errores.length} errores durante bulkWrite.`);
+            }
 
-    // Normalizamos los dominios (siempre en mayúsculas)
-    const dominios = vehiculos.map(v => v.dominio.toUpperCase());
-    
-    // Verificar dominios duplicados en la base de datos
-    const dominiosExistentes = await Vehiculo.find({ 
-      dominio: { $in: dominios } 
-    }).session(session);
-    
-    if (dominiosExistentes.length > 0) {
-      const dominiosRepetidos = dominiosExistentes.map(v => v.dominio).join(', ');
-      logger.warn(`Dominios duplicados en carga masiva: ${dominiosRepetidos}`);
-      throw new Error(`Algunos dominios ya existen en la base de datos: ${dominiosRepetidos}`);
-    }
-
-    // Verificar dominios duplicados en la carga
-    const dominiosUnicos = new Set(dominios);
-    if (dominiosUnicos.size !== dominios.length) {
-      logger.warn('Dominios duplicados dentro de la carga masiva');
-      throw new Error('Hay dominios duplicados en la carga');
-    }
-
-    // Preparar los vehículos para inserción
-    const vehiculosPreparados = vehiculos.map(v => ({
-      ...v,
-      dominio: v.dominio.toUpperCase()
-    }));
-
-    // Insertar los vehículos en la base de datos dentro de la transacción
-    const vehiculosInsertados = await Vehiculo.insertMany(
-      vehiculosPreparados, 
-      { session }
-    );
-    
-    logger.info(`Insertados ${vehiculosInsertados.length} vehículos`);
-
-    // Actualizar las referencias en las empresas
-    // Agrupamos por empresa para reducir el número de operaciones
+             // Actualizar referencias en empresas (solo para los insertados)
+             const insertedIds = result.getInsertedIds().map(idInfo => idInfo._id);
+             if (insertedIds.length > 0) {
+                 const vehiculosInsertados = await Vehiculo.find({ _id: { $in: insertedIds } }).session(session).lean();
     const vehiculosPorEmpresa = {};
-    
     vehiculosInsertados.forEach(vehiculo => {
-      const empresaId = vehiculo.empresa.toString();
-      if (!vehiculosPorEmpresa[empresaId]) {
-        vehiculosPorEmpresa[empresaId] = [];
-      }
-      vehiculosPorEmpresa[empresaId].push(vehiculo._id);
-    });
-    
-    // Actualizamos cada empresa con todos sus vehículos de una vez
-    const actualizacionesEmpresas = Object.entries(vehiculosPorEmpresa).map(([empresaId, vehiculosIds]) => {
-      return Empresa.findByIdAndUpdate(
-        empresaId,
-        { $push: { flota: { $each: vehiculosIds } } },
-        { session }
-      );
-    });
-    
-    await Promise.all(actualizacionesEmpresas);
-    logger.info(`Actualizadas referencias en ${actualizacionesEmpresas.length} empresas`);
+                     const empresaIdStr = vehiculo.empresa.toString();
+                     if (!vehiculosPorEmpresa[empresaIdStr]) vehiculosPorEmpresa[empresaIdStr] = [];
+                     vehiculosPorEmpresa[empresaIdStr].push(vehiculo._id);
+                 });
 
-    // Commit de la transacción
-    await session.commitTransaction();
-    logger.info('Transacción completada: carga masiva finalizada correctamente');
+                 const actualizacionesEmpresas = Object.entries(vehiculosPorEmpresa).map(([empresaId, vehiculosIds]) =>
+                     Empresa.findByIdAndUpdate(empresaId, { $push: { flota: { $each: vehiculosIds } } }, { session })
+                 );
+                 await Promise.all(actualizacionesEmpresas);
+                 logger.info(`[createVehiculosBulk] Actualizadas referencias en ${actualizacionesEmpresas.length} empresas para vehículos nuevos.`);
+             }
+
+
+        } catch (error) {
+            logger.error('[createVehiculosBulk] Error durante bulkWrite:', error);
+            errores.push({ message: `Error general durante bulkWrite: ${error.message}` });
+        }
+    } else {
+        logger.info('[createVehiculosBulk] No se prepararon operaciones válidas.');
+    }
+
 
     return {
-      message: 'Vehículos cargados exitosamente',
-      insertados: vehiculosInsertados.length,
-      vehiculos: vehiculosInsertados
+        success: errores.length === 0,
+        insertados,
+        actualizados,
+        errores
     };
-  } catch (error) {
-    // Rollback en caso de error
-    await session.abortTransaction();
-    logger.error('Error en transacción de carga masiva, rollback aplicado:', error);
-    throw error;
-  } finally {
-    // Finalizamos la sesión
-    session.endSession();
-  }
 };
 
 module.exports = {
