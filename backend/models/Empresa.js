@@ -87,10 +87,9 @@ const empresaSchema = new mongoose.Schema({
     versionKey: false
 });
 
-// Middleware para normalizar datos antes de guardar
-empresaSchema.pre('save', function(next) {
-    next();
-});
+// Añadir índices para mejorar rendimiento en búsquedas
+empresaSchema.index({ cuit: 1 });
+empresaSchema.index({ tipo: 1 });
 
 // Método para obtener información completa de contacto
 empresaSchema.methods.getInfoContacto = function() {
