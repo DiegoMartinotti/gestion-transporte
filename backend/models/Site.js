@@ -3,24 +3,26 @@ const mongoose = require('mongoose');
 /**
  * Schema for Site management
  * @typedef {Object} SiteSchema
- * @property {string} Site - Site name (unique per client)
- * @property {string} Cliente - Client name
- * @property {string} [Direccion] - Address
- * @property {string} [Localidad] - City
- * @property {string} [Provincia] - State/Province
- * @property {string} [Codigo] - Client assigned code
+ * @property {string} nombre - Site name (unique per client)
+ * @property {mongoose.Schema.Types.ObjectId} cliente - Referencia al _id del Cliente
+ * @property {string} [direccion] - Address
+ * @property {string} [localidad] - City
+ * @property {string} [provincia] - State/Province
+ * @property {string} [codigo] - Client assigned code
  * @property {Object} [location] - Geolocation data
  */
 const siteSchema = new mongoose.Schema({
-    Site: {
+    nombre: {
         type: String,
         required: [true, 'El nombre del site es requerido']
     },
-    Cliente: {
-        type: String,
-        required: [true, 'El cliente es requerido']
+    cliente: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Cliente',
+        required: [true, 'El cliente es obligatorio'],
+        index: true
     },
-    Codigo: {
+    codigo: {
         type: String,
         default: ''
     },
@@ -36,15 +38,15 @@ const siteSchema = new mongoose.Schema({
             required: true
         }
     },
-    Direccion: {
+    direccion: {
         type: String,
         default: '-'
     },
-    Localidad: {
+    localidad: {
         type: String,
         default: ''
     },
-    Provincia: {
+    provincia: {
         type: String,
         default: ''
     }
@@ -69,13 +71,36 @@ siteSchema.virtual('coordenadas').get(function() {
 // Pre-save middleware for validation and data cleaning
 siteSchema.pre('save', async function(next) {
     try {
-        this.Site = this.Site.trim().toUpperCase();
-        this.Cliente = this.Cliente.trim().toUpperCase();
+        if (this.isModified('nombre')) {
+           this.nombre = this.nombre.trim().toUpperCase();
+        }
+
+        if (this.isModified('direccion')) this.direccion = this.direccion.trim();
+        if (this.isModified('localidad')) this.localidad = this.localidad.trim();
+        if (this.isModified('provincia')) this.provincia = this.provincia.trim();
+        if (this.isModified('codigo')) this.codigo = this.codigo.trim();
+
+        if (this.isModified('nombre') || this.isModified('cliente')) {
+            const existe = await this.constructor.findOne({
+                cliente: this.cliente,
+                nombre: this.nombre,
+                _id: { $ne: this._id }
+            }).collation({ locale: 'es', strength: 2 });
+            if (existe) {
+                 throw new Error(`El site "${this.nombre}" ya existe para este cliente.`);
+            }
+        }
         
-        if (this.Direccion) this.Direccion = this.Direccion.trim();
-        if (this.Localidad) this.Localidad = this.Localidad.trim();
-        if (this.Provincia) this.Provincia = this.Provincia.trim();
-        if (this.Codigo) this.Codigo = this.Codigo.trim();
+        if (this.codigo && (this.isModified('codigo') || this.isModified('cliente'))) {
+            const existeCodigo = await this.constructor.findOne({
+                cliente: this.cliente,
+                codigo: this.codigo,
+                 _id: { $ne: this._id }
+            }).collation({ locale: 'es', strength: 2 });
+             if (existeCodigo) {
+                 throw new Error(`El código "${this.codigo}" ya existe para este cliente.`);
+            }
+        }
 
         next();
     } catch (error) {
@@ -84,35 +109,39 @@ siteSchema.pre('save', async function(next) {
 });
 
 // Índices optimizados
-siteSchema.index({ Site: 1, Cliente: 1 }, { 
+siteSchema.index({ nombre: 1, cliente: 1 }, {
     unique: true,
-    collation: { locale: 'es', strength: 2 }
-});
-siteSchema.index({ Cliente: 1 });
-siteSchema.index({ Localidad: 1, Provincia: 1 });
-// Índice para garantizar Codigo único por Cliente (solo cuando Codigo existe)
-siteSchema.index({ 
-    Cliente: 1, 
-    Codigo: 1 
-}, { 
-    unique: true, 
     collation: { locale: 'es', strength: 2 },
-    partialFilterExpression: { Codigo: { $exists: true, $ne: '' } }
+    name: 'idx_nombre_cliente_unique'
+});
+siteSchema.index({ cliente: 1 });
+siteSchema.index({ localidad: 1, provincia: 1 }, { name: 'idx_localidad_provincia' });
+siteSchema.index({
+    cliente: 1,
+    codigo: 1
+}, {
+    unique: true,
+    collation: { locale: 'es', strength: 2 },
+    partialFilterExpression: { codigo: { $exists: true, $ne: '' } },
+    name: 'idx_cliente_codigo_partial_unique'
 });
 
 // Métodos de instancia
 siteSchema.methods.getDireccionCompleta = function() {
-    return [this.Direccion, this.Localidad, this.Provincia]
+    return [this.direccion, this.localidad, this.provincia]
         .filter(Boolean)
         .join(', ') || 'Sin dirección';
 };
 
 // Métodos estáticos
-siteSchema.statics.findByClienteAndSite = async function(cliente, site) {
+siteSchema.statics.findByClienteAndNombre = async function(clienteId, nombreSite) {
+     if (!mongoose.Types.ObjectId.isValid(clienteId)) {
+        return null;
+     }
     return this.findOne({
-        Cliente: cliente.toUpperCase(),
-        Site: site.toUpperCase()
-    });
+        cliente: clienteId,
+        nombre: nombreSite.toUpperCase()
+    }).collation({ locale: 'es', strength: 2 });
 };
 
 const Site = mongoose.model('Site', siteSchema);

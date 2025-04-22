@@ -27,16 +27,20 @@ const normalizeText = (text) => {
 
 // --- Funciones de Ayuda para Validación (Replicadas y usadas en construcción del mapa) ---
 const getSiteName = (site) => {
-  // Primero busca en el campo 'Site' (como viene de algunos sitios)
-  if (site && typeof site.Site === 'string' && site.Site.trim() !== '') {
-      return site.Site.trim();
-  }
-  // Si no, busca en 'nombre' (como viene de otros sitios)
-  if (site && typeof site.nombre === 'string' && site.nombre.trim() !== '') {
-      return site.nombre.trim();
-  }
-  // Fallback si ninguno existe o está vacío
-  return site && site.name ? String(site.name).trim() : '';
+    // 1. Prioridad: Campo 'nombre' del modelo
+    if (site && typeof site.nombre === 'string' && site.nombre.trim() !== '') {
+        return site.nombre.trim();
+    }
+    // 2. Fallback: Campo 'Site' (común desde Excel/importación)
+    if (site && typeof site.Site === 'string' && site.Site.trim() !== '') {
+        return site.Site.trim();
+    }
+    // 3. Fallback: Campo 'name' (otro posible estándar)
+    if (site && typeof site.name === 'string' && site.name.trim() !== '') {
+        return site.name.trim();
+    }
+    // Si no se encuentra un nombre válido
+    return ''; // O podrías devolver un valor por defecto como 'Nombre Desconocido'
 };
 
 const parseSpanishNumber = (value) => {
