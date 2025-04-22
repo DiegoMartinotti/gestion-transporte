@@ -158,7 +158,8 @@ const viajeSchema = new mongoose.Schema({
   },
   observaciones: String
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false
 });
 
 /**
@@ -247,8 +248,8 @@ viajeSchema.pre('save', async function (next) {
 
         if (!tramo) {
           await this.populate('origen destino');
-          const origenNombre = this.origen?.Site || 'ID desconocido';
-          const destinoNombre = this.destino?.Site || 'ID desconocido';
+          const origenNombre = this.origen?.nombre || 'ID desconocido';
+          const destinoNombre = this.destino?.nombre || 'ID desconocido';
           throw new Error(`No se encontró un tramo válido para Cliente ${clienteDoc.Cliente} (${this.cliente}) desde ${origenNombre} hasta ${destinoNombre} para la fecha ${this.fecha.toISOString().split('T')[0]}`);
         }
 
@@ -263,8 +264,8 @@ viajeSchema.pre('save', async function (next) {
 
         if (!tarifaVigente) {
           await this.populate('origen destino');
-          const origenNombre = this.origen?.Site || 'ID desconocido';
-          const destinoNombre = this.destino?.Site || 'ID desconocido';
+          const origenNombre = this.origen?.nombre || 'ID desconocido';
+          const destinoNombre = this.destino?.nombre || 'ID desconocido';
           throw new Error(`No se encontró una tarifa (${this.tipoTramo}) vigente para tramo ${origenNombre} → ${destinoNombre} (Cliente: ${clienteDoc.Cliente}) en fecha ${this.fecha.toISOString().split('T')[0]}`);
         }
 
@@ -404,6 +405,25 @@ viajeSchema.post('save', async function(doc) {
 
 // Validación: La `dt` debe ser única por cliente
 viajeSchema.index({ dt: 1, cliente: 1 }, { unique: true });
+
+// Método para obtener una descripción corta del viaje
+viajeSchema.methods.getDescripcionCorta = function() {
+    const origenNombre = this.origen?.nombre || 'ID desconocido';
+    const destinoNombre = this.destino?.nombre || 'ID desconocido';
+    return `${origenNombre} -> ${destinoNombre}`;
+};
+
+// Método para verificar si el viaje está completo (ejemplo)
+viajeSchema.methods.isCompleto = function() {
+    return !!(this.origen && this.destino && this.vehiculos && this.fecha && this.fecha_fin);
+};
+
+// Índices
+viajeSchema.index({ cliente: 1, fecha: -1 });
+viajeSchema.index({ vehiculos: 1, fecha: -1 });
+viajeSchema.index({ estado: 1, fecha: -1 });
+viajeSchema.index({ origen: 1 });
+viajeSchema.index({ destino: 1 });
 
 const Viaje = mongoose.model('Viaje', viajeSchema);
 module.exports = Viaje;

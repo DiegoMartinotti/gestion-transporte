@@ -44,64 +44,130 @@ const TramoBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
   
   // Crear mapas de sitios para búsquedas rápidas usando useMemo para mejorar rendimiento
   const siteMaps = useMemo(() => {
-    // Mapa principal por nombre normalizado
-    const normalizedMap = {};
-    // Mapa secundario por código
-    const codeMap = {};
-    // Mapa exacto (versión original)
-    const exactMap = {};
-    
+    logger.debug("[TramoBulkImporter] Recalculando siteMaps...");
+    const normalizedMap = {}; // Mapa por nombre normalizado (minúsculas, sin acentos)
+    const codeMap = {};       // Mapa por código (minúsculas)
+    const exactMap = {};      // Mapa por nombre exacto (tal como viene, en minúsculas)
+
     // Función auxiliar interna para normalizar texto
     const normalizeText = (text) => {
       if (!text || typeof text !== 'string') return '';
       const trimmed = text.trim().toLowerCase();
+      // Quitar acentos y caracteres diacríticos
       return trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     };
     
-    sites.forEach(site => {
-      if (site && typeof site.Site === 'string') {
-        // Guardar en mapa exacto (caso original)
-        exactMap[site.Site.toLowerCase()] = site;
+    // Función auxiliar para obtener el nombre prioritario del sitio
+    const getSiteNamePriority = (site) => {
+        if (site && typeof site.nombre === 'string' && site.nombre.trim() !== '') return site.nombre.trim();
+        if (site && typeof site.Site === 'string' && site.Site.trim() !== '') return site.Site.trim();
+        if (site && typeof site.name === 'string' && site.name.trim() !== '') return site.name.trim();
+        return null; // Devuelve null si no hay nombre válido
+    };
+    
+    sites.forEach((site, index) => {
+        const siteName = getSiteNamePriority(site);
         
-        // Guardar en mapa normalizado (sin acentos, espacios extra, etc)
-        const normalizedName = normalizeText(site.Site);
-        normalizedMap[normalizedName] = site;
-        
-        // Guardar por código si existe
-        if (site.codigo) {
-          codeMap[site.codigo.toLowerCase()] = site;
+        if (siteName) { // Solo procesar si tenemos un nombre válido
+            const siteNameLower = siteName.toLowerCase();
+            const normalizedName = normalizeText(siteName);
+            
+            // Guardar en mapa exacto (nombre original en minúsculas)
+            if (!exactMap[siteNameLower]) {
+                exactMap[siteNameLower] = site;
+            } else {
+                logger.warn(`[TramoBulkImporter] Nombre exacto duplicado (minúsculas) encontrado para site: "${siteName}". Se usará la primera ocurrencia.`);
+            }
+            
+            // Guardar en mapa normalizado
+            if (!normalizedMap[normalizedName]) {
+                normalizedMap[normalizedName] = site;
+            } else {
+                 logger.warn(`[TramoBulkImporter] Nombre normalizado duplicado encontrado para site: "${siteName}" (Normalizado: "${normalizedName}"). Se usará la primera ocurrencia.`);
+            }
+
+            // Guardar por código si existe (priorizando `codigo` sobre `Codigo`)
+            const siteCodeRaw = site.codigo || site.Codigo;
+            if (siteCodeRaw && typeof siteCodeRaw === 'string') {
+                const siteCode = siteCodeRaw.trim().toLowerCase();
+                if (siteCode && !codeMap[siteCode]) {
+                    codeMap[siteCode] = site;
+                } else if (siteCode && codeMap[siteCode]) {
+                    logger.warn(`[TramoBulkImporter] Código duplicado encontrado para site: "${siteName}", Código: "${siteCode}". Se usará la primera ocurrencia.`);
+                }
+            }
+        } else {
+            logger.warn(`[TramoBulkImporter] Sitio en índice ${index} ignorado por no tener un nombre válido ('nombre', 'Site' o 'name'). Site data:`, site);
         }
-      }
     });
     
-    return { normalizedMap, codeMap, exactMap };
+    logger.debug("[TramoBulkImporter] SiteMaps creados:", { 
+        normalizedMapSize: Object.keys(normalizedMap).length, 
+        codeMapSize: Object.keys(codeMap).length,
+        exactMapSize: Object.keys(exactMap).length
+    });
+    
+    // La función findSiteInContext debe usar estos mapas actualizados
+    // Asegurarse de que la lógica de búsqueda en findSiteInContext use estos mapas
+    return { normalizedMap, codeMap, exactMap }; 
+
   }, [sites]);
   
-  // Validación de cada fila del Excel
-  const validateRow = (row, index, excelHeaders, validationContext) => {
-    // Funciones auxiliares (movidas al inicio)
-    const normalizeText = (text) => {
-      if (!text || typeof text !== 'string') return '';
-      const trimmed = text.trim().toLowerCase();
-      return trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    };
-    const findSiteInContext = (siteName, context) => {
-      if (!siteName || !context) return null;
-      const nameClean = siteName.trim();
-      const nameUpper = nameClean.toUpperCase();
+  // Ejemplo de cómo podría ser findSiteInContext si se define fuera:
+  const findSiteInContext = (siteNameToFind, localSiteMaps) => {
+      if (!siteNameToFind || !localSiteMaps) return null;
+      
+      const nameClean = String(siteNameToFind).trim();
       const nameLower = nameClean.toLowerCase();
-      if (context[nameUpper]) return context[nameUpper];
-      if (context[nameLower]) return context[nameLower];
-      const normalizedName = normalizeText(nameClean);
-      if (context[normalizedName]) return context[normalizedName];
-      if (context[nameLower]) return context[nameLower]; 
-      for (const key in context) {
-        if (normalizeText(key) === normalizedName) {
-          return context[key];
-        }
-      }
+      
+      // 1. Buscar por nombre exacto (minúsculas)
+      if (localSiteMaps.exactMap[nameLower]) return localSiteMaps.exactMap[nameLower];
+
+      // 2. Buscar por nombre normalizado
+      const normalizeText = (text) => {
+          if (!text || typeof text !== 'string') return '';
+          const trimmed = text.trim().toLowerCase();
+          return trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      };
+      const normalizedNameToFind = normalizeText(nameClean);
+      if (localSiteMaps.normalizedMap[normalizedNameToFind]) return localSiteMaps.normalizedMap[normalizedNameToFind];
+      
+      // 3. Buscar por código (si el input parece un código)
+      //    Esta parte es más heurística. Si el input coincide con una clave en codeMap.
+      //    Podrías añadir una lógica para detectar si `siteNameToFind` *es* un código.
+      if (localSiteMaps.codeMap[nameLower]) return localSiteMaps.codeMap[nameLower];
+      
+      // 4. Fallback: Búsqueda menos precisa (ej. comparar normalizado con claves de codeMap)
+      //    Esto podría ser necesario si los códigos en el Excel no coinciden exactamente.
+      //    O comparar normalizado con claves normalizadas de codeMap (si se precalculan)
+      
+      logger.warn(`[TramoBulkImporter] No se pudo encontrar el sitio "${siteNameToFind}" en los mapas.`);
       return null;
-    };
+  };
+
+  // Validación de cada fila del Excel
+  const validateRow = (row, index, excelHeaders) => {
+    // Utilizar la función findSiteInContext definida arriba o 
+    // acceder a los mapas directamente desde siteMaps. 
+    // Ejemplo de acceso directo:
+    const findSiteDirectly = (siteName) => {
+        if (!siteName) return null;
+        const nameClean = String(siteName).trim();
+        const nameLower = nameClean.toLowerCase();
+        // Lógica de búsqueda similar a findSiteInContext usando siteMaps.exactMap, etc.
+        if (siteMaps.exactMap[nameLower]) return siteMaps.exactMap[nameLower];
+        // ... buscar en normalizedMap y codeMap ...
+        const normalizeTextLocal = (text) => {
+          if (!text || typeof text !== 'string') return '';
+          const trimmed = text.trim().toLowerCase();
+          return trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        };
+        const normalizedName = normalizeTextLocal(nameClean);
+        if (siteMaps.normalizedMap[normalizedName]) return siteMaps.normalizedMap[normalizedName];
+        if (siteMaps.codeMap[nameLower]) return siteMaps.codeMap[nameLower]; // Asumiendo que el nombre podría ser un código
+        
+        return null;
+    }
     
     // --- Inicio Validación Fila --- 
     const errors = [];
@@ -122,14 +188,14 @@ const TramoBulkImporter = ({ open, onClose, cliente, onComplete, sites = [] }) =
     let destinoSite = null;
     
     if (row.origen) {
-      origenSite = findSiteInContext(row.origen, validationContext);
+      origenSite = findSiteDirectly(row.origen);
       if (!origenSite) {
         errors.push(`Fila ${ROWNUM}: Sitio de origen "${row.origen}" no encontrado.`);
       }
     }
     
     if (row.destino) {
-      destinoSite = findSiteInContext(row.destino, validationContext);
+      destinoSite = findSiteDirectly(row.destino);
       if (!destinoSite) {
         errors.push(`Fila ${ROWNUM}: Sitio de destino "${row.destino}" no encontrado.`);
       }

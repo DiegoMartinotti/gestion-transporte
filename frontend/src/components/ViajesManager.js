@@ -527,7 +527,7 @@ const ViajesManager = () => {
        const siteData = viaje[accessor];
        const siteId = typeof siteData === 'object' && siteData !== null ? siteData._id : siteData;
        const site = sites.find(s => s._id === siteId);
-       const displayName = site?.nombre || site?.Site;
+       const displayName = site?.nombre;
        return displayName || siteId || '-';
     }
     if (accessor === 'estado') {

@@ -85,33 +85,42 @@ const ViajeBulkImporter = ({
   const getSiteId = (site) => site._id || site.id || '';
   
   // Nueva función para obtener el Código del cliente
-  const getSiteCodigo = (site) => site.Codigo || '';
+  const getSiteCodigo = (site) => site.Codigo || site.codigo || '';
   
   const getSiteName = (site) => {
-    // La imagen muestra que el nombre del sitio está bajo la propiedad "Site"
-    if (site.Site) return site.Site;
-    // Alternativas por si la estructura es diferente
-    return site.nombre || site.name || '';
+    // Prioriza el campo 'nombre' del modelo
+    if (site.nombre) return String(site.nombre).trim();
+    // Luego intenta con 'Site' (común en Excel)
+    if (site.Site) return String(site.Site).trim();
+    // Fallback a 'name'
+    if (site.name) return String(site.name).trim();
+    return ''; // Devuelve vacío si no se encuentra
   };
   
   const getSiteLocality = (site) => {
-    // La imagen muestra que la localidad está bajo "Localidad"
-    if (site.Localidad) return site.Localidad;
-    // Alternativas
-    return site.localidad || '';
+    // Prioriza 'localidad'
+    if (site.localidad) return String(site.localidad).trim();
+    // Fallback a 'Localidad' (Excel)
+    if (site.Localidad) return String(site.Localidad).trim();
+    return '';
   };
   
   const getSiteAddress = (site) => {
-    // La imagen muestra que la dirección está como "-" o vacía
-    if (site.Direccion) return site.Direccion || '-';
-    // Alternativas
-    return site.direccion || site.address || '-';
+    // Prioriza 'direccion'
+    if (site.direccion) return String(site.direccion).trim();
+    // Fallback a 'Direccion' (Excel)
+    if (site.Direccion) return String(site.Direccion).trim();
+    // Fallback a 'address'
+    if (site.address) return String(site.address).trim();
+    return '-'; // Devuelve '-' por defecto
   };
   
   const getSiteProvince = (site) => {
-    // La imagen muestra que hay una columna Provincia
-    if (site.Provincia) return site.Provincia;
-    return site.provincia || '';
+    // Prioriza 'provincia'
+    if (site.provincia) return String(site.provincia).trim();
+    // Fallback a 'Provincia' (Excel)
+    if (site.Provincia) return String(site.Provincia).trim();
+    return '';
   };
   
   // Registro detallado para verificar los sitios recibidos
