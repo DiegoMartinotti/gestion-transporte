@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 /**
  * @typedef {Object} ExtraSchema
  * @property {string} tipo - Tipo de extra
- * @property {string} cliente - Cliente al que aplica el extra
+ * @property {mongoose.Schema.Types.ObjectId} cliente - Referencia al _id del Cliente al que aplica el extra
  * @property {string} [descripcion] - Descripción opcional del extra
  * @property {Date} vigenciaDesde - Fecha de inicio de vigencia
  * @property {Date} vigenciaHasta - Fecha de fin de vigencia
@@ -17,10 +17,9 @@ const extraSchema = new mongoose.Schema({
         uppercase: true
     },
     cliente: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Cliente',
         required: [true, 'El cliente es obligatorio'],
-        trim: true,
-        uppercase: true
     },
     descripcion: {
         type: String,

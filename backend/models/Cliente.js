@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
 const clienteSchema = new mongoose.Schema({
-  Cliente: {
+  nombre: {
     type: String,
     required: true,
     unique: true, // Para asegurar que no haya duplicados
     trim: true
   },
-  CUIT: {
+  cuit: {
     type: String,
     required: true,
     trim: true
