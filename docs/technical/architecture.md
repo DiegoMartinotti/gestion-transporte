@@ -15,11 +15,6 @@ The application follows a client-server architecture with:
 │   ├── middleware/      # Custom middleware
 │   ├── services/        # Business logic
 │   └── utils/           # Helper functions
-├── frontend/             # React frontend
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── services/    # API services
-│   │   └── utils/       # Helper functions
 └── docs/                # Documentation
 ```
 
@@ -31,11 +26,6 @@ The application follows a client-server architecture with:
   - Express-rate-limit
   - Swagger/OpenAPI
 
-- Frontend:
-  - React
-  - Material-UI
-  - Axios
-  - React Context API
 
 ## Security Measures
 1. JWT-based authentication
