@@ -13,6 +13,7 @@
     "start-dev": "npm run set-dev && npm run dev"
   },
   "devDependencies": {
+    "@types/swagger-jsdoc": "^6.0.4",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3"
   },

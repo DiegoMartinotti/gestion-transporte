@@ -123,8 +123,6 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
         *   Definir una `interface` de TypeScript que represente la estructura del documento MongoDB (ej. `interface IUser extends Document { ... }`).
         *   Tipar el `Schema` de Mongoose y el `Model` (ej. `const UserModel = model<IUser>('User', userSchema);`).
         *   Asegurar que los tipos se usan consistentemente.
-    *   **Modelos migrados:**
-        *   [x] ImportacionTemporal.js -> ImportacionTemporal.ts
     *   *Commit ejemplo: `feat: Migrate Mongoose models to TypeScript`*
 
 -   [ ] **2.5 Migrar Servicios (`services/`):**
