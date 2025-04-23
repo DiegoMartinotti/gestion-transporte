@@ -135,31 +135,12 @@ sistema-gestion-viajes/
 │   ├── validators/                 # Validadores de entrada
 │   └── server.js                   # Aplicación Express y punto de entrada
 │
-├── frontend/                       # Aplicación React
-│   ├── public/                     # Archivos estáticos
-│   ├── src/                        # Código fuente
-│   │   ├── components/             # Componentes React
-│   │   │   ├── common/             # Componentes reutilizables
-│   │   │   │   ├── DataTable.js    # Tabla de datos reutilizable
-│   │   │   │   ├── ExcelImportTemplate.js # Componente base para importación Excel
-│   │   │   │   └── ...             # Otros componentes comunes
-│   │   │   ├── vehiculos/          # Componentes específicos por dominio
-│   │   │   ├── tramos/             # Componentes específicos por dominio
-│   │   │   └── ...                 # Otros dominios
-│   │   ├── context/                # Contextos de React (Auth, etc.)
-│   │   ├── hooks/                  # Hooks personalizados
-│   │   ├── pages/                  # Componentes de páginas completas
-│   │   ├── services/               # Servicios para API
-│   │   ├── workers/                # Web Workers para procesamiento asíncrono
-│   │   └── utils/                  # Utilidades y helpers
-│   └── package.json                # Dependencias del frontend
 │
 ├── docs/                           # Documentación del proyecto
 │   ├── API.md                      # Documentación de la API
 │   ├── importacion-excel.md        # Guía de importación masiva con Excel
 │   └── technical/                  # Documentación técnica detallada
 │
-├── REFACTORIZACION.md              # Documentación del proceso de refactorización
 ├── scripts/                        # Scripts de utilidad
 ├── .gitignore                      # Archivos ignorados por Git
 ├── package.json                    # Dependencias del proyecto principal
