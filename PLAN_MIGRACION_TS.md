@@ -112,7 +112,7 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
     *   Prestar especial atención a tipar los objetos `req`, `res`, `next` de Express (usar `Request`, `Response`, `NextFunction` de `@types/express`).
     *   *Commit ejemplo: `feat: Migrate middleware functions to TypeScript`*
 
--   [ ] **2.3 Migrar Validadores (`validators/`):**
+-   [x] **2.3 Migrar Validadores (`validators/`):**
     *   Migrar los archivos de validación.
     *   Tipar los esquemas de validación (si usas librerías como Joi o express-validator, suelen tener soporte para TS o tipos definidos).
     *   *Commit ejemplo: `feat: Migrate validators to TypeScript`*
