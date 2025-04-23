@@ -14,9 +14,7 @@
     "sourceMap": true 
   },
   "include": [
-    "**/*.ts", 
-    "**/*.js"  
-    // "**/*.json" 
+    "**/*.ts"
   ],
   "exclude": [
     "node_modules",
