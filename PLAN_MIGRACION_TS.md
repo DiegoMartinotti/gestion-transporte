@@ -6,7 +6,7 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
 
 ## Fase 1: Preparación y Configuración Inicial
 
--   [ ] **1.1 Instalar Dependencias de TypeScript:**
+-   [x] **1.1 Instalar Dependencias de TypeScript:**
     *   Añadir TypeScript y las herramientas necesarias como dependencias de desarrollo.
         ```powershell
         npm install --save-dev typescript ts-node @types/node @types/express @types/mongoose @types/jsonwebtoken @types/cors @types/cookie-parser @types/supertest @types/jest
@@ -14,7 +14,7 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
         ```
     *   Verificar que `package.json` y `package-lock.json` se actualizan.
 
--   [ ] **1.2 Crear Archivo de Configuración de TypeScript (`tsconfig.json`):**
+-   [x] **1.2 Crear Archivo de Configuración de TypeScript (`tsconfig.json`):**
     *   Crear un archivo `tsconfig.json` en la raíz del directorio `backend`.
     *   Configurar opciones iniciales para permitir una migración incremental. Un ejemplo de configuración podría ser:
         ```json
@@ -53,7 +53,7 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
         ```
     *   Ajustar `include`, `exclude` y `rootDir` según la estructura final deseada.
 
--   [ ] **1.3 Actualizar Scripts en `package.json`:**
+-   [x] **1.3 Actualizar Scripts en `package.json`:**
     *   Modificar los scripts `dev`, `start`, `build` (y `test` si es necesario) para usar `ts-node` (desarrollo) y `tsc` (build).
         *   **Ejemplo `dev` (usando `nodemon` y `ts-node`):**
             ```json
@@ -78,7 +78,7 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
             "start": "node dist/index.js" // O el punto de entrada compilado
             ```
 
--   [ ] **1.4 Actualizar `.gitignore`:**
+-   [x] **1.4 Actualizar `.gitignore`:**
     *   Añadir el directorio de salida (`dist/` o el que definas en `outDir`) y otros artefactos de TS (`*.tsbuildinfo`).
         ```
         # TypeScript
@@ -86,19 +86,19 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
         *.tsbuildinfo
         ```
 
--   [ ] **1.5 Revisión y Aumento de Cobertura de Pruebas:**
+-   [x] **1.5 Revisión y Aumento de Cobertura de Pruebas:**
     *   Antes de migrar código, revisar la suite de pruebas existente (`__tests__`).
     *   Asegurarse de que las pruebas existentes pasen con la nueva configuración (puede requerir `ts-jest` si usas Jest).
     *   **Identificar áreas críticas** (autenticación, lógica de negocio compleja como tarifas, importaciones) y **aumentar la cobertura de pruebas** si es baja. *Este paso es fundamental para una migración segura.*
 
--   [ ] **1.6 Commit Inicial:**
+-   [x] **1.6 Commit Inicial:**
     *   Realizar un commit con toda la configuración inicial y las dependencias instaladas. `git commit -m "chore: Setup TypeScript environment for backend migration"`
 
 ## Fase 2: Migración Incremental de Módulos
 
 *Estrategia:* Empezar por módulos con menos dependencias (hojas del árbol de dependencias) e ir avanzando hacia el núcleo de la aplicación. Se recomienda hacer commits frecuentes después de migrar cada módulo o grupo pequeño de módulos.
 
--   [ ] **2.1 Migrar Módulos de Utilidades (`utils/`, `config/`):**
+-   [x] **2.1 Migrar Módulos de Utilidades (`utils/`, `config/`):**
     *   Para cada archivo `.js` en estos directorios:
         *   Renombrarlo a `.ts`.
         *   Ejecutar `tsc --noEmit` o revisar los errores en el editor.
