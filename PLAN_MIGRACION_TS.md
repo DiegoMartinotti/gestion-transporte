@@ -107,7 +107,7 @@ Este documento detalla los pasos para migrar el backend existente de Node.js/Exp
         *   Ejecutar pruebas relevantes si existen.
     *   *Commit ejemplo: `feat: Migrate utils modules to TypeScript`*
 
--   [ ] **2.2 Migrar Middlewares (`middleware/`):**
+-   [x] **2.2 Migrar Middlewares (`middleware/`):**
     *   Repetir el proceso para los archivos en `middleware/`.
     *   Prestar especial atención a tipar los objetos `req`, `res`, `next` de Express (usar `Request`, `Response`, `NextFunction` de `@types/express`).
     *   *Commit ejemplo: `feat: Migrate middleware functions to TypeScript`*
