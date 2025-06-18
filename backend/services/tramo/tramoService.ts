@@ -727,7 +727,6 @@ const createTramosBulk = async (tramosData: TramosBulkData[], options: { session
     // 3. Crear mapas para búsqueda rápida
     const sitiosPorNombre = new Map();
     sitios.forEach(sitio => {
-        if (sitio.Site) sitiosPorNombre.set(sitio.Site.toLowerCase(), sitio);
         if (sitio.nombre) sitiosPorNombre.set(sitio.nombre.toLowerCase(), sitio);
     });
     logger.debug(`[createTramosBulk] Sitios encontrados: ${sitiosPorNombre.size} de ${sitiosNecesarios.length} necesarios.`);

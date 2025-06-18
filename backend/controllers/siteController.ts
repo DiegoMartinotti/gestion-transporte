@@ -90,19 +90,19 @@ export const getSites = tryCatch(async (req: AuthenticatedRequest, res: Response
         throw new ValidationError('Cliente es requerido');
     }
 
-    const sites = await Site.find({ Cliente: cliente })
+    const sites = await Site.find({ cliente: cliente })
         .lean()
         .exec();
 
-    // Mapear los campos para que el frontend reciba nombre, tipo y codigo
+    // Mapear los campos para que el frontend reciba nombre y codigo
     const sitesFormateados: SiteFormattedData[] = sites.map(site => ({
         _id: site._id.toString(),
-        nombre: site.Site,
-        tipo: site.Tipo || '',
-        codigo: site.Codigo || '',
-        direccion: site.Direccion || '',
-        localidad: site.Localidad || '',
-        provincia: site.Provincia || '',
+        nombre: site.nombre,
+        tipo: '', // Campo tipo no existe en el modelo
+        codigo: site.codigo || '',
+        direccion: site.direccion || '',
+        localidad: site.localidad || '',
+        provincia: site.provincia || '',
         coordenadas: site.location && Array.isArray(site.location.coordinates)
             ? { lng: site.location.coordinates[0], lat: site.location.coordinates[1] }
             : null
@@ -120,11 +120,11 @@ export const getSites = tryCatch(async (req: AuthenticatedRequest, res: Response
 export const createSite = async (req: AuthenticatedRequest, res: Response<ISite | ApiResponse>): Promise<void> => {
     try {
         const nuevoSite = new Site({
-            Site: req.body.site,
-            Cliente: req.body.cliente,
-            Direccion: req.body.direccion || '-',
-            Localidad: req.body.localidad || '',
-            Provincia: req.body.provincia || '',
+            nombre: req.body.site,
+            cliente: req.body.cliente,
+            direccion: req.body.direccion || '-',
+            localidad: req.body.localidad || '',
+            provincia: req.body.provincia || '',
             location: req.body.location || null
         });
 
@@ -133,12 +133,13 @@ export const createSite = async (req: AuthenticatedRequest, res: Response<ISite 
     } catch (error: any) {
         if (error.code === 11000) {
             res.status(400).json({ 
+                success: false,
                 message: 'Ya existe un site con este nombre para este cliente'
             });
             return;
         }
         logger.error('Error al crear site:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -150,13 +151,13 @@ export const updateSite = async (req: AuthenticatedRequest, res: Response<ISite 
             { new: true }
         );
         if (!site) {
-            res.status(404).json({ message: 'Site no encontrado' });
+            res.status(404).json({ success: false, message: 'Site no encontrado' });
             return;
         }
         res.json(site);
     } catch (error) {
         logger.error('Error al actualizar site:', error);
-        res.status(500).json({ message: 'Error al actualizar site' });
+        res.status(500).json({ success: false, message: 'Error al actualizar site' });
     }
 };
 
@@ -164,13 +165,13 @@ export const deleteSite = async (req: AuthenticatedRequest, res: Response<ApiRes
     try {
         const site = await Site.findByIdAndDelete(req.params.id);
         if (!site) {
-            res.status(404).json({ message: 'Site no encontrado' });
+            res.status(404).json({ success: false, message: 'Site no encontrado' });
             return;
         }
-        res.json({ message: 'Site eliminado exitosamente' });
+        res.json({ success: true, message: 'Site eliminado exitosamente' });
     } catch (error) {
         logger.error('Error al eliminar site:', error);
-        res.status(500).json({ message: 'Error al eliminar site' });
+        res.status(500).json({ success: false, message: 'Error al eliminar site' });
     }
 };
 
@@ -196,12 +197,12 @@ export const bulkCreateSites = async (req: AuthenticatedRequest, res: Response<B
                 } : null;
 
                 const nuevoSite = new Site({
-                    Site: siteData.site,
-                    Codigo: siteData.codigo || '',
-                    Cliente: siteData.cliente,
-                    Direccion: siteData.direccion || '-',
-                    Localidad: siteData.localidad || '',
-                    Provincia: siteData.provincia || '',
+                    nombre: siteData.site,
+                    codigo: siteData.codigo || '',
+                    cliente: siteData.cliente,
+                    direccion: siteData.direccion || '-',
+                    localidad: siteData.localidad || '',
+                    provincia: siteData.provincia || '',
                     location
                 });
 
@@ -223,7 +224,7 @@ export const bulkCreateSites = async (req: AuthenticatedRequest, res: Response<B
         });
     } catch (error) {
         logger.error('Error en importación masiva:', error);
-        res.status(500).json({ message: 'Error en la importación masiva' });
+        res.status(500).json({ success: false, message: 'Error en la importación masiva' });
     }
 };
 
@@ -232,12 +233,12 @@ export const searchNearby = async (req: AuthenticatedRequest, res: Response<ISit
         const { lng, lat, maxDistance = '5000' } = req.query;
 
         if (!lng || !lat || typeof lng !== 'string' || typeof lat !== 'string') {
-            res.status(400).json({ message: 'lng y lat son requeridos' });
+            res.status(400).json({ success: false, message: 'lng y lat son requeridos' });
             return;
         }
 
         const sites = await Site.find({
-            ubicacion: {
+            location: {
                 $near: {
                     $geometry: {
                         type: 'Point',
@@ -251,6 +252,6 @@ export const searchNearby = async (req: AuthenticatedRequest, res: Response<ISit
         res.json(sites);
     } catch (error) {
         logger.error('Error en búsqueda por proximidad:', error);
-        res.status(500).json({ message: 'Error en la búsqueda' });
+        res.status(500).json({ success: false, message: 'Error en la búsqueda' });
     }
 };
