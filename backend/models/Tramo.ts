@@ -1,11 +1,49 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-const { calcularDistanciaRuta } = require('../services/routingService');
-const logger = require('../utils/logger');
-// Eliminamos la importación directa del modelo Site para evitar dependencia circular
+import mongoose, { Document, Schema, Types, model } from 'mongoose';
+import { calcularDistanciaRuta } from '../services/routingService';
+import logger from '../utils/logger';
+
+/**
+ * Interface for Tarifa Historica subdocument
+ */
+export interface ITarifaHistorica {
+    _id: Types.ObjectId;
+    tipo: 'TRMC' | 'TRMI';
+    metodoCalculo: 'Kilometro' | 'Palet' | 'Fijo';
+    valor: number;
+    valorPeaje: number;
+    vigenciaDesde: Date;
+    vigenciaHasta: Date;
+}
+
+/**
+ * Interface for Tramo document
+ */
+export interface ITramo extends Document {
+    origen: Types.ObjectId;
+    destino: Types.ObjectId;
+    cliente: Types.ObjectId;
+    distancia: number;
+    tarifasHistoricas: ITarifaHistorica[];
+    createdAt: Date;
+    updatedAt: Date;
+    
+    // Virtual properties
+    descripcion: Promise<string>;
+    tarifaVigente: ITarifaHistorica | undefined;
+    tarifasVigentes: ITarifaHistorica[];
+    
+    // Instance methods
+    getTarifaVigente(fecha?: Date, tipo?: string): ITarifaHistorica | undefined;
+    getTarifasVigentes(fecha?: Date): ITarifaHistorica[];
+}
+
+/**
+ * Interface for Tramo Model
+ */
+export interface ITramoModel extends mongoose.Model<ITramo> {}
 
 // Esquema para las tarifas históricas
-const tarifaHistoricaSchema = new Schema({
+const tarifaHistoricaSchema = new Schema<ITarifaHistorica>({
     tipo: {
         type: String,
         enum: ['TRMC', 'TRMI'],
@@ -20,16 +58,12 @@ const tarifaHistoricaSchema = new Schema({
     valor: {
         type: Number,
         required: [true, 'El valor es obligatorio'],
-        min: 0,
-        get: v => parseFloat(v).toFixed(2),
-        set: v => parseFloat(parseFloat(v).toFixed(2))
+        min: 0
     },
     valorPeaje: {
         type: Number,
         default: 0,
-        min: 0,
-        get: v => parseFloat(v).toFixed(2),
-        set: v => parseFloat(parseFloat(v).toFixed(2))
+        min: 0
     },
     vigenciaDesde: {
         type: Date,
@@ -41,19 +75,19 @@ const tarifaHistoricaSchema = new Schema({
     }
 }, { _id: true, id: false });
 
-const tramoSchema = new Schema({
+const tramoSchema = new Schema<ITramo>({
     origen: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Site',
         required: [true, 'El origen es obligatorio']
     },
     destino: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Site',
         required: [true, 'El destino es obligatorio']
     },
     cliente: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Cliente',
         required: [true, 'El cliente es obligatorio']
     },
@@ -82,17 +116,17 @@ tramoSchema.index({
 });
 
 // Método para obtener la tarifa vigente a una fecha dada
-tramoSchema.methods.getTarifaVigente = function(fecha = new Date(), tipo = null) {
+tramoSchema.methods.getTarifaVigente = function(this: ITramo, fecha: Date = new Date(), tipo?: string): ITarifaHistorica | undefined {
     if (tipo) {
         // Buscar tarifa vigente con tipo específico
-        return this.tarifasHistoricas.find(tarifa => 
+        return this.tarifasHistoricas.find((tarifa: ITarifaHistorica) => 
             tarifa.tipo === tipo &&
             tarifa.vigenciaDesde <= fecha && 
             tarifa.vigenciaHasta >= fecha
         );
     } else {
         // Buscar cualquier tarifa vigente
-        return this.tarifasHistoricas.find(tarifa => 
+        return this.tarifasHistoricas.find((tarifa: ITarifaHistorica) => 
             tarifa.vigenciaDesde <= fecha && 
             tarifa.vigenciaHasta >= fecha
         );
@@ -100,8 +134,8 @@ tramoSchema.methods.getTarifaVigente = function(fecha = new Date(), tipo = null)
 };
 
 // Método para obtener todas las tarifas vigentes a una fecha dada
-tramoSchema.methods.getTarifasVigentes = function(fecha = new Date()) {
-    return this.tarifasHistoricas.filter(tarifa => 
+tramoSchema.methods.getTarifasVigentes = function(this: ITramo, fecha: Date = new Date()): ITarifaHistorica[] {
+    return this.tarifasHistoricas.filter((tarifa: ITarifaHistorica) => 
         tarifa.vigenciaDesde <= fecha && 
         tarifa.vigenciaHasta >= fecha
     );
@@ -136,7 +170,7 @@ tramoSchema.pre('save', async function(next) {
                     // Actualizar el campo de distancia
                     this.distancia = distanciaKm;
                     logger.debug(`[DISTANCIA] ✅ Distancia calculada: ${distanciaKm} km`);
-                } catch (routeError) {
+                } catch (routeError: any) {
                     logger.error('[DISTANCIA] ❌ Error calculando distancia:', routeError.message);
                     // No interrumpimos el guardado si falla el cálculo de distancia
                 }
@@ -158,18 +192,18 @@ tramoSchema.pre('save', async function(next) {
 tramoSchema.pre('save', function(next) {
     // Formatear valores en las tarifas históricas
     if (this.tarifasHistoricas && this.tarifasHistoricas.length > 0) {
-        this.tarifasHistoricas.forEach(tarifa => {
+        this.tarifasHistoricas.forEach((tarifa: any) => {
             // Normalizar el tipo a mayúsculas
             if (tarifa.tipo) {
                 tarifa.tipo = tarifa.tipo.toUpperCase();
             }
             
             if (tarifa.valor) {
-                tarifa.valor = parseFloat(parseFloat(tarifa.valor).toFixed(2));
+                tarifa.valor = parseFloat(parseFloat(tarifa.valor.toString()).toFixed(2));
             }
             
             if (tarifa.valorPeaje) {
-                tarifa.valorPeaje = parseFloat(parseFloat(tarifa.valorPeaje).toFixed(2));
+                tarifa.valorPeaje = parseFloat(parseFloat(tarifa.valorPeaje.toString()).toFixed(2));
             }
         });
     }
@@ -184,7 +218,7 @@ tramoSchema.pre('save', async function(next) {
         if (this.tarifasHistoricas && this.tarifasHistoricas.length > 1) {
             // Ordenar por fecha de inicio
             const tarifasOrdenadas = [...this.tarifasHistoricas].sort((a, b) => 
-                a.vigenciaDesde - b.vigenciaDesde
+                a.vigenciaDesde.getTime() - b.vigenciaDesde.getTime()
             );
             
             // Validar que cada tarifa tenga vigenciaHasta >= vigenciaDesde
@@ -220,18 +254,18 @@ tramoSchema.pre('save', async function(next) {
         next();
     } catch (error) {
         logger.error('[VALIDACIÓN] ❌ Error en validación de tramo:', error);
-        next(error);
+        next(error as Error);
     }
 });
 
 // Método para crear una descripción humanizada del tramo
-tramoSchema.virtual('descripcion').get(async function() {
+tramoSchema.virtual('descripcion').get(async function(this: ITramo): Promise<string> {
     try {
         // Poblar relaciones para obtener nombres
         await this.populate('origen destino cliente'); 
-        const nombreOrigen = this.origen ? this.origen.Site : 'ID Origen Desc.';
-        const nombreDestino = this.destino ? this.destino.Site : 'ID Destino Desc.';
-        const nombreCliente = this.cliente ? this.cliente.Cliente : 'ID Cliente Desc.';
+        const nombreOrigen = (this.origen as any)?.nombre || 'ID Origen Desc.';
+        const nombreDestino = (this.destino as any)?.nombre || 'ID Destino Desc.';
+        const nombreCliente = (this.cliente as any)?.nombre || 'ID Cliente Desc.';
         
         const tarifaActual = this.getTarifaVigente();
         const tipoStr = tarifaActual ? tarifaActual.tipo : 'Sin tipo';
@@ -245,20 +279,20 @@ tramoSchema.virtual('descripcion').get(async function() {
 });
 
 // Validaciones adicionales
-tramoSchema.path('destino').validate(function(value) {
+tramoSchema.path('destino').validate(function(this: ITramo, value: Types.ObjectId) {
     return String(value) !== String(this.origen);
 }, 'El origen y el destino no pueden ser el mismo Site');
 
 // Virtual para obtener la tarifa vigente actual
-tramoSchema.virtual('tarifaVigente').get(function() {
+tramoSchema.virtual('tarifaVigente').get(function(this: ITramo) {
     return this.getTarifaVigente();
 });
 
 // Virtual para obtener todas las tarifas vigentes
-tramoSchema.virtual('tarifasVigentes').get(function() {
+tramoSchema.virtual('tarifasVigentes').get(function(this: ITramo) {
     return this.getTarifasVigentes();
 });
 
-const Tramo = mongoose.model('Tramo', tramoSchema);
+const Tramo = model<ITramo, ITramoModel>('Tramo', tramoSchema);
 
-module.exports = Tramo;
+export default Tramo;

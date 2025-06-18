@@ -1,18 +1,92 @@
-const Site = require('../models/Site');
-const { tryCatch } = require('../utils/errorHandler');
-const { ValidationError } = require('../utils/errors');
-const logger = require('../utils/logger');
+import { Request, Response } from 'express';
+import Site, { ISite } from '../models/Site';
+import { tryCatch } from '../utils/errorHandler';
+import { ValidationError } from '../utils/errors';
+import logger from '../utils/logger';
+
+/**
+ * Interface for authenticated user in request
+ */
+interface AuthenticatedUser {
+    id: string;
+    email: string;
+    roles?: string[];
+}
+
+/**
+ * Interface for authenticated request
+ */
+interface AuthenticatedRequest extends Request {
+    user?: AuthenticatedUser;
+}
+
+/**
+ * Interface for API responses
+ */
+interface ApiResponse<T = any> {
+    success: boolean;
+    data?: T;
+    message?: string;
+    count?: number;
+}
+
+/**
+ * Interface for site data from frontend
+ */
+interface SiteFormattedData {
+    _id: string;
+    nombre: string;
+    tipo: string;
+    codigo: string;
+    direccion: string;
+    localidad: string;
+    provincia: string;
+    coordenadas: {
+        lng: number;
+        lat: number;
+    } | null;
+}
+
+/**
+ * Interface for bulk import site data
+ */
+interface SiteBulkData {
+    site: string;
+    codigo?: string;
+    cliente: string;
+    direccion?: string;
+    localidad?: string;
+    provincia?: string;
+    coordenadas?: {
+        lng: number;
+        lat: number;
+    };
+}
+
+/**
+ * Interface for bulk import results
+ */
+interface BulkImportResult {
+    mensaje: string;
+    resultados: {
+        exitosos: number;
+        errores: Array<{
+            site: string;
+            error: string;
+        }>;
+    };
+}
 
 /**
  * Get sites by client
  * @route GET /api/sites
- * @param {string} cliente - Client name
- * @returns {Array<Site>} List of sites
+ * @param cliente - Client name
+ * @returns List of sites
  */
-exports.getSites = tryCatch(async (req, res) => {
+export const getSites = tryCatch(async (req: AuthenticatedRequest, res: Response<ApiResponse<SiteFormattedData[]>>): Promise<void> => {
     const { cliente } = req.query;
     
-    if (!cliente) {
+    if (!cliente || typeof cliente !== 'string') {
         throw new ValidationError('Cliente es requerido');
     }
 
@@ -21,8 +95,8 @@ exports.getSites = tryCatch(async (req, res) => {
         .exec();
 
     // Mapear los campos para que el frontend reciba nombre, tipo y codigo
-    const sitesFormateados = sites.map(site => ({
-        _id: site._id,
+    const sitesFormateados: SiteFormattedData[] = sites.map(site => ({
+        _id: site._id.toString(),
         nombre: site.Site,
         tipo: site.Tipo || '',
         codigo: site.Codigo || '',
@@ -43,7 +117,7 @@ exports.getSites = tryCatch(async (req, res) => {
     });
 });
 
-exports.createSite = async (req, res) => {
+export const createSite = async (req: AuthenticatedRequest, res: Response<ISite | ApiResponse>): Promise<void> => {
     try {
         const nuevoSite = new Site({
             Site: req.body.site,
@@ -56,18 +130,19 @@ exports.createSite = async (req, res) => {
 
         await nuevoSite.save();
         res.status(201).json(nuevoSite);
-    } catch (error) {
+    } catch (error: any) {
         if (error.code === 11000) {
-            return res.status(400).json({ 
+            res.status(400).json({ 
                 message: 'Ya existe un site con este nombre para este cliente'
             });
+            return;
         }
         logger.error('Error al crear site:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
-exports.updateSite = async (req, res) => {
+export const updateSite = async (req: AuthenticatedRequest, res: Response<ISite | ApiResponse>): Promise<void> => {
     try {
         const site = await Site.findByIdAndUpdate(
             req.params.id,
@@ -75,7 +150,8 @@ exports.updateSite = async (req, res) => {
             { new: true }
         );
         if (!site) {
-            return res.status(404).json({ message: 'Site no encontrado' });
+            res.status(404).json({ message: 'Site no encontrado' });
+            return;
         }
         res.json(site);
     } catch (error) {
@@ -84,11 +160,12 @@ exports.updateSite = async (req, res) => {
     }
 };
 
-exports.deleteSite = async (req, res) => {
+export const deleteSite = async (req: AuthenticatedRequest, res: Response<ApiResponse>): Promise<void> => {
     try {
         const site = await Site.findByIdAndDelete(req.params.id);
         if (!site) {
-            return res.status(404).json({ message: 'Site no encontrado' });
+            res.status(404).json({ message: 'Site no encontrado' });
+            return;
         }
         res.json({ message: 'Site eliminado exitosamente' });
     } catch (error) {
@@ -97,24 +174,24 @@ exports.deleteSite = async (req, res) => {
     }
 };
 
-exports.bulkCreateSites = async (req, res) => {
+export const bulkCreateSites = async (req: AuthenticatedRequest, res: Response<BulkImportResult | ApiResponse>): Promise<void> => {
     try {
-        const { sites } = req.body;
+        const { sites }: { sites: SiteBulkData[] } = req.body;
         logger.debug('Recibidos sites para importación:', sites.length);
 
         const resultados = {
             exitosos: 0,
-            errores: []
+            errores: [] as Array<{ site: string; error: string }>
         };
 
         for (let siteData of sites) {
             try {
                 // Convertir coordenadas al formato GeoJSON
                 const location = siteData.coordenadas ? {
-                    type: 'Point',
+                    type: 'Point' as const,
                     coordinates: [
-                        parseFloat(siteData.coordenadas.lng),
-                        parseFloat(siteData.coordenadas.lat)
+                        parseFloat(siteData.coordenadas.lng.toString()),
+                        parseFloat(siteData.coordenadas.lat.toString())
                     ]
                 } : null;
 
@@ -130,7 +207,7 @@ exports.bulkCreateSites = async (req, res) => {
 
                 await nuevoSite.save();
                 resultados.exitosos++;
-            } catch (error) {
+            } catch (error: any) {
                 resultados.errores.push({
                     site: siteData.site,
                     error: error.code === 11000 ? 
@@ -150,9 +227,14 @@ exports.bulkCreateSites = async (req, res) => {
     }
 };
 
-exports.searchNearby = async (req, res) => {
+export const searchNearby = async (req: AuthenticatedRequest, res: Response<ISite[] | ApiResponse>): Promise<void> => {
     try {
-        const { lng, lat, maxDistance = 5000 } = req.query; // maxDistance en metros
+        const { lng, lat, maxDistance = '5000' } = req.query;
+
+        if (!lng || !lat || typeof lng !== 'string' || typeof lat !== 'string') {
+            res.status(400).json({ message: 'lng y lat son requeridos' });
+            return;
+        }
 
         const sites = await Site.find({
             ubicacion: {
@@ -161,7 +243,7 @@ exports.searchNearby = async (req, res) => {
                         type: 'Point',
                         coordinates: [parseFloat(lng), parseFloat(lat)]
                     },
-                    $maxDistance: parseInt(maxDistance)
+                    $maxDistance: parseInt(maxDistance.toString())
                 }
             }
         });

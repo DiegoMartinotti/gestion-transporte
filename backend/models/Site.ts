@@ -1,23 +1,49 @@
-const mongoose = require('mongoose');
+import mongoose, { Document, Schema, Types, model } from 'mongoose';
+
+/**
+ * Interface for Site document
+ */
+export interface ISite extends Document {
+    nombre: string;
+    cliente: Types.ObjectId;
+    codigo?: string;
+    location: {
+        type: 'Point';
+        coordinates: [number, number]; // [longitude, latitude]
+    };
+    direccion?: string;
+    localidad?: string;
+    provincia?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    
+    // Virtual properties
+    coordenadas: {
+        lng: number;
+        lat: number;
+    } | null;
+    
+    // Instance methods
+    getDireccionCompleta(): string;
+}
+
+/**
+ * Interface for Site Model with static methods
+ */
+export interface ISiteModel extends mongoose.Model<ISite> {
+    findByClienteAndNombre(clienteId: string | Types.ObjectId, nombreSite: string): Promise<ISite | null>;
+}
 
 /**
  * Schema for Site management
- * @typedef {Object} SiteSchema
- * @property {string} nombre - Site name (unique per client)
- * @property {mongoose.Schema.Types.ObjectId} cliente - Referencia al _id del Cliente
- * @property {string} [direccion] - Address
- * @property {string} [localidad] - City
- * @property {string} [provincia] - State/Province
- * @property {string} [codigo] - Client assigned code
- * @property {Object} [location] - Geolocation data
  */
-const siteSchema = new mongoose.Schema({
+const siteSchema = new Schema<ISite>({
     nombre: {
         type: String,
         required: [true, 'El nombre del site es requerido']
     },
     cliente: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Cliente',
         required: [true, 'El cliente es obligatorio'],
         index: true
@@ -75,13 +101,14 @@ siteSchema.pre('save', async function(next) {
            this.nombre = this.nombre.trim().toUpperCase();
         }
 
-        if (this.isModified('direccion')) this.direccion = this.direccion.trim();
-        if (this.isModified('localidad')) this.localidad = this.localidad.trim();
-        if (this.isModified('provincia')) this.provincia = this.provincia.trim();
-        if (this.isModified('codigo')) this.codigo = this.codigo.trim();
+        if (this.isModified('direccion')) this.direccion = this.direccion?.trim();
+        if (this.isModified('localidad')) this.localidad = this.localidad?.trim();
+        if (this.isModified('provincia')) this.provincia = this.provincia?.trim();
+        if (this.isModified('codigo')) this.codigo = this.codigo?.trim();
 
         if (this.isModified('nombre') || this.isModified('cliente')) {
-            const existe = await this.constructor.findOne({
+            const SiteModel = this.constructor as ISiteModel;
+            const existe = await SiteModel.findOne({
                 cliente: this.cliente,
                 nombre: this.nombre,
                 _id: { $ne: this._id }
@@ -92,7 +119,8 @@ siteSchema.pre('save', async function(next) {
         }
         
         if (this.codigo && (this.isModified('codigo') || this.isModified('cliente'))) {
-            const existeCodigo = await this.constructor.findOne({
+            const SiteModel = this.constructor as ISiteModel;
+            const existeCodigo = await SiteModel.findOne({
                 cliente: this.cliente,
                 codigo: this.codigo,
                  _id: { $ne: this._id }
@@ -104,7 +132,7 @@ siteSchema.pre('save', async function(next) {
 
         next();
     } catch (error) {
-        next(error);
+        next(error as Error);
     }
 });
 
@@ -127,15 +155,18 @@ siteSchema.index({
 });
 
 // Métodos de instancia
-siteSchema.methods.getDireccionCompleta = function() {
+siteSchema.methods.getDireccionCompleta = function(): string {
     return [this.direccion, this.localidad, this.provincia]
         .filter(Boolean)
         .join(', ') || 'Sin dirección';
 };
 
 // Métodos estáticos
-siteSchema.statics.findByClienteAndNombre = async function(clienteId, nombreSite) {
-     if (!mongoose.Types.ObjectId.isValid(clienteId)) {
+siteSchema.statics.findByClienteAndNombre = async function(
+    clienteId: string | Types.ObjectId,
+    nombreSite: string
+): Promise<ISite | null> {
+     if (!Types.ObjectId.isValid(clienteId)) {
         return null;
      }
     return this.findOne({
@@ -144,6 +175,6 @@ siteSchema.statics.findByClienteAndNombre = async function(clienteId, nombreSite
     }).collation({ locale: 'es', strength: 2 });
 };
 
-const Site = mongoose.model('Site', siteSchema);
+const Site = model<ISite, ISiteModel>('Site', siteSchema);
 
-module.exports = Site;
+export default Site;

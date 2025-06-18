@@ -1,17 +1,53 @@
-const axios = require('axios');
-const logger = require('../utils/logger');
+import { Request, Response } from 'express';
+import axios from 'axios';
+import logger from '../utils/logger';
 
-exports.geocode = async (req, res) => {
+/**
+ * Interface for authenticated user in request
+ */
+interface AuthenticatedUser {
+    id: string;
+    email: string;
+    roles?: string[];
+}
+
+/**
+ * Interface for authenticated request
+ */
+interface AuthenticatedRequest extends Request {
+    user?: AuthenticatedUser;
+}
+
+/**
+ * Interface for geocoding query parameters
+ */
+interface GeocodingQuery {
+    lat: string;
+    lng: string;
+}
+
+/**
+ * Interface for API responses
+ */
+interface ApiResponse {
+    message?: string;
+    error?: string;
+    details?: any;
+    received?: any;
+}
+
+export const geocode = async (req: Request<{}, any, {}, GeocodingQuery>, res: Response<any>): Promise<void> => {
     try {
         const { lat, lng } = req.query;
         
         logger.debug('Geocoding request for:', { lat, lng });
 
         if (!lat || !lng) {
-            return res.status(400).json({ 
+            res.status(400).json({ 
                 message: 'Lat y lng son requeridos',
                 received: { lat, lng }
             });
+            return;
         }
 
         // Validar que lat y lng sean números y estén en rango
@@ -20,10 +56,11 @@ exports.geocode = async (req, res) => {
 
         if (isNaN(numLat) || isNaN(numLng) || numLat < -90 || numLat > 90 || numLng < -180 || numLng > 180) {
             logger.warn('Coordenadas inválidas recibidas:', { lat, lng });
-            return res.status(400).json({
+            res.status(400).json({
                 message: 'Latitud y longitud deben ser números válidos en sus rangos respectivos (-90 a 90 para lat, -180 a 180 para lng)',
                 received: { lat, lng }
             });
+            return;
         }
 
         const url = 'https://nominatim.openstreetmap.org/reverse';
@@ -44,7 +81,7 @@ exports.geocode = async (req, res) => {
 
         logger.debug('Nominatim response:', response.data);
         res.json(response.data);
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Geocoding error details:', {
             message: error.message,
             code: error.code,

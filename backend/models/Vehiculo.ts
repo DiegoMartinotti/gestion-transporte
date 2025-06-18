@@ -1,20 +1,92 @@
-const mongoose = require('mongoose');
+import mongoose, { Document, Schema, Types, model } from 'mongoose';
 
 /**
- * @typedef {Object} VehiculoSchema
- * @property {string} dominio - Patente/Dominio del vehículo
- * @property {string} tipo - Tipo de vehículo (Camión, Acoplado, etc.)
- * @property {string} [marca] - Marca del vehículo
- * @property {string} [modelo] - Modelo del vehículo
- * @property {number} [año] - Año del vehículo
- * @property {string} [numeroChasis] - Número de chasis
- * @property {string} [numeroMotor] - Número de motor
- * @property {mongoose.Schema.Types.ObjectId} empresa - Empresa propietaria
- * @property {Object} documentacion - Documentación del vehículo
- * @property {boolean} activo - Estado operativo del vehículo
+ * Interface for Documentacion subdocument
  */
+export interface IDocumentacion {
+    seguro?: {
+        numero?: string;
+        vencimiento?: Date;
+        compania?: string;
+    };
+    vtv?: {
+        numero?: string;
+        vencimiento?: Date;
+    };
+    ruta?: {
+        numero?: string;
+        vencimiento?: Date;
+    };
+    senasa?: {
+        numero?: string;
+        vencimiento?: Date;
+    };
+}
 
-const vehiculoSchema = new mongoose.Schema({
+/**
+ * Interface for Caracteristicas subdocument
+ */
+export interface ICaracteristicas {
+    capacidadCarga?: number; // en kilogramos
+    tara?: number; // peso del vehículo vacío
+    largo?: number; // en metros
+    ancho?: number; // en metros
+    alto?: number; // en metros
+    configuracionEjes?: string;
+    tipoCarroceria?: string;
+}
+
+/**
+ * Interface for Mantenimiento subdocument
+ */
+export interface IMantenimiento {
+    _id?: Types.ObjectId;
+    fecha?: Date;
+    tipo?: 'Preventivo' | 'Correctivo' | 'Revisión';
+    kilometraje?: number;
+    descripcion?: string;
+    costo?: number;
+}
+
+/**
+ * Interface for Vencimiento Proximo
+ */
+export interface IVencimientoProximo {
+    tipo: string;
+    vencimiento: Date;
+}
+
+/**
+ * Interface for Vehiculo document
+ */
+export interface IVehiculo extends Document {
+    dominio: string;
+    tipo: 'Camión' | 'Acoplado' | 'Semirremolque' | 'Bitren' | 'Furgón' | 'Utilitario';
+    marca?: string;
+    modelo?: string;
+    año?: number;
+    numeroChasis?: string;
+    numeroMotor?: string;
+    empresa: Types.ObjectId;
+    documentacion?: IDocumentacion;
+    caracteristicas?: ICaracteristicas;
+    mantenimiento?: IMantenimiento[];
+    activo: boolean;
+    observaciones?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    
+    // Instance methods
+    getVencimientosProximos(diasLimite?: number): IVencimientoProximo[];
+    getResumen(): string;
+}
+
+/**
+ * Interface for Vehiculo Model
+ */
+export interface IVehiculoModel extends mongoose.Model<IVehiculo> {}
+
+const vehiculoSchema = new Schema<IVehiculo>({
     dominio: {
         type: String,
         required: [true, 'La patente/dominio es obligatoria'],
@@ -22,7 +94,7 @@ const vehiculoSchema = new mongoose.Schema({
         trim: true,
         uppercase: true,
         validate: {
-            validator: function(v) {
+            validator: function(v: string) {
                 // Validación para patentes argentinas (formato viejo y nuevo)
                 return /^[A-Z]{3}[0-9]{3}$|^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(v);
             },
@@ -59,7 +131,7 @@ const vehiculoSchema = new mongoose.Schema({
         uppercase: true
     },
     empresa: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Empresa',
         required: [true, 'La empresa es obligatoria']
     },
@@ -129,21 +201,21 @@ vehiculoSchema.pre('save', function(next) {
 });
 
 // Método para verificar vencimientos próximos
-vehiculoSchema.methods.getVencimientosProximos = function(diasLimite = 30) {
+vehiculoSchema.methods.getVencimientosProximos = function(this: IVehiculo, diasLimite: number = 30): IVencimientoProximo[] {
     const hoy = new Date();
     const limite = new Date();
     limite.setDate(limite.getDate() + diasLimite);
     
-    const vencimientos = [];
+    const vencimientos: IVencimientoProximo[] = [];
     
-    if (this.documentacion.seguro?.vencimiento && this.documentacion.seguro.vencimiento <= limite) {
+    if (this.documentacion?.seguro?.vencimiento && this.documentacion.seguro.vencimiento <= limite) {
         vencimientos.push({
             tipo: 'Seguro',
             vencimiento: this.documentacion.seguro.vencimiento
         });
     }
     
-    if (this.documentacion.vtv?.vencimiento && this.documentacion.vtv.vencimiento <= limite) {
+    if (this.documentacion?.vtv?.vencimiento && this.documentacion.vtv.vencimiento <= limite) {
         vencimientos.push({
             tipo: 'VTV',
             vencimiento: this.documentacion.vtv.vencimiento
@@ -154,10 +226,10 @@ vehiculoSchema.methods.getVencimientosProximos = function(diasLimite = 30) {
 };
 
 // Método para obtener información resumida
-vehiculoSchema.methods.getResumen = function() {
+vehiculoSchema.methods.getResumen = function(this: IVehiculo): string {
     return `${this.dominio} - ${this.marca} ${this.modelo} (${this.tipo})`;
 };
 
-const Vehiculo = mongoose.model('Vehiculo', vehiculoSchema);
+const Vehiculo = model<IVehiculo, IVehiculoModel>('Vehiculo', vehiculoSchema);
 
-module.exports = Vehiculo; 
+export default Vehiculo;

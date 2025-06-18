@@ -1,40 +1,156 @@
-/**
- * @module controllers/tramoController
- * @description Controlador para gestionar los tramos de transporte
- */
+import { Request, Response } from 'express';
+import { Types } from 'mongoose';
+import Tramo, { ITramo } from '../models/Tramo';
+import Cliente, { ICliente } from '../models/Cliente';
+import Site, { ISite } from '../models/Site';
+import { format } from 'date-fns';
+import { fechasSuperpuestas, generarTramoId, sonTramosIguales } from '../utils/tramoValidator';
+import { calcularTarifaPaletConFormula } from '../utils/formulaParser';
+import { calcularDistanciaRuta } from '../services/routingService';
+import logger from '../utils/logger';
+import mongoose from 'mongoose';
+import * as tarifaService from '../services/tarifaService';
+import * as formulaClienteService from '../services/formulaClienteService';
+import * as tramoService from '../services/tramo/tramoService';
+import Extra from '../models/Extra';
+import path from 'path';
+import fs from 'fs';
+import util from 'util';
+import axios from 'axios';
 
-const Tramo = require('../models/Tramo');
-const Cliente = require('../models/Cliente'); // Importamos el modelo Cliente
-const Site = require('../models/Site');
-const { format } = require('date-fns');
-const { fechasSuperpuestas, generarTramoId, sonTramosIguales } = require('../utils/tramoValidator');
-const { calcularTarifaPaletConFormula } = require('../utils/formulaParser'); // Importamos el parser de fórmulas
-const { calcularDistanciaRuta } = require('../services/routingService'); // Importamos el servicio de cálculo de distancias
-const logger = require('../utils/logger');
-const mongoose = require('mongoose');
-const tarifaService = require('../services/tarifaService'); // Importamos el servicio de tarifas
-const formulaClienteService = require('../services/formulaClienteService'); // Importar el servicio de fórmulas personalizadas
-const tramoService = require('../services/tramo/tramoService'); // Importar el servicio de tramos
-const Extra = require('../models/Extra');
-const path = require('path');
-const fs = require('fs');
-const util = require('util');
 const streamPipeline = util.promisify(require('stream').pipeline);
-const axios = require('axios');
+
+/**
+ * Interface for authenticated user in request
+ */
+interface AuthenticatedUser {
+    id: string;
+    email: string;
+    roles?: string[];
+}
+
+/**
+ * Interface for authenticated request
+ */
+interface AuthenticatedRequest extends Request {
+    user?: AuthenticatedUser;
+}
+
+/**
+ * Interface for API responses
+ */
+interface ApiResponse<T = any> {
+    success: boolean;
+    data?: T;
+    message?: string;
+    error?: string;
+    pagination?: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        limit: number;
+    };
+}
+
+/**
+ * Interface for tarifa calculation request
+ */
+interface TarifaCalculationRequest {
+    cliente: string;
+    origen: string;
+    destino: string;
+    fecha: string;
+    palets: number;
+    tipoUnidad?: string;
+    tipoTramo: string;
+    metodoCalculo?: string;
+    permitirTramoNoVigente?: boolean;
+    tramoId?: string;
+    tarifaHistoricaId?: string;
+}
+
+/**
+ * Interface for tarifa calculation result
+ */
+interface TarifaCalculationResult {
+    tarifaBase: number;
+    peaje: number;
+    total: number;
+    detalles: {
+        origen: string;
+        destino: string;
+        distancia?: number;
+        metodoCalculo: string;
+        tipo: string;
+        tipoUnidad: string;
+        valor: number;
+        valorPeaje: number;
+        vigenciaDesde?: Date;
+        vigenciaHasta?: Date;
+    };
+    formula: string;
+    tarifaHistoricaId?: string;
+}
+
+/**
+ * Interface for bulk import request
+ */
+interface BulkImportRequest {
+    cliente: string;
+    tramos: any[];
+    reutilizarDistancias?: boolean;
+    actualizarExistentes?: boolean;
+}
+
+/**
+ * Interface for bulk import result
+ */
+interface BulkImportResult {
+    total: number;
+    exitosos: number;
+    errores: any[];
+    tramosCreados: number;
+    tramosActualizados: number;
+}
+
+/**
+ * Interface for tramo duplicate verification
+ */
+interface DuplicateVerificationResult {
+    tramosVerificados: number;
+    tramosExistentes: number;
+    posiblesDuplicados: any[];
+    mapaIds: Record<string, number>;
+}
+
+/**
+ * Interface for vigencia update request
+ */
+interface VigenciaUpdateRequest {
+    tramoIds: string[];
+    vigenciaDesde: string;
+    vigenciaHasta: string;
+    tipoTramo?: string;
+}
+
+/**
+ * Interface for vigencia update result
+ */
+interface VigenciaUpdateResult {
+    actualizados: string[];
+    conflictos: Array<{
+        id: string;
+        tarifaId?: string;
+        error: string;
+    }>;
+    noEncontrados: string[];
+    mensaje: string;
+}
 
 /**
  * Obtiene todos los tramos asociados a un cliente específico
- * 
- * @async
- * @function getTramosByCliente
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} req.params - Parámetros de la URL
- * @param {string} req.params.cliente - ID del cliente
- * @param {Object} res - Objeto de respuesta Express
- * @returns {Promise<Object>} Lista de tramos del cliente
- * @throws {Error} Error 500 si hay un error en el servidor
  */
-exports.getTramosByCliente = async (req, res) => {
+export const getTramosByCliente = async (req: AuthenticatedRequest, res: Response<ApiResponse<ITramo[]>>): Promise<void> => {
     try {
         logger.debug('Buscando tramos para cliente:', req.params.cliente);
         
@@ -42,38 +158,33 @@ exports.getTramosByCliente = async (req, res) => {
         const { desde, hasta, incluirHistoricos } = req.query;
         
         // Parámetros de paginación
-        const page = parseInt(req.query.page, 10) || 1;
-        const limit = parseInt(req.query.limit, 10) || 20; // Límite por defecto
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 20;
         const skip = (page - 1) * limit;
         
         logger.debug(`Parámetros de filtro: desde=${desde}, hasta=${hasta}, incluirHistoricos=${incluirHistoricos}, page=${page}, limit=${limit}`);
         
         // Construir el pipeline de agregación
-        const pipeline = [];
+        const pipeline: any[] = [];
         
         // Etapa 1: Filtrado inicial por cliente
-        // Seleccionamos solo los tramos que pertenecen al cliente solicitado
-        pipeline.push({ $match: { cliente: mongoose.Types.ObjectId(cliente) } });
+        pipeline.push({ $match: { cliente: new Types.ObjectId(cliente) } });
 
         // Etapa 1.5: Lookup para enriquecer datos del cliente
-        // Unimos con la colección 'clientes' para obtener los detalles del cliente
         pipeline.push(
             {
                 $lookup: {
-                    from: 'clientes', // Nombre de la colección de clientes
+                    from: 'clientes',
                     localField: 'cliente',
                     foreignField: '_id',
                     as: 'clienteData'
                 }
             },
-            // Desempaquetar el array resultante y reemplazar el campo 'cliente'
             {
                 $addFields: {
-                    // Reemplaza el ObjectId de cliente con el primer (y único) documento encontrado
                     cliente: { $arrayElemAt: ['$clienteData', 0] }
                 }
             },
-            // Opcional: Eliminar el campo temporal si no se necesita más adelante
             {
                 $project: {
                     clienteData: 0
@@ -82,8 +193,6 @@ exports.getTramosByCliente = async (req, res) => {
         );
         
         // Etapa 2: Lookup para enriquecer datos de origen y destino
-        // Realizamos una operación de join con la colección de sites para obtener
-        // la información completa de los sitios de origen y destino
         pipeline.push(
             { 
                 $lookup: {
@@ -101,15 +210,12 @@ exports.getTramosByCliente = async (req, res) => {
                     as: 'destinoData'
                 }
             },
-            // Desempaquetar los arrays resultantes del lookup
-            // Convertimos los arrays de un solo elemento a objetos directos
             { 
                 $addFields: {
                     origen: { $arrayElemAt: ['$origenData', 0] },
                     destino: { $arrayElemAt: ['$destinoData', 0] }
                 }
             },
-            // Eliminamos los campos temporales que ya no necesitamos
             {
                 $project: {
                     origenData: 0,
@@ -122,26 +228,17 @@ exports.getTramosByCliente = async (req, res) => {
         if (desde && hasta && incluirHistoricos === 'true') {
             logger.debug('Procesando tramos históricos con filtro de fecha');
             
-            // Convertir fechas a objetos Date para comparación
-            const desdeDate = new Date(desde);
-            const hastaDate = new Date(hasta);
+            const desdeDate = new Date(desde as string);
+            const hastaDate = new Date(hasta as string);
             
             logger.debug(`Filtrando tramos por rango de fechas: ${desdeDate.toISOString().split('T')[0]} - ${hastaDate.toISOString().split('T')[0]}`);
             
-            // Etapa 3a: Procesamiento de tramos históricos con facet
-            // Usamos $facet para procesar en paralelo dos tipos de tramos:
-            // 1. Tramos con tarifasHistoricas (modelo nuevo)
-            // 2. Tramos sin tarifasHistoricas (modelo antiguo)
             pipeline.push(
                 {
                     $facet: {
-                        // Procesamiento de tramos con tarifasHistoricas (modelo nuevo)
                         tramosConHistorico: [
-                            // Seleccionamos solo tramos que tienen tarifas históricas
                             { $match: { tarifasHistoricas: { $exists: true, $ne: [] } } },
-                            // Desplegar el array tarifasHistoricas para procesar cada tarifa independientemente
                             { $unwind: '$tarifasHistoricas' },
-                            // Filtrado por fechas de vigencia: solo tarifas que se superponen con el rango solicitado
                             {
                                 $match: {
                                     $expr: {
@@ -152,8 +249,6 @@ exports.getTramosByCliente = async (req, res) => {
                                     }
                                 }
                             },
-                            // Transferimos propiedades de la tarifa histórica al documento principal
-                            // para facilitar el procesamiento posterior
                             {
                                 $addFields: {
                                     tipo: '$tarifasHistoricas.tipo',
@@ -164,12 +259,9 @@ exports.getTramosByCliente = async (req, res) => {
                                     vigenciaHasta: '$tarifasHistoricas.vigenciaHasta'
                                 }
                             },
-                            // Ordenamos para asegurar que obtenemos la tarifa más reciente primero
                             {
                                 $sort: { 'tarifasHistoricas.vigenciaHasta': -1 }
                             },
-                            // Agrupamos por origen-destino-tipo para obtener un solo tramo por cada combinación
-                            // (el primero será el más reciente debido al ordenamiento previo)
                             {
                                 $group: {
                                     _id: {
@@ -180,14 +272,11 @@ exports.getTramosByCliente = async (req, res) => {
                                     tramo: { $first: '$$ROOT' }
                                 }
                             },
-                            // Reemplazamos el documento raíz con el tramo completo
                             {
                                 $replaceRoot: { newRoot: '$tramo' }
                             }
                         ],
-                        // Procesamiento de tramos con formato antiguo (sin tarifasHistoricas)
                         tramosAntiguos: [
-                            // Seleccionamos tramos sin tarifas históricas pero con campos de vigencia
                             {
                                 $match: {
                                     $or: [
@@ -198,7 +287,6 @@ exports.getTramosByCliente = async (req, res) => {
                                     vigenciaHasta: { $exists: true }
                                 }
                             },
-                            // Filtrado por fechas de vigencia: solo tramos que se superponen con el rango solicitado
                             {
                                 $match: {
                                     $expr: {
@@ -209,11 +297,9 @@ exports.getTramosByCliente = async (req, res) => {
                                     }
                                 }
                             },
-                            // Ordenamos para asegurar que obtenemos el tramo más reciente primero
                             {
                                 $sort: { vigenciaHasta: -1 }
                             },
-                            // Agrupamos por origen-destino-tipo para obtener un solo tramo por cada combinación
                             {
                                 $group: {
                                     _id: {
@@ -224,36 +310,27 @@ exports.getTramosByCliente = async (req, res) => {
                                     tramo: { $first: '$$ROOT' }
                                 }
                             },
-                            // Reemplazamos el documento raíz con el tramo completo
                             {
                                 $replaceRoot: { newRoot: '$tramo' }
                             }
                         ]
                     }
                 },
-                // Combinamos los resultados de ambos facets en un solo array
                 {
                     $project: {
                         combinedResults: { $concatArrays: ['$tramosConHistorico', '$tramosAntiguos'] }
                     }
                 },
-                // Desenrollamos el array de resultados combinados
                 { $unwind: '$combinedResults' },
-                // Reemplazamos el documento raíz con cada resultado
                 { $replaceRoot: { newRoot: '$combinedResults' } }
             );
         } else {
-            // Etapa 3b: Procesamiento normal (sin filtro de fechas históricas)
-            // Similar al procesamiento histórico pero sin filtrar por fechas de vigencia
             pipeline.push(
                 {
                     $facet: {
-                        // Procesamiento de tramos con tarifasHistoricas
                         tramosConHistorico: [
                             { $match: { tarifasHistoricas: { $exists: true, $ne: [] } } },
-                            // Desplegar el array tarifasHistoricas
                             { $unwind: '$tarifasHistoricas' },
-                            // Transferir propiedades de la tarifa al tramo principal
                             {
                                 $addFields: {
                                     tipo: '$tarifasHistoricas.tipo',
@@ -264,7 +341,6 @@ exports.getTramosByCliente = async (req, res) => {
                                     vigenciaHasta: '$tarifasHistoricas.vigenciaHasta'
                                 }
                             },
-                            // Agrupar por origen, destino y tipo para obtener solo el más reciente
                             {
                                 $sort: { 'tarifasHistoricas.vigenciaHasta': -1 }
                             },
@@ -282,7 +358,6 @@ exports.getTramosByCliente = async (req, res) => {
                                 $replaceRoot: { newRoot: '$tramo' }
                             }
                         ],
-                        // Procesar tramos con formato antiguo
                         tramosAntiguos: [
                             {
                                 $match: {
@@ -293,7 +368,6 @@ exports.getTramosByCliente = async (req, res) => {
                                     tipo: { $exists: true }
                                 }
                             },
-                            // Agrupar por origen, destino y tipo para obtener solo el más reciente
                             {
                                 $sort: { vigenciaHasta: -1 }
                             },
@@ -313,7 +387,6 @@ exports.getTramosByCliente = async (req, res) => {
                         ]
                     }
                 },
-                // Unir los resultados de ambos facets
                 {
                     $project: {
                         combinedResults: { $concatArrays: ['$tramosConHistorico', '$tramosAntiguos'] }
@@ -324,8 +397,7 @@ exports.getTramosByCliente = async (req, res) => {
             );
         }
         
-        // Etapa 4: Ordenamiento final de los resultados
-        // Organizamos los tramos por origen, destino y tipo para una visualización consistente
+        // Etapa 4: Ordenamiento final
         pipeline.push(
             {
                 $sort: {
@@ -336,8 +408,7 @@ exports.getTramosByCliente = async (req, res) => {
             }
         );
         
-        // Etapa 5: Paginación y metadatos
-        // Calculamos el total de documentos y aplicamos skip/limit para paginación
+        // Etapa 5: Paginación
         pipeline.push(
             {
                 $facet: {
@@ -350,14 +421,12 @@ exports.getTramosByCliente = async (req, res) => {
         // Ejecutar la agregación
         const [result] = await Tramo.aggregate(pipeline);
         
-        // Extraer los datos y metadata
         const totalTramos = result.metadata[0]?.total || 0;
         const tramos = result.data;
         
         logger.debug(`Encontrados ${totalTramos} tramos totales para cliente ${cliente}`);
         logger.debug(`Enviando ${tramos.length} tramos (página ${page})`);
         
-        // Enviar respuesta
         res.json({
             success: true,
             data: tramos,
@@ -368,7 +437,7 @@ exports.getTramosByCliente = async (req, res) => {
                 limit: limit
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al obtener tramos por cliente:', error);
         res.status(500).json({
             success: false,
@@ -378,13 +447,10 @@ exports.getTramosByCliente = async (req, res) => {
     }
 };
 
-exports.getDistanciasCalculadas = async (req, res) => {
+export const getDistanciasCalculadas = async (req: AuthenticatedRequest, res: Response<ApiResponse>): Promise<void> => {
     try {
-        // Obtener todas las distancias calculadas de tramos existentes
         const distancias = await Tramo.aggregate([
-            // Filtrar solo tramos con distancia calculada
             { $match: { distancia: { $gt: 0 } } },
-            // Agrupar por origen-destino y tomar la distancia más reciente
             {
                 $group: {
                     _id: { origen: "$origen", destino: "$destino" },
@@ -392,7 +458,6 @@ exports.getDistanciasCalculadas = async (req, res) => {
                     updatedAt: { $max: "$updatedAt" }
                 }
             },
-            // Formatear la salida
             {
                 $project: {
                     _id: 0,
@@ -409,7 +474,7 @@ exports.getDistanciasCalculadas = async (req, res) => {
             success: true,
             data: distancias
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al obtener distancias calculadas:', error);
         res.status(500).json({
             success: false,
@@ -421,45 +486,22 @@ exports.getDistanciasCalculadas = async (req, res) => {
 
 /**
  * Crea múltiples tramos en una sola operación
- * 
- * @async
- * @function bulkCreateTramos
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} req.body - Cuerpo de la solicitud
- * @param {string} req.body.cliente - ID del cliente
- * @param {Array<Object>} req.body.tramos - Array de objetos con datos de tramos
- * @param {string} req.body.tramos[].origen - ID del sitio de origen
- * @param {string} req.body.tramos[].destino - ID del sitio de destino
- * @param {Object} req.body.tramos[].tarifaHistorica - Datos de la tarifa histórica
- * @param {string} req.body.tramos[].tarifaHistorica.tipo - Tipo de tramo (TRMC/TRMI)
- * @param {string} req.body.tramos[].tarifaHistorica.metodoCalculo - Método de cálculo de tarifa
- * @param {number} req.body.tramos[].tarifaHistorica.valor - Valor base del tramo
- * @param {number} req.body.tramos[].tarifaHistorica.valorPeaje - Valor del peaje
- * @param {Date} req.body.tramos[].tarifaHistorica.vigenciaDesde - Fecha de inicio de vigencia
- * @param {Date} req.body.tramos[].tarifaHistorica.vigenciaHasta - Fecha de fin de vigencia
- * @param {number} req.body.tramos[].distanciaPreCalculada - Distancia pre-calculada (opcional)
- * @param {boolean} req.body.reutilizarDistancias - Indica si se deben reutilizar distancias pre-calculadas
- * @param {boolean} req.body.actualizarExistentes - Indica si se deben actualizar tramos existentes
- * @param {Object} res - Objeto de respuesta Express
- * @returns {Promise<Object>} Resultado de la operación con tramos creados y errores
- * @throws {Error} Error 400 si los datos son inválidos
- * @throws {Error} Error 500 si hay un error en el servidor
  */
-exports.bulkCreateTramos = async (req, res) => {
+export const bulkCreateTramos = async (req: Request<{}, ApiResponse<BulkImportResult>, BulkImportRequest>, res: Response<ApiResponse<BulkImportResult>>): Promise<void> => {
     try {
         const { cliente, tramos, reutilizarDistancias = true, actualizarExistentes = false } = req.body;
         
         if (!cliente || !tramos || !Array.isArray(tramos)) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Se requiere cliente y un array de tramos'
             });
+            return;
         }
         
         logger.debug(`Procesando ${tramos.length} tramos para cliente ${cliente}`);
         logger.debug(`Opciones: reutilizarDistancias=${reutilizarDistancias}, actualizarExistentes=${actualizarExistentes}`);
         
-        // Dividir en lotes para evitar problemas de tamaño en la petición
         const BATCH_SIZE = 50;
         const batches = [];
         
@@ -469,8 +511,7 @@ exports.bulkCreateTramos = async (req, res) => {
         
         logger.debug(`Dividiendo ${tramos.length} tramos en ${batches.length} lotes de máximo ${BATCH_SIZE} tramos`);
         
-        // Resultados consolidados
-        const resultadosConsolidados = {
+        const resultadosConsolidados: BulkImportResult = {
             total: tramos.length,
             exitosos: 0,
             errores: [],
@@ -478,14 +519,12 @@ exports.bulkCreateTramos = async (req, res) => {
             tramosActualizados: 0
         };
         
-        // Procesar cada lote
         for (let i = 0; i < batches.length; i++) {
             const batch = batches[i];
             
             try {
                 logger.debug(`Procesando lote ${i + 1} de ${batches.length} (${batch.length} tramos)`);
                 
-                // Llamar al servicio para procesar el lote
                 const resultados = await tramoService.bulkImportTramos(
                     cliente, 
                     batch, 
@@ -493,12 +532,10 @@ exports.bulkCreateTramos = async (req, res) => {
                     actualizarExistentes
                 );
                 
-                // Consolidar resultados
                 resultadosConsolidados.exitosos += resultados.exitosos;
                 resultadosConsolidados.tramosCreados += resultados.tramosCreados;
                 resultadosConsolidados.tramosActualizados += resultados.tramosActualizados;
                 
-                // Añadir referencia del lote a cada error
                 const erroresConLote = resultados.errores.map(error => ({
                     ...error,
                     lote: i + 1
@@ -508,10 +545,9 @@ exports.bulkCreateTramos = async (req, res) => {
                 
                 logger.debug(`Lote ${i + 1} procesado: ${resultados.exitosos} exitosos, ${resultados.errores.length} errores`);
                 
-            } catch (error) {
+            } catch (error: any) {
                 logger.error(`Error procesando lote ${i + 1}:`, error);
                 
-                // Añadir error del lote completo a los resultados
                 resultadosConsolidados.errores.push({
                     lote: i + 1,
                     error: `Error procesando lote: ${error.message}`
@@ -519,34 +555,34 @@ exports.bulkCreateTramos = async (req, res) => {
             }
         }
         
-        // Enviar respuesta final consolidada
         logger.info(`Importación masiva completada para cliente ${cliente}: ${resultadosConsolidados.exitosos} exitosos, ${resultadosConsolidados.errores.length} errores.`);
         res.status(200).json({
             success: true,
             message: `Proceso completado: ${resultadosConsolidados.exitosos} exitosos, ${resultadosConsolidados.errores.length} errores.`,
-            ...resultadosConsolidados
+            data: resultadosConsolidados
         });
         
-    } catch (error) { // Captura errores generales del controlador
+    } catch (error: any) {
         logger.error('Error general en bulkCreateTramos:', error);
         res.status(500).json({
             success: false,
             message: 'Error interno del servidor durante la importación masiva',
-            error: error.message // Enviar mensaje de error para depuración
+            error: error.message
         });
     }
 };
 
-exports.getVigentesByFecha = async (req, res) => {
+export const getVigentesByFecha = async (req: AuthenticatedRequest, res: Response<ApiResponse<ITramo[]>>): Promise<void> => {
     try {
         const { fecha } = req.params;
         const fechaBusqueda = new Date(fecha);
         
         if (isNaN(fechaBusqueda.getTime())) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Formato de fecha inválido'
             });
+            return;
         }
         
         const tramos = await Tramo.find({
@@ -560,7 +596,7 @@ exports.getVigentesByFecha = async (req, res) => {
             success: true,
             data: tramos
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al obtener tramos vigentes:', error);
         res.status(500).json({
             success: false,
@@ -569,7 +605,7 @@ exports.getVigentesByFecha = async (req, res) => {
     }
 };
 
-exports.getTramoById = async (req, res) => {
+export const getTramoById = async (req: AuthenticatedRequest, res: Response<ApiResponse<ITramo>>): Promise<void> => {
     try {
         const { id } = req.params;
         const tramo = await Tramo.findById(id)
@@ -577,17 +613,18 @@ exports.getTramoById = async (req, res) => {
             .populate('destino', 'Site location');
             
         if (!tramo) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 message: 'Tramo no encontrado'
             });
+            return;
         }
         
         res.json({
             success: true,
             data: tramo
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al obtener tramo por ID:', error);
         res.status(500).json({
             success: false,
@@ -596,17 +633,14 @@ exports.getTramoById = async (req, res) => {
     }
 };
 
-exports.getAllTramos = async (req, res) => {
+export const getAllTramos = async (req: AuthenticatedRequest, res: Response<ApiResponse<ITramo[]>>): Promise<void> => {
     try {
-        // Parámetros de paginación
-        const page = parseInt(req.query.page, 10) || 1;
-        const limit = parseInt(req.query.limit, 10) || 20; // Límite por defecto
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const limit = parseInt(req.query.limit as string, 10) || 20;
         const skip = (page - 1) * limit;
         
-        // Contar el total de tramos para la metadata
         const totalTramos = await Tramo.countDocuments();
         
-        // Obtener tramos con paginación
         const tramos = await Tramo.find()
             .populate('origen', 'Site')
             .populate('destino', 'Site')
@@ -623,7 +657,7 @@ exports.getAllTramos = async (req, res) => {
                 limit: limit
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al obtener todos los tramos:', error);
         res.status(500).json({
             success: false,
@@ -632,13 +666,12 @@ exports.getAllTramos = async (req, res) => {
     }
 };
 
-exports.createTramo = async (req, res) => {
+export const createTramo = async (req: AuthenticatedRequest, res: Response<ApiResponse<ITramo>>): Promise<void> => {
     try {
         const tramoData = req.body;
         const nuevoTramo = new Tramo(tramoData);
         const tramoGuardado = await nuevoTramo.save();
         
-        // Poblar los campos de origen y destino
         await tramoGuardado.populate('origen', 'Site');
         await tramoGuardado.populate('destino', 'Site');
         
@@ -646,7 +679,7 @@ exports.createTramo = async (req, res) => {
             success: true,
             data: tramoGuardado
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al crear tramo:', error);
         res.status(400).json({
             success: false,
@@ -655,7 +688,7 @@ exports.createTramo = async (req, res) => {
     }
 };
 
-exports.updateTramo = async (req, res) => {
+export const updateTramo = async (req: AuthenticatedRequest, res: Response<ApiResponse<ITramo>>): Promise<void> => {
     try {
         const { id } = req.params;
         const tramoActualizado = await Tramo.findByIdAndUpdate(
@@ -667,17 +700,18 @@ exports.updateTramo = async (req, res) => {
         .populate('destino', 'Site');
         
         if (!tramoActualizado) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 message: 'Tramo no encontrado'
             });
+            return;
         }
         
         res.json({
             success: true,
             data: tramoActualizado
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al actualizar tramo:', error);
         res.status(400).json({
             success: false,
@@ -686,23 +720,24 @@ exports.updateTramo = async (req, res) => {
     }
 };
 
-exports.deleteTramo = async (req, res) => {
+export const deleteTramo = async (req: AuthenticatedRequest, res: Response<ApiResponse>): Promise<void> => {
     try {
         const { id } = req.params;
         const tramoEliminado = await Tramo.findByIdAndDelete(id);
         
         if (!tramoEliminado) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 message: 'Tramo no encontrado'
             });
+            return;
         }
         
         res.json({
             success: true,
             message: 'Tramo eliminado correctamente'
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al eliminar tramo:', error);
         res.status(500).json({
             success: false,
@@ -711,23 +746,21 @@ exports.deleteTramo = async (req, res) => {
     }
 };
 
-// Método para verificar duplicados
-exports.verificarPosiblesDuplicados = async (req, res) => {
+export const verificarPosiblesDuplicados = async (req: Request<{}, ApiResponse<{ resultado: DuplicateVerificationResult }>, { tramos: any[]; cliente: string }>, res: Response<ApiResponse<{ resultado: DuplicateVerificationResult }>>): Promise<void> => {
     try {
         const { tramos, cliente } = req.body;
         
         if (!Array.isArray(tramos) || !cliente) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Se requieren tramos y cliente'
             });
+            return;
         }
         
-        // Cargar todos los tramos existentes
         const tramosExistentes = await Tramo.find({ cliente }).lean();
         
-        // Crear mapa de IDs de tramos
-        const mapaExistentes = {};
+        const mapaExistentes: Record<string, any[]> = {};
         tramosExistentes.forEach(tramo => {
             const id = generarTramoId(tramo);
             if (!mapaExistentes[id]) {
@@ -736,19 +769,16 @@ exports.verificarPosiblesDuplicados = async (req, res) => {
             mapaExistentes[id].push(tramo);
         });
         
-        // Resultados
-        const resultado = {
+        const resultado: DuplicateVerificationResult = {
             tramosVerificados: tramos.length,
             tramosExistentes: tramosExistentes.length,
             posiblesDuplicados: [],
             mapaIds: {}
         };
         
-        // Verificar cada tramo
         for (const tramoData of tramos) {
             const id = generarTramoId(tramoData);
             
-            // Contar IDs para análisis
             if (!resultado.mapaIds[id]) {
                 resultado.mapaIds[id] = 0;
             }
@@ -756,7 +786,6 @@ exports.verificarPosiblesDuplicados = async (req, res) => {
             
             const tramosConMismoId = mapaExistentes[id] || [];
             
-            // Verificar cada tramo existente con mismo ID
             for (const existente of tramosConMismoId) {
                 if (fechasSuperpuestas(
                     tramoData.vigenciaDesde,
@@ -787,9 +816,9 @@ exports.verificarPosiblesDuplicados = async (req, res) => {
         
         res.json({
             success: true,
-            resultado
+            data: { resultado }
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al verificar duplicados:', error);
         res.status(500).json({
             success: false,
@@ -799,21 +828,17 @@ exports.verificarPosiblesDuplicados = async (req, res) => {
     }
 };
 
-// Método para verificar y normalizar los tipos de tramos
-exports.normalizarTramos = async (req, res) => {
+export const normalizarTramos = async (req: AuthenticatedRequest, res: Response<ApiResponse>): Promise<void> => {
     try {
         const resultados = {
             procesados: 0,
             actualizados: 0,
-            errores: []
+            errores: [] as any[]
         };
 
-        // Contar total de tramos a procesar
         resultados.procesados = await Tramo.countDocuments();
         
-        // Normalizar los tipos en tarifasHistoricas - actualización masiva
         try {
-            // Actualizar todos los tramos que tienen tarifas históricas con tipos no válidos o en minúsculas
             const resultTRMC = await Tramo.updateMany(
                 { 'tarifasHistoricas.tipo': { $regex: /^trmc$/i, $ne: 'TRMC' } },
                 { $set: { 'tarifasHistoricas.$[elem].tipo': 'TRMC' } },
@@ -826,14 +851,12 @@ exports.normalizarTramos = async (req, res) => {
                 { arrayFilters: [{ 'elem.tipo': { $regex: /^trmi$/i } }], multi: true }
             );
             
-            // Actualizar tarifas con tipos inválidos o nulos a 'TRMC'
             const resultNonValid = await Tramo.updateMany(
                 { 'tarifasHistoricas.tipo': { $nin: ['TRMC', 'TRMI', 'trmc', 'trmi'] } },
                 { $set: { 'tarifasHistoricas.$[elem].tipo': 'TRMC' } },
                 { arrayFilters: [{ 'elem.tipo': { $nin: ['TRMC', 'TRMI', 'trmc', 'trmi'] } }], multi: true }
             );
             
-            // Compatibilidad con modelo antiguo - actualizar campo tipo directamente
             const resultOldModel = await Tramo.updateMany(
                 { tipo: { $exists: true } },
                 [
@@ -851,7 +874,6 @@ exports.normalizarTramos = async (req, res) => {
                 ]
             );
             
-            // Sumar todas las actualizaciones realizadas
             resultados.actualizados = 
                 (resultTRMC.modifiedCount || 0) + 
                 (resultTRMI.modifiedCount || 0) + 
@@ -860,7 +882,7 @@ exports.normalizarTramos = async (req, res) => {
                 
             logger.info(`Normalización masiva completada: ${resultados.actualizados} tramos actualizados`);
             
-        } catch (error) {
+        } catch (error: any) {
             logger.error('Error en actualización masiva:', error);
             resultados.errores.push({
                 fase: 'actualizacionMasiva',
@@ -870,9 +892,9 @@ exports.normalizarTramos = async (req, res) => {
 
         res.json({
             success: true,
-            resultados
+            data: resultados
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error normalizando tramos:', error);
         res.status(500).json({
             success: false,
@@ -882,24 +904,22 @@ exports.normalizarTramos = async (req, res) => {
     }
 };
 
-// Nuevo método para probar la importación con diferentes tipos
-exports.testImportacionTipos = async (req, res) => {
+export const testImportacionTipos = async (req: AuthenticatedRequest, res: Response<ApiResponse>): Promise<void> => {
     try {
         const { origen, destino, cliente } = req.body;
         
         if (!origen || !destino || !cliente) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Se requieren origen, destino y cliente para la prueba'
             });
+            return;
         }
         
-        // Crear fechas de vigencia
         const fechaInicio = new Date();
         const fechaFin = new Date();
-        fechaFin.setFullYear(fechaFin.getFullYear() + 1); // Un año de vigencia
+        fechaFin.setFullYear(fechaFin.getFullYear() + 1);
         
-        // Crear un tramo con dos tarifas históricas de diferentes tipos
         const nuevoTramo = new Tramo({
             origen,
             destino,
@@ -924,15 +944,14 @@ exports.testImportacionTipos = async (req, res) => {
             ]
         });
         
-        // Guardar el tramo
         await nuevoTramo.save();
         
         res.json({
             success: true,
             message: 'Prueba completada correctamente',
-            tramo: nuevoTramo
+            data: nuevoTramo
         });
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error en prueba de importación:', error);
         res.status(500).json({
             success: false,
@@ -942,47 +961,47 @@ exports.testImportacionTipos = async (req, res) => {
     }
 };
 
-exports.updateVigenciaMasiva = async (req, res) => {
+export const updateVigenciaMasiva = async (req: Request<{}, ApiResponse<VigenciaUpdateResult>, VigenciaUpdateRequest>, res: Response<ApiResponse<VigenciaUpdateResult>>): Promise<void> => {
     try {
-        // Modificado para aceptar tramoIds (lo que el frontend envía) en lugar de tramosIds
         const tramosIds = req.body.tramoIds;
         const vigenciaDesde = req.body.vigenciaDesde;
         const vigenciaHasta = req.body.vigenciaHasta;
-        const tipoTramo = req.body.tipoTramo; // Opcional
+        const tipoTramo = req.body.tipoTramo;
 
         if (!tramosIds || !Array.isArray(tramosIds) || tramosIds.length === 0) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Se requiere un array de IDs de tramos'
             });
+            return;
         }
 
         if (!vigenciaDesde || !vigenciaHasta) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Se requieren las fechas de vigencia'
             });
+            return;
         }
 
-        // Modificamos la creación de fechas para asegurar formato UTC
         const fechaDesde = new Date(vigenciaDesde);
-        fechaDesde.setUTCHours(12, 0, 0, 0); // Mediodía UTC para evitar problemas de zona horaria
+        fechaDesde.setUTCHours(12, 0, 0, 0);
 
         const fechaHasta = new Date(vigenciaHasta);
-        fechaHasta.setUTCHours(12, 0, 0, 0); // Mediodía UTC para evitar problemas de zona horaria
+        fechaHasta.setUTCHours(12, 0, 0, 0);
 
         if (fechaHasta < fechaDesde) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'La fecha de fin debe ser posterior a la fecha de inicio'
             });
+            return;
         }
 
-        const actualizados = [];
-        const conflictos = [];
-        const noEncontrados = [];
+        const actualizados: string[] = [];
+        const conflictos: Array<{ id: string; tarifaId?: string; error: string }> = [];
+        const noEncontrados: string[] = [];
 
-        // Iterar sobre cada ID de tramo para procesarlo individualmente
         for (const tramoId of tramosIds) {
             try {
                 const tramo = await Tramo.findById(tramoId);
@@ -990,87 +1009,71 @@ exports.updateVigenciaMasiva = async (req, res) => {
                 if (!tramo) {
                     noEncontrados.push(tramoId);
                     logger.warn(`Tramo con ID ${tramoId} no encontrado para actualización masiva.`);
-                    continue; // Pasar al siguiente ID
+                    continue;
                 }
 
                 let tarifasModificadas = false;
 
-                // Iterar sobre las tarifas históricas del tramo
                 for (let i = 0; i < tramo.tarifasHistoricas.length; i++) {
                     const tarifa = tramo.tarifasHistoricas[i];
 
-                    // Si se especificó un tipoTramo, solo modificar las tarifas de ese tipo
                     if (tipoTramo && tarifa.tipo !== tipoTramo) {
                         continue;
                     }
 
-                    // Verificar conflicto ANTES de modificar:
-                    // ¿Existe OTRA tarifa (j != i) del MISMO tipo y método que se superponga con las NUEVAS fechas?
                     const hayConflicto = tramo.tarifasHistoricas.some((otraTarifa, j) => 
-                        i !== j && // No comparar consigo misma
+                        i !== j &&
                         otraTarifa.tipo === tarifa.tipo && 
                         otraTarifa.metodoCalculo === tarifa.metodoCalculo &&
-                        // Comprobar superposición de fechas:
                         otraTarifa.vigenciaDesde <= fechaHasta && 
                         otraTarifa.vigenciaHasta >= fechaDesde
                     );
 
                     if (hayConflicto) {
-                        // Si encontramos un conflicto potencial con las nuevas fechas, registramos y saltamos esta tarifa
                         const errorMsg = `Conflicto potencial de fechas al actualizar tarifa (${tarifa.tipo}/${tarifa.metodoCalculo}) en tramo ${tramoId}.`;
                         logger.error(errorMsg);
-                        conflictos.push({ id: tramoId, tarifaId: tarifa._id, error: errorMsg });
-                        // Importante: No modificamos esta tarifa y continuamos el bucle interno
-                        // para ver si otras tarifas del mismo tramo SÍ se pueden actualizar.
+                        conflictos.push({ id: tramoId, tarifaId: tarifa._id?.toString(), error: errorMsg });
                     } else {
-                        // No hay conflicto para ESTA tarifa con las nuevas fechas, la modificamos.
                         tramo.tarifasHistoricas[i].vigenciaDesde = fechaDesde;
                         tramo.tarifasHistoricas[i].vigenciaHasta = fechaHasta;
                         tarifasModificadas = true;
                     }
                 }
 
-                // Si se modificó al menos una tarifa y no hubo errores de conflicto *durante la iteración anterior* 
-                // (los conflictos detectados ya están en el array `conflictos`)
-                // intentamos guardar el tramo. La validación pre-save actuará como doble chequeo.
                 if (tarifasModificadas) {
                     try {
                         await tramo.save();
                         actualizados.push(tramoId);
                         logger.debug(`Tramo ${tramoId} actualizado correctamente.`);
-                    } catch (saveError) {
-                        // Error al guardar (probablemente validación del modelo)
+                    } catch (saveError: any) {
                         logger.error(`Error al guardar tramo ${tramoId} tras actualización masiva: ${saveError.message}`);
                         conflictos.push({ id: tramoId, error: `Error al guardar: ${saveError.message}` });
-                        // Si falló el save(), el tramo no se agrega a `actualizados`
                     }
                 } else if (conflictos.some(c => c.id === tramoId)) {
-                    // Si no se modificó nada PERO hubo conflictos reportados para este tramoId
                     logger.warn(`Tramo ${tramoId} no actualizado debido a conflictos de fechas detectados.`);
                 } else {
-                    // No se modificó ninguna tarifa (quizás no había del tipo especificado)
                     logger.info(`Tramo ${tramoId}: No se encontraron tarifas ${tipoTramo ? `del tipo ${tipoTramo} ` : ''}para actualizar.`);
-                    // Opcionalmente, podrías agregarlo a una lista de 'no aplicables'
                 }
 
-            } catch (error) {
-                // Error al buscar o procesar un tramo individual
+            } catch (error: any) {
                 logger.error(`Error procesando tramo ${tramoId} en actualización masiva:`, error);
                 conflictos.push({ id: tramoId, error: error.message });
             }
         }
 
+        const resultado: VigenciaUpdateResult = {
+            actualizados,
+            conflictos,
+            noEncontrados,
+            mensaje: `Proceso completado: ${actualizados.length} tramos actualizados, ${conflictos.length} conflictos, ${noEncontrados.length} no encontrados.`
+        };
+
         res.json({
             success: true,
-            data: {
-                actualizados,
-                conflictos,
-                noEncontrados,
-                mensaje: `Proceso completado: ${actualizados.length} tramos actualizados, ${conflictos.length} conflictos, ${noEncontrados.length} no encontrados.`
-            }
+            data: resultado
         });
 
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error general en actualización masiva de vigencia:', error);
         res.status(500).json({
             success: false,
@@ -1082,15 +1085,8 @@ exports.updateVigenciaMasiva = async (req, res) => {
 
 /**
  * Calcula la tarifa para un tramo específico
- * 
- * @async
- * @function calcularTarifa
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
- * @returns {Promise<Object>} Tarifa calculada
- * @throws {Error} Error 500 si hay un error en el servidor
  */
-exports.calcularTarifa = async (req, res) => {
+export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculationResult>, TarifaCalculationRequest>, res: Response<ApiResponse<TarifaCalculationResult>>): Promise<void> => {
     try {
         const { 
             cliente: clienteNombre, 
@@ -1107,16 +1103,16 @@ exports.calcularTarifa = async (req, res) => {
         } = req.body;
 
         if (!clienteNombre || !origen || !destino || !fecha || !tipoTramo) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Todos los campos son requeridos'
             });
+            return;
         }
 
         let tramo;
         const fechaConsulta = new Date(fecha);
 
-        // Si se proporciona un ID de tramo específico y permitirTramoNoVigente es true
         if (tramoId && permitirTramoNoVigente === true) {
             logger.debug('Buscando tramo específico por ID:', tramoId, 'con permitirTramoNoVigente:', permitirTramoNoVigente);
             tramo = await Tramo.findOne({
@@ -1126,7 +1122,6 @@ exports.calcularTarifa = async (req, res) => {
                 destino
             }).populate('origen destino');
         } else {
-            // Buscar tramo base (sin considerar tarifas históricas)
             logger.debug('Buscando tramo base para fecha:', fecha);
             tramo = await Tramo.findOne({
                 cliente: clienteNombre,
@@ -1136,19 +1131,18 @@ exports.calcularTarifa = async (req, res) => {
         }
 
         if (!tramo) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 message: 'No se encontró un tramo para la ruta especificada'
             });
+            return;
         }
 
-        // Buscar la tarifa histórica vigente para la fecha y tipo especificados o usar la tarifa específica si se proporciona su ID
         let tarifaSeleccionada;
         
         if (tarifaHistoricaId && tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-            // Si se proporciona un ID específico de tarifa histórica, usarla directamente
             logger.debug(`Buscando tarifa histórica específica por ID: ${tarifaHistoricaId}`);
-            tarifaSeleccionada = tramo.tarifasHistoricas.find(t => t._id.toString() === tarifaHistoricaId.toString());
+            tarifaSeleccionada = tramo.tarifasHistoricas.find(t => t._id?.toString() === tarifaHistoricaId.toString());
             
             if (tarifaSeleccionada) {
                 logger.debug(`Usando tarifa histórica específica con ID ${tarifaHistoricaId}:`, {
@@ -1163,24 +1157,22 @@ exports.calcularTarifa = async (req, res) => {
             }
         }
         
-        // Si no se encuentra la tarifa específica, usar la lógica existente
         if (!tarifaSeleccionada) {
-            const tarifaVigente = tramo.getTarifaVigente(fechaConsulta, tipoTramo);
+            const tarifaVigente = (tramo as any).getTarifaVigente(fechaConsulta, tipoTramo);
             
             if (!tarifaVigente && !permitirTramoNoVigente) {
-                return res.status(404).json({
+                res.status(404).json({
                     success: false,
                     message: `No se encontró una tarifa vigente de tipo ${tipoTramo} para la fecha ${fecha}`
                 });
+                return;
             }
             
             tarifaSeleccionada = tarifaVigente;
             
-            // Si se especificó un método de cálculo, buscar una tarifa con ese método
             if (metodoCalculo && tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
                 logger.debug(`Buscando tarifa con método de cálculo: ${metodoCalculo} y tipo: ${tipoTramo}`);
                 
-                // Primero buscar una tarifa vigente con el método de cálculo específico
                 const tarifaEspecifica = tramo.tarifasHistoricas.find(t => 
                     t.tipo === tipoTramo && 
                     t.metodoCalculo === metodoCalculo &&
@@ -1188,7 +1180,6 @@ exports.calcularTarifa = async (req, res) => {
                     new Date(t.vigenciaHasta) >= fechaConsulta
                 );
                 
-                // Si no hay una vigente, usar cualquier tarifa con el método y tipo especificados
                 if (!tarifaEspecifica && permitirTramoNoVigente) {
                     const tarifaNoVigente = tramo.tarifasHistoricas.find(t => 
                         t.tipo === tipoTramo && 
@@ -1206,12 +1197,10 @@ exports.calcularTarifa = async (req, res) => {
             }
         }
 
-        // Obtenemos la información del cliente para sus fórmulas personalizadas
         const cliente = await Cliente.findOne({ Cliente: clienteNombre });
         const numPalets = Number(palets) || 1;
-        const tipoDeUnidad = tipoUnidad || 'Sider'; // Valor por defecto: Sider
+        const tipoDeUnidad = tipoUnidad || 'Sider';
 
-        // Preparar los datos para el cálculo
         const tramoConTarifa = {
             ...tramo.toObject(),
             valor: tarifaSeleccionada ? tarifaSeleccionada.valor : (tramo.valor || 0),
@@ -1220,8 +1209,6 @@ exports.calcularTarifa = async (req, res) => {
             tipo: tarifaSeleccionada ? tarifaSeleccionada.tipo : tipoTramo
         };
 
-        // Para asegurar que se utilicen exactamente los valores de la tarifa seleccionada, 
-        // forzamos estos valores explícitamente
         if (tarifaSeleccionada) {
             logger.debug(`Aplicando valores exactos de la tarifa seleccionada (ID: ${tarifaSeleccionada._id}): valor=${tarifaSeleccionada.valor}, peaje=${tarifaSeleccionada.valorPeaje}`);
             tramoConTarifa.valor = tarifaSeleccionada.valor;
@@ -1231,25 +1218,18 @@ exports.calcularTarifa = async (req, res) => {
 
         logger.debug(`Datos de cálculo: método=${tramoConTarifa.metodoCalculo}, valor=${tramoConTarifa.valor}, peaje=${tramoConTarifa.valorPeaje}`);
 
-        // Obtener la fórmula aplicable usando el nuevo servicio
         const clienteId = cliente ? cliente._id : null;
         if (clienteId && tramoConTarifa.metodoCalculo === 'Palet') {
             try {
-                // Usar la fecha de vigencia de la tarifa seleccionada si está disponible
-                // o la fecha de la consulta como respaldo
                 let fechaDeCalculo;
                 
-                // Usar diferentes fechas en orden de prioridad
                 if (tarifaSeleccionada && tarifaSeleccionada.vigenciaDesde) {
-                    // 1. Usar la fecha específica de la tarifa
                     fechaDeCalculo = new Date(tarifaSeleccionada.vigenciaDesde);
                     logger.debug(`Usando fecha de vigencia de tarifa: ${fechaDeCalculo.toISOString()}`);
                 } else if (fechaConsulta) {
-                    // 2. Usar la fecha de consulta
                     fechaDeCalculo = fechaConsulta;
                     logger.debug(`Usando fecha de consulta: ${fechaDeCalculo.toISOString()}`);
                 } else {
-                    // 3. Usar fecha actual
                     fechaDeCalculo = new Date();
                     logger.debug(`Usando fecha actual: ${fechaDeCalculo.toISOString()}`);
                 }
@@ -1262,7 +1242,6 @@ exports.calcularTarifa = async (req, res) => {
                     Vigencia: ${new Date(tarifaSeleccionada?.vigenciaDesde || 0).toISOString()} - ${new Date(tarifaSeleccionada?.vigenciaHasta || 0).toISOString()}`);
                 
                 try {
-                    // Obtener la fórmula aplicable para este cliente, unidad y fecha
                     const formulaAplicable = await formulaClienteService.getFormulaAplicable(
                         clienteId, 
                         tipoDeUnidad, 
@@ -1271,14 +1250,12 @@ exports.calcularTarifa = async (req, res) => {
                     
                     logger.debug(`Fórmula aplicable para cliente ${clienteNombre}, unidad ${tipoDeUnidad}, fecha ${fechaDeCalculo.toISOString()}: ${formulaAplicable}`);
                     
-                    // Verificar si la fórmula es válida antes de usarla
                     let formulaAplicableCorregida = formulaAplicable;
                     if (!formulaAplicableCorregida) {
                         logger.warn(`No se encontró una fórmula personalizada específica, usando fórmula estándar`);
                         formulaAplicableCorregida = formulaClienteService.FORMULA_ESTANDAR;
                     }
                     
-                    // Asegurarse de que los valores del tramo son correctos
                     if (!tramoConTarifa.valor || tramoConTarifa.valor === 0) {
                         if (tarifaSeleccionada && tarifaSeleccionada.valor) {
                             tramoConTarifa.valor = tarifaSeleccionada.valor;
@@ -1286,7 +1263,6 @@ exports.calcularTarifa = async (req, res) => {
                         }
                     }
                     
-                    // Usar el servicio de tarifa con la fórmula aplicable
                     const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo, formulaAplicableCorregida);
                     
                     logger.debug(`Resultado del cálculo:
@@ -1294,14 +1270,12 @@ exports.calcularTarifa = async (req, res) => {
                         peaje: ${resultado.peaje}
                         total: ${resultado.total}`);
                         
-                    // Asegurar que el total no sea NaN
                     if (isNaN(resultado.total)) {
                         logger.warn('El cálculo resultó en NaN, corrigiendo...');
                         resultado.total = resultado.tarifaBase + resultado.peaje;
                         logger.debug(`Total corregido: ${resultado.total}`);
                     }
                     
-                    // Si el total es 0, intentar con el método estándar
                     if (resultado.total === 0) {
                         logger.warn(`El cálculo con fórmula resultó en 0, intentando con método estándar`);
                         const resultadoEstandar = tarifaService.calcularTarifaTramo({
@@ -1317,32 +1291,30 @@ exports.calcularTarifa = async (req, res) => {
                         }
                     }
                     
-                    // Verificar una vez más si el total es NaN
                     if (isNaN(resultado.total)) {
                         logger.warn('El total sigue siendo NaN, usando cálculo básico');
                         resultado.tarifaBase = tramoConTarifa.valor * numPalets;
                         resultado.total = resultado.tarifaBase + resultado.peaje;
                     }
                     
-                    // Convertir los resultados a números fijos con 2 decimales
-                    const resultadoFinal = {
+                    const resultadoFinal: TarifaCalculationResult = {
                         tarifaBase: resultado.tarifaBase,
                         peaje: resultado.peaje,
                         total: resultado.total,
                         detalles: {
-                            origen: tramo.origen.Site,
-                            destino: tramo.destino.Site,
+                            origen: (tramo.origen as any).Site,
+                            destino: (tramo.destino as any).Site,
                             distancia: tramo.distancia,
                             metodoCalculo: tramoConTarifa.metodoCalculo,
                             tipo: tramoConTarifa.tipo,
                             tipoUnidad: tipoDeUnidad,
                             valor: tramoConTarifa.valor,
                             valorPeaje: tramoConTarifa.valorPeaje,
-                            vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
-                            vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
+                            vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : undefined,
+                            vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : undefined
                         },
                         formula: formulaAplicableCorregida,
-                        tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
+                        tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id?.toString() : undefined
                     };
                     
                     res.json({
@@ -1350,12 +1322,9 @@ exports.calcularTarifa = async (req, res) => {
                         data: resultadoFinal
                     });
                     return;
-                } catch (error) {
+                } catch (error: any) {
                     logger.error(`Error al calcular tarifa con fórmula personalizada: ${error.message}`, error);
-                    // Si llegamos aquí, es porque no se usó una fórmula personalizada o hubo un error
-                    // Vamos a asegurarnos de que los valores en tramoConTarifa son correctos
                     
-                    // Verificar si los valores son 0 o nulos, y tratar de obtenerlos de la tarifa seleccionada
                     if (!tramoConTarifa.valor || tramoConTarifa.valor === 0) {
                         if (tarifaSeleccionada && tarifaSeleccionada.valor) {
                             tramoConTarifa.valor = tarifaSeleccionada.valor;
@@ -1363,7 +1332,6 @@ exports.calcularTarifa = async (req, res) => {
                         }
                     }
                     
-                    // Calcular usando el método estándar correspondiente
                     logger.debug(`Realizando cálculo estándar con método: ${tramoConTarifa.metodoCalculo}`);
                     const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
                     
@@ -1372,25 +1340,24 @@ exports.calcularTarifa = async (req, res) => {
                         peaje: ${resultado.peaje}
                         total: ${resultado.total}`);
                         
-                    // Convertir los resultados a números fijos con 2 decimales
-                    const resultadoFinal = {
+                    const resultadoFinal: TarifaCalculationResult = {
                         tarifaBase: resultado.tarifaBase,
                         peaje: resultado.peaje,
                         total: resultado.total,
                         detalles: {
-                            origen: tramo.origen.Site,
-                            destino: tramo.destino.Site,
+                            origen: (tramo.origen as any).Site,
+                            destino: (tramo.destino as any).Site,
                             distancia: tramo.distancia,
                             metodoCalculo: tramoConTarifa.metodoCalculo,
                             tipo: tramoConTarifa.tipo,
                             tipoUnidad: tipoDeUnidad,
                             valor: tramoConTarifa.valor,
                             valorPeaje: tramoConTarifa.valorPeaje,
-                            vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
-                            vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
+                            vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : undefined,
+                            vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : undefined
                         },
                         formula: 'Estándar',
-                        tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
+                        tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id?.toString() : undefined
                     };
 
                     res.json({
@@ -1398,12 +1365,9 @@ exports.calcularTarifa = async (req, res) => {
                         data: resultadoFinal
                     });
                 }
-            } catch (error) {
+            } catch (error: any) {
                 logger.error(`Error al calcular tarifa con fórmula personalizada: ${error.message}`, error);
-                // Si llegamos aquí, es porque no se usó una fórmula personalizada o hubo un error
-                // Vamos a asegurarnos de que los valores en tramoConTarifa son correctos
                 
-                // Verificar si los valores son 0 o nulos, y tratar de obtenerlos de la tarifa seleccionada
                 if (!tramoConTarifa.valor || tramoConTarifa.valor === 0) {
                     if (tarifaSeleccionada && tarifaSeleccionada.valor) {
                         tramoConTarifa.valor = tarifaSeleccionada.valor;
@@ -1411,7 +1375,6 @@ exports.calcularTarifa = async (req, res) => {
                     }
                 }
                 
-                // Calcular usando el método estándar correspondiente
                 logger.debug(`Realizando cálculo estándar con método: ${tramoConTarifa.metodoCalculo}`);
                 const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
                 
@@ -1420,25 +1383,24 @@ exports.calcularTarifa = async (req, res) => {
                     peaje: ${resultado.peaje}
                     total: ${resultado.total}`);
                     
-                // Convertir los resultados a números fijos con 2 decimales
-                const resultadoFinal = {
+                const resultadoFinal: TarifaCalculationResult = {
                     tarifaBase: resultado.tarifaBase,
                     peaje: resultado.peaje,
                     total: resultado.total,
                     detalles: {
-                        origen: tramo.origen.Site,
-                        destino: tramo.destino.Site,
+                        origen: (tramo.origen as any).Site,
+                        destino: (tramo.destino as any).Site,
                         distancia: tramo.distancia,
                         metodoCalculo: tramoConTarifa.metodoCalculo,
                         tipo: tramoConTarifa.tipo,
                         tipoUnidad: tipoDeUnidad,
                         valor: tramoConTarifa.valor,
                         valorPeaje: tramoConTarifa.valorPeaje,
-                        vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
-                        vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
+                        vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : undefined,
+                        vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : undefined
                     },
                     formula: 'Estándar',
-                    tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
+                    tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id?.toString() : undefined
                 };
 
                 res.json({
@@ -1448,29 +1410,27 @@ exports.calcularTarifa = async (req, res) => {
             }
         }
 
-        // Usar el servicio para calcular la tarifa con el método original
         logger.debug(`Realizando cálculo estándar final con valores directos de tarifa: valor=${tramoConTarifa.valor}, peaje=${tramoConTarifa.valorPeaje}, método=${tramoConTarifa.metodoCalculo}`);
         const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
 
-        // Convertir los resultados a números fijos con 2 decimales
-        const resultadoFinal = {
+        const resultadoFinal: TarifaCalculationResult = {
             tarifaBase: resultado.tarifaBase,
             peaje: resultado.peaje,
             total: resultado.total,
             detalles: {
-                origen: tramo.origen.Site,
-                destino: tramo.destino.Site,
+                origen: (tramo.origen as any).Site,
+                destino: (tramo.destino as any).Site,
                 distancia: tramo.distancia,
                 metodoCalculo: tramoConTarifa.metodoCalculo,
                 tipo: tramoConTarifa.tipo,
                 tipoUnidad: tipoDeUnidad,
                 valor: tramoConTarifa.valor,
                 valorPeaje: tramoConTarifa.valorPeaje,
-                vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : null,
-                vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : null
+                vigenciaDesde: tarifaSeleccionada ? tarifaSeleccionada.vigenciaDesde : undefined,
+                vigenciaHasta: tarifaSeleccionada ? tarifaSeleccionada.vigenciaHasta : undefined
             },
             formula: 'Estándar',
-            tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id : null
+            tarifaHistoricaId: tarifaSeleccionada ? tarifaSeleccionada._id?.toString() : undefined
         };
 
         res.json({
@@ -1478,7 +1438,7 @@ exports.calcularTarifa = async (req, res) => {
             data: resultadoFinal
         });
 
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error al calcular tarifa:', error);
         res.status(500).json({
             success: false,
@@ -1487,6 +1447,3 @@ exports.calcularTarifa = async (req, res) => {
         });
     }
 };
-
-// Export the module
-module.exports = exports;
