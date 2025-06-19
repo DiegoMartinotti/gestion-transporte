@@ -1,19 +1,5 @@
-"use strict";
-const mongoose = require('mongoose');
-/**
- * @typedef {Object} VehiculoSchema
- * @property {string} dominio - Patente/Dominio del vehículo
- * @property {string} tipo - Tipo de vehículo (Camión, Acoplado, etc.)
- * @property {string} [marca] - Marca del vehículo
- * @property {string} [modelo] - Modelo del vehículo
- * @property {number} [año] - Año del vehículo
- * @property {string} [numeroChasis] - Número de chasis
- * @property {string} [numeroMotor] - Número de motor
- * @property {mongoose.Schema.Types.ObjectId} empresa - Empresa propietaria
- * @property {Object} documentacion - Documentación del vehículo
- * @property {boolean} activo - Estado operativo del vehículo
- */
-const vehiculoSchema = new mongoose.Schema({
+import { Schema, model } from 'mongoose';
+const vehiculoSchema = new Schema({
     dominio: {
         type: String,
         required: [true, 'La patente/dominio es obligatoria'],
@@ -58,7 +44,7 @@ const vehiculoSchema = new mongoose.Schema({
         uppercase: true
     },
     empresa: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Empresa',
         required: [true, 'La empresa es obligatoria']
     },
@@ -129,18 +115,17 @@ vehiculoSchema.pre('save', function (next) {
 });
 // Método para verificar vencimientos próximos
 vehiculoSchema.methods.getVencimientosProximos = function (diasLimite = 30) {
-    var _a, _b;
     const hoy = new Date();
     const limite = new Date();
     limite.setDate(limite.getDate() + diasLimite);
     const vencimientos = [];
-    if (((_a = this.documentacion.seguro) === null || _a === void 0 ? void 0 : _a.vencimiento) && this.documentacion.seguro.vencimiento <= limite) {
+    if (this.documentacion?.seguro?.vencimiento && this.documentacion.seguro.vencimiento <= limite) {
         vencimientos.push({
             tipo: 'Seguro',
             vencimiento: this.documentacion.seguro.vencimiento
         });
     }
-    if (((_b = this.documentacion.vtv) === null || _b === void 0 ? void 0 : _b.vencimiento) && this.documentacion.vtv.vencimiento <= limite) {
+    if (this.documentacion?.vtv?.vencimiento && this.documentacion.vtv.vencimiento <= limite) {
         vencimientos.push({
             tipo: 'VTV',
             vencimiento: this.documentacion.vtv.vencimiento
@@ -152,6 +137,6 @@ vehiculoSchema.methods.getVencimientosProximos = function (diasLimite = 30) {
 vehiculoSchema.methods.getResumen = function () {
     return `${this.dominio} - ${this.marca} ${this.modelo} (${this.tipo})`;
 };
-const Vehiculo = mongoose.model('Vehiculo', vehiculoSchema);
-module.exports = Vehiculo;
+const Vehiculo = model('Vehiculo', vehiculoSchema);
+export default Vehiculo;
 //# sourceMappingURL=Vehiculo.js.map

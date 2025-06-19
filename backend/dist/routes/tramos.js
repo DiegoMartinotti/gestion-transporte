@@ -1,28 +1,15 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const Tramo = require('../models/Tramo');
-const Site = require('../models/Site');
-const Cliente = require('../models/Cliente');
-const tramoController = require('../controllers/tramoController');
-const auth = require('../middleware/auth');
-const logger = require('../utils/logger');
+import Tramo from '../models/Tramo';
+import * as tramoController from '../controllers/tramoController';
+import auth from '../middleware/auth';
+import logger from '../utils/logger';
 // Middleware para debugging de solicitudes grandes
 router.use('/bulk', (req, res, next) => {
-    var _a, _b, _c, _d;
     logger.debug('Recibiendo solicitud bulk import:');
     logger.debug('- Headers:', req.headers);
-    logger.debug('- Cliente:', (_a = req.body) === null || _a === void 0 ? void 0 : _a.cliente);
-    logger.debug('- Cantidad tramos:', ((_c = (_b = req.body) === null || _b === void 0 ? void 0 : _b.tramos) === null || _c === void 0 ? void 0 : _c.length) || 0);
+    logger.debug('- Cliente:', req.body?.cliente);
+    logger.debug('- Cantidad tramos:', req.body?.tramos?.length || 0);
     if (!req.body || !req.body.tramos) {
         logger.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
         logger.error('Content-Type:', req.headers['content-type']);
@@ -34,14 +21,14 @@ router.use('/bulk', (req, res, next) => {
                 contentType: req.headers['content-type'],
                 contentLength: req.headers['content-length'],
                 bodyEmpty: !req.body,
-                tramosEmpty: !((_d = req.body) === null || _d === void 0 ? void 0 : _d.tramos)
+                tramosEmpty: !req.body?.tramos
             }
         });
     }
     next();
 });
 // Middleware para verificar el tipo de tramo
-router.use((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.use(async (req, res, next) => {
     if (['POST', 'PUT'].includes(req.method) && req.body.tipo) {
         // Normalizar el tipo a mayúsculas
         req.body.tipo = req.body.tipo.toUpperCase();
@@ -54,16 +41,16 @@ router.use((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
         }
     }
     next();
-}));
+});
 // IMPORTANTE: Primero las rutas específicas
 // Obtener tramos vigentes a una fecha determinada
-router.get('/vigentes/:fecha', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/vigentes/:fecha', async (req, res) => {
     try {
         const fecha = new Date(req.params.fecha);
         if (isNaN(fecha.getTime())) {
             return res.status(400).json({ error: 'La fecha proporcionada no es válida' });
         }
-        const tramos = yield Tramo.find({
+        const tramos = await Tramo.find({
             vigenciaDesde: { $lte: fecha },
             vigenciaHasta: { $gte: fecha }
         }).populate('origen', 'Site location')
@@ -73,12 +60,12 @@ router.get('/vigentes/:fecha', (req, res) => __awaiter(void 0, void 0, void 0, f
     catch (error) {
         res.status(500).json({ error: error.message });
     }
-}));
+});
 // Mejorar la ruta para obtener tramos por cliente
-router.get('/cliente/:cliente', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/cliente/:cliente', async (req, res) => {
     try {
         logger.info('Buscando tramos para cliente:', req.params.cliente);
-        const tramos = yield Tramo.find({ cliente: req.params.cliente })
+        const tramos = await Tramo.find({ cliente: req.params.cliente })
             .populate('origen', 'Site location')
             .populate('destino', 'Site location');
         logger.info(`Se encontraron ${tramos.length} tramos para el cliente ${req.params.cliente}`);
@@ -96,11 +83,11 @@ router.get('/cliente/:cliente', (req, res) => __awaiter(void 0, void 0, void 0, 
             error: error.toString()
         });
     }
-}));
+});
 // Obtener un tramo específico
-router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/:id', async (req, res) => {
     try {
-        const tramo = yield Tramo.findById(req.params.id)
+        const tramo = await Tramo.findById(req.params.id)
             .populate('origen')
             .populate('destino');
         if (!tramo) {
@@ -111,7 +98,7 @@ router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     catch (error) {
         res.status(500).json({ error: error.message });
     }
-}));
+});
 // Después las rutas genéricas
 /**
  * @swagger
@@ -234,7 +221,7 @@ router.get('/', auth, tramoController.getAllTramos);
  */
 router.post('/', auth, tramoController.createTramo);
 // Mejorada la ruta bulk para manejar errores mejor
-router.post('/bulk', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/bulk', async (req, res) => {
     try {
         logger.debug('Bulk import - Headers:', {
             contentType: req.headers['content-type'],
@@ -254,7 +241,7 @@ router.post('/bulk', (req, res) => __awaiter(void 0, void 0, void 0, function* (
             clientePresente: !!cliente,
             tramosPresente: !!tramos,
             tipoTramos: typeof tramos,
-            tramosLength: (tramos === null || tramos === void 0 ? void 0 : tramos.length) || 0
+            tramosLength: tramos?.length || 0
         });
         if (!cliente) {
             return res.status(400).json({
@@ -273,7 +260,7 @@ router.post('/bulk', (req, res) => __awaiter(void 0, void 0, void 0, function* (
             });
         }
         // Llamar al controlador para procesar los tramos
-        yield tramoController.bulkCreateTramos(req, res);
+        await tramoController.bulkCreateTramos(req, res);
     }
     catch (error) {
         logger.error('Error no controlado en bulk import:', error);
@@ -283,10 +270,9 @@ router.post('/bulk', (req, res) => __awaiter(void 0, void 0, void 0, function* (
             error: error.message
         });
     }
-}));
+});
 // Nueva ruta para diagnóstico de duplicados
-router.post('/diagnostico-tipos', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+router.post('/diagnostico-tipos', async (req, res) => {
     try {
         const { cliente, origen, destino, metodoCalculo } = req.body;
         if (!cliente) {
@@ -305,7 +291,7 @@ router.post('/diagnostico-tipos', (req, res) => __awaiter(void 0, void 0, void 0
         if (metodoCalculo)
             baseQuery.metodoCalculo = metodoCalculo;
         // Buscar todos los tramos que coincidan con los criterios
-        const tramos = yield Tramo.find(baseQuery)
+        const tramos = await Tramo.find(baseQuery)
             .populate('origen', 'Site')
             .populate('destino', 'Site')
             .lean();
@@ -319,15 +305,12 @@ router.post('/diagnostico-tipos', (req, res) => __awaiter(void 0, void 0, void 0
                 otros: tramos.filter(t => !['TRMC', 'TRMI'].includes(t.tipo)).length,
                 nulos: tramos.filter(t => !t.tipo).length
             },
-            tramosSinTipoNormalizado: tramos.filter(t => t.tipo && t.tipo !== 'TRMC' && t.tipo !== 'TRMI').map(t => {
-                var _a, _b;
-                return ({
-                    _id: t._id,
-                    origen: (_a = t.origen) === null || _a === void 0 ? void 0 : _a.Site,
-                    destino: (_b = t.destino) === null || _b === void 0 ? void 0 : _b.Site,
-                    tipo: t.tipo
-                });
-            }),
+            tramosSinTipoNormalizado: tramos.filter(t => t.tipo && t.tipo !== 'TRMC' && t.tipo !== 'TRMI').map(t => ({
+                _id: t._id,
+                origen: t.origen?.Site,
+                destino: t.destino?.Site,
+                tipo: t.tipo
+            })),
             posiblesConflictos: []
         };
         // Encontrar pares de tramos que podrían estar en conflicto
@@ -349,8 +332,8 @@ router.post('/diagnostico-tipos', (req, res) => __awaiter(void 0, void 0, void 0
                 if (tiposEnRuta.size > 1) {
                     analisis.posiblesConflictos.push({
                         ruta: ruta,
-                        origen: (_a = tramosRuta[0].origen) === null || _a === void 0 ? void 0 : _a.Site,
-                        destino: (_b = tramosRuta[0].destino) === null || _b === void 0 ? void 0 : _b.Site,
+                        origen: tramosRuta[0].origen?.Site,
+                        destino: tramosRuta[0].destino?.Site,
                         tipos: Array.from(tiposEnRuta),
                         tramos: tramosRuta.map(t => ({
                             _id: t._id,
@@ -376,9 +359,9 @@ router.post('/diagnostico-tipos', (req, res) => __awaiter(void 0, void 0, void 0
             error: error.message
         });
     }
-}));
+});
 // Nuevo endpoint para corregir tipos de tramos
-router.post('/corregir-tipos', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/corregir-tipos', async (req, res) => {
     try {
         const { tramoIds, nuevoTipo } = req.body;
         if (!tramoIds || !Array.isArray(tramoIds) || tramoIds.length === 0) {
@@ -400,11 +383,11 @@ router.post('/corregir-tipos', (req, res) => __awaiter(void 0, void 0, void 0, f
         };
         for (const id of tramoIds) {
             try {
-                const tramo = yield Tramo.findById(id);
+                const tramo = await Tramo.findById(id);
                 if (tramo) {
                     const tipoAnterior = tramo.tipo;
                     tramo.tipo = nuevoTipo;
-                    yield tramo.save();
+                    await tramo.save();
                     resultados.actualizados++;
                     logger.info(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
                 }
@@ -435,7 +418,7 @@ router.post('/corregir-tipos', (req, res) => __awaiter(void 0, void 0, void 0, f
             error: error.message
         });
     }
-}));
+});
 // Actualizar tramo
 /**
  * @swagger
@@ -573,5 +556,5 @@ router.post('/calcular-tarifa', auth, tramoController.calcularTarifa);
  *                         type: number
  */
 router.get('/distancias', tramoController.getDistanciasCalculadas);
-module.exports = router;
+export default router;
 //# sourceMappingURL=tramos.js.map

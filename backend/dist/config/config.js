@@ -1,9 +1,7 @@
-"use strict";
 /**
  * Configuración centralizada de la aplicación
  * Utiliza variables de entorno con valores por defecto
  */
-Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Obtiene el secreto JWT, asegurando que existe
  * @returns El secreto JWT
@@ -49,5 +47,5 @@ const config = {
         }
     }
 };
-exports.default = config;
+export default config;
 //# sourceMappingURL=config.js.map

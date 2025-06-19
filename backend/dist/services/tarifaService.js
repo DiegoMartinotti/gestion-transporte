@@ -1,18 +1,17 @@
-"use strict";
 /**
  * @module services/tarifaService
  * @description Servicio para el cálculo y gestión de tarifas de tramos
  */
-const { calcularTarifaPaletConFormula } = require('../utils/formulaParser');
-const logger = require('../utils/logger');
+import { calcularTarifaPaletConFormula } from '../utils/formulaParser';
+import logger from '../utils/logger';
 /**
  * Calcula la tarifa para un tipo de tramo específico
  *
- * @param {Object} tramo - Objeto tramo completo con toda la información
- * @param {number} palets - Cantidad de palets
- * @param {string} [tipo='TRMC'] - Tipo de tramo
- * @param {string} [formulaCliente=null] - Fórmula personalizada del cliente
- * @returns {Object} Objeto con tarifaBase, peaje y total
+ * @param tramo - Objeto tramo completo con toda la información
+ * @param palets - Cantidad de palets
+ * @param tipo - Tipo de tramo
+ * @param formulaCliente - Fórmula personalizada del cliente
+ * @returns Objeto con tarifaBase, peaje y total
  */
 function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null) {
     try {
@@ -110,7 +109,7 @@ function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null
         else {
             // Para fórmulas personalizadas o cualquier otro método, usar el parser de fórmulas
             logger.debug(`Utilizando método personalizado/fórmula para el cálculo: ${metodoCalculo}`);
-            return calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, metodoCalculo);
+            return calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, metodoCalculo || '');
         }
     }
     catch (error) {
@@ -122,11 +121,11 @@ function calcularTarifaTramo(tramo, palets, tipo = 'TRMC', formulaCliente = null
 /**
  * Obtiene el precio de un tramo completo incluyendo extras
  *
- * @param {Object} tramo - Objeto tramo
- * @param {number} palets - Cantidad de palets
- * @param {Array<Object>} extras - Lista de extras a aplicar
- * @param {string} [tipo='TRMC'] - Tipo de tramo
- * @returns {Object} Objeto con precio base, extras, peaje y total
+ * @param tramo - Objeto tramo
+ * @param palets - Cantidad de palets
+ * @param extras - Lista de extras a aplicar
+ * @param tipo - Tipo de tramo
+ * @returns Objeto con precio base, extras, peaje y total
  */
 function calcularPrecioTramoConExtras(tramo, palets, extras = [], tipo = 'TRMC') {
     try {
@@ -136,7 +135,7 @@ function calcularPrecioTramoConExtras(tramo, palets, extras = [], tipo = 'TRMC')
         let totalExtras = 0;
         const extrasDetalle = [];
         extras.forEach(extra => {
-            const valorExtra = parseFloat(extra.valor) || 0;
+            const valorExtra = parseFloat(extra.valor.toString()) || 0;
             totalExtras += valorExtra;
             extrasDetalle.push({
                 id: extra.id,
@@ -166,8 +165,5 @@ function calcularPrecioTramoConExtras(tramo, palets, extras = [], tipo = 'TRMC')
         };
     }
 }
-module.exports = {
-    calcularTarifaTramo,
-    calcularPrecioTramoConExtras
-};
+export { calcularTarifaTramo, calcularPrecioTramoConExtras };
 //# sourceMappingURL=tarifaService.js.map

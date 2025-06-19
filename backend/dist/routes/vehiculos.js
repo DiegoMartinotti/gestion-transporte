@@ -1,8 +1,6 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { getVehiculos, getVehiculosByEmpresa, getVehiculoById, createVehiculo, updateVehiculo, deleteVehiculo, getVehiculosConVencimientos, getVehiculosVencidos, createVehiculosBulk } = require('../controllers/vehiculoController');
-const logger = require('../utils/logger');
+import { getVehiculos, getVehiculosByEmpresa, getVehiculoById, createVehiculo, updateVehiculo, deleteVehiculo, getVehiculosConVencimientos, getVehiculosVencidos, createVehiculosBulk } from '../controllers/vehiculoController';
 // Rutas básicas CRUD
 router.get('/', getVehiculos);
 router.get('/empresa/:empresaId', getVehiculosByEmpresa);
@@ -13,5 +11,5 @@ router.post('/', createVehiculo);
 router.post('/bulk', createVehiculosBulk);
 router.put('/:id', updateVehiculo);
 router.delete('/:id', deleteVehiculo);
-module.exports = router;
+export default router;
 //# sourceMappingURL=vehiculos.js.map

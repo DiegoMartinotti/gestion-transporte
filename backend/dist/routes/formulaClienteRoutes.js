@@ -1,8 +1,7 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const formulaClienteController = require('../controllers/formulaClienteController');
-// const authMiddleware = require('../middleware/authMiddleware'); // Descomentar si se usa autenticación
+import * as formulaClienteController from '../controllers/formulaClienteController';
+// import authMiddleware from '../middleware/authMiddleware'; // Descomentar si se usa autenticación
 // Aplicar middleware de autenticación si es necesario
 // router.use(authMiddleware);
 // Crear una nueva fórmula personalizada
@@ -13,5 +12,5 @@ router.get('/cliente/:clienteId', formulaClienteController.getFormulasByCliente)
 router.put('/:id', formulaClienteController.updateFormula);
 // Eliminar una fórmula existente
 router.delete('/:id', formulaClienteController.deleteFormula);
-module.exports = router;
+export default router;
 //# sourceMappingURL=formulaClienteRoutes.js.map

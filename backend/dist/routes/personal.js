@@ -1,7 +1,6 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const personalController = require('../controllers/personalController');
+import * as personalController from '../controllers/personalController';
 // Rutas para personal
 router.get('/', personalController.getAllPersonal);
 router.get('/:id', personalController.getPersonalById);
@@ -10,5 +9,5 @@ router.put('/:id', personalController.updatePersonal);
 router.delete('/:id', personalController.deletePersonal);
 // Ruta para importación masiva
 router.post('/bulk', personalController.bulkImportPersonal);
-module.exports = router;
+export default router;
 //# sourceMappingURL=personal.js.map

@@ -1,13 +1,7 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.debugTramo = exports.sonTramosIguales = exports.generarTramoId = exports.fechasSuperpuestas = exports.normalizarFecha = void 0;
 /**
  * Utility para validar tramos y detectar duplicados
  */
-const logger_1 = __importDefault(require("./logger"));
+import logger from './logger';
 /**
  * Normaliza las fechas para manejo consistente
  * @param fecha - La fecha a normalizar
@@ -25,7 +19,6 @@ const normalizarFecha = (fecha) => {
     }
     return new Date(fecha);
 };
-exports.normalizarFecha = normalizarFecha;
 /**
  * Verifica si dos fechas se superponen
  * @param fecha1Desde - Fecha inicio primer rango
@@ -41,25 +34,24 @@ const fechasSuperpuestas = (fecha1Desde, fecha1Hasta, fecha2Desde, fecha2Hasta) 
     const f2Desde = normalizarFecha(fecha2Desde);
     const f2Hasta = normalizarFecha(fecha2Hasta);
     // Verificar superposición y mostrar log detallado
-    logger_1.default.debug('Comparando fechas para superposición:');
-    logger_1.default.debug(`Rango 1: ${f1Desde.toISOString().split('T')[0]} - ${f1Hasta.toISOString().split('T')[0]}`);
-    logger_1.default.debug(`Rango 2: ${f2Desde.toISOString().split('T')[0]} - ${f2Hasta.toISOString().split('T')[0]}`);
+    logger.debug('Comparando fechas para superposición:');
+    logger.debug(`Rango 1: ${f1Desde.toISOString().split('T')[0]} - ${f1Hasta.toISOString().split('T')[0]}`);
+    logger.debug(`Rango 2: ${f2Desde.toISOString().split('T')[0]} - ${f2Hasta.toISOString().split('T')[0]}`);
     // Dos rangos se superponen si el inicio de uno es anterior o igual al fin del otro
     // Y el fin de uno es posterior o igual al inicio del otro
     const haySuper = f1Desde <= f2Hasta && f2Desde <= f1Hasta;
     if (haySuper) {
-        logger_1.default.debug('⚠️ SUPERPOSICIÓN DETECTADA');
-        logger_1.default.debug(`Rango 1 inicia antes del fin de Rango 2: ${f1Desde <= f2Hasta}`);
-        logger_1.default.debug(`Rango 2 inicia antes del fin de Rango 1: ${f2Desde <= f1Hasta}`);
+        logger.debug('⚠️ SUPERPOSICIÓN DETECTADA');
+        logger.debug(`Rango 1 inicia antes del fin de Rango 2: ${f1Desde <= f2Hasta}`);
+        logger.debug(`Rango 2 inicia antes del fin de Rango 1: ${f2Desde <= f1Hasta}`);
     }
     else {
-        logger_1.default.debug('✅ No hay superposición');
-        logger_1.default.debug(`Rango 1 termina antes de que inicie Rango 2: ${f1Hasta < f2Desde}`);
-        logger_1.default.debug(`Rango 2 termina antes de que inicie Rango 1: ${f2Hasta < f1Desde}`);
+        logger.debug('✅ No hay superposición');
+        logger.debug(`Rango 1 termina antes de que inicie Rango 2: ${f1Hasta < f2Desde}`);
+        logger.debug(`Rango 2 termina antes de que inicie Rango 1: ${f2Hasta < f1Desde}`);
     }
     return haySuper;
 };
-exports.fechasSuperpuestas = fechasSuperpuestas;
 /**
  * Genera un identificador único para un tramo basado en sus propiedades
  * @param tramo - El objeto tramo
@@ -74,13 +66,12 @@ const generarTramoId = (tramo) => {
     // Normalizar método de cálculo
     const metodo = tramo.metodoCalculo || 'Palet';
     // Log de diagnóstico mejorado
-    logger_1.default.debug(`[DIAGNÓSTICO] generarTramoId - Datos: origen=${tramo.origen}, destino=${tramo.destino}, tipo=${tipo}, metodo=${metodo}`);
+    logger.debug(`[DIAGNÓSTICO] generarTramoId - Datos: origen=${tramo.origen}, destino=${tramo.destino}, tipo=${tipo}, metodo=${metodo}`);
     // Crear un ID que garantice la distinción por tipo
     const id = `${tramo.origen}:${tramo.destino}:${tipo}:${metodo}`;
-    logger_1.default.debug(`[DIAGNÓSTICO] ID generado: ${id}`);
+    logger.debug(`[DIAGNÓSTICO] ID generado: ${id}`);
     return id;
 };
-exports.generarTramoId = generarTramoId;
 /**
  * Verifica si dos tramos son exactamente iguales (misma ruta, tipo y método)
  * @param tramo1 - Primer tramo
@@ -96,26 +87,25 @@ const sonTramosIguales = (tramo1, tramo2) => {
         tipo1 === tipo2 &&
         (tramo1.metodoCalculo || 'Palet') === (tramo2.metodoCalculo || 'Palet'));
     // Log detallado
-    logger_1.default.debug(`sonTramosIguales: Comparando tramos - Resultado: ${sonIguales}`);
-    logger_1.default.debug(`Tipo 1: ${tipo1}, Tipo 2: ${tipo2}`);
+    logger.debug(`sonTramosIguales: Comparando tramos - Resultado: ${sonIguales}`);
+    logger.debug(`Tipo 1: ${tipo1}, Tipo 2: ${tipo2}`);
     return sonIguales;
 };
-exports.sonTramosIguales = sonTramosIguales;
 /**
  * Debug: Imprime los detalles completos de un tramo para diagnóstico
  * @param tramo - El tramo a inspeccionar
  * @param etiqueta - Etiqueta para identificar el log
  */
 const debugTramo = (tramo, etiqueta = 'Tramo') => {
-    logger_1.default.debug(`------ DEBUG ${etiqueta} ------`);
-    logger_1.default.debug(`ID: ${generarTramoId(tramo)}`);
-    logger_1.default.debug(`Origen: ${tramo.origen}`);
-    logger_1.default.debug(`Destino: ${tramo.destino}`);
-    logger_1.default.debug(`Tipo: ${tramo.tipo} (normalizado: ${tramo.tipo ? tramo.tipo.toUpperCase() : 'TRMC'})`);
-    logger_1.default.debug(`Método: ${tramo.metodoCalculo || 'Kilometro'}`);
-    logger_1.default.debug(`Cliente: ${tramo.cliente}`);
-    logger_1.default.debug(`Vigencia: ${tramo.vigenciaDesde} - ${tramo.vigenciaHasta}`);
-    logger_1.default.debug('-------------------------');
+    logger.debug(`------ DEBUG ${etiqueta} ------`);
+    logger.debug(`ID: ${generarTramoId(tramo)}`);
+    logger.debug(`Origen: ${tramo.origen}`);
+    logger.debug(`Destino: ${tramo.destino}`);
+    logger.debug(`Tipo: ${tramo.tipo} (normalizado: ${tramo.tipo ? tramo.tipo.toUpperCase() : 'TRMC'})`);
+    logger.debug(`Método: ${tramo.metodoCalculo || 'Kilometro'}`);
+    logger.debug(`Cliente: ${tramo.cliente}`);
+    logger.debug(`Vigencia: ${tramo.vigenciaDesde} - ${tramo.vigenciaHasta}`);
+    logger.debug('-------------------------');
 };
-exports.debugTramo = debugTramo;
+export { normalizarFecha, fechasSuperpuestas, generarTramoId, sonTramosIguales, debugTramo };
 //# sourceMappingURL=tramoValidator.js.map

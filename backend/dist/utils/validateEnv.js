@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Valida que las variables de entorno requeridas estén configuradas
  * @returns true si todas las variables requeridas están presentes
@@ -21,5 +19,5 @@ const validateEnv = () => {
     console.log('✅ Variables de entorno validadas correctamente');
     return true;
 };
-exports.default = validateEnv;
+export default validateEnv;
 //# sourceMappingURL=validateEnv.js.map

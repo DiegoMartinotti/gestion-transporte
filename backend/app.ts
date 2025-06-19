@@ -1,13 +1,13 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/database';
 import logger from './utils/logger';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler';
 import config from './config/config';
 import validateEnv from './config/validateEnv';
-import rateLimit from 'express-rate-limit';
 
 // Validar variables de entorno
 validateEnv();
@@ -29,7 +29,7 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json({
     limit: config.bodyLimits.json,
-    verify: (req: express.Request, res: express.Response, buf: Buffer) => {
+    verify: (req: Request, res: Response, buf: Buffer) => {
         try {
             JSON.parse(buf.toString());
         } catch (e) {
@@ -52,7 +52,7 @@ import securityMiddleware from './middleware/security';
 app.use(securityMiddleware);
 
 // Improved request logging
-app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
     // En producción, solo registrar errores
     if (process.env.NODE_ENV === 'production') {
         res.on('finish', () => {
@@ -71,7 +71,7 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
 });
 
 // Test endpoint
-app.get('/api/test', (req: express.Request, res: express.Response) => {
+app.get('/api/test', (req: Request, res: Response) => {
     res.json({ message: 'API funcionando correctamente' });
 });
 
@@ -104,7 +104,7 @@ app.use(errorHandler);
 
 // Middleware global para manejo de errores
 // Este middleware debe colocarse después de todas las rutas y otros middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     // Loguear el error
     logger.error('Error no controlado:', err);
     
@@ -116,7 +116,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     let errorMessage = err.message || 'Error interno del servidor';
     
     // Para errores de sintaxis JSON, personalizar el mensaje
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    if (err instanceof SyntaxError && 'status' in err && (err as any).status === 400 && 'body' in err) {
         errorMessage = 'JSON inválido';
     }
     
@@ -128,7 +128,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     });
 });
 
-async function startServer() {
+async function startServer(): Promise<void> {
     try {
         await connectDB();
         app.listen(port, () => {

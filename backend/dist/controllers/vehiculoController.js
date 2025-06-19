@@ -1,57 +1,49 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const Vehiculo = require('../models/Vehiculo');
-const Empresa = require('../models/Empresa');
-const logger = require('../utils/logger');
+import Vehiculo from '../models/Vehiculo';
+import Empresa from '../models/Empresa';
+import logger from '../utils/logger';
+import ApiResponse from '../utils/ApiResponse';
 /**
  * @desc    Obtener todos los vehículos
  * @route   GET /api/vehiculos
  * @access  Private
  */
-const getVehiculos = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getVehiculos = async (req, res) => {
     try {
-        const vehiculos = yield Vehiculo.find().populate('empresa', 'nombre tipo');
+        const vehiculos = await Vehiculo.find().populate('empresa', 'nombre tipo');
         res.json(vehiculos);
     }
     catch (error) {
         logger.error('Error al obtener vehículos:', error);
         res.status(500).json({ message: 'Error al obtener vehículos', error: error.message });
     }
-});
+};
 /**
  * @desc    Obtener vehículos por empresa
  * @route   GET /api/vehiculos/empresa/:empresaId
  * @access  Private
  */
-const getVehiculosByEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getVehiculosByEmpresa = async (req, res) => {
     try {
         const { empresaId } = req.params;
-        const vehiculos = yield Vehiculo.find({ empresa: empresaId }).populate('empresa', 'nombre tipo');
+        const vehiculos = await Vehiculo.find({ empresa: empresaId }).populate('empresa', 'nombre tipo');
         res.json(vehiculos);
     }
     catch (error) {
         logger.error(`Error al obtener vehículos de la empresa ${req.params.empresaId}:`, error);
         res.status(500).json({ message: 'Error al obtener vehículos por empresa', error: error.message });
     }
-});
+};
 /**
  * @desc    Obtener un vehículo por ID
  * @route   GET /api/vehiculos/:id
  * @access  Private
  */
-const getVehiculoById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getVehiculoById = async (req, res) => {
     try {
-        const vehiculo = yield Vehiculo.findById(req.params.id).populate('empresa', 'nombre tipo');
+        const vehiculo = await Vehiculo.findById(req.params.id).populate('empresa', 'nombre tipo');
         if (!vehiculo) {
-            return res.status(404).json({ message: 'Vehículo no encontrado' });
+            res.status(404).json({ message: 'Vehículo no encontrado' });
+            return;
         }
         res.json(vehiculo);
     }
@@ -59,24 +51,26 @@ const getVehiculoById = (req, res) => __awaiter(void 0, void 0, void 0, function
         logger.error(`Error al obtener vehículo ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error al obtener vehículo', error: error.message });
     }
-});
+};
 /**
  * @desc    Crear un nuevo vehículo
  * @route   POST /api/vehiculos
  * @access  Private
  */
-const createVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const createVehiculo = async (req, res) => {
     try {
         const { dominio, tipo, marca, modelo, año, numeroChasis, numeroMotor, empresa, documentacion, caracteristicas, activo, observaciones } = req.body;
         // Verificar que la empresa existe
-        const empresaExiste = yield Empresa.findById(empresa);
+        const empresaExiste = await Empresa.findById(empresa);
         if (!empresaExiste) {
-            return res.status(400).json({ message: 'La empresa especificada no existe' });
+            res.status(400).json({ message: 'La empresa especificada no existe' });
+            return;
         }
         // Verificar si ya existe un vehículo con el mismo dominio
-        const dominioExiste = yield Vehiculo.findOne({ dominio: dominio.toUpperCase() });
+        const dominioExiste = await Vehiculo.findOne({ dominio: dominio.toUpperCase() });
         if (dominioExiste) {
-            return res.status(400).json({ message: 'Ya existe un vehículo con ese dominio' });
+            res.status(400).json({ message: 'Ya existe un vehículo con ese dominio' });
+            return;
         }
         const vehiculo = new Vehiculo({
             dominio,
@@ -92,49 +86,52 @@ const createVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function*
             activo,
             observaciones
         });
-        const vehiculoGuardado = yield vehiculo.save();
+        const vehiculoGuardado = await vehiculo.save();
         // Actualizar la referencia en la empresa
-        yield Empresa.findByIdAndUpdate(empresa, { $push: { flota: vehiculoGuardado._id } });
+        await Empresa.findByIdAndUpdate(empresa, { $push: { flota: vehiculoGuardado._id } });
         res.status(201).json(vehiculoGuardado);
     }
     catch (error) {
         logger.error('Error al crear vehículo:', error);
         res.status(500).json({ message: 'Error al crear vehículo', error: error.message });
     }
-});
+};
 /**
  * @desc    Actualizar un vehículo
  * @route   PUT /api/vehiculos/:id
  * @access  Private
  */
-const updateVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const updateVehiculo = async (req, res) => {
     try {
         const { dominio, tipo, marca, modelo, año, numeroChasis, numeroMotor, empresa, documentacion, caracteristicas, activo, observaciones } = req.body;
         // Verificar que la empresa existe
-        const empresaExiste = yield Empresa.findById(empresa);
+        const empresaExiste = await Empresa.findById(empresa);
         if (!empresaExiste) {
-            return res.status(400).json({ message: 'La empresa especificada no existe' });
+            res.status(400).json({ message: 'La empresa especificada no existe' });
+            return;
         }
         // Verificar si el vehículo existe
-        const vehiculo = yield Vehiculo.findById(req.params.id);
+        const vehiculo = await Vehiculo.findById(req.params.id);
         if (!vehiculo) {
-            return res.status(404).json({ message: 'Vehículo no encontrado' });
+            res.status(404).json({ message: 'Vehículo no encontrado' });
+            return;
         }
         // Si se cambia el dominio, verificar que no exista otro con ese dominio
         if (dominio && dominio.toUpperCase() !== vehiculo.dominio) {
-            const dominioExiste = yield Vehiculo.findOne({ dominio: dominio.toUpperCase() });
+            const dominioExiste = await Vehiculo.findOne({ dominio: dominio.toUpperCase() });
             if (dominioExiste) {
-                return res.status(400).json({ message: 'Ya existe un vehículo con ese dominio' });
+                res.status(400).json({ message: 'Ya existe un vehículo con ese dominio' });
+                return;
             }
         }
         // Si se cambia la empresa, actualizar las referencias
         if (empresa && empresa.toString() !== vehiculo.empresa.toString()) {
             // Eliminar de la empresa anterior
-            yield Empresa.findByIdAndUpdate(vehiculo.empresa, { $pull: { flota: vehiculo._id } });
+            await Empresa.findByIdAndUpdate(vehiculo.empresa, { $pull: { flota: vehiculo._id } });
             // Agregar a la nueva empresa
-            yield Empresa.findByIdAndUpdate(empresa, { $push: { flota: vehiculo._id } });
+            await Empresa.findByIdAndUpdate(empresa, { $push: { flota: vehiculo._id } });
         }
-        const vehiculoActualizado = yield Vehiculo.findByIdAndUpdate(req.params.id, {
+        const vehiculoActualizado = await Vehiculo.findByIdAndUpdate(req.params.id, {
             dominio,
             tipo,
             marca,
@@ -148,46 +145,47 @@ const updateVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function*
             activo,
             observaciones
         }, { new: true, runValidators: true });
-        res.json(vehiculoActualizado);
+        res.json(vehiculoActualizado?.toObject());
     }
     catch (error) {
         logger.error(`Error al actualizar vehículo ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error al actualizar vehículo', error: error.message });
     }
-});
+};
 /**
  * @desc    Eliminar un vehículo
  * @route   DELETE /api/vehiculos/:id
  * @access  Private
  */
-const deleteVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const deleteVehiculo = async (req, res) => {
     try {
-        const vehiculo = yield Vehiculo.findById(req.params.id);
+        const vehiculo = await Vehiculo.findById(req.params.id);
         if (!vehiculo) {
-            return res.status(404).json({ message: 'Vehículo no encontrado' });
+            res.status(404).json({ message: 'Vehículo no encontrado' });
+            return;
         }
         // Eliminar la referencia en la empresa
-        yield Empresa.findByIdAndUpdate(vehiculo.empresa, { $pull: { flota: vehiculo._id } });
-        yield vehiculo.remove();
+        await Empresa.findByIdAndUpdate(vehiculo.empresa, { $pull: { flota: vehiculo._id } });
+        await vehiculo.deleteOne();
         res.json({ message: 'Vehículo eliminado correctamente' });
     }
     catch (error) {
         logger.error(`Error al eliminar vehículo ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error al eliminar vehículo', error: error.message });
     }
-});
+};
 /**
  * @desc    Obtener vehículos con documentación próxima a vencer
  * @route   GET /api/vehiculos/vencimientos/:dias
  * @access  Private
  */
-const getVehiculosConVencimientos = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getVehiculosConVencimientos = async (req, res) => {
     try {
         const diasLimite = parseInt(req.params.dias) || 30;
         const hoy = new Date();
         const limite = new Date();
         limite.setDate(limite.getDate() + diasLimite);
-        const vehiculos = yield Vehiculo.find({
+        const vehiculos = await Vehiculo.find({
             $or: [
                 { 'documentacion.seguro.vencimiento': { $gte: hoy, $lte: limite } },
                 { 'documentacion.vtv.vencimiento': { $gte: hoy, $lte: limite } },
@@ -201,16 +199,16 @@ const getVehiculosConVencimientos = (req, res) => __awaiter(void 0, void 0, void
         logger.error('Error al obtener vehículos con vencimientos próximos:', error);
         res.status(500).json({ message: 'Error al obtener vehículos con vencimientos', error: error.message });
     }
-});
+};
 /**
  * @desc    Obtener vehículos con documentación vencida
  * @route   GET /api/vehiculos/vencidos
  * @access  Private
  */
-const getVehiculosVencidos = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getVehiculosVencidos = async (req, res) => {
     try {
         const hoy = new Date();
-        const vehiculos = yield Vehiculo.find({
+        const vehiculos = await Vehiculo.find({
             $or: [
                 { 'documentacion.seguro.vencimiento': { $lt: hoy } },
                 { 'documentacion.vtv.vencimiento': { $lt: hoy } },
@@ -224,93 +222,88 @@ const getVehiculosVencidos = (req, res) => __awaiter(void 0, void 0, void 0, fun
         logger.error('Error al obtener vehículos con documentación vencida:', error);
         res.status(500).json({ message: 'Error al obtener vehículos vencidos', error: error.message });
     }
-});
+};
 /**
  * @desc    Crear múltiples vehículos en una sola operación (carga masiva)
  * @route   POST /api/vehiculos/bulk
  * @access  Private
  */
-const createVehiculosBulk = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const createVehiculosBulk = async (req, res) => {
     try {
         const { vehiculos } = req.body;
         if (!vehiculos || !Array.isArray(vehiculos) || vehiculos.length === 0) {
-            return res.status(400).json({ message: 'No se proporcionaron vehículos para cargar' });
+            res.status(400).json({ message: 'No se proporcionaron vehículos para cargar' });
+            return;
         }
         logger.info(`Iniciando carga masiva de ${vehiculos.length} vehículos`);
         // Validar que todos los vehículos tengan los campos requeridos
         const vehiculosInvalidos = vehiculos.filter(v => !v.dominio || !v.tipo || !v.empresa);
         if (vehiculosInvalidos.length > 0) {
-            return res.status(400).json({
+            res.status(400).json({
                 message: 'Algunos vehículos no tienen los campos requeridos (dominio, tipo, empresa)',
-                vehiculosInvalidos
+                data: vehiculosInvalidos
             });
+            return;
         }
         // Verificar que todas las empresas existan
         const empresasIds = [...new Set(vehiculos.map(v => v.empresa))];
-        const empresasExistentes = yield Empresa.find({ _id: { $in: empresasIds } });
+        const empresasExistentes = await Empresa.find({ _id: { $in: empresasIds } });
         if (empresasExistentes.length !== empresasIds.length) {
-            return res.status(400).json({ message: 'Una o más empresas especificadas no existen' });
+            res.status(400).json({ message: 'Una o más empresas especificadas no existen' });
+            return;
         }
         // Verificar dominios duplicados en la base de datos
         const dominios = vehiculos.map(v => v.dominio.toUpperCase());
-        const dominiosExistentes = yield Vehiculo.find({ dominio: { $in: dominios } });
+        const dominiosExistentes = await Vehiculo.find({ dominio: { $in: dominios } });
         if (dominiosExistentes.length > 0) {
-            return res.status(400).json({
+            res.status(400).json({
                 message: 'Algunos dominios ya existen en la base de datos',
-                dominiosExistentes: dominiosExistentes.map(v => v.dominio)
+                data: dominiosExistentes.map(v => v.dominio)
             });
+            return;
         }
         // Verificar dominios duplicados en la carga
         const dominiosUnicos = new Set(dominios);
         if (dominiosUnicos.size !== dominios.length) {
-            return res.status(400).json({ message: 'Hay dominios duplicados en la carga' });
+            res.status(400).json({ message: 'Hay dominios duplicados en la carga' });
+            return;
         }
         // Preparar los vehículos para inserción
-        const vehiculosPreparados = vehiculos.map(v => (Object.assign(Object.assign({}, v), { dominio: v.dominio.toUpperCase() })));
+        const vehiculosPreparados = vehiculos.map(v => ({
+            ...v,
+            dominio: v.dominio.toUpperCase()
+        }));
         // Insertar los vehículos en la base de datos
-        const vehiculosInsertados = yield Vehiculo.insertMany(vehiculosPreparados);
+        const vehiculosInsertados = await Vehiculo.insertMany(vehiculosPreparados);
         // Actualizar las referencias en las empresas
         for (const vehiculo of vehiculosInsertados) {
-            yield Empresa.findByIdAndUpdate(vehiculo.empresa, { $push: { flota: vehiculo._id } });
+            await Empresa.findByIdAndUpdate(vehiculo.empresa, { $push: { flota: vehiculo._id } });
         }
         logger.info(`Carga masiva completada: ${vehiculosInsertados.length} vehículos insertados`);
         res.status(201).json({
             message: 'Vehículos cargados exitosamente',
             insertados: vehiculosInsertados.length,
-            vehiculos: vehiculosInsertados
+            vehiculos: vehiculosInsertados.map(v => v.toObject())
         });
     }
     catch (error) {
         logger.error('Error en carga masiva de vehículos:', error);
         // Manejar errores específicos de validación de MongoDB
         if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                message: 'Error de validación en los datos de los vehículos',
-                errores: Object.values(error.errors).map(e => e.message)
-            });
+            return ApiResponse.error(res, 'Error de validación en los datos de los vehículos', 400, Object.values(error.errors).map((e) => e.message));
         }
         // Manejar errores de duplicados
         if (error.code === 11000) {
-            return res.status(400).json({
+            res.status(400).json({
                 message: 'Hay dominios duplicados que ya existen en la base de datos',
                 error: error.message
             });
+            return;
         }
         res.status(500).json({
             message: 'Error al procesar la carga masiva de vehículos',
             error: error.message
         });
     }
-});
-module.exports = {
-    getVehiculos,
-    getVehiculosByEmpresa,
-    getVehiculoById,
-    createVehiculo,
-    updateVehiculo,
-    deleteVehiculo,
-    getVehiculosConVencimientos,
-    getVehiculosVencidos,
-    createVehiculosBulk
 };
 //# sourceMappingURL=vehiculoController.js.map

@@ -1,8 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const mongoose_1 = require("mongoose");
+import { Schema, model } from 'mongoose';
 // Schema de Mongoose para la Empresa
-const empresaSchema = new mongoose_1.Schema({
+const empresaSchema = new Schema({
     nombre: {
         type: String,
         required: [true, 'El nombre de la empresa es obligatorio'],
@@ -53,11 +51,11 @@ const empresaSchema = new mongoose_1.Schema({
         trim: true
     },
     flota: [{
-            type: mongoose_1.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: 'Vehiculo'
         }],
     personal: [{
-            type: mongoose_1.Schema.Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: 'Personal'
         }],
     activa: {
@@ -89,5 +87,5 @@ empresaSchema.methods.getInfoContacto = function () {
     return contacto.join(' | ') || 'Sin información de contacto';
 };
 // Exportar el modelo con tipado
-exports.default = (0, mongoose_1.model)('Empresa', empresaSchema);
+export default model('Empresa', empresaSchema);
 //# sourceMappingURL=Empresa.js.map

@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import Vehiculo, { IVehiculo } from '../models/Vehiculo';
 import Empresa, { IEmpresa } from '../models/Empresa';
 import logger from '../utils/logger';
+import ApiResponse from '../utils/ApiResponse';
 
 /**
  * Interface for authenticated user in request
@@ -254,7 +255,7 @@ export const updateVehiculo = async (req: Request<{ id: string }, IVehiculo | Ap
             { new: true, runValidators: true }
         );
 
-        res.json(vehiculoActualizado);
+        res.json(vehiculoActualizado?.toObject());
     } catch (error: any) {
         logger.error(`Error al actualizar vehículo ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error al actualizar vehículo', error: error.message });
@@ -419,18 +420,19 @@ export const createVehiculosBulk = async (req: Request<{}, BulkImportResult | Ap
         res.status(201).json({
             message: 'Vehículos cargados exitosamente',
             insertados: vehiculosInsertados.length,
-            vehiculos: vehiculosInsertados
+            vehiculos: vehiculosInsertados.map(v => v.toObject())
         });
     } catch (error: any) {
         logger.error('Error en carga masiva de vehículos:', error);
         
         // Manejar errores específicos de validación de MongoDB
         if (error.name === 'ValidationError') {
-            res.status(400).json({ 
-                message: 'Error de validación en los datos de los vehículos',
-                error: Object.values(error.errors).map((e: any) => e.message)
-            });
-            return;
+            return ApiResponse.error(
+                res,
+                'Error de validación en los datos de los vehículos',
+                400,
+                Object.values(error.errors).map((e: any) => e.message)
+            );
         }
         
         // Manejar errores de duplicados

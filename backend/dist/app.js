@@ -1,22 +1,13 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const { connectDB } = require('./config/database');
-const logger = require('./utils/logger');
-const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
-const config = require('./config/config');
-const validateEnv = require('./config/validateEnv');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+import { connectDB } from './config/database';
+import logger from './utils/logger';
+import { notFoundHandler, errorHandler } from './middleware/errorHandler';
+import config from './config/config';
+import validateEnv from './config/validateEnv';
 // Validar variables de entorno
 validateEnv();
 const app = express();
@@ -35,7 +26,7 @@ app.use(express.json({
     limit: config.bodyLimits.json,
     verify: (req, res, buf) => {
         try {
-            JSON.parse(buf);
+            JSON.parse(buf.toString());
         }
         catch (e) {
             logger.error('Error al analizar JSON en verify:', e.message);
@@ -50,7 +41,7 @@ app.use(express.urlencoded({
 }));
 app.use(cookieParser());
 // Importar y configurar middleware de seguridad
-const securityMiddleware = require('./middleware/security');
+import securityMiddleware from './middleware/security';
 app.use(securityMiddleware);
 // Improved request logging
 app.use((req, res, next) => {
@@ -76,11 +67,11 @@ app.get('/api/test', (req, res) => {
     res.json({ message: 'API funcionando correctamente' });
 });
 // Routes
-const authRouter = require('./routes/auth');
-const apiRoutes = require('./routes/index');
-const proxyRouter = require('./routes/proxy');
+import authRouter from './routes/auth';
+import apiRoutes from './routes/index';
+import proxyRouter from './routes/proxy';
 // Rate Limiter específico para Proxy
-const proxyLimiter = require('express-rate-limit')({
+const proxyLimiter = rateLimit({
     windowMs: config.rateLimiting.proxy.windowMs,
     max: config.rateLimiting.proxy.max,
     message: { error: 'Demasiadas solicitudes de geocodificación, por favor intente más tarde' },
@@ -107,31 +98,33 @@ app.use((err, req, res, next) => {
     // Determinar mensaje de error
     let errorMessage = err.message || 'Error interno del servidor';
     // Para errores de sintaxis JSON, personalizar el mensaje
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    if (err instanceof SyntaxError && 'status' in err && err.status === 400 && 'body' in err) {
         errorMessage = 'JSON inválido';
     }
     // Enviar respuesta estandarizada
-    res.status(statusCode).json(Object.assign({ success: false, message: errorMessage }, (process.env.NODE_ENV === 'development' && { stack: err.stack })));
-});
-function startServer() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            yield connectDB();
-            app.listen(port, () => {
-                logger.info(`Servidor ejecutándose en http://localhost:${port}`);
-                logger.info('Rutas disponibles:');
-                logger.info('- POST /api/auth/login');
-                logger.info('- POST /api/auth/register');
-                logger.info('- GET /api/test');
-            });
-        }
-        catch (error) {
-            logger.error(`Error al iniciar el servidor: ${error.message}`);
-            process.exit(1);
-        }
+    res.status(statusCode).json({
+        success: false,
+        message: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
+});
+async function startServer() {
+    try {
+        await connectDB();
+        app.listen(port, () => {
+            logger.info(`Servidor ejecutándose en http://localhost:${port}`);
+            logger.info('Rutas disponibles:');
+            logger.info('- POST /api/auth/login');
+            logger.info('- POST /api/auth/register');
+            logger.info('- GET /api/test');
+        });
+    }
+    catch (error) {
+        logger.error(`Error al iniciar el servidor: ${error.message}`);
+        process.exit(1);
+    }
 }
 startServer();
 // Exportar la app para poder usarla en server.js
-module.exports = app;
+export default app;
 //# sourceMappingURL=app.js.map

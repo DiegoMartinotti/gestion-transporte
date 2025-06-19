@@ -1,9 +1,8 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('../config/swaggerConfig');
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpecs from '../config/swaggerConfig';
 router.use('/', swaggerUi.serve);
 router.get('/', swaggerUi.setup(swaggerSpecs));
-module.exports = router;
+export default router;
 //# sourceMappingURL=swagger.js.map

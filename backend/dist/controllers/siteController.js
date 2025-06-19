@@ -1,40 +1,30 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const Site = require('../models/Site');
-const { tryCatch } = require('../utils/errorHandler');
-const { ValidationError } = require('../utils/errors');
-const logger = require('../utils/logger');
+import Site from '../models/Site';
+import { tryCatch } from '../utils/errorHandler';
+import { ValidationError } from '../utils/errors';
+import logger from '../utils/logger';
 /**
  * Get sites by client
  * @route GET /api/sites
- * @param {string} cliente - Client name
- * @returns {Array<Site>} List of sites
+ * @param cliente - Client name
+ * @returns List of sites
  */
-exports.getSites = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getSites = tryCatch(async (req, res) => {
     const { cliente } = req.query;
-    if (!cliente) {
+    if (!cliente || typeof cliente !== 'string') {
         throw new ValidationError('Cliente es requerido');
     }
-    const sites = yield Site.find({ Cliente: cliente })
+    const sites = await Site.find({ cliente: cliente })
         .lean()
         .exec();
-    // Mapear los campos para que el frontend reciba nombre, tipo y codigo
+    // Mapear los campos para que el frontend reciba nombre y codigo
     const sitesFormateados = sites.map(site => ({
-        _id: site._id,
-        nombre: site.Site,
-        tipo: site.Tipo || '',
-        codigo: site.Codigo || '',
-        direccion: site.Direccion || '',
-        localidad: site.Localidad || '',
-        provincia: site.Provincia || '',
+        _id: site._id.toString(),
+        nombre: site.nombre,
+        tipo: '', // Campo tipo no existe en el modelo
+        codigo: site.codigo || '',
+        direccion: site.direccion || '',
+        localidad: site.localidad || '',
+        provincia: site.provincia || '',
         coordenadas: site.location && Array.isArray(site.location.coordinates)
             ? { lng: site.location.coordinates[0], lat: site.location.coordinates[1] }
             : null
@@ -45,57 +35,61 @@ exports.getSites = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, func
         count: sitesFormateados.length,
         data: sitesFormateados
     });
-}));
-exports.createSite = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+export const createSite = async (req, res) => {
     try {
         const nuevoSite = new Site({
-            Site: req.body.site,
-            Cliente: req.body.cliente,
-            Direccion: req.body.direccion || '-',
-            Localidad: req.body.localidad || '',
-            Provincia: req.body.provincia || '',
+            nombre: req.body.site,
+            cliente: req.body.cliente,
+            direccion: req.body.direccion || '-',
+            localidad: req.body.localidad || '',
+            provincia: req.body.provincia || '',
             location: req.body.location || null
         });
-        yield nuevoSite.save();
+        await nuevoSite.save();
         res.status(201).json(nuevoSite);
     }
     catch (error) {
         if (error.code === 11000) {
-            return res.status(400).json({
+            res.status(400).json({
+                success: false,
                 message: 'Ya existe un site con este nombre para este cliente'
             });
+            return;
         }
         logger.error('Error al crear site:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
-});
-exports.updateSite = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+};
+export const updateSite = async (req, res) => {
     try {
-        const site = yield Site.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const site = await Site.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!site) {
-            return res.status(404).json({ message: 'Site no encontrado' });
+            res.status(404).json({ success: false, message: 'Site no encontrado' });
+            return;
         }
         res.json(site);
     }
     catch (error) {
         logger.error('Error al actualizar site:', error);
-        res.status(500).json({ message: 'Error al actualizar site' });
+        res.status(500).json({ success: false, message: 'Error al actualizar site' });
     }
-});
-exports.deleteSite = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+};
+export const deleteSite = async (req, res) => {
     try {
-        const site = yield Site.findByIdAndDelete(req.params.id);
+        const site = await Site.findByIdAndDelete(req.params.id);
         if (!site) {
-            return res.status(404).json({ message: 'Site no encontrado' });
+            res.status(404).json({ success: false, message: 'Site no encontrado' });
+            return;
         }
-        res.json({ message: 'Site eliminado exitosamente' });
+        res.json({ success: true, message: 'Site eliminado exitosamente' });
     }
     catch (error) {
         logger.error('Error al eliminar site:', error);
-        res.status(500).json({ message: 'Error al eliminar site' });
+        res.status(500).json({ success: false, message: 'Error al eliminar site' });
     }
-});
-exports.bulkCreateSites = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+};
+export const bulkCreateSites = async (req, res) => {
     try {
         const { sites } = req.body;
         logger.debug('Recibidos sites para importación:', sites.length);
@@ -109,20 +103,20 @@ exports.bulkCreateSites = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 const location = siteData.coordenadas ? {
                     type: 'Point',
                     coordinates: [
-                        parseFloat(siteData.coordenadas.lng),
-                        parseFloat(siteData.coordenadas.lat)
+                        parseFloat(siteData.coordenadas.lng.toString()),
+                        parseFloat(siteData.coordenadas.lat.toString())
                     ]
                 } : null;
                 const nuevoSite = new Site({
-                    Site: siteData.site,
-                    Codigo: siteData.codigo || '',
-                    Cliente: siteData.cliente,
-                    Direccion: siteData.direccion || '-',
-                    Localidad: siteData.localidad || '',
-                    Provincia: siteData.provincia || '',
+                    nombre: siteData.site,
+                    codigo: siteData.codigo || '',
+                    cliente: siteData.cliente,
+                    direccion: siteData.direccion || '-',
+                    localidad: siteData.localidad || '',
+                    provincia: siteData.provincia || '',
                     location
                 });
-                yield nuevoSite.save();
+                await nuevoSite.save();
                 resultados.exitosos++;
             }
             catch (error) {
@@ -141,20 +135,24 @@ exports.bulkCreateSites = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logger.error('Error en importación masiva:', error);
-        res.status(500).json({ message: 'Error en la importación masiva' });
+        res.status(500).json({ success: false, message: 'Error en la importación masiva' });
     }
-});
-exports.searchNearby = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+};
+export const searchNearby = async (req, res) => {
     try {
-        const { lng, lat, maxDistance = 5000 } = req.query; // maxDistance en metros
-        const sites = yield Site.find({
-            ubicacion: {
+        const { lng, lat, maxDistance = '5000' } = req.query;
+        if (!lng || !lat || typeof lng !== 'string' || typeof lat !== 'string') {
+            res.status(400).json({ success: false, message: 'lng y lat son requeridos' });
+            return;
+        }
+        const sites = await Site.find({
+            location: {
                 $near: {
                     $geometry: {
                         type: 'Point',
                         coordinates: [parseFloat(lng), parseFloat(lat)]
                     },
-                    $maxDistance: parseInt(maxDistance)
+                    $maxDistance: parseInt(maxDistance.toString())
                 }
             }
         });
@@ -162,7 +160,7 @@ exports.searchNearby = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     catch (error) {
         logger.error('Error en búsqueda por proximidad:', error);
-        res.status(500).json({ message: 'Error en la búsqueda' });
+        res.status(500).json({ success: false, message: 'Error en la búsqueda' });
     }
-});
+};
 //# sourceMappingURL=siteController.js.map

@@ -1,31 +1,20 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const axios = require('axios');
-const logger = require('../utils/logger');
+import axios from 'axios';
+import logger from '../utils/logger';
 // Configuración (podría ir en un archivo .env)
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/reverse';
 const USER_AGENT = 'MiAppBackend/1.0 (tu_email@example.com)'; // ¡IMPORTANTE: Cambia esto por tu info!
 /**
  * Obtiene la dirección (calle, localidad, provincia) a partir de coordenadas usando Nominatim.
- * @param {number} lat - Latitud
- * @param {number} lng - Longitud
- * @returns {Promise<{direccion: string, localidad: string, provincia: string} | null>} Objeto con la dirección o null si falla.
+ * @param lat - Latitud
+ * @param lng - Longitud
+ * @returns Objeto con la dirección o null si falla.
  */
-const getAddressFromCoords = (lat, lng) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const getAddressFromCoords = async (lat, lng) => {
     try {
         // Construir URL asegurándose de que los parámetros se codifican correctamente
         const url = `${NOMINATIM_URL}?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
         logger.debug(`Llamando a Nominatim: ${url}`);
-        const response = yield axios.get(url, {
+        const response = await axios.get(url, {
             headers: {
                 'User-Agent': USER_AGENT, // Requerido por Nominatim
                 'Accept-Language': 'es' // Preferir resultados en español si es posible
@@ -52,15 +41,13 @@ const getAddressFromCoords = (lat, lng) => __awaiter(void 0, void 0, void 0, fun
     }
     catch (error) {
         if (axios.isAxiosError(error)) {
-            logger.error(`Error Axios llamando a Nominatim para ${lat},${lng}: ${error.message} - Status: ${(_a = error.response) === null || _a === void 0 ? void 0 : _a.status}`);
+            logger.error(`Error Axios llamando a Nominatim para ${lat},${lng}: ${error.message} - Status: ${error.response?.status}`);
         }
         else {
-            logger.error(`Error inesperado llamando a Nominatim para ${lat},${lng}: ${error.message}`);
+            logger.error(`Error inesperado llamando a Nominatim para ${lat},${lng}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
         return null;
     }
-});
-module.exports = {
-    getAddressFromCoords
 };
+export { getAddressFromCoords };
 //# sourceMappingURL=geocodingService.js.map

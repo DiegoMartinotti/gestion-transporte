@@ -27,6 +27,7 @@ interface TarifaHistorica {
 }
 
 interface TramoData {
+  _id?: string;
   origen: string;
   destino: string;
   origenNombre?: string;

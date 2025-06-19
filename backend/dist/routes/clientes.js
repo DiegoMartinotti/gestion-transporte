@@ -1,13 +1,11 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { getClientes, getClienteById, createCliente, updateCliente, deleteCliente } = require('../controllers/clienteController');
-const logger = require('../utils/logger');
+import { getClientes, getClienteById, createCliente, updateCliente, deleteCliente } from '../controllers/clienteController';
 // Rutas
 router.get('/', getClientes);
 router.get('/:id', getClienteById);
 router.post('/', createCliente);
 router.put('/:id', updateCliente);
 router.delete('/:id', deleteCliente);
-module.exports = router;
+export default router;
 //# sourceMappingURL=clientes.js.map

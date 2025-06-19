@@ -1,17 +1,7 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const vehiculoService = require('../../services/vehiculo/vehiculoService');
-const logger = require('../../utils/logger');
-const { APIError } = require('../../middleware/errorHandler');
-const mongoose = require('mongoose');
+import { updateVehiculo as updateVehiculoService } from '../../services/vehiculo/vehiculoService';
+import logger from '../../utils/logger';
+import { APIError } from '../../middleware/errorHandler';
+import mongoose from 'mongoose';
 /**
  * Valida que el ID proporcionado sea un ObjectId válido de MongoDB
  * @param {string} id - ID a validar
@@ -73,7 +63,7 @@ const validarDatosActualizacion = (data) => {
  * @route   PUT /api/vehiculos/:id
  * @access  Private
  */
-const updateVehiculo = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const updateVehiculo = async (req, res, next) => {
     const inicioTiempo = Date.now();
     const { id } = req.params;
     logger.info(`Petición recibida: PUT /api/vehiculos/${id}`);
@@ -97,7 +87,7 @@ const updateVehiculo = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
             req.body.dominio = req.body.dominio.toUpperCase().trim();
         }
         // Actualizar el vehículo
-        const vehiculoActualizado = yield vehiculoService.updateVehiculo(id, req.body);
+        const vehiculoActualizado = await updateVehiculoService(id, req.body);
         const tiempoTotal = Date.now() - inicioTiempo;
         logger.info(`Vehículo ${id} actualizado correctamente (tiempo: ${tiempoTotal}ms)`);
         // Responder con éxito
@@ -132,6 +122,6 @@ const updateVehiculo = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         logger.error(`Error al actualizar vehículo ${id}: ${error.message} (tiempo: ${tiempoTotal}ms)`, error);
         next(new APIError(`Error al actualizar vehículo: ${error.message}`));
     }
-});
-module.exports = updateVehiculo;
+};
+export default updateVehiculo;
 //# sourceMappingURL=updateVehiculo.js.map

@@ -116,8 +116,9 @@ const viajeSchema = new Schema<IViaje>({
         required: true,
         validate: {
             validator: async function(value: Types.ObjectId) {
+                const Personal = mongoose.model('Personal');
                 const personal = await Personal.findById(value).lean();
-                return personal && personal.activo === true;
+                return personal && (personal as any).activo === true;
             },
             message: 'El chofer debe ser un personal activo'
         }
@@ -249,22 +250,25 @@ viajeSchema.path('vehiculos').validate(function(vehiculos: IVehiculoViaje[]) {
  * También actualiza el tipoUnidad basado en el vehículo principal
  */
 viajeSchema.pre('save', async function (next) {
+    // Cast this to IViaje for type safety
+    const viaje = this as unknown as IViaje;
+    
     // Primero, intentar obtener info de tarifa pre-calculada (desde bulk import)
-    const tempTariffInfo = this._tempTariffInfo;
+    const tempTariffInfo = viaje._tempTariffInfo;
     let tarifaVigente: any = null;
     let tramo: any = null; // Necesitaremos 'tramo' si calculamos por Km o usamos fórmula
 
     try {
         // --- 1. Verificar y actualizar tipoUnidad basado en vehículo principal ---
         if (this.isNew || this.isModified('vehiculos')) {
-            if (this.vehiculos && this.vehiculos.length > 0) {
-                const vehiculoPrincipal = await Vehiculo.findById(this.vehiculos[0].vehiculo).lean();
+            if (viaje.vehiculos && viaje.vehiculos.length > 0) {
+                const vehiculoPrincipal = await Vehiculo.findById(viaje.vehiculos[0].vehiculo).lean();
                 if (!vehiculoPrincipal) throw new Error('Vehículo principal no encontrado');
-                this.tipoUnidad = vehiculoPrincipal.tipo === 'Bitren' ? 'Bitren' : 'Sider';
-                logger.debug(`Tipo Unidad actualizado a: ${this.tipoUnidad} para viaje ${this.dt}`);
+                viaje.tipoUnidad = vehiculoPrincipal.tipo === 'Bitren' ? 'Bitren' : 'Sider';
+                logger.debug(`Tipo Unidad actualizado a: ${viaje.tipoUnidad} para viaje ${viaje.dt}`);
             } else {
                 // Si no hay vehículos, ¿qué tipo de unidad debería tener? ¿Dejar el default?
-                logger.warn(`Viaje ${this.dt} no tiene vehículos asignados, tipoUnidad permanecerá como ${this.tipoUnidad}`);
+                logger.warn(`Viaje ${viaje.dt} no tiene vehículos asignados, tipoUnidad permanecerá como ${viaje.tipoUnidad}`);
             }
         }
 
@@ -273,25 +277,25 @@ viajeSchema.pre('save', async function (next) {
         if (this.isNew || tempTariffInfo || this.isModified('origen') || this.isModified('destino') ||
             this.isModified('tipoTramo') || this.isModified('tipoUnidad') || this.isModified('paletas')) {
 
-            logger.debug(`Iniciando cálculo de tarifa/peaje para viaje ${this.dt}. Es nuevo: ${this.isNew}, Tiene tempInfo: ${!!tempTariffInfo}`);
+            logger.debug(`Iniciando cálculo de tarifa/peaje para viaje ${viaje.dt}. Es nuevo: ${this.isNew}, Tiene tempInfo: ${!!tempTariffInfo}`);
 
             // Cargamos el documento cliente completo (necesario para fórmulas)
-            const clienteDoc = await Cliente.findById(this.cliente);
+            const clienteDoc = await Cliente.findById(viaje.cliente);
             if (!clienteDoc) throw new Error('Cliente no encontrado para cálculo de tarifa');
 
             // -- Determinar la tarifaVigente a usar --
             if (tempTariffInfo) {
                 // Opción A: Usar datos pre-calculados de bulk import
-                logger.debug(`Usando _tempTariffInfo para viaje DT: ${this.dt}`);
+                logger.debug(`Usando _tempTariffInfo para viaje DT: ${viaje.dt}`);
                 tarifaVigente = tempTariffInfo; // Usamos el objeto temporal como si fuera la tarifa
-                this.peaje = Number(tarifaVigente.valorPeaje) || 0;
+                viaje.peaje = Number(tarifaVigente.valorPeaje) || 0;
 
                 // Si el cálculo es por Km, necesitamos la distancia del tramo
                 if (tarifaVigente.metodoCalculo === 'Kilometro') {
                     tramo = { distancia: tarifaVigente.distanciaTramo }; // Usar la distancia pasada
                     if (typeof tramo.distancia === 'undefined' || tramo.distancia === null || tramo.distancia <= 0) {
                         // Si no se pasó la distancia o es inválida, intentar buscar el tramo
-                        logger.warn(`Distancia (${tramo.distancia}) inválida o no encontrada en _tempTariffInfo para ${this.dt}, buscando tramo ID ${tarifaVigente.tramoId}...`);
+                        logger.warn(`Distancia (${tramo.distancia}) inválida o no encontrada en _tempTariffInfo para ${viaje.dt}, buscando tramo ID ${tarifaVigente.tramoId}...`);
                         const tramoEncontrado = await Tramo.findById(tarifaVigente.tramoId).lean();
                         if (!tramoEncontrado || typeof tramoEncontrado.distancia === 'undefined' || tramoEncontrado.distancia === null || tramoEncontrado.distancia <= 0) {
                             throw new Error(`No se pudo obtener una distancia válida para el tramo ID ${tarifaVigente.tramoId} para cálculo por Km.`);
@@ -301,19 +305,19 @@ viajeSchema.pre('save', async function (next) {
                 }
             } else {
                 // Opción B: Lógica original para creación/actualización normal
-                logger.debug(`Calculando tarifa/peaje para viaje DT: ${this.dt} (método normal)`);
+                logger.debug(`Calculando tarifa/peaje para viaje DT: ${viaje.dt} (método normal)`);
                 // Buscar el tramo principal
                 tramo = await Tramo.findOne({
-                    cliente: this.cliente,
-                    origen: this.origen,
-                    destino: this.destino
+                    cliente: viaje.cliente,
+                    origen: viaje.origen,
+                    destino: viaje.destino
                 }).populate('tarifasHistoricas'); // Poblar para acceder a tarifas
 
                 if (!tramo) {
                     await this.populate('origen destino');
-                    const origenNombre = (this.origen as any)?.nombre || 'ID desconocido';
-                    const destinoNombre = (this.destino as any)?.nombre || 'ID desconocido';
-                    throw new Error(`No se encontró un tramo válido para Cliente ${(clienteDoc as any).Cliente} (${this.cliente}) desde ${origenNombre} hasta ${destinoNombre} para la fecha ${this.fecha.toISOString().split('T')[0]}`);
+                    const origenNombre = (viaje.origen as any)?.nombre || 'ID desconocido';
+                    const destinoNombre = (viaje.destino as any)?.nombre || 'ID desconocido';
+                    throw new Error(`No se encontró un tramo válido para Cliente ${(clienteDoc as any).nombre} (${viaje.cliente}) desde ${origenNombre} hasta ${destinoNombre} para la fecha ${viaje.fecha.toISOString().split('T')[0]}`);
                 }
 
                 // Encontrar la tarifa vigente usando el método del modelo (o lógica manual si es necesario)

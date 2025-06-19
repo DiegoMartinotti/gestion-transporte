@@ -1,10 +1,5 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const config_1 = __importDefault(require("../config/config"));
+import jwt from 'jsonwebtoken';
+import config from '../config/config';
 function verifyToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Formato: "Bearer <token>"
@@ -13,7 +8,7 @@ function verifyToken(req, res, next) {
         return;
     }
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, config_1.default.jwtSecret);
+        const decoded = jwt.verify(token, config.jwtSecret);
         req.user = decoded; // Guarda la información del token (por ejemplo, el id del usuario)
         next();
     }
@@ -21,5 +16,5 @@ function verifyToken(req, res, next) {
         res.status(403).json({ error: 'Token inválido' });
     }
 }
-exports.default = verifyToken;
+export default verifyToken;
 //# sourceMappingURL=verifyToken.js.map

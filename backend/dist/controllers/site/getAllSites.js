@@ -1,39 +1,32 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const Site = require('../../models/Site');
-const { tryCatch } = require('../../utils/errorHandler');
-const { ValidationError } = require('../../utils/errors');
-const logger = require('../../utils/logger');
+import Site from '../../models/Site';
+import { tryCatch } from '../../utils/errorHandler';
+import logger from '../../utils/logger';
 /**
  * Get all sites
  * @route GET /api/site
- * @param {string} cliente - Client name (optional)
- * @returns {Array<Site>} List of sites
+ * @param cliente - Client name (optional)
+ * @returns List of sites
  */
-const getAllSites = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllSites = tryCatch(async (req, res) => {
     const { cliente } = req.query;
     let query = {};
     if (cliente) {
-        query.Cliente = cliente;
+        // Buscar por ID del cliente, no por nombre
+        query.cliente = cliente;
     }
-    const sites = yield Site.find(query)
+    const sites = await Site.find(query)
         .lean()
         .exec();
-    const sitesFormateados = sites.map(site => {
+    const sitesFormateados = sites.map((site) => {
         // Convertir coordenadas de GeoJSON a formato lat/lng
         const coordenadas = site.location && Array.isArray(site.location.coordinates) ? {
             lng: site.location.coordinates[0],
             lat: site.location.coordinates[1]
         } : null;
-        return Object.assign(Object.assign({}, site), { coordenadas });
+        return {
+            ...site,
+            coordenadas
+        };
     });
     logger.debug('Sites procesados:', sitesFormateados.length);
     res.json({
@@ -41,6 +34,6 @@ const getAllSites = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, fun
         count: sitesFormateados.length,
         data: sitesFormateados
     });
-}));
-module.exports = getAllSites;
+});
+export default getAllSites;
 //# sourceMappingURL=getAllSites.js.map

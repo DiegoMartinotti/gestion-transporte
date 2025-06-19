@@ -1,17 +1,7 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const Site = require('../../models/Site');
-const logger = require('../../utils/logger');
-const { tryCatch } = require('../../utils/errorHandler');
-const { ValidationError } = require('../../utils/errors');
+import Site from '../../models/Site';
+import logger from '../../utils/logger';
+import { tryCatch } from '../../utils/errorHandler';
+import { ValidationError } from '../../utils/errors';
 /**
  * Search sites nearby a location
  * @route GET /api/site/nearby
@@ -20,8 +10,8 @@ const { ValidationError } = require('../../utils/errors');
  * @param {number} maxDistance - Max distance in meters (default: 5000)
  * @returns {Array<Site>} List of nearby sites
  */
-const searchNearby = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { lng, lat, maxDistance = 5000 } = req.query; // maxDistance en metros
+const searchNearby = tryCatch(async (req, res) => {
+    const { lng, lat, maxDistance = '5000' } = req.query; // maxDistance en metros
     if (!lng || !lat) {
         throw new ValidationError('Se requieren coordenadas (lng, lat)');
     }
@@ -31,7 +21,7 @@ const searchNearby = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, fu
     if (isNaN(parsedLng) || isNaN(parsedLat)) {
         throw new ValidationError('Coordenadas inválidas');
     }
-    const sites = yield Site.find({
+    const sites = await Site.find({
         location: {
             $near: {
                 $geometry: {
@@ -48,6 +38,6 @@ const searchNearby = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, fu
         count: sites.length,
         data: sites
     });
-}));
-module.exports = searchNearby;
+});
+export default searchNearby;
 //# sourceMappingURL=searchNearby.js.map

@@ -1,4 +1,3 @@
-"use strict";
 /**
  * Sistema de logging centralizado
  *
@@ -6,8 +5,6 @@
  * permitiendo mostrar solo errores en producción y logs completos en desarrollo.
  * Implementa niveles de log estándar: debug, info, warn, error, critical
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCurrentLogLevel = exports.LOG_LEVEL = exports.critical = exports.error = exports.warn = exports.info = exports.debug = void 0;
 // Obtener el modo de entorno desde variables de entorno o usar desarrollo por defecto
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isDevelopment = NODE_ENV === 'development';
@@ -21,7 +18,7 @@ var LOG_LEVEL;
     LOG_LEVEL[LOG_LEVEL["ERROR"] = 3] = "ERROR";
     LOG_LEVEL[LOG_LEVEL["CRITICAL"] = 4] = "CRITICAL";
     LOG_LEVEL[LOG_LEVEL["NONE"] = 5] = "NONE";
-})(LOG_LEVEL || (exports.LOG_LEVEL = LOG_LEVEL = {}));
+})(LOG_LEVEL || (LOG_LEVEL = {}));
 // Nivel mínimo de log según el entorno
 const currentLogLevel = (() => {
     if (isTest)
@@ -46,7 +43,6 @@ const debug = (...args) => {
         console.log(`[${getTimestamp()}] [DEBUG]`, ...args);
     }
 };
-exports.debug = debug;
 /**
  * Logger para información general
  * @param args - Argumentos a loggear
@@ -56,7 +52,6 @@ const info = (...args) => {
         console.log(`[${getTimestamp()}] [INFO]`, ...args);
     }
 };
-exports.info = info;
 /**
  * Logger para advertencias
  * @param args - Argumentos a loggear
@@ -66,7 +61,6 @@ const warn = (...args) => {
         console.warn(`[${getTimestamp()}] [WARN]`, ...args);
     }
 };
-exports.warn = warn;
 /**
  * Logger para errores
  * @param args - Argumentos a loggear
@@ -81,7 +75,6 @@ const error = (...args) => {
         }
     }
 };
-exports.error = error;
 /**
  * Logger para información crítica
  * @param args - Argumentos a loggear
@@ -96,7 +89,6 @@ const critical = (...args) => {
         }
     }
 };
-exports.critical = critical;
 // Interceptar errores no capturados
 process.on('uncaughtException', (err) => {
     critical('Excepción no capturada:', err);
@@ -108,8 +100,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 // Función para obtener el nivel de log actual (útil para pruebas)
 const getCurrentLogLevel = () => currentLogLevel;
-exports.getCurrentLogLevel = getCurrentLogLevel;
-exports.default = {
+export { debug, info, warn, error, critical, LOG_LEVEL, getCurrentLogLevel };
+export default {
     debug,
     info,
     warn,

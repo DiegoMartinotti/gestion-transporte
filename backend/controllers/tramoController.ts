@@ -1203,8 +1203,8 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
 
         const tramoConTarifa = {
             ...tramo.toObject(),
-            valor: tarifaSeleccionada ? tarifaSeleccionada.valor : (tramo.valor || 0),
-            valorPeaje: tarifaSeleccionada ? tarifaSeleccionada.valorPeaje : (tramo.valorPeaje || 0),
+            valor: tarifaSeleccionada ? tarifaSeleccionada.valor : 0,
+            valorPeaje: tarifaSeleccionada ? tarifaSeleccionada.valorPeaje : 0,
             metodoCalculo: metodoCalculo || (tarifaSeleccionada ? tarifaSeleccionada.metodoCalculo : 'No disponible'),
             tipo: tarifaSeleccionada ? tarifaSeleccionada.tipo : tipoTramo
         };
@@ -1218,7 +1218,7 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
 
         logger.debug(`Datos de cálculo: método=${tramoConTarifa.metodoCalculo}, valor=${tramoConTarifa.valor}, peaje=${tramoConTarifa.valorPeaje}`);
 
-        const clienteId = cliente ? cliente._id : null;
+        const clienteId = cliente ? cliente._id?.toString() : null;
         if (clienteId && tramoConTarifa.metodoCalculo === 'Palet') {
             try {
                 let fechaDeCalculo;
@@ -1242,11 +1242,11 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
                     Vigencia: ${new Date(tarifaSeleccionada?.vigenciaDesde || 0).toISOString()} - ${new Date(tarifaSeleccionada?.vigenciaHasta || 0).toISOString()}`);
                 
                 try {
-                    const formulaAplicable = await formulaClienteService.getFormulaAplicable(
+                    const formulaAplicable = clienteId ? await formulaClienteService.getFormulaAplicable(
                         clienteId, 
                         tipoDeUnidad, 
                         fechaDeCalculo
-                    );
+                    ) : null;
                     
                     logger.debug(`Fórmula aplicable para cliente ${clienteNombre}, unidad ${tipoDeUnidad}, fecha ${fechaDeCalculo.toISOString()}: ${formulaAplicable}`);
                     
@@ -1263,7 +1263,15 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
                         }
                     }
                     
-                    const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo, formulaAplicableCorregida);
+                    const tramoParaCalculo = {
+                        _id: tramo._id?.toString(),
+                        valor: tramoConTarifa.valor,
+                        valorPeaje: tramoConTarifa.valorPeaje,
+                        metodoCalculo: tramoConTarifa.metodoCalculo,
+                        distancia: tramo.distancia,
+                        tarifasHistoricas: tramo.tarifasHistoricas
+                    };
+                    const resultado = tarifaService.calcularTarifaTramo(tramoParaCalculo, numPalets, tipoTramo, formulaAplicableCorregida);
                     
                     logger.debug(`Resultado del cálculo:
                         tarifaBase: ${resultado.tarifaBase}
@@ -1278,10 +1286,15 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
                     
                     if (resultado.total === 0) {
                         logger.warn(`El cálculo con fórmula resultó en 0, intentando con método estándar`);
-                        const resultadoEstandar = tarifaService.calcularTarifaTramo({
-                            ...tramoConTarifa,
-                            metodoCalculo: 'Palet'
-                        }, numPalets, tipoTramo);
+                        const tramoEstandar = {
+                            _id: tramo._id?.toString(),
+                            valor: tramoConTarifa.valor,
+                            valorPeaje: tramoConTarifa.valorPeaje,
+                            metodoCalculo: 'Palet',
+                            distancia: tramo.distancia,
+                            tarifasHistoricas: tramo.tarifasHistoricas
+                        };
+                        const resultadoEstandar = tarifaService.calcularTarifaTramo(tramoEstandar, numPalets, tipoTramo);
                         
                         if (resultadoEstandar.total > 0) {
                             logger.debug(`Usando resultado de cálculo estándar: ${resultadoEstandar.total}`);
@@ -1333,7 +1346,15 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
                     }
                     
                     logger.debug(`Realizando cálculo estándar con método: ${tramoConTarifa.metodoCalculo}`);
-                    const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
+                    const tramoParaCalculo = {
+                        _id: tramo._id?.toString(),
+                        valor: tramoConTarifa.valor,
+                        valorPeaje: tramoConTarifa.valorPeaje,
+                        metodoCalculo: tramoConTarifa.metodoCalculo,
+                        distancia: tramo.distancia,
+                        tarifasHistoricas: tramo.tarifasHistoricas
+                    };
+                    const resultado = tarifaService.calcularTarifaTramo(tramoParaCalculo, numPalets, tipoTramo);
                     
                     logger.debug(`Resultado del cálculo estándar:
                         tarifaBase: ${resultado.tarifaBase}
@@ -1376,7 +1397,15 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
                 }
                 
                 logger.debug(`Realizando cálculo estándar con método: ${tramoConTarifa.metodoCalculo}`);
-                const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
+                const tramoParaCalculo = {
+                    _id: tramo._id?.toString(),
+                    valor: tramoConTarifa.valor,
+                    valorPeaje: tramoConTarifa.valorPeaje,
+                    metodoCalculo: tramoConTarifa.metodoCalculo,
+                    distancia: tramo.distancia,
+                    tarifasHistoricas: tramo.tarifasHistoricas
+                };
+                const resultado = tarifaService.calcularTarifaTramo(tramoParaCalculo, numPalets, tipoTramo);
                 
                 logger.debug(`Resultado del cálculo estándar:
                     tarifaBase: ${resultado.tarifaBase}
@@ -1411,7 +1440,15 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
         }
 
         logger.debug(`Realizando cálculo estándar final con valores directos de tarifa: valor=${tramoConTarifa.valor}, peaje=${tramoConTarifa.valorPeaje}, método=${tramoConTarifa.metodoCalculo}`);
-        const resultado = tarifaService.calcularTarifaTramo(tramoConTarifa, numPalets, tipoTramo);
+        const tramoParaCalculo = {
+            _id: tramo._id?.toString(),
+            valor: tramoConTarifa.valor,
+            valorPeaje: tramoConTarifa.valorPeaje,
+            metodoCalculo: tramoConTarifa.metodoCalculo,
+            distancia: tramo.distancia,
+            tarifasHistoricas: tramo.tarifasHistoricas
+        };
+        const resultado = tarifaService.calcularTarifaTramo(tramoParaCalculo, numPalets, tipoTramo);
 
         const resultadoFinal: TarifaCalculationResult = {
             tarifaBase: resultado.tarifaBase,

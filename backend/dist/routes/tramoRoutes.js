@@ -1,17 +1,9 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const express = require('express');
-const router = express.Router();
-const tramoController = require('../controllers/tramoController');
-const logger = require('../utils/logger');
+import { Router } from 'express';
+import * as tramoController from '../controllers/tramoController';
+import logger from '../utils/logger';
+import Tramo from '../models/Tramo';
+import { generarTramoId } from '../utils/tramoValidator';
+const router = Router();
 // CRUD básico
 router.get('/', tramoController.getAllTramos);
 router.get('/:id', tramoController.getTramoById);
@@ -23,11 +15,11 @@ router.get('/cliente/:cliente', tramoController.getTramosByCliente);
 router.get('/vigentes/:fecha', tramoController.getVigentesByFecha);
 router.post('/bulk', tramoController.bulkCreateTramos);
 router.post('/verificar-duplicados', tramoController.verificarPosiblesDuplicados);
-router.post('/normalizar-tipos', tramoController.normalizarTiposTramos);
+router.post('/normalizar-tipos', tramoController.normalizarTramos);
 // Ruta de prueba para la funcionalidad de tipos
 router.post('/test-tipos', tramoController.testImportacionTipos);
 // Diagnóstico específico para el problema de tipos
-router.post('/diagnose-tipos', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/diagnose-tipos', async (req, res) => {
     try {
         // Requerir origen, destino, cliente como parámetros
         const { origen, destino, cliente } = req.body;
@@ -37,10 +29,8 @@ router.post('/diagnose-tipos', (req, res) => __awaiter(void 0, void 0, void 0, f
                 message: 'Se requieren origen, destino y cliente'
             });
         }
-        const Tramo = require('../models/Tramo');
-        const { generarTramoId } = require('../utils/tramoValidator');
         // Buscar todos los tramos con ese origen y destino
-        const tramos = yield Tramo.find({
+        const tramos = await Tramo.find({
             origen,
             destino,
             cliente
@@ -79,12 +69,12 @@ router.post('/diagnose-tipos', (req, res) => __awaiter(void 0, void 0, void 0, f
             error: error.message
         });
     }
-}));
+});
 // Ruta para actualización masiva de vigencias
 router.post('/updateVigenciaMasiva', tramoController.updateVigenciaMasiva);
 // Ruta para calcular tarifa
 router.post('/calcular-tarifa', tramoController.calcularTarifa);
 // Ruta para obtener distancias calculadas
 router.get('/distancias', tramoController.getDistanciasCalculadas);
-module.exports = router;
+export default router;
 //# sourceMappingURL=tramoRoutes.js.map

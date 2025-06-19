@@ -1,30 +1,18 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const Personal = require('../models/Personal');
-const Empresa = require('../models/Empresa');
-const mongoose = require('mongoose');
-const logger = require('../utils/logger');
+import { Types } from 'mongoose';
+import Personal from '../models/Personal';
+import Empresa from '../models/Empresa';
+import logger from '../utils/logger';
 /**
  * Obtener todos los registros de personal
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
  */
-exports.getAllPersonal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getAllPersonal = async (req, res) => {
     try {
         const { empresaId } = req.query;
         let query = {};
-        if (empresaId) {
+        if (empresaId && typeof empresaId === 'string') {
             query.empresa = empresaId;
         }
-        const personal = yield Personal.find(query)
+        const personal = await Personal.find(query)
             .populate('empresa', 'nombre tipo')
             .sort({ nombre: 1 });
         res.status(200).json(personal);
@@ -33,22 +21,22 @@ exports.getAllPersonal = (req, res) => __awaiter(void 0, void 0, void 0, functio
         logger.error('Error al obtener personal:', error);
         res.status(500).json({ error: 'Error al obtener personal' });
     }
-});
+};
 /**
  * Obtener un registro de personal por ID
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
  */
-exports.getPersonalById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getPersonalById = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: 'ID de personal inválido' });
+        if (!Types.ObjectId.isValid(id)) {
+            res.status(400).json({ error: 'ID de personal inválido' });
+            return;
         }
-        const personal = yield Personal.findById(id)
+        const personal = await Personal.findById(id)
             .populate('empresa', 'nombre tipo');
         if (!personal) {
-            return res.status(404).json({ error: 'Personal no encontrado' });
+            res.status(404).json({ error: 'Personal no encontrado' });
+            return;
         }
         res.status(200).json(personal);
     }
@@ -56,20 +44,19 @@ exports.getPersonalById = (req, res) => __awaiter(void 0, void 0, void 0, functi
         logger.error('Error al obtener personal por ID:', error);
         res.status(500).json({ error: 'Error al obtener personal por ID' });
     }
-});
+};
 /**
  * Crear un nuevo registro de personal
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
  */
-exports.createPersonal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const createPersonal = async (req, res) => {
     try {
         const personalData = req.body;
         // Verificar si la empresa existe
         if (personalData.empresa) {
-            const empresaExists = yield Empresa.findById(personalData.empresa);
+            const empresaExists = await Empresa.findById(personalData.empresa);
             if (!empresaExists) {
-                return res.status(400).json({ error: 'La empresa especificada no existe' });
+                res.status(400).json({ error: 'La empresa especificada no existe' });
+                return;
             }
         }
         // Si no se proporciona un período de empleo, crear uno con la fecha actual
@@ -81,70 +68,75 @@ exports.createPersonal = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         // Crear el registro de personal
         const personal = new Personal(personalData);
-        yield personal.save();
+        await personal.save();
         res.status(201).json(personal);
     }
     catch (error) {
         logger.error('Error al crear personal:', error);
         if (error.name === 'ValidationError') {
-            return res.status(400).json({ error: error.message });
+            res.status(400).json({ error: error.message });
+            return;
         }
         if (error.code === 11000) {
-            return res.status(400).json({ error: 'Ya existe un registro con ese DNI' });
+            res.status(400).json({ error: 'Ya existe un registro con ese DNI' });
+            return;
         }
         res.status(500).json({ error: 'Error al crear personal' });
     }
-});
+};
 /**
  * Actualizar un registro de personal
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
  */
-exports.updatePersonal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const updatePersonal = async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: 'ID de personal inválido' });
+        if (!Types.ObjectId.isValid(id)) {
+            res.status(400).json({ error: 'ID de personal inválido' });
+            return;
         }
         // Verificar si la empresa existe si se está actualizando
         if (updateData.empresa) {
-            const empresaExists = yield Empresa.findById(updateData.empresa);
+            const empresaExists = await Empresa.findById(updateData.empresa);
             if (!empresaExists) {
-                return res.status(400).json({ error: 'La empresa especificada no existe' });
+                res.status(400).json({ error: 'La empresa especificada no existe' });
+                return;
             }
         }
-        const personal = yield Personal.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+        const personal = await Personal.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
         if (!personal) {
-            return res.status(404).json({ error: 'Personal no encontrado' });
+            res.status(404).json({ error: 'Personal no encontrado' });
+            return;
         }
         res.status(200).json(personal);
     }
     catch (error) {
         logger.error('Error al actualizar personal:', error);
         if (error.name === 'ValidationError') {
-            return res.status(400).json({ error: error.message });
+            res.status(400).json({ error: error.message });
+            return;
         }
         if (error.code === 11000) {
-            return res.status(400).json({ error: 'Ya existe un registro con ese DNI' });
+            res.status(400).json({ error: 'Ya existe un registro con ese DNI' });
+            return;
         }
         res.status(500).json({ error: 'Error al actualizar personal' });
     }
-});
+};
 /**
  * Eliminar un registro de personal
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
  */
-exports.deletePersonal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const deletePersonal = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: 'ID de personal inválido' });
+        if (!Types.ObjectId.isValid(id)) {
+            res.status(400).json({ error: 'ID de personal inválido' });
+            return;
         }
-        const personal = yield Personal.findByIdAndDelete(id);
+        const personal = await Personal.findByIdAndDelete(id);
         if (!personal) {
-            return res.status(404).json({ error: 'Personal no encontrado' });
+            res.status(404).json({ error: 'Personal no encontrado' });
+            return;
         }
         res.status(200).json({ message: 'Personal eliminado correctamente' });
     }
@@ -152,17 +144,16 @@ exports.deletePersonal = (req, res) => __awaiter(void 0, void 0, void 0, functio
         logger.error('Error al eliminar personal:', error);
         res.status(500).json({ error: 'Error al eliminar personal' });
     }
-});
+};
 /**
  * Importar personal masivamente
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
  */
-exports.bulkImportPersonal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const bulkImportPersonal = async (req, res) => {
     try {
         const { personal } = req.body;
         if (!Array.isArray(personal) || personal.length === 0) {
-            return res.status(400).json({ error: 'No se proporcionaron datos de personal para importar' });
+            res.status(400).json({ error: 'No se proporcionaron datos de personal para importar' });
+            return;
         }
         const results = {
             total: personal.length,
@@ -175,7 +166,7 @@ exports.bulkImportPersonal = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 const item = personal[i];
                 // Verificar si la empresa existe
                 if (item.empresaId) {
-                    const empresaExists = yield Empresa.findById(item.empresaId);
+                    const empresaExists = await Empresa.findById(item.empresaId);
                     if (!empresaExists) {
                         throw new Error(`La empresa con ID ${item.empresaId} no existe`);
                     }
@@ -236,7 +227,7 @@ exports.bulkImportPersonal = (req, res) => __awaiter(void 0, void 0, void 0, fun
                     }];
                 // Crear el registro de personal
                 const nuevoPersonal = new Personal(personalData);
-                yield nuevoPersonal.save();
+                await nuevoPersonal.save();
                 results.exitosos++;
             }
             catch (error) {
@@ -254,33 +245,32 @@ exports.bulkImportPersonal = (req, res) => __awaiter(void 0, void 0, void 0, fun
         logger.error('Error al importar personal masivamente:', error);
         res.status(500).json({ error: 'Error al importar personal masivamente' });
     }
-});
+};
 /**
  * Crea o activa personal masivamente desde la plantilla de corrección.
  * Resuelve la empresa por ID o Nombre.
  * Activa personal existente si se indica.
  *
- * @param {Array<Object>} personalData - Array con datos de personal extraídos de la plantilla.
- * @param {Object} options - Opciones, incluye la session de mongoose.
- * @returns {Promise<Object>} - Resultado con insertados, actualizados y errores.
+ * @param personalData - Array con datos de personal extraídos de la plantilla.
+ * @param options - Opciones, incluye la session de mongoose.
+ * @returns Resultado con insertados, actualizados y errores.
  */
-exports.createPersonalBulk = (personalData_1, ...args_1) => __awaiter(void 0, [personalData_1, ...args_1], void 0, function* (personalData, options = {}) {
-    var _a;
+export const createPersonalBulk = async (personalData, options = {}) => {
     const session = options.session;
     let insertados = 0;
     let actualizados = 0;
     const errores = [];
     const personalToInsert = [];
-    const personalToActivate = []; // { filter: {dni: ...}, update: {$set: {activo: true, ...otros campos...}} }
+    const personalToActivate = [];
     if (!Array.isArray(personalData) || personalData.length === 0) {
         return { success: false, insertados, actualizados, errores: [{ message: 'No personal data provided for bulk operation.' }] };
     }
     // 1. Resolver Empresas (Obtener todos los nombres/IDs necesarios)
     const empresaIdentifiers = [...new Set(personalData.map(p => p.empresa).filter(e => e))];
-    const empresaIds = empresaIdentifiers.filter(id => mongoose.Types.ObjectId.isValid(id));
-    const empresaNombres = empresaIdentifiers.filter(id => !mongoose.Types.ObjectId.isValid(id));
-    const empresasFoundById = yield Empresa.find({ _id: { $in: empresaIds } }).session(session).lean();
-    const empresasFoundByName = yield Empresa.find({ nombre: { $in: empresaNombres } }).session(session).lean();
+    const empresaIds = empresaIdentifiers.filter(id => Types.ObjectId.isValid(id));
+    const empresaNombres = empresaIdentifiers.filter(id => !Types.ObjectId.isValid(id));
+    const empresasFoundById = await Empresa.find({ _id: { $in: empresaIds } }).session(session).lean();
+    const empresasFoundByName = await Empresa.find({ nombre: { $in: empresaNombres } }).session(session).lean();
     const empresaMap = new Map();
     [...empresasFoundById, ...empresasFoundByName].forEach(emp => {
         empresaMap.set(emp._id.toString(), emp._id); // Mapear por ID
@@ -298,7 +288,7 @@ exports.createPersonalBulk = (personalData_1, ...args_1) => __awaiter(void 0, [p
         // Resolver Empresa ID
         let empresaId = null;
         const empresaKey = typeof item.empresa === 'string' ? item.empresa.toLowerCase() : item.empresa;
-        if (mongoose.Types.ObjectId.isValid(item.empresa)) {
+        if (Types.ObjectId.isValid(item.empresa)) {
             empresaId = empresaMap.get(item.empresa.toString());
         }
         else if (typeof empresaKey === 'string') {
@@ -322,12 +312,12 @@ exports.createPersonalBulk = (personalData_1, ...args_1) => __awaiter(void 0, [p
             // Buscar personal inactivo por DNI para activarlo
             personalToActivate.push({
                 filter: { dni: item.dni, activo: false },
-                update: { $set: Object.assign(Object.assign({}, newItemData), { activo: true }) } // Actualizar con los nuevos datos y activar
+                update: { $set: { ...newItemData, activo: true } } // Actualizar con los nuevos datos y activar
             });
         }
         else {
             // Preparar para inserción (asegurándose de que activo sea false)
-            personalToInsert.push(Object.assign(Object.assign({}, newItemData), { activo: false }));
+            personalToInsert.push({ ...newItemData, activo: false });
         }
     }
     // 3. Realizar operaciones de activación (Update)
@@ -335,15 +325,14 @@ exports.createPersonalBulk = (personalData_1, ...args_1) => __awaiter(void 0, [p
         try {
             // Usar bulkWrite para actualizaciones individuales eficientes
             const activationOps = personalToActivate.map(op => ({ updateOne: op }));
-            const activationResult = yield Personal.bulkWrite(activationOps, { session, ordered: false });
-            actualizados = activationResult.modifiedCount;
+            const activationResult = await Personal.bulkWrite(activationOps, { session, ordered: false });
+            actualizados = activationResult.modifiedCount || 0;
             logger.info(`[createPersonalBulk] Intentos de activación: ${personalToActivate.length}, Activados/Actualizados: ${actualizados}`);
             // Registrar errores de activación si los hubiera (aunque ordered:false los ignora)
-            if (activationResult.hasWriteErrors()) {
-                activationResult.getWriteErrors().forEach(err => {
-                    var _a, _b;
+            if (activationResult.hasWriteErrors && activationResult.hasWriteErrors()) {
+                activationResult.getWriteErrors().forEach((err) => {
                     // Es difícil mapear el error al índice original aquí sin más lógica
-                    errores.push({ index: 'N/A', message: `Error activando personal (DNI: ${(_b = (_a = err.op) === null || _a === void 0 ? void 0 : _a.filter) === null || _b === void 0 ? void 0 : _b.dni}): ${err.errmsg}`, code: err.code });
+                    errores.push({ index: 'N/A', message: `Error activando personal (DNI: ${err.op?.filter?.dni}): ${err.errmsg}`, code: err.code });
                 });
             }
         }
@@ -355,25 +344,24 @@ exports.createPersonalBulk = (personalData_1, ...args_1) => __awaiter(void 0, [p
     // 4. Realizar operaciones de inserción (InsertMany)
     if (personalToInsert.length > 0) {
         try {
-            const insertResult = yield Personal.insertMany(personalToInsert, { session, ordered: false });
+            const insertResult = await Personal.insertMany(personalToInsert, { session, ordered: false });
             insertados = insertResult.length;
             logger.info(`[createPersonalBulk] Insertados ${insertados} nuevos registros de personal.`);
         }
         catch (error) {
             logger.error('[createPersonalBulk] Error durante insertMany:', error);
             if (error.name === 'MongoBulkWriteError' && error.writeErrors) {
-                error.writeErrors.forEach(err => {
-                    var _a;
+                error.writeErrors.forEach((err) => {
                     // Mapear error al índice original si es posible (requiere mantener correlación)
-                    const originalIndex = personalData.findIndex(p => { var _a; return p.dni === ((_a = personalToInsert[err.index]) === null || _a === void 0 ? void 0 : _a.dni) && !p.activar; }); // Intento de mapeo
+                    const originalIndex = personalData.findIndex(p => p.dni === personalToInsert[err.index]?.dni && !p.activar); // Intento de mapeo
                     errores.push({
                         index: originalIndex !== -1 ? originalIndex : 'N/A',
-                        message: `Error al insertar DNI ${(_a = personalToInsert[err.index]) === null || _a === void 0 ? void 0 : _a.dni}: ${err.errmsg}`,
+                        message: `Error al insertar DNI ${personalToInsert[err.index]?.dni}: ${err.errmsg}`,
                         code: err.code,
                         data: personalToInsert[err.index]
                     });
                 });
-                insertados = ((_a = error.result) === null || _a === void 0 ? void 0 : _a.nInserted) || (personalToInsert.length - error.writeErrors.length);
+                insertados = error.result?.nInserted || (personalToInsert.length - error.writeErrors.length);
             }
             else {
                 errores.push({ message: `Error inesperado en bulk insert: ${error.message}` });
@@ -387,5 +375,5 @@ exports.createPersonalBulk = (personalData_1, ...args_1) => __awaiter(void 0, [p
         actualizados,
         errores
     };
-});
+};
 //# sourceMappingURL=personalController.js.map

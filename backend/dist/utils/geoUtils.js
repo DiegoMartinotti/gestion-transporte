@@ -1,6 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.calcularDistancia = calcularDistancia;
 /**
  * Calcula la distancia entre dos puntos geográficos usando la fórmula haversine
  * @param coordenadas1 - Coordenadas del primer punto [longitud, latitud]
@@ -26,4 +23,5 @@ function calcularDistancia(coordenadas1, coordenadas2) {
     // Redondear a 2 decimales
     return Math.round(distancia * 100) / 100;
 }
+export { calcularDistancia };
 //# sourceMappingURL=geoUtils.js.map

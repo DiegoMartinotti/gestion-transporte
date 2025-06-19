@@ -1,32 +1,14 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const mongoose = require('mongoose');
+import { Schema, Types, model } from 'mongoose';
 /**
  * Schema for Site management
- * @typedef {Object} SiteSchema
- * @property {string} nombre - Site name (unique per client)
- * @property {mongoose.Schema.Types.ObjectId} cliente - Referencia al _id del Cliente
- * @property {string} [direccion] - Address
- * @property {string} [localidad] - City
- * @property {string} [provincia] - State/Province
- * @property {string} [codigo] - Client assigned code
- * @property {Object} [location] - Geolocation data
  */
-const siteSchema = new mongoose.Schema({
+const siteSchema = new Schema({
     nombre: {
         type: String,
         required: [true, 'El nombre del site es requerido']
     },
     cliente: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Cliente',
         required: [true, 'El cliente es obligatorio'],
         index: true
@@ -76,46 +58,46 @@ siteSchema.virtual('coordenadas').get(function () {
     return null;
 });
 // Pre-save middleware for validation and data cleaning
-siteSchema.pre('save', function (next) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            if (this.isModified('nombre')) {
-                this.nombre = this.nombre.trim().toUpperCase();
-            }
-            if (this.isModified('direccion'))
-                this.direccion = this.direccion.trim();
-            if (this.isModified('localidad'))
-                this.localidad = this.localidad.trim();
-            if (this.isModified('provincia'))
-                this.provincia = this.provincia.trim();
-            if (this.isModified('codigo'))
-                this.codigo = this.codigo.trim();
-            if (this.isModified('nombre') || this.isModified('cliente')) {
-                const existe = yield this.constructor.findOne({
-                    cliente: this.cliente,
-                    nombre: this.nombre,
-                    _id: { $ne: this._id }
-                }).collation({ locale: 'es', strength: 2 });
-                if (existe) {
-                    throw new Error(`El site "${this.nombre}" ya existe para este cliente.`);
-                }
-            }
-            if (this.codigo && (this.isModified('codigo') || this.isModified('cliente'))) {
-                const existeCodigo = yield this.constructor.findOne({
-                    cliente: this.cliente,
-                    codigo: this.codigo,
-                    _id: { $ne: this._id }
-                }).collation({ locale: 'es', strength: 2 });
-                if (existeCodigo) {
-                    throw new Error(`El código "${this.codigo}" ya existe para este cliente.`);
-                }
-            }
-            next();
+siteSchema.pre('save', async function (next) {
+    try {
+        if (this.isModified('nombre')) {
+            this.nombre = this.nombre.trim().toUpperCase();
         }
-        catch (error) {
-            next(error);
+        if (this.isModified('direccion'))
+            this.direccion = this.direccion?.trim();
+        if (this.isModified('localidad'))
+            this.localidad = this.localidad?.trim();
+        if (this.isModified('provincia'))
+            this.provincia = this.provincia?.trim();
+        if (this.isModified('codigo'))
+            this.codigo = this.codigo?.trim();
+        if (this.isModified('nombre') || this.isModified('cliente')) {
+            const SiteModel = this.constructor;
+            const existe = await SiteModel.findOne({
+                cliente: this.cliente,
+                nombre: this.nombre,
+                _id: { $ne: this._id }
+            }).collation({ locale: 'es', strength: 2 });
+            if (existe) {
+                throw new Error(`El site "${this.nombre}" ya existe para este cliente.`);
+            }
         }
-    });
+        if (this.codigo && (this.isModified('codigo') || this.isModified('cliente'))) {
+            const SiteModel = this.constructor;
+            const existeCodigo = await SiteModel.findOne({
+                cliente: this.cliente,
+                codigo: this.codigo,
+                _id: { $ne: this._id }
+            }).collation({ locale: 'es', strength: 2 });
+            if (existeCodigo) {
+                throw new Error(`El código "${this.codigo}" ya existe para este cliente.`);
+            }
+        }
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
 });
 // Índices optimizados
 siteSchema.index({ nombre: 1, cliente: 1 }, {
@@ -141,17 +123,15 @@ siteSchema.methods.getDireccionCompleta = function () {
         .join(', ') || 'Sin dirección';
 };
 // Métodos estáticos
-siteSchema.statics.findByClienteAndNombre = function (clienteId, nombreSite) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (!mongoose.Types.ObjectId.isValid(clienteId)) {
-            return null;
-        }
-        return this.findOne({
-            cliente: clienteId,
-            nombre: nombreSite.toUpperCase()
-        }).collation({ locale: 'es', strength: 2 });
-    });
+siteSchema.statics.findByClienteAndNombre = async function (clienteId, nombreSite) {
+    if (!Types.ObjectId.isValid(clienteId)) {
+        return null;
+    }
+    return this.findOne({
+        cliente: clienteId,
+        nombre: nombreSite.toUpperCase()
+    }).collation({ locale: 'es', strength: 2 });
 };
-const Site = mongoose.model('Site', siteSchema);
-module.exports = Site;
+const Site = model('Site', siteSchema);
+export default Site;
 //# sourceMappingURL=Site.js.map
