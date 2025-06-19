@@ -28,7 +28,7 @@ router.post('/bulk/iniciar',
         if (!req.body || !Array.isArray(req.body.viajes) || req.body.viajes.length === 0) {
             logger.error('⚠️ CUERPO DE LA SOLICITUD /bulk/iniciar VACÍO O INCOMPLETO (inline)');
             logger.error('Content-Type:', req.headers['content-type']);
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Datos de solicitud vacíos, inválidos o sin array \'viajes\' para iniciar importación',
                 debug: {
@@ -38,6 +38,7 @@ router.post('/bulk/iniciar',
                     viajesLength: req.body?.viajes?.length
                 }
             });
+            return;
         }
         next(); // Si la validación pasa, continuar al controlador
     },
@@ -45,6 +46,8 @@ router.post('/bulk/iniciar',
     viajeController.iniciarBulkImportViajes // Controlador principal
 );
 
+// TODO: Implementar estos endpoints cuando se completen los controladores correspondientes
+/*
 // Descargar plantillas pre-rellenadas para corrección
 router.get(
     '/bulk/template/:importId/:templateType',
@@ -69,5 +72,6 @@ router.get(
     '/bulk/fallback/:importId',
     viajeController.descargarFallbackViajes // Controlador (Asegúrate que esté implementado)
 );
+*/
 
 export default router;

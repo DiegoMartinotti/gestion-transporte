@@ -187,7 +187,7 @@ const createVehiculo = async (vehiculoData: VehiculoData): Promise<any> => {
     }
     
     // Verificar que la empresa existe
-    const empresaExiste = await Empresa.findById(vehiculoData.empresa).session(session);
+    const empresaExiste = await Empresa.findById(vehiculoData.empresa).session(session || null);
     if (!empresaExiste) {
       logger.warn(`Empresa no encontrada al crear vehículo: ${vehiculoData.empresa}`);
       throw new Error('La empresa especificada no existe');
@@ -199,7 +199,7 @@ const createVehiculo = async (vehiculoData: VehiculoData): Promise<any> => {
     // Verificar si ya existe un vehículo con el mismo dominio
     const dominioExiste = await Vehiculo.findOne({ 
       dominio: vehiculoData.dominio 
-    }).session(session);
+    }).session(session || null);
     
     if (dominioExiste) {
       logger.warn(`Intento de crear vehículo con dominio duplicado: ${vehiculoData.dominio}`);
@@ -260,7 +260,7 @@ const updateVehiculo = async (id: string, vehiculoData: VehiculoData): Promise<a
     
     // Verificar que la empresa existe si se está cambiando
     if (vehiculoData.empresa) {
-      const empresaExiste = await Empresa.findById(vehiculoData.empresa).session(session);
+      const empresaExiste = await Empresa.findById(vehiculoData.empresa).session(session || null);
       if (!empresaExiste) {
         logger.warn(`Empresa no encontrada al actualizar vehículo: ${vehiculoData.empresa}`);
         throw new Error('La empresa especificada no existe');
@@ -268,7 +268,7 @@ const updateVehiculo = async (id: string, vehiculoData: VehiculoData): Promise<a
     }
 
     // Verificar si el vehículo existe
-    const vehiculo = await Vehiculo.findById(id).session(session);
+    const vehiculo = await Vehiculo.findById(id).session(session || null);
     if (!vehiculo) {
       logger.warn(`Vehículo no encontrado al actualizar: ${id}`);
       throw new Error('Vehículo no encontrado');
@@ -283,7 +283,7 @@ const updateVehiculo = async (id: string, vehiculoData: VehiculoData): Promise<a
         const dominioExiste = await Vehiculo.findOne({ 
           dominio: vehiculoData.dominio,
           _id: { $ne: id } // Excluimos el vehículo actual
-        }).session(session);
+        }).session(session || null);
         
         if (dominioExiste) {
           logger.warn(`Intento de actualizar vehículo con dominio duplicado: ${vehiculoData.dominio}`);
@@ -352,7 +352,7 @@ const deleteVehiculo = async (id: string): Promise<{ message: string }> => {
       throw new Error('Se requiere el ID del vehículo');
     }
     
-    const vehiculo = await Vehiculo.findById(id).session(session);
+    const vehiculo = await Vehiculo.findById(id).session(session || null);
     
     if (!vehiculo) {
       logger.warn(`Vehículo no encontrado al eliminar: ${id}`);
@@ -476,8 +476,8 @@ const createVehiculosBulk = async (vehiculosData: VehiculoBulkData[], options: {
     const empresaIds = empresaIdentifiers.filter(id => mongoose.Types.ObjectId.isValid(id));
     const empresaNombres = empresaIdentifiers.filter(id => !mongoose.Types.ObjectId.isValid(id));
 
-    const empresasFoundById = await Empresa.find({ _id: { $in: empresaIds } }).session(session).lean();
-    const empresasFoundByName = await Empresa.find({ nombre: { $in: empresaNombres } }).session(session).lean();
+    const empresasFoundById = await Empresa.find({ _id: { $in: empresaIds } }).session(session || null).lean();
+    const empresasFoundByName = await Empresa.find({ nombre: { $in: empresaNombres } }).session(session || null).lean();
     const empresaMap = new Map();
     [...empresasFoundById, ...empresasFoundByName].forEach(emp => {
         empresaMap.set(emp._id.toString(), emp._id);
@@ -489,7 +489,7 @@ const createVehiculosBulk = async (vehiculosData: VehiculoBulkData[], options: {
 
     // 2. Buscar Vehículos Existentes por patenteFaltante (dominio)
     const patentesFaltantes = vehiculosData.map(v => String(v.patenteFaltante || '').trim().toUpperCase()).filter(p => p);
-    const vehiculosExistentes = await Vehiculo.find({ dominio: { $in: patentesFaltantes } }).session(session).lean();
+    const vehiculosExistentes = await Vehiculo.find({ dominio: { $in: patentesFaltantes } }).session(session || null).lean();
     const vehiculosExistentesMap = new Map(vehiculosExistentes.map(v => [v.dominio, v]));
     logger.debug(`[createVehiculosBulk] Vehículos existentes encontrados: ${vehiculosExistentesMap.size}`);
 
@@ -561,29 +561,29 @@ const createVehiculosBulk = async (vehiculosData: VehiculoBulkData[], options: {
             if (result.hasWriteErrors()) {
                  result.getWriteErrors().forEach(err => {
                      // Intentar mapear el error al índice original (puede ser complejo)
-                     const opType = err.op.insertOne ? 'insert' : 'update';
-                     const targetDomain = err.op.insertOne ? err.op.insertOne.document.dominio : err.op.updateOne?.filter?.dominio; // Puede ser _id
+                     const opType = (err as any).op?.insertOne ? 'insert' : 'update';
+                     const targetDomain = (err as any).op?.insertOne ? (err as any).op.insertOne.document.dominio : (err as any).op?.updateOne?.filter?.dominio; // Puede ser _id
                      const originalIndex = vehiculosData.findIndex(v => String(v.patenteFaltante || '').trim().toUpperCase() === targetDomain);
 
                     errores.push({
                         index: originalIndex !== -1 ? originalIndex : 'N/A',
                         message: `Error en operación ${opType} para patente ${targetDomain || 'desconocida'}: ${err.errmsg}`,
                         code: err.code,
-                        data: err.op // Contiene la operación fallida
+                        data: (err as any).op || 'No disponible' // Contiene la operación fallida
                     });
                  });
                  logger.warn(`[createVehiculosBulk] ${errores.length} errores durante bulkWrite.`);
             }
 
              // Actualizar referencias en empresas (solo para los insertados)
-             const insertedIds = result.getInsertedIds().map(idInfo => idInfo._id);
+             const insertedIds = Object.values(result.insertedIds || {});
              if (insertedIds.length > 0) {
-                 const vehiculosInsertados = await Vehiculo.find({ _id: { $in: insertedIds } }).session(session).lean();
+                 const vehiculosInsertados = await Vehiculo.find({ _id: { $in: insertedIds } }).session(session || null).lean();
                  const vehiculosPorEmpresa: Record<string, mongoose.Types.ObjectId[]> = {};
                  vehiculosInsertados.forEach(vehiculo => {
                      const empresaIdStr = vehiculo.empresa.toString();
                      if (!vehiculosPorEmpresa[empresaIdStr]) vehiculosPorEmpresa[empresaIdStr] = [];
-                     vehiculosPorEmpresa[empresaIdStr].push(vehiculo._id);
+                     vehiculosPorEmpresa[empresaIdStr].push(vehiculo._id as mongoose.Types.ObjectId);
                  });
 
                  const actualizacionesEmpresas = Object.entries(vehiculosPorEmpresa).map(([empresaId, vehiculosIds]) =>
