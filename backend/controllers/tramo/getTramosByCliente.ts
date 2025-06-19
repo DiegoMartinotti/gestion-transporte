@@ -3,8 +3,15 @@
  * @description Controlador para obtener los tramos de un cliente
  */
 
-const tramoService = require('../../services/tramo/tramoService');
-const logger = require('../../utils/logger');
+import express from 'express';
+import { getTramosByCliente as getTramosByClienteService } from '../../services/tramo/tramoService';
+import logger from '../../utils/logger';
+
+interface TramoQuery {
+  desde?: string;
+  hasta?: string;
+  incluirHistoricos?: string;
+}
 
 /**
  * Obtiene todos los tramos asociados a un cliente específico
@@ -22,14 +29,14 @@ const logger = require('../../utils/logger');
  * @returns {Promise<Object>} Lista de tramos del cliente
  * @throws {Error} Error 500 si hay un error en el servidor
  */
-async function getTramosByCliente(req, res) {
+async function getTramosByCliente(req: express.Request, res: express.Response): Promise<void> {
     try {
         const { cliente } = req.params;
-        const { desde, hasta, incluirHistoricos } = req.query;
+        const { desde, hasta, incluirHistoricos }: TramoQuery = req.query as TramoQuery;
         
         logger.debug(`Solicitando tramos para cliente: ${cliente}`);
         
-        const resultado = await tramoService.getTramosByCliente(cliente, {
+        const resultado = await getTramosByClienteService(cliente, {
             desde,
             hasta,
             incluirHistoricos
@@ -46,9 +53,9 @@ async function getTramosByCliente(req, res) {
         logger.error('Error al obtener tramos:', error);
         res.status(500).json({ 
             success: false,
-            message: error.message 
+            message: (error as Error).message 
         });
     }
 }
 
-module.exports = getTramosByCliente; 
+export default getTramosByCliente;

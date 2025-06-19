@@ -3,8 +3,9 @@
  * @description Controlador para obtener las distancias calculadas entre sitios
  */
 
-const tramoService = require('../../services/tramo/tramoService');
-const logger = require('../../utils/logger');
+import express from 'express';
+import { getDistanciasCalculadas as getDistanciasCalculadasService } from '../../services/tramo/tramoService';
+import logger from '../../utils/logger';
 
 /**
  * Obtiene todas las distancias calculadas de tramos existentes
@@ -16,11 +17,11 @@ const logger = require('../../utils/logger');
  * @returns {Promise<Object>} Lista de distancias calculadas
  * @throws {Error} Error 500 si hay un error en el servidor
  */
-async function getDistanciasCalculadas(req, res) {
+async function getDistanciasCalculadas(req: express.Request, res: express.Response): Promise<void> {
     try {
         logger.debug('Solicitando distancias calculadas');
         
-        const distancias = await tramoService.getDistanciasCalculadas();
+        const distancias = await getDistanciasCalculadasService();
         
         res.json({
             success: true,
@@ -31,9 +32,9 @@ async function getDistanciasCalculadas(req, res) {
         res.status(500).json({
             success: false,
             message: 'Error al obtener distancias calculadas',
-            error: error.message
+            error: (error as Error).message
         });
     }
 }
 
-module.exports = getDistanciasCalculadas; 
+export default getDistanciasCalculadas;

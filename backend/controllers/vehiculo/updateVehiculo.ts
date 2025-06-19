@@ -1,14 +1,40 @@
-const vehiculoService = require('../../services/vehiculo/vehiculoService');
-const logger = require('../../utils/logger');
-const { APIError } = require('../../middleware/errorHandler');
-const mongoose = require('mongoose');
+import express from 'express';
+import { updateVehiculo as updateVehiculoService } from '../../services/vehiculo/vehiculoService';
+import logger from '../../utils/logger';
+import { APIError } from '../../middleware/errorHandler';
+import mongoose from 'mongoose';
+
+interface DocumentacionVencimiento {
+  vencimiento?: string;
+}
+
+interface Documentacion {
+  seguro?: DocumentacionVencimiento;
+  vtv?: DocumentacionVencimiento;
+  ruta?: DocumentacionVencimiento;
+  senasa?: DocumentacionVencimiento;
+}
+
+interface VehiculoUpdateData {
+  dominio?: string;
+  empresa?: string;
+  tipo?: string;
+  activo?: boolean;
+  capacidad?: number | string;
+  documentacion?: Documentacion;
+}
+
+interface ValidationResult {
+  valido: boolean;
+  errores: string[];
+}
 
 /**
  * Valida que el ID proporcionado sea un ObjectId válido de MongoDB
  * @param {string} id - ID a validar
  * @returns {boolean} true si es válido
  */
-const validarObjectId = (id) => {
+const validarObjectId = (id: string): boolean => {
   return mongoose.Types.ObjectId.isValid(id);
 };
 
@@ -17,8 +43,8 @@ const validarObjectId = (id) => {
  * @param {Object} data - Datos a validar
  * @returns {Object} - Resultado de la validación { valido, errores }
  */
-const validarDatosActualizacion = (data) => {
-  const errores = [];
+const validarDatosActualizacion = (data: VehiculoUpdateData): ValidationResult => {
+  const errores: string[] = [];
   
   // Validar campos si están presentes
   if (!data || Object.keys(data).length === 0) {
@@ -51,10 +77,10 @@ const validarDatosActualizacion = (data) => {
   
   // Validar formato de fechas en la documentación
   if (data.documentacion) {
-    const docs = ['seguro', 'vtv', 'ruta', 'senasa'];
+    const docs = ['seguro', 'vtv', 'ruta', 'senasa'] as const;
     docs.forEach(doc => {
-      if (data.documentacion[doc] && data.documentacion[doc].vencimiento) {
-        const fecha = new Date(data.documentacion[doc].vencimiento);
+      if (data.documentacion![doc] && data.documentacion![doc]!.vencimiento) {
+        const fecha = new Date(data.documentacion![doc]!.vencimiento!);
         if (isNaN(fecha.getTime())) {
           errores.push(`La fecha de vencimiento de ${doc} no es válida`);
         }
@@ -73,7 +99,7 @@ const validarDatosActualizacion = (data) => {
  * @route   PUT /api/vehiculos/:id
  * @access  Private
  */
-const updateVehiculo = async (req, res, next) => {
+const updateVehiculo = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<void> => {
   const inicioTiempo = Date.now();
   const { id } = req.params;
   
@@ -104,7 +130,7 @@ const updateVehiculo = async (req, res, next) => {
     }
     
     // Actualizar el vehículo
-    const vehiculoActualizado = await vehiculoService.updateVehiculo(id, req.body);
+    const vehiculoActualizado = await updateVehiculoService(id, req.body);
     
     const tiempoTotal = Date.now() - inicioTiempo;
     logger.info(`Vehículo ${id} actualizado correctamente (tiempo: ${tiempoTotal}ms)`);
@@ -124,27 +150,27 @@ const updateVehiculo = async (req, res, next) => {
     const tiempoTotal = Date.now() - inicioTiempo;
     
     // Manejar errores específicos
-    if (error.message.includes('empresa') || 
-        error.message.includes('La empresa especificada no existe')) {
-      logger.warn(`Error al actualizar vehículo - Empresa no válida: ${error.message} (tiempo: ${tiempoTotal}ms)`);
+    if ((error as Error).message.includes('empresa') || 
+        (error as Error).message.includes('La empresa especificada no existe')) {
+      logger.warn(`Error al actualizar vehículo - Empresa no válida: ${(error as Error).message} (tiempo: ${tiempoTotal}ms)`);
       return next(APIError.validacion('La empresa especificada no existe', { campo: 'empresa' }));
     }
     
-    if (error.message.includes('dominio') || 
-        error.message.includes('Ya existe un vehículo con ese dominio')) {
-      logger.warn(`Error al actualizar vehículo - Dominio duplicado: ${error.message} (tiempo: ${tiempoTotal}ms)`);
+    if ((error as Error).message.includes('dominio') || 
+        (error as Error).message.includes('Ya existe un vehículo con ese dominio')) {
+      logger.warn(`Error al actualizar vehículo - Dominio duplicado: ${(error as Error).message} (tiempo: ${tiempoTotal}ms)`);
       return next(APIError.conflicto('Ya existe un vehículo con ese dominio', { campo: 'dominio' }));
     }
     
-    if (error.message.includes('no encontrado')) {
+    if ((error as Error).message.includes('no encontrado')) {
       logger.warn(`Vehículo no encontrado al actualizar: ${id} (tiempo: ${tiempoTotal}ms)`);
       return next(APIError.noEncontrado(`Vehículo con ID ${id} no encontrado`, 'vehiculo'));
     }
     
     // Error general
-    logger.error(`Error al actualizar vehículo ${id}: ${error.message} (tiempo: ${tiempoTotal}ms)`, error);
-    next(new APIError(`Error al actualizar vehículo: ${error.message}`));
+    logger.error(`Error al actualizar vehículo ${id}: ${(error as Error).message} (tiempo: ${tiempoTotal}ms)`, error);
+    next(new APIError(`Error al actualizar vehículo: ${(error as Error).message}`));
   }
 };
 
-module.exports = updateVehiculo; 
+export default updateVehiculo;

@@ -1,14 +1,15 @@
-const vehiculoService = require('../../services/vehiculo/vehiculoService');
-const logger = require('../../utils/logger');
-const { APIError } = require('../../middleware/errorHandler');
-const mongoose = require('mongoose');
+import express from 'express';
+import { getVehiculoById as getVehiculoByIdService } from '../../services/vehiculo/vehiculoService';
+import logger from '../../utils/logger';
+import { APIError } from '../../middleware/errorHandler';
+import mongoose from 'mongoose';
 
 /**
  * Valida que el ID proporcionado sea un ObjectId válido de MongoDB
  * @param {string} id - ID a validar
  * @returns {boolean} true si es válido
  */
-const validarObjectId = (id) => {
+const validarObjectId = (id: string): boolean => {
   return mongoose.Types.ObjectId.isValid(id);
 };
 
@@ -17,7 +18,7 @@ const validarObjectId = (id) => {
  * @route   GET /api/vehiculos/:id
  * @access  Private
  */
-const getVehiculoById = async (req, res, next) => {
+const getVehiculoById = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<void> => {
   const inicioTiempo = Date.now();
   const { id } = req.params;
   
@@ -35,7 +36,7 @@ const getVehiculoById = async (req, res, next) => {
     }
     
     // Obtener el vehículo
-    const vehiculo = await vehiculoService.getVehiculoById(id);
+    const vehiculo = await getVehiculoByIdService(id);
     
     // Si no se encontró, lanzar error específico
     if (!vehiculo) {
@@ -59,15 +60,15 @@ const getVehiculoById = async (req, res, next) => {
     const tiempoTotal = Date.now() - inicioTiempo;
     
     // Si es un error específico de "no encontrado"
-    if (error.message.includes('no encontrado')) {
+    if ((error as Error).message.includes('no encontrado')) {
       logger.warn(`Vehículo no encontrado: ${id} (tiempo: ${tiempoTotal}ms)`);
       return next(APIError.noEncontrado(`Vehículo con ID ${id} no encontrado`, 'vehiculo'));
     }
     
     // Error general
-    logger.error(`Error al obtener vehículo ${id}: ${error.message} (tiempo: ${tiempoTotal}ms)`, error);
-    next(new APIError(`Error al obtener vehículo: ${error.message}`));
+    logger.error(`Error al obtener vehículo ${id}: ${(error as Error).message} (tiempo: ${tiempoTotal}ms)`, error);
+    next(new APIError(`Error al obtener vehículo: ${(error as Error).message}`));
   }
 };
 
-module.exports = getVehiculoById; 
+export default getVehiculoById;
