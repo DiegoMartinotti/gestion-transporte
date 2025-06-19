@@ -9,7 +9,7 @@ import * as tramoController from '../controllers/tramo';
 import logger from '../utils/logger';
 
 // Middleware para debugging de solicitudes grandes
-router.use('/bulk', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.use('/bulk', (req: express.Request, res: express.Response, next: express.NextFunction): void => {
     logger.debug('Recibiendo solicitud bulk import:');
     logger.debug('- Headers:', req.headers);
     logger.debug('- Cliente:', req.body?.cliente);
@@ -19,7 +19,7 @@ router.use('/bulk', (req: express.Request, res: express.Response, next: express.
         logger.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
         logger.error('Content-Type:', req.headers['content-type']);
         logger.error('Content-Length:', req.headers['content-length']);
-        return res.status(400).json({
+        res.status(400).json({
             success: false,
             message: 'Datos de solicitud vacíos o inválidos',
             debug: {
@@ -29,6 +29,7 @@ router.use('/bulk', (req: express.Request, res: express.Response, next: express.
                 tramosEmpty: !req.body?.tramos
             }
         });
+        return;
     }
     
     next();

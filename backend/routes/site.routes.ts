@@ -43,10 +43,7 @@ import logger from '../utils/logger';
  *       500:
  *         description: Error del servidor
  */
-router.get('/', authenticateToken, async (req: express.Request, res: express.Response) => {
-  logger.debug('GET /api/site - Parámetros:', req.query);
-  return await siteController.getAllSites(req, res);
-});
+router.get('/', authenticateToken, siteController.getAllSites);
 
 /**
  * @swagger
@@ -70,10 +67,7 @@ router.get('/', authenticateToken, async (req: express.Request, res: express.Res
  *       500:
  *         description: Error del servidor
  */
-router.get('/:id', authenticateToken, async (req: express.Request, res: express.Response) => {
-  logger.debug(`GET /api/site/${req.params.id}`);
-  return await siteController.getSiteById(req, res);
-});
+router.get('/:id', authenticateToken, siteController.getSiteById);
 
 /**
  * @swagger
@@ -97,10 +91,7 @@ router.get('/:id', authenticateToken, async (req: express.Request, res: express.
  *       500:
  *         description: Error del servidor
  */
-router.get('/cliente/:clienteId', authenticateToken, async (req: express.Request, res: express.Response) => {
-  logger.debug(`GET /api/site/cliente/${req.params.clienteId}`);
-  return await siteController.getSitesByCliente(req, res);
-});
+router.get('/cliente/:clienteId', authenticateToken, siteController.getSitesByCliente);
 
 /**
  * @swagger
@@ -140,10 +131,7 @@ router.get('/cliente/:clienteId', authenticateToken, async (req: express.Request
  *       500:
  *         description: Error del servidor
  */
-router.post('/', authenticateToken, validateSite, async (req: express.Request, res: express.Response) => {
-  logger.debug('POST /api/site - Body:', req.body);
-  return await siteController.createSite(req, res);
-});
+router.post('/', authenticateToken, validateSite, siteController.createSite);
 
 /**
  * @swagger
@@ -187,10 +175,7 @@ router.post('/', authenticateToken, validateSite, async (req: express.Request, r
  *       500:
  *         description: Error del servidor
  */
-router.put('/:id', authenticateToken, validateSite, async (req: express.Request, res: express.Response) => {
-  logger.debug(`PUT /api/site/${req.params.id} - Body:`, req.body);
-  return await siteController.updateSite(req, res);
-});
+router.put('/:id', authenticateToken, validateSite, siteController.updateSite);
 
 /**
  * @swagger
@@ -216,10 +201,7 @@ router.put('/:id', authenticateToken, validateSite, async (req: express.Request,
  *       500:
  *         description: Error del servidor
  */
-router.delete('/:id', authenticateToken, async (req: express.Request, res: express.Response) => {
-  logger.debug(`DELETE /api/site/${req.params.id}`);
-  return await siteController.deleteSite(req, res);
-});
+router.delete('/:id', authenticateToken, siteController.deleteSite);
 
 /**
  * @swagger
@@ -247,10 +229,7 @@ router.delete('/:id', authenticateToken, async (req: express.Request, res: expre
  *       500:
  *         description: Error del servidor
  */
-router.post('/geocode', authenticateToken, async (req: express.Request, res: express.Response) => {
-  logger.debug('POST /api/site/geocode - Body:', req.body);
-  return await siteController.geocodeDireccion(req, res);
-});
+router.post('/geocode', authenticateToken, siteController.geocodeDireccion);
 
 /**
  * @swagger
@@ -274,10 +253,7 @@ router.post('/geocode', authenticateToken, async (req: express.Request, res: exp
  *       500:
  *         description: Error del servidor
  */
-router.delete('/bulk/cliente/:cliente', authenticateToken, async (req: express.Request, res: express.Response) => {
-  logger.debug(`DELETE /api/site/bulk/cliente/${req.params.cliente}`);
-  return await siteController.bulkDeleteSites(req, res);
-});
+router.delete('/bulk/cliente/:cliente', authenticateToken, siteController.bulkDeleteSites);
 
 /**
  * @swagger
@@ -312,9 +288,6 @@ router.delete('/bulk/cliente/:cliente', authenticateToken, async (req: express.R
  *       500:
  *         description: Error del servidor durante el reprocesamiento
  */
-router.post('/reprocess-addresses/:cliente', authenticateToken, async (req: express.Request, res: express.Response) => {
-  logger.debug(`POST /api/site/reprocess-addresses/${req.params.cliente}`);
-  return await siteController.reprocessAddressesByCliente(req, res);
-});
+router.post('/reprocess-addresses/:cliente', authenticateToken, siteController.reprocessAddressesByCliente);
 
 export default router;

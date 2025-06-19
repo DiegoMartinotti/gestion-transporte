@@ -16,7 +16,7 @@ router.use('/bulk', (req, res, next) => {
         logger.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
         logger.error('Content-Type:', req.headers['content-type']);
         logger.error('Content-Length:', req.headers['content-length']);
-        return res.status(400).json({
+        res.status(400).json({
             success: false,
             message: 'Datos de solicitud vacíos o inválidos',
             debug: {
@@ -26,6 +26,7 @@ router.use('/bulk', (req, res, next) => {
                 tramosEmpty: !req.body?.tramos
             }
         });
+        return;
     }
     next();
 });

@@ -29,7 +29,7 @@ router.post('/', authenticateToken, async (req: express.Request, res: express.Re
 });
 
 // PUT /api/extras/:id - Actualizar un extra
-router.put('/:id', authenticateToken, async (req: express.Request, res: express.Response) => {
+router.put('/:id', authenticateToken, async (req: express.Request, res: express.Response): Promise<void> => {
     try {
         const extra = await Extra.findByIdAndUpdate(
             req.params.id,
@@ -37,7 +37,8 @@ router.put('/:id', authenticateToken, async (req: express.Request, res: express.
             { new: true, runValidators: true }
         );
         if (!extra) {
-            return res.status(404).json({ error: 'Extra no encontrado' });
+            res.status(404).json({ error: 'Extra no encontrado' });
+            return;
         }
         res.json(extra);
     } catch (error) {
@@ -47,11 +48,12 @@ router.put('/:id', authenticateToken, async (req: express.Request, res: express.
 });
 
 // DELETE /api/extras/:id - Eliminar un extra
-router.delete('/:id', authenticateToken, async (req: express.Request, res: express.Response) => {
+router.delete('/:id', authenticateToken, async (req: express.Request, res: express.Response): Promise<void> => {
     try {
         const extra = await Extra.findByIdAndDelete(req.params.id);
         if (!extra) {
-            return res.status(404).json({ error: 'Extra no encontrado' });
+            res.status(404).json({ error: 'Extra no encontrado' });
+            return;
         }
         res.json({ message: 'Extra eliminado correctamente' });
     } catch (error) {
