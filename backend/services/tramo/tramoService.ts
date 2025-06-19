@@ -513,9 +513,9 @@ async function obtenerTramosHistoricos(tramos: any[], desde: string, hasta: stri
             );
             
             // Agrupar por tipo y obtener la más reciente para cada tipo
-            const tiposTarifa = [...new Set(tarifasEnRango.map((t: any) => t.tipo))];
+            const tiposTarifa = [...new Set(tarifasEnRango.map((t: any) => t.tipo))] as string[];
             
-            tiposTarifa.forEach(tipo => {
+            tiposTarifa.forEach((tipo: string) => {
                 // Obtener la tarifa más reciente de este tipo
                 const tarifaMasReciente = tarifasEnRango
                     .filter((t: any) => t.tipo === tipo)
@@ -723,7 +723,7 @@ const createTramosBulk = async (tramosData: TramosBulkData[], options: { session
             { Site: { $in: sitiosNecesarios } },
             { nombre: { $in: sitiosNecesarios } }
         ]
-    }).session(session).lean();
+    }).session(session || null).lean();
 
     // 3. Crear mapas para búsqueda rápida
     const sitiosPorNombre = new Map();
@@ -755,7 +755,7 @@ const createTramosBulk = async (tramosData: TramosBulkData[], options: { session
             destino: par.destino
         })),
         cliente: { $in: [...clienteIds] }
-    }).session(session).lean();
+    }).session(session || null).lean();
 
     // Crear mapa de tramos existentes para búsqueda rápida
     const tramosPorOrigenDestino = new Map();
@@ -938,7 +938,7 @@ const createTramosBulk = async (tramosData: TramosBulkData[], options: { session
                         index: 'N/A', // Es difícil mapear el error al índice original
                         message: `Error en operación: ${err.errmsg}`,
                         code: err.code,
-                        data: err.op
+                        data: (err as any).op || 'No disponible'
                     });
                 });
             }

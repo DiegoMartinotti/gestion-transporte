@@ -2,6 +2,7 @@ import mongoose, { Document, Schema, Types, model } from 'mongoose';
 import Tramo from './Tramo';
 import Cliente from './Cliente';
 import Extra from './Extra';
+import Site from './Site';
 import { calcularTarifaPaletConFormula } from '../utils/formulaParser';
 import { actualizarEstadoPartida } from '../utils/estadoPartida';
 import logger from '../utils/logger';
@@ -115,10 +116,10 @@ const viajeSchema = new Schema<IViaje>({
         ref: 'Personal',
         required: true,
         validate: {
-            validator: async function(value: Types.ObjectId) {
-                const Personal = mongoose.model('Personal');
-                const personal = await Personal.findById(value).lean();
-                return personal && (personal as any).activo === true;
+            validator: function(value: Types.ObjectId) {
+                return mongoose.model('Personal').findById(value).lean().then((personal: any) => {
+                    return personal && personal.activo === true;
+                });
             },
             message: 'El chofer debe ser un personal activo'
         }
@@ -314,52 +315,54 @@ viajeSchema.pre('save', async function (next) {
                 }).populate('tarifasHistoricas'); // Poblar para acceder a tarifas
 
                 if (!tramo) {
-                    await this.populate('origen destino');
-                    const origenNombre = (viaje.origen as any)?.nombre || 'ID desconocido';
-                    const destinoNombre = (viaje.destino as any)?.nombre || 'ID desconocido';
+                    await (this as any).populate(['origen', 'destino']);
+                    const origenPopulated = (this as any).populated('origen') ? (this as any).origen : await Site.findById(viaje.origen);
+                    const destinoPopulated = (this as any).populated('destino') ? (this as any).destino : await Site.findById(viaje.destino);
+                    const origenNombre = (origenPopulated as any)?.Site || 'ID desconocido';
+                    const destinoNombre = (destinoPopulated as any)?.Site || 'ID desconocido';
                     throw new Error(`No se encontró un tramo válido para Cliente ${(clienteDoc as any).nombre} (${viaje.cliente}) desde ${origenNombre} hasta ${destinoNombre} para la fecha ${viaje.fecha.toISOString().split('T')[0]}`);
                 }
 
                 // Encontrar la tarifa vigente usando el método del modelo (o lógica manual si es necesario)
                 // ¡Asegúrate que tramo.getTarifaVigente maneje fechas y tipos correctamente!
                 try {
-                    tarifaVigente = tramo.getTarifaVigente(this.fecha, this.tipoTramo);
+                    tarifaVigente = tramo.getTarifaVigente(viaje.fecha, viaje.tipoTramo);
                 } catch (e: any) {
                     logger.error(`Error en tramo.getTarifaVigente para tramo ${tramo._id}: ${e.message}`);
                     throw new Error(`Error buscando tarifa vigente: ${e.message}`); // Relanzar error
                 }
 
                 if (!tarifaVigente) {
-                    await this.populate('origen destino');
-                    const origenNombre = (this.origen as any)?.nombre || 'ID desconocido';
-                    const destinoNombre = (this.destino as any)?.nombre || 'ID desconocido';
-                    throw new Error(`No se encontró una tarifa (${this.tipoTramo}) vigente para tramo ${origenNombre} → ${destinoNombre} (Cliente: ${(clienteDoc as any).Cliente}) en fecha ${this.fecha.toISOString().split('T')[0]}`);
+                    await (this as any).populate('origen destino');
+                    const origenNombre = ((this as any).origen as any)?.nombre || 'ID desconocido';
+                    const destinoNombre = ((this as any).destino as any)?.nombre || 'ID desconocido';
+                    throw new Error(`No se encontró una tarifa (${viaje.tipoTramo}) vigente para tramo ${origenNombre} → ${destinoNombre} (Cliente: ${(clienteDoc as any).Cliente}) en fecha ${viaje.fecha.toISOString().split('T')[0]}`);
                 }
 
                 // Asignar el peaje de la tarifa vigente encontrada
-                this.peaje = Number(tarifaVigente.valorPeaje) || 0;
+                viaje.peaje = Number(tarifaVigente.valorPeaje) || 0;
                 logger.debug(`Tarifa Vigente encontrada (método normal):`, tarifaVigente);
             }
 
             // --- Calcular tarifa base usando la tarifaVigente (obtenida de A o B) ---
             let tarifaBase = 0;
-            const numPalets = Number(this.paletas) || 0;
+            const numPalets = Number(viaje.paletas) || 0;
 
             if (!tarifaVigente || typeof tarifaVigente.metodoCalculo === 'undefined' || typeof tarifaVigente.valor === 'undefined') {
                 throw new Error(`Datos incompletos en la tarifa vigente seleccionada para calcular la tarifa base.`);
             }
 
-            logger.debug(`Calculando tarifa base con: metodo=${tarifaVigente.metodoCalculo}, valor=${tarifaVigente.valor}, palets=${numPalets}, tipoUnidad=${this.tipoUnidad}, peaje=${this.peaje}`);
+            logger.debug(`Calculando tarifa base con: metodo=${tarifaVigente.metodoCalculo}, valor=${tarifaVigente.valor}, palets=${numPalets}, tipoUnidad=${viaje.tipoUnidad}, peaje=${viaje.peaje}`);
 
             switch (tarifaVigente.metodoCalculo) {
                 case 'Palet':
-                    const formulaKey = this.tipoUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
+                    const formulaKey = viaje.tipoUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
                     const formulaPersonalizada = (clienteDoc as any)[formulaKey];
                     if (formulaPersonalizada) {
-                        logger.info(`Usando fórmula personalizada para ${(clienteDoc as any).Cliente} (${this.tipoUnidad}): ${formulaPersonalizada}`);
+                        logger.info(`Usando fórmula personalizada para ${(clienteDoc as any).Cliente} (${viaje.tipoUnidad}): ${formulaPersonalizada}`);
                         const valorTarifaParaFormula = Number(tarifaVigente.valor);
                         if (isNaN(valorTarifaParaFormula)) throw new Error('Valor de tarifa inválido para fórmula Palet.');
-                        const resultado = calcularTarifaPaletConFormula(valorTarifaParaFormula, this.peaje, numPalets, formulaPersonalizada);
+                        const resultado = calcularTarifaPaletConFormula(valorTarifaParaFormula, viaje.peaje, numPalets, formulaPersonalizada);
                         tarifaBase = resultado.tarifaBase;
                     } else {
                         const valorTarifa = Number(tarifaVigente.valor);
@@ -388,14 +391,14 @@ viajeSchema.pre('save', async function (next) {
             }
 
             // Asignar la tarifa calculada
-            this.tarifa = Math.round(tarifaBase * 100) / 100;
+            viaje.tarifa = Math.round(tarifaBase * 100) / 100;
 
             // Validar que tanto tarifa como peaje sean números válidos >= 0
-            if (isNaN(this.tarifa) || this.tarifa < 0 || isNaN(this.peaje) || this.peaje < 0) {
-                logger.error('Error de validación Post-Cálculo - Tarifa o Peaje inválido:', { tarifa: this.tarifa, peaje: this.peaje });
+            if (isNaN(viaje.tarifa) || viaje.tarifa < 0 || isNaN(viaje.peaje) || viaje.peaje < 0) {
+                logger.error('Error de validación Post-Cálculo - Tarifa o Peaje inválido:', { tarifa: viaje.tarifa, peaje: viaje.peaje });
                 throw new Error('La tarifa y el peaje calculados deben ser números mayores o iguales a 0');
             }
-            logger.debug(`Tarifa base calculada: ${tarifaBase}, Tarifa final: ${this.tarifa}, Peaje asignado: ${this.peaje}`);
+            logger.debug(`Tarifa base calculada: ${tarifaBase}, Tarifa final: ${viaje.tarifa}, Peaje asignado: ${viaje.peaje}`);
 
             // Limpiar la propiedad temporal si existía
             if (tempTariffInfo) {

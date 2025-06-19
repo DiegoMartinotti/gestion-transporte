@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import Vehiculo, { IVehiculo } from '../models/Vehiculo';
 import Empresa, { IEmpresa } from '../models/Empresa';
 import logger from '../utils/logger';
-import ApiResponse from '../utils/ApiResponse';
+import ApiResponseClass from '../utils/ApiResponse';
 
 /**
  * Interface for authenticated user in request
@@ -427,7 +427,7 @@ export const createVehiculosBulk = async (req: Request<{}, BulkImportResult | Ap
         
         // Manejar errores específicos de validación de MongoDB
         if (error.name === 'ValidationError') {
-            ApiResponse.error(
+            ApiResponseClass.error(
                 res,
                 'Error de validación en los datos de los vehículos',
                 400,

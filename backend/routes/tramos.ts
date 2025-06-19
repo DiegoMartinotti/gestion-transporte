@@ -18,7 +18,7 @@ router.use('/bulk', (req: express.Request, res: express.Response, next: express.
         logger.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
         logger.error('Content-Type:', req.headers['content-type']);
         logger.error('Content-Length:', req.headers['content-length']);
-        return res.status(400).json({
+        res.status(400).json({
             success: false,
             message: 'Datos de solicitud vacíos o inválidos',
             debug: {
@@ -41,7 +41,7 @@ router.use(async (req: express.Request, res: express.Response, next: express.Nex
         
         // Verificar que es un tipo válido
         if (!['TRMC', 'TRMI'].includes(req.body.tipo)) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'El tipo de tramo debe ser TRMC o TRMI'
             });
@@ -57,7 +57,8 @@ router.get('/vigentes/:fecha', async (req: express.Request, res: express.Respons
     const fecha = new Date(req.params.fecha);
     
     if (isNaN(fecha.getTime())) {
-      return res.status(400).json({ error: 'La fecha proporcionada no es válida' });
+      res.status(400).json({ error: 'La fecha proporcionada no es válida' });
+      return;
     }
     
     const tramos = await Tramo.find({
@@ -105,7 +106,8 @@ router.get('/:id', async (req: express.Request, res: express.Response) => {
       .populate('origen')
       .populate('destino');
     if (!tramo) {
-      return res.status(404).json({ error: 'Tramo no encontrado' });
+      res.status(404).json({ error: 'Tramo no encontrado' });
+      return;
     }
     res.json(tramo);
   } catch (error) {
@@ -248,10 +250,11 @@ router.post('/bulk', async (req: express.Request, res: express.Response) => {
         // Validar formato de la solicitud
         if (!req.body) {
             logger.error('Cuerpo de la solicitud nulo o indefinido');
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'El cuerpo de la solicitud está vacío'
             });
+            return;
         }
 
         const { cliente, tramos } = req.body;
@@ -264,14 +267,15 @@ router.post('/bulk', async (req: express.Request, res: express.Response) => {
         });
 
         if (!cliente) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Cliente no especificado'
             });
+            return;
         }
 
         if (!tramos || !Array.isArray(tramos)) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Formato de tramos inválido',
                 debug: {
@@ -279,6 +283,7 @@ router.post('/bulk', async (req: express.Request, res: express.Response) => {
                     isArray: Array.isArray(tramos)
                 }
             });
+            return;
         }
 
         // Llamar al controlador para procesar los tramos
@@ -299,7 +304,7 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
         const { cliente, origen, destino, metodoCalculo } = req.body;
         
         if (!cliente) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Cliente es requerido para el diagnóstico'
             });
@@ -325,16 +330,16 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
         const analisis = {
             totalTramos: tramos.length,
             porTipo: {
-                TRMC: tramos.filter(t => t.tipo === 'TRMC').length,
-                TRMI: tramos.filter(t => t.tipo === 'TRMI').length,
-                otros: tramos.filter(t => !['TRMC', 'TRMI'].includes(t.tipo)).length,
-                nulos: tramos.filter(t => !t.tipo).length
+                TRMC: tramos.filter(t => (t as any).tipo === 'TRMC').length,
+                TRMI: tramos.filter(t => (t as any).tipo === 'TRMI').length,
+                otros: tramos.filter(t => !['TRMC', 'TRMI'].includes((t as any).tipo)).length,
+                nulos: tramos.filter(t => !(t as any).tipo).length
             },
-            tramosSinTipoNormalizado: tramos.filter(t => t.tipo && t.tipo !== 'TRMC' && t.tipo !== 'TRMI').map(t => ({
+            tramosSinTipoNormalizado: tramos.filter(t => (t as any).tipo && (t as any).tipo !== 'TRMC' && (t as any).tipo !== 'TRMI').map(t => ({
                 _id: t._id,
                 origen: (t.origen as any)?.Site,
                 destino: (t.destino as any)?.Site,
-                tipo: t.tipo
+                tipo: (t as any).tipo
             })),
             posiblesConflictos: [] as any[]
         };
@@ -344,7 +349,7 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
         const rutasUnicas: Record<string, any[]> = {};
         
         tramos.forEach(tramo => {
-            const rutaKey = `${(tramo.origen as any)._id}-${(tramo.destino as any)._id}-${tramo.metodoCalculo}`;
+            const rutaKey = `${(tramo.origen as any)._id}-${(tramo.destino as any)._id}-${(tramo as any).metodoCalculo}`;
             if (!rutasUnicas[rutaKey]) {
                 rutasUnicas[rutaKey] = [];
             }
@@ -356,7 +361,7 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
             const tramosRuta = rutasUnicas[ruta];
             if (tramosRuta.length > 1) {
                 // Verificar si hay diferentes tipos en esta ruta
-                const tiposEnRuta = new Set(tramosRuta.map(t => t.tipo));
+                const tiposEnRuta = new Set(tramosRuta.map(t => (t as any).tipo));
                 if (tiposEnRuta.size > 1) {
                     analisis.posiblesConflictos.push({
                         ruta: ruta,
@@ -365,7 +370,7 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
                         tipos: Array.from(tiposEnRuta),
                         tramos: tramosRuta.map(t => ({
                             _id: t._id,
-                            tipo: t.tipo,
+                            tipo: (t as any).tipo,
                             vigenciaDesde: t.vigenciaDesde,
                             vigenciaHasta: t.vigenciaHasta,
                             valor: t.valor
@@ -395,14 +400,14 @@ router.post('/corregir-tipos', async (req: express.Request, res: express.Respons
         const { tramoIds, nuevoTipo } = req.body;
         
         if (!tramoIds || !Array.isArray(tramoIds) || tramoIds.length === 0) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Se requieren IDs de tramos para corregir'
             });
         }
         
         if (!nuevoTipo || !['TRMC', 'TRMI'].includes(nuevoTipo)) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'El nuevo tipo debe ser TRMC o TRMI'
             });
@@ -418,8 +423,8 @@ router.post('/corregir-tipos', async (req: express.Request, res: express.Respons
             try {
                 const tramo = await Tramo.findById(id);
                 if (tramo) {
-                    const tipoAnterior = tramo.tipo;
-                    tramo.tipo = nuevoTipo;
+                    const tipoAnterior = (tramo as any).tipo;
+                    (tramo as any).tipo = nuevoTipo;
                     await tramo.save();
                     resultados.actualizados++;
                     logger.info(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
