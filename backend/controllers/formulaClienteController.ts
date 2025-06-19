@@ -225,7 +225,7 @@ export const updateFormula = async (req: Request<{ id: string }, IFormulasPerson
         }
 
         // Validar solapamiento excluyendo el documento actual
-        const overlap = await checkOverlap(formulaExistente.clienteId, formulaExistente.tipoUnidad, desdeDate, hastaDate, id);
+        const overlap = await checkOverlap(formulaExistente.clienteId.toString(), formulaExistente.tipoUnidad, desdeDate, hastaDate || null, id);
         if (overlap) {
             res.status(400).json({
                 message: `El nuevo período de vigencia se solapa con otra fórmula existente (ID: ${overlap._id})`,

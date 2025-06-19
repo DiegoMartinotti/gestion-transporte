@@ -1,7 +1,6 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const { geocode } = require('../controllers/proxyController');
+import { geocode } from '../controllers/proxyController';
 router.get('/geocode', geocode);
-module.exports = router;
+export default router;
 //# sourceMappingURL=proxy.js.map

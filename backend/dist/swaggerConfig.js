@@ -1,10 +1,9 @@
-"use strict";
 /**
  * Configuración centralizada de Swagger
  * Este módulo genera la documentación interactiva de la API
  */
-const swaggerJsdoc = require('swagger-jsdoc');
-const logger = require('./utils/logger');
+import swaggerJsdoc from 'swagger-jsdoc';
+import logger from './utils/logger';
 // Definición de la documentación OpenAPI
 const swaggerOptions = {
     definition: {
@@ -216,10 +215,16 @@ const swaggerOptions = {
     apis: [
         './routes/*.js', // Archivos de rutas antiguos
         './routes/**/*.js', // Rutas modularizadas (incluye subdirectorios)
+        './routes/*.ts', // Archivos de rutas TypeScript
+        './routes/**/*.ts', // Rutas modularizadas TypeScript
         './controllers/*.js', // Controladores antiguos
         './controllers/**/*.js', // Controladores modularizados (incluye subdirectorios)
-        './models/*.js', // Modelos
-        './middleware/*.js' // Middleware
+        './controllers/*.ts', // Controladores TypeScript
+        './controllers/**/*.ts', // Controladores modularizados TypeScript
+        './models/*.js', // Modelos JavaScript
+        './models/*.ts', // Modelos TypeScript
+        './middleware/*.js', // Middleware JavaScript
+        './middleware/*.ts' // Middleware TypeScript
     ]
 };
 // Generar especificaciones Swagger
@@ -241,5 +246,5 @@ catch (error) {
         paths: {}
     };
 }
-module.exports = swaggerSpecs;
+export default swaggerSpecs;
 //# sourceMappingURL=swaggerConfig.js.map

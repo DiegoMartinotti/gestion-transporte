@@ -1,10 +1,8 @@
-"use strict";
 /**
  * @module controllers/tramo
  * @description Índice de controladores para el módulo de tramos
  */
-module.exports = {
-    getTramosByCliente: require('./getTramosByCliente'),
-    getDistanciasCalculadas: require('./getDistanciasCalculadas'),
-};
+import getTramosByCliente from './getTramosByCliente';
+import getDistanciasCalculadas from './getDistanciasCalculadas';
+export { getTramosByCliente, getDistanciasCalculadas, };
 //# sourceMappingURL=index.js.map

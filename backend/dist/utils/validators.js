@@ -1,13 +1,8 @@
-"use strict";
 /**
  * @module utils/validators
  * @description Utilidades de validación centralizadas para la aplicación
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const mongoose_1 = __importDefault(require("mongoose"));
+import mongoose from 'mongoose';
 /**
  * Validadores para uso común en toda la aplicación
  */
@@ -20,7 +15,7 @@ const validators = {
     esObjectIdValido: (id) => {
         if (!id)
             return false;
-        return mongoose_1.default.Types.ObjectId.isValid(id);
+        return mongoose.Types.ObjectId.isValid(id);
     },
     /**
      * Valida que un dominio (patente) tenga un formato válido
@@ -109,5 +104,5 @@ const validators = {
         return emailRegex.test(email);
     }
 };
-exports.default = validators;
+export default validators;
 //# sourceMappingURL=validators.js.map

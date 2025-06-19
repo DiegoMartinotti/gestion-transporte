@@ -1,23 +1,13 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const Site = require('../../models/Site');
-const logger = require('../../utils/logger');
-const { tryCatch } = require('../../utils/errorHandler');
+import Site from '../../models/Site';
+import logger from '../../utils/logger';
+import { tryCatch } from '../../utils/errorHandler';
 /**
  * Bulk create sites
  * @route POST /api/site/bulk
  * @param {Array} req.body.sites - Array of sites to create
  * @returns {object} Results of operation
  */
-const bulkCreateSites = tryCatch((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const bulkCreateSites = tryCatch(async (req, res) => {
     const { sites } = req.body;
     logger.debug('Recibidos sites para importación:', sites.length);
     const resultados = {
@@ -30,20 +20,20 @@ const bulkCreateSites = tryCatch((req, res) => __awaiter(void 0, void 0, void 0,
             const location = siteData.coordenadas ? {
                 type: 'Point',
                 coordinates: [
-                    parseFloat(siteData.coordenadas.lng),
-                    parseFloat(siteData.coordenadas.lat)
+                    parseFloat(String(siteData.coordenadas.lng)),
+                    parseFloat(String(siteData.coordenadas.lat))
                 ]
-            } : null;
+            } : undefined;
             const nuevoSite = new Site({
-                Site: siteData.site,
-                Cliente: siteData.cliente,
-                Direccion: siteData.direccion || '-',
-                Localidad: siteData.localidad || '',
-                Provincia: siteData.provincia || '',
-                Codigo: siteData.codigo || '',
+                nombre: siteData.site,
+                cliente: siteData.cliente,
+                direccion: siteData.direccion || '-',
+                localidad: siteData.localidad || '',
+                provincia: siteData.provincia || '',
+                codigo: siteData.codigo || '',
                 location
             });
-            yield nuevoSite.save();
+            await nuevoSite.save();
             resultados.exitosos++;
         }
         catch (error) {
@@ -61,6 +51,6 @@ const bulkCreateSites = tryCatch((req, res) => __awaiter(void 0, void 0, void 0,
         mensaje: `Importación completada: ${resultados.exitosos} sites creados`,
         resultados
     });
-}));
-module.exports = bulkCreateSites;
+});
+export default bulkCreateSites;
 //# sourceMappingURL=bulkCreateSites.js.map

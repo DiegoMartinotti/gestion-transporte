@@ -1,15 +1,5 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const vehiculoService = require('../../services/vehiculo/vehiculoService');
-const logger = require('../../utils/logger');
+import { createVehiculosBulk as createVehiculosBulkService } from '../../services/vehiculo/vehiculoService';
+import logger from '../../utils/logger';
 /**
  * Valida los datos de entrada para la carga masiva
  * @param {Array} vehiculos - Lista de vehículos a validar
@@ -21,42 +11,42 @@ const validarDatosMasivos = (vehiculos) => {
     // Validar que se proporcionó un array
     if (!vehiculos) {
         errores.push('No se proporcionaron datos de vehículos');
-        return { valido: false, errores, advertencias };
+        return { valido: false, errores, advertencias, vehiculos: [] };
     }
     if (!Array.isArray(vehiculos)) {
         errores.push('El formato de datos no es válido, se espera un array de vehículos');
-        return { valido: false, errores, advertencias };
+        return { valido: false, errores, advertencias, vehiculos: [] };
     }
     if (vehiculos.length === 0) {
         errores.push('La lista de vehículos está vacía');
-        return { valido: false, errores, advertencias };
+        return { valido: false, errores, advertencias, vehiculos: [] };
     }
     if (vehiculos.length > 500) {
         errores.push(`La carga masiva está limitada a 500 vehículos por lote (recibidos: ${vehiculos.length})`);
-        return { valido: false, errores, advertencias };
+        return { valido: false, errores, advertencias, vehiculos: [] };
     }
-    // Validar cada vehículo individualmente
+    // Validar cada vehículo individualmente y convertir al formato correcto
     const vehiculosInvalidos = [];
     const dominios = new Set();
+    const vehiculosValidados = [];
     vehiculos.forEach((vehiculo, index) => {
         const erroresVehiculo = [];
-        // Comprobar campos obligatorios
-        if (!vehiculo.dominio) {
-            erroresVehiculo.push('Dominio requerido');
+        // Comprobar campos obligatorios - usar patenteFaltante o dominio
+        const patente = vehiculo.patenteFaltante || vehiculo.dominio;
+        if (!patente) {
+            erroresVehiculo.push('Dominio o patente faltante requerido');
         }
-        else if (typeof vehiculo.dominio !== 'string' || vehiculo.dominio.trim().length < 3) {
-            erroresVehiculo.push('Dominio inválido');
+        else if (typeof patente !== 'string' || patente.trim().length < 3) {
+            erroresVehiculo.push('Dominio/patente inválido');
         }
         else {
             // Normalizar el dominio para verificar duplicados
-            const dominioNormalizado = vehiculo.dominio.toUpperCase().trim();
+            const dominioNormalizado = patente.toUpperCase().trim();
             if (dominios.has(dominioNormalizado)) {
                 erroresVehiculo.push('Dominio duplicado en la carga');
             }
             else {
                 dominios.add(dominioNormalizado);
-                // Normalizar el dominio en los datos
-                vehiculo.dominio = dominioNormalizado;
             }
         }
         if (!vehiculo.empresa) {
@@ -77,11 +67,23 @@ const validarDatosMasivos = (vehiculos) => {
                 }
             });
         }
-        // Si tiene errores, agregarlo a la lista
-        if (erroresVehiculo.length > 0) {
+        // Si no tiene errores, crear el objeto con el formato correcto
+        if (erroresVehiculo.length === 0) {
+            const patenteFaltante = (vehiculo.patenteFaltante || vehiculo.dominio).toUpperCase().trim();
+            vehiculosValidados.push({
+                patenteFaltante,
+                tipo: vehiculo.tipo,
+                empresa: vehiculo.empresa,
+                marca: vehiculo.marca,
+                modelo: vehiculo.modelo,
+                anio: vehiculo.anio
+            });
+        }
+        else {
+            // Si tiene errores, agregarlo a la lista
             vehiculosInvalidos.push({
                 indice: index,
-                dominio: vehiculo.dominio || '[Sin dominio]',
+                dominio: vehiculo.patenteFaltante || vehiculo.dominio || '[Sin dominio]',
                 errores: erroresVehiculo
             });
         }
@@ -105,7 +107,7 @@ const validarDatosMasivos = (vehiculos) => {
         valido: errores.length === 0,
         errores,
         advertencias,
-        vehiculos // Devolvemos los vehículos con los dominios normalizados
+        vehiculos: vehiculosValidados // Devolvemos los vehículos validados y convertidos
     };
 };
 /**
@@ -113,7 +115,7 @@ const validarDatosMasivos = (vehiculos) => {
  * @route   POST /api/vehiculos/bulk
  * @access  Private
  */
-const createVehiculosBulk = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const createVehiculosBulk = async (req, res) => {
     const inicioTiempo = Date.now();
     logger.info(`Petición recibida: POST /api/vehiculos/bulk`);
     try {
@@ -121,30 +123,32 @@ const createVehiculosBulk = (req, res) => __awaiter(void 0, void 0, void 0, func
         const { vehiculos } = req.body;
         if (!vehiculos) {
             logger.warn('Intento de carga masiva sin datos de vehículos');
-            return res.status(400).json({
+            res.status(400).json({
                 exito: false,
                 mensaje: 'No se proporcionaron datos de vehículos',
                 errores: ['Se requiere un array de vehículos en el campo "vehiculos"']
             });
+            return;
         }
         logger.info(`Recibidos ${vehiculos.length} vehículos para carga masiva`);
         // Validar los datos de entrada
         const { valido, errores, advertencias, vehiculos: vehiculosValidados } = validarDatosMasivos(vehiculos);
         if (!valido) {
             logger.warn(`Validación fallida en carga masiva: ${errores.join(', ')}`);
-            return res.status(400).json({
+            res.status(400).json({
                 exito: false,
                 mensaje: 'La validación de datos ha fallado',
                 errores,
                 advertencias
             });
+            return;
         }
         // Si hay advertencias, las registramos
         if (advertencias.length > 0) {
             logger.info(`Advertencias en carga masiva: ${advertencias.join(', ')}`);
         }
         // Procesar la carga masiva
-        const resultado = yield vehiculoService.createVehiculosBulk(vehiculosValidados);
+        const resultado = await createVehiculosBulkService(vehiculosValidados);
         const tiempoTotal = Date.now() - inicioTiempo;
         logger.info(`Carga masiva completada: ${resultado.insertados} vehículos insertados (tiempo: ${tiempoTotal}ms)`);
         // Responder con éxito
@@ -160,32 +164,35 @@ const createVehiculosBulk = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
     catch (error) {
         const tiempoTotal = Date.now() - inicioTiempo;
+        const errorMessage = error.message;
         // Clasificar el tipo de error para dar respuestas específicas
-        if (error.message.includes('dominios duplicados') ||
-            error.message.includes('ya existen en la base de datos')) {
-            logger.warn(`Error en carga masiva - Dominios duplicados: ${error.message} (tiempo: ${tiempoTotal}ms)`);
-            return res.status(400).json({
+        if (errorMessage.includes('dominios duplicados') ||
+            errorMessage.includes('ya existen en la base de datos')) {
+            logger.warn(`Error en carga masiva - Dominios duplicados: ${errorMessage} (tiempo: ${tiempoTotal}ms)`);
+            res.status(400).json({
                 exito: false,
                 mensaje: 'Hay dominios duplicados en la base de datos',
-                error: error.message
+                error: errorMessage
             });
+            return;
         }
-        if (error.message.includes('empresas especificadas no existen')) {
-            logger.warn(`Error en carga masiva - Empresas no válidas: ${error.message} (tiempo: ${tiempoTotal}ms)`);
-            return res.status(400).json({
+        if (errorMessage.includes('empresas especificadas no existen')) {
+            logger.warn(`Error en carga masiva - Empresas no válidas: ${errorMessage} (tiempo: ${tiempoTotal}ms)`);
+            res.status(400).json({
                 exito: false,
                 mensaje: 'Una o más empresas no existen en el sistema',
-                error: error.message
+                error: errorMessage
             });
+            return;
         }
         // Error general
-        logger.error(`Error en carga masiva de vehículos: ${error.message} (tiempo: ${tiempoTotal}ms)`, error);
+        logger.error(`Error en carga masiva de vehículos: ${errorMessage} (tiempo: ${tiempoTotal}ms)`, error);
         res.status(500).json({
             exito: false,
             mensaje: 'Error al procesar la carga masiva de vehículos',
-            error: error.message
+            error: errorMessage
         });
     }
-});
-module.exports = createVehiculosBulk;
+};
+export default createVehiculosBulk;
 //# sourceMappingURL=createVehiculosBulk.js.map

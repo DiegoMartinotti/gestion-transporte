@@ -1,9 +1,6 @@
-"use strict";
 /**
  * Clases de errores personalizados para la aplicación
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ValidationError = exports.NotFoundError = exports.ForbiddenError = exports.UnauthorizedError = exports.AppError = void 0;
 /**
  * Error base para todos los errores de la aplicación
  */
@@ -15,7 +12,6 @@ class AppError extends Error {
         Error.captureStackTrace(this, this.constructor);
     }
 }
-exports.AppError = AppError;
 /**
  * Error para solicitudes no autorizadas (401)
  */
@@ -24,7 +20,6 @@ class UnauthorizedError extends AppError {
         super(message, 401);
     }
 }
-exports.UnauthorizedError = UnauthorizedError;
 /**
  * Error para acceso prohibido (403)
  */
@@ -33,7 +28,6 @@ class ForbiddenError extends AppError {
         super(message, 403);
     }
 }
-exports.ForbiddenError = ForbiddenError;
 /**
  * Error para recursos no encontrados (404)
  */
@@ -42,7 +36,6 @@ class NotFoundError extends AppError {
         super(message, 404);
     }
 }
-exports.NotFoundError = NotFoundError;
 /**
  * Error para validación fallida (400)
  */
@@ -52,5 +45,5 @@ class ValidationError extends AppError {
         this.errors = errors;
     }
 }
-exports.ValidationError = ValidationError;
+export { AppError, UnauthorizedError, ForbiddenError, NotFoundError, ValidationError };
 //# sourceMappingURL=errors.js.map

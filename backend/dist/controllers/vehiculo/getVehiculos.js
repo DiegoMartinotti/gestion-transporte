@@ -1,15 +1,5 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const vehiculoService = require('../../services/vehiculo/vehiculoService');
-const logger = require('../../utils/logger');
+import { getAllVehiculos, getVehiculosConVencimientos, getVehiculosVencidos } from '../../services/vehiculo/vehiculoService';
+import logger from '../../utils/logger';
 /**
  * Analiza y valida los parámetros de filtrado y paginación
  * @param {Object} query - Parámetros de la query string
@@ -17,8 +7,8 @@ const logger = require('../../utils/logger');
  */
 const procesarParametros = (query) => {
     const opciones = {
-        limite: parseInt(query.limite) || 50,
-        pagina: parseInt(query.pagina) || 1,
+        limite: parseInt(query.limite || '50') || 50,
+        pagina: parseInt(query.pagina || '1') || 1,
         filtros: {}
     };
     // Limitar valores extremos
@@ -30,10 +20,10 @@ const procesarParametros = (query) => {
         if (query[filtro] !== undefined) {
             // Manejar valores específicos según el tipo
             if (filtro === 'activo') {
-                opciones.filtros[filtro] = query[filtro].toLowerCase() === 'true';
+                opciones.filtros[filtro] = query[filtro]?.toLowerCase() === 'true';
             }
             else if (filtro === 'anio') {
-                opciones.filtros[filtro] = parseInt(query[filtro]);
+                opciones.filtros[filtro] = parseInt(query[filtro] || '0');
             }
             else {
                 opciones.filtros[filtro] = query[filtro];
@@ -43,7 +33,7 @@ const procesarParametros = (query) => {
     // Filtro por documentos próximos a vencer
     if (query.vencimientoProximo === 'true') {
         opciones.vencimientoProximo = true;
-        opciones.diasVencimiento = parseInt(query.diasVencimiento) || 30;
+        opciones.diasVencimiento = parseInt(query.diasVencimiento || '30') || 30;
     }
     // Filtro por documentos vencidos
     if (query.vencidos === 'true') {
@@ -56,7 +46,7 @@ const procesarParametros = (query) => {
  * @route   GET /api/vehiculos
  * @access  Private
  */
-const getVehiculos = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getVehiculos = async (req, res) => {
     const inicioTiempo = Date.now();
     logger.info(`Petición recibida: GET /api/vehiculos ${JSON.stringify(req.query)}`);
     try {
@@ -66,17 +56,17 @@ const getVehiculos = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Determinar el tipo de consulta según los parámetros
         if (opciones.vencimientoProximo) {
             // Consulta de vehículos con vencimientos próximos
-            resultado = yield vehiculoService.getVehiculosConVencimientos(opciones.diasVencimiento);
+            resultado = await getVehiculosConVencimientos(opciones.diasVencimiento);
             logger.info(`Obtenidos ${resultado.length} vehículos con vencimientos próximos`);
         }
         else if (opciones.vencidos) {
             // Consulta de vehículos con documentos vencidos
-            resultado = yield vehiculoService.getVehiculosVencidos();
+            resultado = await getVehiculosVencidos();
             logger.info(`Obtenidos ${resultado.length} vehículos con documentos vencidos`);
         }
         else {
             // Consulta estándar con filtros
-            resultado = yield vehiculoService.getAllVehiculos(opciones);
+            resultado = await getAllVehiculos(opciones);
             const { vehiculos, paginacion } = resultado;
             logger.info(`Obtenidos ${vehiculos.length} vehículos (total: ${paginacion.total})`);
             // Para mantener compatibilidad con el cliente, si no se solicitó paginación
@@ -98,6 +88,6 @@ const getVehiculos = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             error: error.message
         });
     }
-});
-module.exports = getVehiculos;
+};
+export default getVehiculos;
 //# sourceMappingURL=getVehiculos.js.map

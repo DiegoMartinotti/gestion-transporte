@@ -1,24 +1,22 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 // Importar todas las rutas
-const authRoutes = require('./auth');
-const clientesRoutes = require('./clientes');
-const sitesRoutes = require('./sites');
-const siteRoutes = require('./site.routes');
-const tramosRoutes = require('./tramos');
-const tramoRoutes = require('./tramo.routes');
-const viajesRoutes = require('./viajes');
-const extrasRoutes = require('./extras');
-const empresasRoutes = require('./empresas');
-const vehiculosRoutes = require('./vehiculos');
-const vehiculoRoutes = require('./vehiculo.routes');
-const personalRoutes = require('./personal');
-const formulaClienteRoutes = require('./formulaClienteRoutes');
-const proxyRouter = require('./proxy');
+import authRoutes from './auth';
+import clientesRoutes from './clientes';
+import sitesRoutes from './sites';
+import siteRoutes from './site.routes';
+import tramosRoutes from './tramos';
+import tramoRoutes from './tramo.routes';
+import viajesRoutes from './viajes';
+import extrasRoutes from './extras';
+import empresasRoutes from './empresas';
+import vehiculosRoutes from './vehiculos';
+import vehiculoRoutes from './vehiculo.routes';
+import personalRoutes from './personal';
+import formulaClienteRoutes from './formulaClienteRoutes';
+import proxyRouter from './proxy';
 // Middleware
-const { authenticateToken } = require('../middleware/authMiddleware');
-const logger = require('../utils/logger');
+import { authenticateToken } from '../middleware/authMiddleware';
 // Rutas públicas (no requieren autenticación)
 router.use('/auth', authRoutes);
 router.use('/proxy', proxyRouter);
@@ -45,5 +43,5 @@ protectedRoutes.forEach(route => {
 router.get('/status', (req, res) => {
     res.json({ status: 'ok', message: 'API Router funcionando correctamente' });
 });
-module.exports = router;
+export default router;
 //# sourceMappingURL=index.js.map

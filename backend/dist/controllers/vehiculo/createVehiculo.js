@@ -1,15 +1,5 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const vehiculoService = require('../../services/vehiculo/vehiculoService');
-const logger = require('../../utils/logger');
+import { createVehiculo as createVehiculoService } from '../../services/vehiculo/vehiculoService';
+import logger from '../../utils/logger';
 /**
  * Valida los datos de entrada para la creación de un vehículo
  * @param {Object} data - Datos del vehículo a validar
@@ -65,7 +55,7 @@ const validarDatosVehiculo = (data) => {
  * @route   POST /api/vehiculos
  * @access  Private
  */
-const createVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const createVehiculo = async (req, res) => {
     const inicioTiempo = Date.now();
     logger.info(`Petición recibida: POST /api/vehiculos`);
     try {
@@ -73,18 +63,19 @@ const createVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const { valido, errores } = validarDatosVehiculo(req.body);
         if (!valido) {
             logger.warn(`Validación fallida al crear vehículo: ${errores.join(', ')}`);
-            return res.status(400).json({
+            res.status(400).json({
                 exito: false,
                 mensaje: 'Datos de vehículo inválidos',
                 errores
             });
+            return;
         }
         // Normalizar el dominio (siempre en mayúsculas)
         if (req.body.dominio) {
             req.body.dominio = req.body.dominio.toUpperCase().trim();
         }
         // Crear el vehículo
-        const vehiculoGuardado = yield vehiculoService.createVehiculo(req.body);
+        const vehiculoGuardado = await createVehiculoService(req.body);
         const tiempoTotal = Date.now() - inicioTiempo;
         logger.info(`Vehículo creado con ID ${vehiculoGuardado._id} (tiempo: ${tiempoTotal}ms)`);
         res.status(201).json({
@@ -99,20 +90,22 @@ const createVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (error.message.includes('empresa') ||
             error.message.includes('La empresa especificada no existe')) {
             logger.warn(`Error al crear vehículo - Empresa no válida: ${error.message} (tiempo: ${tiempoTotal}ms)`);
-            return res.status(400).json({
+            res.status(400).json({
                 exito: false,
                 mensaje: 'La empresa especificada no existe',
                 error: error.message
             });
+            return;
         }
         if (error.message.includes('dominio') ||
             error.message.includes('Ya existe un vehículo con ese dominio')) {
             logger.warn(`Error al crear vehículo - Dominio duplicado: ${error.message} (tiempo: ${tiempoTotal}ms)`);
-            return res.status(400).json({
+            res.status(400).json({
                 exito: false,
                 mensaje: 'Ya existe un vehículo con ese dominio',
                 error: error.message
             });
+            return;
         }
         // Error genérico
         logger.error(`Error al crear vehículo: ${error.message} (tiempo: ${tiempoTotal}ms)`, error);
@@ -122,6 +115,6 @@ const createVehiculo = (req, res) => __awaiter(void 0, void 0, void 0, function*
             error: error.message
         });
     }
-});
-module.exports = createVehiculo;
+};
+export default createVehiculo;
 //# sourceMappingURL=createVehiculo.js.map

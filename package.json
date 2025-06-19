@@ -13,9 +13,12 @@
     "start-dev": "npm run set-dev && npm run dev"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/multer": "^1.4.13",
     "@types/swagger-jsdoc": "^6.0.4",
     "concurrently": "^8.2.2",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

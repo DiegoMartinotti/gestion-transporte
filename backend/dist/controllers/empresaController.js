@@ -1,25 +1,12 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const Empresa = require('../models/Empresa');
-const logger = require('../utils/logger');
+import Empresa from '../models/Empresa';
+import logger from '../utils/logger';
 /**
- * @function getEmpresas
- * @description Obtiene todas las empresas ordenadas por fecha de creación descendente
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
+ * Obtiene todas las empresas ordenadas por fecha de creación descendente
  */
-exports.getEmpresas = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getEmpresas = async (req, res) => {
     try {
         logger.debug('Obteniendo lista de empresas');
-        const empresas = yield Empresa.find().sort({ createdAt: -1 });
+        const empresas = await Empresa.find().sort({ createdAt: -1 });
         logger.debug(`${empresas.length} empresas encontradas`);
         res.json(empresas);
     }
@@ -27,18 +14,16 @@ exports.getEmpresas = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         logger.error('Error al obtener empresas:', error);
         res.status(500).json({ message: 'Error al obtener empresas' });
     }
-});
+};
 /**
- * @function getEmpresaById
- * @description Obtiene una empresa por su ID
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
+ * Obtiene una empresa por su ID
  */
-exports.getEmpresaById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getEmpresaById = async (req, res) => {
     try {
-        const empresa = yield Empresa.findById(req.params.id);
+        const empresa = await Empresa.findById(req.params.id);
         if (!empresa) {
-            return res.status(404).json({ message: 'Empresa no encontrada' });
+            res.status(404).json({ message: 'Empresa no encontrada' });
+            return;
         }
         res.json(empresa);
     }
@@ -46,47 +31,44 @@ exports.getEmpresaById = (req, res) => __awaiter(void 0, void 0, void 0, functio
         logger.error('Error al obtener empresa:', error);
         res.status(500).json({ message: 'Error al obtener empresa' });
     }
-});
+};
 /**
- * @function createEmpresa
- * @description Crea una nueva empresa
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
+ * Crea una nueva empresa
  */
-exports.createEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const createEmpresa = async (req, res) => {
     try {
         const nuevaEmpresa = new Empresa(req.body);
-        yield nuevaEmpresa.save();
+        await nuevaEmpresa.save();
         res.status(201).json(nuevaEmpresa);
     }
     catch (error) {
         logger.error('Error al crear empresa:', error);
         // Manejo específico para errores de validación
         if (error.name === 'ValidationError') {
-            const errores = Object.values(error.errors).map(err => err.message);
-            return res.status(400).json({ message: 'Error de validación', errores });
+            const errores = Object.values(error.errors).map((err) => err.message);
+            res.status(400).json({ message: 'Error de validación', errores });
+            return;
         }
         // Manejo específico para errores de duplicados
         if (error.code === 11000) {
-            return res.status(400).json({
+            res.status(400).json({
                 message: 'Error de duplicado',
                 error: `Ya existe una empresa con el nombre ${req.body.nombre}`
             });
+            return;
         }
         res.status(500).json({ message: 'Error al crear empresa' });
     }
-});
+};
 /**
- * @function updateEmpresa
- * @description Actualiza una empresa existente
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
+ * Actualiza una empresa existente
  */
-exports.updateEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const updateEmpresa = async (req, res) => {
     try {
-        const empresa = yield Empresa.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const empresa = await Empresa.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!empresa) {
-            return res.status(404).json({ message: 'Empresa no encontrada' });
+            res.status(404).json({ message: 'Empresa no encontrada' });
+            return;
         }
         res.json(empresa);
     }
@@ -94,30 +76,30 @@ exports.updateEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function
         logger.error('Error al actualizar empresa:', error);
         // Manejo específico para errores de validación
         if (error.name === 'ValidationError') {
-            const errores = Object.values(error.errors).map(err => err.message);
-            return res.status(400).json({ message: 'Error de validación', errores });
+            const errores = Object.values(error.errors).map((err) => err.message);
+            res.status(400).json({ message: 'Error de validación', errores });
+            return;
         }
         // Manejo específico para errores de duplicados
         if (error.code === 11000) {
-            return res.status(400).json({
+            res.status(400).json({
                 message: 'Error de duplicado',
                 error: `Ya existe una empresa con el nombre ${req.body.nombre}`
             });
+            return;
         }
         res.status(500).json({ message: 'Error al actualizar empresa' });
     }
-});
+};
 /**
- * @function deleteEmpresa
- * @description Elimina una empresa
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
+ * Elimina una empresa
  */
-exports.deleteEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const deleteEmpresa = async (req, res) => {
     try {
-        const empresa = yield Empresa.findByIdAndDelete(req.params.id);
+        const empresa = await Empresa.findByIdAndDelete(req.params.id);
         if (!empresa) {
-            return res.status(404).json({ message: 'Empresa no encontrada' });
+            res.status(404).json({ message: 'Empresa no encontrada' });
+            return;
         }
         res.json({ message: 'Empresa eliminada exitosamente' });
     }
@@ -125,41 +107,36 @@ exports.deleteEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function
         logger.error('Error al eliminar empresa:', error);
         res.status(500).json({ message: 'Error al eliminar empresa' });
     }
-});
+};
 /**
- * @function getEmpresasByTipo
- * @description Obtiene empresas filtradas por tipo
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
+ * Obtiene empresas filtradas por tipo
  */
-exports.getEmpresasByTipo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getEmpresasByTipo = async (req, res) => {
     try {
         const { tipo } = req.params;
         if (!['Propia', 'Subcontratada'].includes(tipo)) {
-            return res.status(400).json({ message: 'Tipo de empresa inválido' });
+            res.status(400).json({ message: 'Tipo de empresa inválido' });
+            return;
         }
-        const empresas = yield Empresa.find({ tipo }).sort({ nombre: 1 });
+        const empresas = await Empresa.find({ tipo }).sort({ nombre: 1 });
         res.json(empresas);
     }
     catch (error) {
         logger.error('Error al obtener empresas por tipo:', error);
         res.status(500).json({ message: 'Error al obtener empresas por tipo' });
     }
-});
+};
 /**
- * @function getEmpresasActivas
- * @description Obtiene todas las empresas activas
- * @param {Object} req - Objeto de solicitud Express
- * @param {Object} res - Objeto de respuesta Express
+ * Obtiene todas las empresas activas
  */
-exports.getEmpresasActivas = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+export const getEmpresasActivas = async (req, res) => {
     try {
-        const empresas = yield Empresa.find({ activa: true }).sort({ nombre: 1 });
+        const empresas = await Empresa.find({ activa: true }).sort({ nombre: 1 });
         res.json(empresas);
     }
     catch (error) {
         logger.error('Error al obtener empresas activas:', error);
         res.status(500).json({ message: 'Error al obtener empresas activas' });
     }
-});
+};
 //# sourceMappingURL=empresaController.js.map

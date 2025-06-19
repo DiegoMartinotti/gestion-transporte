@@ -38,6 +38,7 @@ try {
 
 /**
  * Inicia el servidor y establece conexión con la base de datos
+ * @returns {Promise<void>}
  */
 async function startServer(): Promise<void> {
   try {
@@ -74,7 +75,7 @@ process.on('SIGINT', () => {
 });
 
 // Si este archivo se ejecuta directamente (no importado por otro módulo)
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   startServer();
 }
 

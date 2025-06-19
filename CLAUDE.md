@@ -115,3 +115,19 @@ Using Mongoose ODM with:
 - **Formula Calculations**: Uses MathJS for dynamic pricing formulas
 
 When adding new features, follow the existing pattern of routes → controllers → services → models, and ensure proper TypeScript types are added during the ongoing migration.
+
+## Git Workflow
+
+**IMPORTANT**: Always commit changes following best practices:
+- Commit after completing logical units of work (e.g., migrating a complete module, fixing a specific issue)
+- Commit before major refactoring or risky changes to preserve working state
+- Use descriptive commit messages that explain the "why" not just the "what"
+- Stage related files together in atomic commits
+- Run tests and build verification before committing when possible
+
+Commit frequency guidelines:
+- After migrating a complete file or module to TypeScript
+- After fixing compilation errors or type issues
+- Before starting work on a new component or feature
+- When reaching stable milestones during development
+- Before making experimental or potentially breaking changes

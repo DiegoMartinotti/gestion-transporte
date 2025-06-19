@@ -1,12 +1,9 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const viajeController = require('../controllers/viajeController'); // Importar todo el controlador
-const logger = require('../utils/logger');
-// Eliminar la siguiente línea:
-// const { upload } = require('../middleware/fileUpload'); // Importar middleware de subida
+import * as viajeController from '../controllers/viajeController'; // Importar todo el controlador
+import logger from '../utils/logger';
 // Añadir configuración de multer
-const multer = require('multer');
+import multer from 'multer';
 const storage = multer.memoryStorage(); // Usar almacenamiento en memoria
 const upload = multer({ storage: storage });
 // --- Rutas CRUD estándar ---
@@ -20,10 +17,9 @@ router.delete('/:id', viajeController.deleteViaje);
 router.post('/bulk/iniciar', 
 // --- Insertar la lógica de validación AQUÍ, en línea ---
 (req, res, next) => {
-    var _a, _b, _c, _d, _e, _f;
     logger.debug('Middleware inline para /bulk/iniciar:');
-    logger.debug('- Cliente:', (_a = req.body) === null || _a === void 0 ? void 0 : _a.cliente);
-    logger.debug('- Cantidad viajes:', ((_c = (_b = req.body) === null || _b === void 0 ? void 0 : _b.viajes) === null || _c === void 0 ? void 0 : _c.length) || 0);
+    logger.debug('- Cliente:', req.body?.cliente);
+    logger.debug('- Cantidad viajes:', req.body?.viajes?.length || 0);
     if (!req.body || !Array.isArray(req.body.viajes) || req.body.viajes.length === 0) {
         logger.error('⚠️ CUERPO DE LA SOLICITUD /bulk/iniciar VACÍO O INCOMPLETO (inline)');
         logger.error('Content-Type:', req.headers['content-type']);
@@ -33,8 +29,8 @@ router.post('/bulk/iniciar',
             debug: {
                 contentType: req.headers['content-type'],
                 bodyEmpty: !req.body,
-                viajesIsArray: Array.isArray((_d = req.body) === null || _d === void 0 ? void 0 : _d.viajes),
-                viajesLength: (_f = (_e = req.body) === null || _e === void 0 ? void 0 : _e.viajes) === null || _f === void 0 ? void 0 : _f.length
+                viajesIsArray: Array.isArray(req.body?.viajes),
+                viajesLength: req.body?.viajes?.length
             }
         });
     }
@@ -55,5 +51,5 @@ router.post('/bulk/retry/:importId', viajeController.reintentarImportacionViajes
 // Descargar archivo Excel/CSV con los viajes que fallaron definitivamente
 router.get('/bulk/fallback/:importId', viajeController.descargarFallbackViajes // Controlador (Asegúrate que esté implementado)
 );
-module.exports = router;
+export default router;
 //# sourceMappingURL=viajes.js.map

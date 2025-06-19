@@ -1,28 +1,5 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const mongoose = require('mongoose');
-/**
- * @typedef {Object} PersonalSchema
- * @property {string} nombre - Nombre del empleado
- * @property {string} apellido - Apellido del empleado
- * @property {string} dni - DNI del empleado
- * @property {string} [cuil] - CUIL del empleado
- * @property {string} tipo - Tipo de personal (Conductor, Administrativo, etc.)
- * @property {mongoose.Schema.Types.ObjectId} empresa - Empresa a la que pertenece
- * @property {string} [numeroLegajo] - Número de legajo único por empresa (generado automáticamente si no se proporciona)
- * @property {Array} periodosEmpleo - Períodos de empleo (fechas de ingreso/egreso)
- * @property {Object} documentacion - Documentación del empleado
- * @property {boolean} activo - Estado activo/inactivo del empleado
- */
-const personalSchema = new mongoose.Schema({
+import { Schema, model } from 'mongoose';
+const personalSchema = new Schema({
     nombre: {
         type: String,
         required: [true, 'El nombre es obligatorio'],
@@ -87,7 +64,7 @@ const personalSchema = new mongoose.Schema({
         }
     },
     empresa: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: 'Empresa',
         required: [true, 'La empresa es obligatoria']
     },
@@ -164,62 +141,65 @@ personalSchema.index({ empresa: 1, numeroLegajo: 1 }, { unique: true, sparse: tr
 personalSchema.index({ empresa: 1, 'documentacion.licenciaConducir.vencimiento': 1 });
 personalSchema.index({ empresa: 1, 'documentacion.psicofisico.vencimiento': 1 });
 // Middleware para normalizar datos y generar legajo automáticamente
-personalSchema.pre('save', function (next) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // Normalizar datos
-            if (this.dni)
-                this.dni = this.dni.replace(/\D/g, '');
-            // Si no hay número de legajo, generarlo automáticamente
-            if (!this.numeroLegajo && this.empresa) {
-                const Personal = this.constructor;
-                // Buscar el último legajo para esta empresa
-                const ultimoPersonal = yield Personal.findOne({ empresa: this.empresa, numeroLegajo: { $exists: true, $ne: null } }, { numeroLegajo: 1 }, { sort: { numeroLegajo: -1 } });
-                let nuevoNumero = 1;
-                if (ultimoPersonal && ultimoPersonal.numeroLegajo) {
-                    // Extraer el número del último legajo (asumiendo formato numérico)
-                    const ultimoNumero = parseInt(ultimoPersonal.numeroLegajo, 10);
-                    if (!isNaN(ultimoNumero)) {
-                        nuevoNumero = ultimoNumero + 1;
-                    }
-                }
-                // Formatear el nuevo número de legajo (con ceros a la izquierda)
-                this.numeroLegajo = nuevoNumero.toString().padStart(4, '0');
-            }
-            // Si se proporciona un número de legajo, verificar que esté disponible
-            else if (this.isModified('numeroLegajo') && this.numeroLegajo) {
-                const Personal = this.constructor;
-                const existeLegajo = yield Personal.findOne({
-                    empresa: this.empresa,
-                    numeroLegajo: this.numeroLegajo,
-                    _id: { $ne: this._id } // Excluir el documento actual en caso de actualización
-                });
-                if (existeLegajo) {
-                    throw new Error(`El número de legajo ${this.numeroLegajo} ya está en uso en esta empresa`);
+personalSchema.pre('save', async function (next) {
+    try {
+        // Normalizar datos
+        if (this.dni)
+            this.dni = this.dni.replace(/\D/g, '');
+        // Si no hay número de legajo, generarlo automáticamente
+        if (!this.numeroLegajo && this.empresa) {
+            const Personal = this.constructor;
+            // Buscar el último legajo para esta empresa
+            const ultimoPersonal = await Personal.findOne({ empresa: this.empresa, numeroLegajo: { $exists: true, $ne: null } }, { numeroLegajo: 1 }, { sort: { numeroLegajo: -1 } });
+            let nuevoNumero = 1;
+            if (ultimoPersonal && ultimoPersonal.numeroLegajo) {
+                // Extraer el número del último legajo (asumiendo formato numérico)
+                const ultimoNumero = parseInt(ultimoPersonal.numeroLegajo, 10);
+                if (!isNaN(ultimoNumero)) {
+                    nuevoNumero = ultimoNumero + 1;
                 }
             }
-            next();
+            // Formatear el nuevo número de legajo (con ceros a la izquierda)
+            this.numeroLegajo = nuevoNumero.toString().padStart(4, '0');
         }
-        catch (error) {
+        // Si se proporciona un número de legajo, verificar que esté disponible
+        else if (this.isModified('numeroLegajo') && this.numeroLegajo) {
+            const Personal = this.constructor;
+            const existeLegajo = await Personal.findOne({
+                empresa: this.empresa,
+                numeroLegajo: this.numeroLegajo,
+                _id: { $ne: this._id } // Excluir el documento actual en caso de actualización
+            });
+            if (existeLegajo) {
+                throw new Error(`El número de legajo ${this.numeroLegajo} ya está en uso en esta empresa`);
+            }
+        }
+        next();
+    }
+    catch (error) {
+        // Convertir cualquier error a Error standard para que sea aceptado por mongoose
+        if (error instanceof Error) {
             next(error);
         }
-    });
+        else {
+            next(new Error('Error desconocido durante el guardado'));
+        }
+    }
 });
 // Método para verificar vencimientos próximos
 personalSchema.methods.getVencimientosProximos = function (diasLimite = 30) {
-    var _a, _b;
     const hoy = new Date();
     const limite = new Date();
     limite.setDate(limite.getDate() + diasLimite);
     const vencimientos = [];
-    if (((_a = this.documentacion.licenciaConducir) === null || _a === void 0 ? void 0 : _a.vencimiento) &&
+    if (this.documentacion?.licenciaConducir?.vencimiento &&
         this.documentacion.licenciaConducir.vencimiento <= limite) {
         vencimientos.push({
             tipo: 'Licencia de Conducir',
             vencimiento: this.documentacion.licenciaConducir.vencimiento
         });
     }
-    if (((_b = this.documentacion.psicofisico) === null || _b === void 0 ? void 0 : _b.vencimiento) &&
+    if (this.documentacion?.psicofisico?.vencimiento &&
         this.documentacion.psicofisico.vencimiento <= limite) {
         vencimientos.push({
             tipo: 'Psicofísico',
@@ -244,31 +224,11 @@ personalSchema.methods.getEdad = function () {
 personalSchema.methods.estaEmpleadoActualmente = function () {
     if (!this.periodosEmpleo || this.periodosEmpleo.length === 0)
         return false;
-    // Buscar el período más reciente sin fecha de egreso
-    const periodoActual = this.periodosEmpleo
-        .filter(periodo => !periodo.fechaEgreso)
-        .sort((a, b) => b.fechaIngreso - a.fechaIngreso)[0];
-    return !!periodoActual;
+    // Obtener el último período de empleo
+    const ultimoPeriodo = this.periodosEmpleo[this.periodosEmpleo.length - 1];
+    // Si no tiene fecha de egreso en el último período, está empleado actualmente
+    return !ultimoPeriodo.fechaEgreso;
 };
-// Método para obtener información resumida
-personalSchema.methods.getResumen = function () {
-    const legajo = this.numeroLegajo ? ` [Legajo: ${this.numeroLegajo}]` : '';
-    return `${this.nombre} - ${this.tipo} (DNI: ${this.dni})${legajo}`;
-};
-// Método estático para verificar disponibilidad de legajo
-personalSchema.statics.verificarLegajoDisponible = function (empresa_1, numeroLegajo_1) {
-    return __awaiter(this, arguments, void 0, function* (empresa, numeroLegajo, idExcluir = null) {
-        const query = {
-            empresa,
-            numeroLegajo
-        };
-        if (idExcluir) {
-            query._id = { $ne: idExcluir };
-        }
-        const existeLegajo = yield this.findOne(query);
-        return !existeLegajo;
-    });
-};
-const Personal = mongoose.model('Personal', personalSchema);
-module.exports = Personal;
+// Exportar el modelo con tipado
+export default model('Personal', personalSchema);
 //# sourceMappingURL=Personal.js.map

@@ -1,19 +1,9 @@
-"use strict";
 /**
  * @module controllers/tramo/getTramosByCliente
  * @description Controlador para obtener los tramos de un cliente
  */
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const tramoService = require('../../services/tramo/tramoService');
-const logger = require('../../utils/logger');
+import { getTramosByCliente as getTramosByClienteService } from '../../services/tramo/tramoService';
+import logger from '../../utils/logger';
 /**
  * Obtiene todos los tramos asociados a un cliente específico
  *
@@ -30,32 +20,30 @@ const logger = require('../../utils/logger');
  * @returns {Promise<Object>} Lista de tramos del cliente
  * @throws {Error} Error 500 si hay un error en el servidor
  */
-function getTramosByCliente(req, res) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const { cliente } = req.params;
-            const { desde, hasta, incluirHistoricos } = req.query;
-            logger.debug(`Solicitando tramos para cliente: ${cliente}`);
-            const resultado = yield tramoService.getTramosByCliente(cliente, {
-                desde,
-                hasta,
-                incluirHistoricos
-            });
-            // Formatear la respuesta basada en el resultado del servicio
-            res.status(200).json({
-                success: true,
-                data: resultado.tramos,
-                metadata: resultado.metadata
-            });
-        }
-        catch (error) {
-            logger.error('Error al obtener tramos:', error);
-            res.status(500).json({
-                success: false,
-                message: error.message
-            });
-        }
-    });
+async function getTramosByCliente(req, res) {
+    try {
+        const { cliente } = req.params;
+        const { desde, hasta, incluirHistoricos } = req.query;
+        logger.debug(`Solicitando tramos para cliente: ${cliente}`);
+        const resultado = await getTramosByClienteService(cliente, {
+            desde,
+            hasta,
+            incluirHistoricos
+        });
+        // Formatear la respuesta basada en el resultado del servicio
+        res.status(200).json({
+            success: true,
+            data: resultado.tramos,
+            metadata: resultado.metadata
+        });
+    }
+    catch (error) {
+        logger.error('Error al obtener tramos:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 }
-module.exports = getTramosByCliente;
+export default getTramosByCliente;
 //# sourceMappingURL=getTramosByCliente.js.map

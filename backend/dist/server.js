@@ -1,26 +1,16 @@
-"use strict";
 /**
  * Servidor principal de la aplicación
  * Este archivo es el punto de entrada principal y configura todo el servidor Express
  * utilizando configuraciones modularizadas y centralizadas
  */
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-require('dotenv').config();
-const express = require('express');
-const { connectDB } = require('./config/database');
-const logger = require('./utils/logger');
-const validateEnv = require('./utils/validateEnv');
-const config = require('./config/config');
-const { configureMiddlewares, configureErrorHandling } = require('./config/middlewareConfig');
-const { configureRoutes, getMainRoutes } = require('./config/routeConfig');
+import 'dotenv/config';
+import express from 'express';
+import { connectDB } from './config/database';
+import logger from './utils/logger';
+import validateEnv from './utils/validateEnv';
+import config from './config/config';
+import { configureMiddlewares, configureErrorHandling } from './config/middlewareConfig';
+import { configureRoutes, getMainRoutes } from './config/routeConfig';
 // Validar variables de entorno antes de iniciar la aplicación
 validateEnv();
 // Crear la aplicación Express
@@ -43,27 +33,25 @@ catch (error) {
  * Inicia el servidor y establece conexión con la base de datos
  * @returns {Promise<void>}
  */
-function startServer() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // Determinar el puerto a usar
-            const port = process.env.PORT || config.port || 3001;
-            // Conectar a la base de datos MongoDB
-            yield connectDB();
-            logger.info('Conexión a la base de datos establecida correctamente');
-            // Iniciar el servidor HTTP
-            app.listen(port, () => {
-                logger.info(`Servidor ejecutándose en http://localhost:${port}`);
-                // Mostrar rutas principales disponibles
-                logger.info('Rutas principales disponibles:');
-                getMainRoutes().forEach(route => logger.info(`- ${route}`));
-            });
-        }
-        catch (error) {
-            logger.critical(`Error fatal al iniciar el servidor: ${error.message}`, error);
-            process.exit(1);
-        }
-    });
+async function startServer() {
+    try {
+        // Determinar el puerto a usar
+        const port = process.env.PORT || config.port || 3001;
+        // Conectar a la base de datos MongoDB
+        await connectDB();
+        logger.info('Conexión a la base de datos establecida correctamente');
+        // Iniciar el servidor HTTP
+        app.listen(port, () => {
+            logger.info(`Servidor ejecutándose en http://localhost:${port}`);
+            // Mostrar rutas principales disponibles
+            logger.info('Rutas principales disponibles:');
+            getMainRoutes().forEach(route => logger.info(`- ${route}`));
+        });
+    }
+    catch (error) {
+        logger.critical(`Error fatal al iniciar el servidor: ${error.message}`, error);
+        process.exit(1);
+    }
 }
 // Control de procesos y manejo de señales
 process.on('SIGTERM', () => {
@@ -75,9 +63,9 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 // Si este archivo se ejecuta directamente (no importado por otro módulo)
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
     startServer();
 }
 // Exportar la app para poder usarla en tests y otros contextos
-module.exports = app;
+export default app;
 //# sourceMappingURL=server.js.map

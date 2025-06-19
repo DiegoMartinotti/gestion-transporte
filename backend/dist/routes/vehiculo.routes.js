@@ -1,8 +1,7 @@
-"use strict";
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const vehiculoController = require('../controllers/vehiculo');
-const logger = require('../utils/logger');
+import * as vehiculoController from '../controllers/vehiculo';
+import logger from '../utils/logger';
 /**
  * @desc    Rutas para gestión de vehículos
  * @base    /api/vehiculos
@@ -23,5 +22,5 @@ router.post('/', vehiculoController.createVehiculo);
 router.post('/bulk', vehiculoController.createVehiculosBulk);
 router.put('/:id', vehiculoController.updateVehiculo);
 router.delete('/:id', vehiculoController.deleteVehiculo);
-module.exports = router;
+export default router;
 //# sourceMappingURL=vehiculo.routes.js.map

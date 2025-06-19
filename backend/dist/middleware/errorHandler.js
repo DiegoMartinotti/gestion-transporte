@@ -1,14 +1,8 @@
-"use strict";
 /**
  * @module middleware/errorHandler
  * @description Middleware centralizado para manejar errores en la aplicación
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.APIError = exports.errorHandler = exports.notFoundHandler = void 0;
-const logger_1 = __importDefault(require("../utils/logger"));
+import logger from '../utils/logger';
 /**
  * Middleware para manejar errores 404 (rutas no encontradas)
  */
@@ -17,13 +11,12 @@ const notFoundHandler = (req, res, next) => {
     error.statusCode = 404;
     next(error);
 };
-exports.notFoundHandler = notFoundHandler;
 /**
  * Middleware para manejar errores generales de la aplicación
  */
 const errorHandler = (err, req, res, next) => {
     // Registrar el error
-    logger_1.default.error(`Error: ${err.message}`, {
+    logger.error(`Error: ${err.message}`, {
         url: req.originalUrl,
         method: req.method,
         statusCode: err.statusCode || 500,
@@ -43,7 +36,6 @@ const errorHandler = (err, req, res, next) => {
     // Enviar respuesta al cliente
     res.status(statusCode).json(errorResponse);
 };
-exports.errorHandler = errorHandler;
 /**
  * Clase personalizada para errores de la API
  */
@@ -117,5 +109,5 @@ class APIError extends Error {
         });
     }
 }
-exports.APIError = APIError;
+export { notFoundHandler, errorHandler, APIError };
 //# sourceMappingURL=errorHandler.js.map

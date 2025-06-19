@@ -1,14 +1,8 @@
-"use strict";
 /**
  * Middleware centralizado para validaciones
  * Este archivo contiene validadores para diferentes entidades
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateAuth = exports.validateTramo = exports.validateSite = void 0;
-const logger_1 = __importDefault(require("../utils/logger"));
+import logger from '../utils/logger';
 /**
  * Valida los datos de un sitio antes de crear o actualizar
  * @param {Request} req - Objeto de solicitud Express
@@ -52,7 +46,7 @@ const validateSite = (req, res, next) => {
     }
     // Si hay errores, devolver respuesta de error
     if (errors.length > 0) {
-        logger_1.default.warn('Validación fallida:', errors);
+        logger.warn('Validación fallida:', errors);
         res.status(400).json({
             success: false,
             message: 'Error de validación',
@@ -62,7 +56,6 @@ const validateSite = (req, res, next) => {
     }
     next();
 };
-exports.validateSite = validateSite;
 /**
  * Valida los datos de un tramo antes de crear o actualizar
  * @param {Request} req - Objeto de solicitud Express
@@ -108,7 +101,7 @@ const validateTramo = (req, res, next) => {
     }
     // Si hay errores, devolver respuesta de error
     if (errors.length > 0) {
-        logger_1.default.warn('Validación de tramo fallida:', errors);
+        logger.warn('Validación de tramo fallida:', errors);
         res.status(400).json({
             success: false,
             message: 'Error de validación',
@@ -118,7 +111,6 @@ const validateTramo = (req, res, next) => {
     }
     next();
 };
-exports.validateTramo = validateTramo;
 /**
  * Valida los datos de autenticación
  * @param {Request} req - Objeto de solicitud Express
@@ -149,5 +141,5 @@ const validateAuth = (req, res, next) => {
     }
     next();
 };
-exports.validateAuth = validateAuth;
+export { validateSite, validateTramo, validateAuth };
 //# sourceMappingURL=validationMiddleware.js.map

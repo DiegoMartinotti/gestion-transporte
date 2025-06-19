@@ -1,23 +1,13 @@
-"use strict";
 /**
  * Rutas para la gestión de sitios/ubicaciones
  * Implementa los endpoints RESTful para gestionar sitios
  */
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const siteController = require('../controllers/site/site.controller');
-const { authenticateToken } = require('../middleware/authMiddleware');
-const { validateSite } = require('../middleware/validationMiddleware');
-const logger = require('../utils/logger');
+import * as siteController from '../controllers/site/site.controller';
+import { authenticateToken } from '../middleware/authMiddleware';
+import { validateSite } from '../middleware/validationMiddleware';
+import logger from '../utils/logger';
 /**
  * @swagger
  * /api/site:
@@ -51,10 +41,10 @@ const logger = require('../utils/logger');
  *       500:
  *         description: Error del servidor
  */
-router.get('/', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/', authenticateToken, async (req, res) => {
     logger.debug('GET /api/site - Parámetros:', req.query);
-    return yield siteController.getAllSites(req, res);
-}));
+    return await siteController.getAllSites(req, res);
+});
 /**
  * @swagger
  * /api/site/{id}:
@@ -77,10 +67,10 @@ router.get('/', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 
  *       500:
  *         description: Error del servidor
  */
-router.get('/:id', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/:id', authenticateToken, async (req, res) => {
     logger.debug(`GET /api/site/${req.params.id}`);
-    return yield siteController.getSiteById(req, res);
-}));
+    return await siteController.getSiteById(req, res);
+});
 /**
  * @swagger
  * /api/site/cliente/{clienteId}:
@@ -103,10 +93,10 @@ router.get('/:id', authenticateToken, (req, res) => __awaiter(void 0, void 0, vo
  *       500:
  *         description: Error del servidor
  */
-router.get('/cliente/:clienteId', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/cliente/:clienteId', authenticateToken, async (req, res) => {
     logger.debug(`GET /api/site/cliente/${req.params.clienteId}`);
-    return yield siteController.getSitesByCliente(req, res);
-}));
+    return await siteController.getSitesByCliente(req, res);
+});
 /**
  * @swagger
  * /api/site:
@@ -145,10 +135,10 @@ router.get('/cliente/:clienteId', authenticateToken, (req, res) => __awaiter(voi
  *       500:
  *         description: Error del servidor
  */
-router.post('/', authenticateToken, validateSite, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/', authenticateToken, validateSite, async (req, res) => {
     logger.debug('POST /api/site - Body:', req.body);
-    return yield siteController.createSite(req, res);
-}));
+    return await siteController.createSite(req, res);
+});
 /**
  * @swagger
  * /api/site/{id}:
@@ -191,10 +181,10 @@ router.post('/', authenticateToken, validateSite, (req, res) => __awaiter(void 0
  *       500:
  *         description: Error del servidor
  */
-router.put('/:id', authenticateToken, validateSite, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.put('/:id', authenticateToken, validateSite, async (req, res) => {
     logger.debug(`PUT /api/site/${req.params.id} - Body:`, req.body);
-    return yield siteController.updateSite(req, res);
-}));
+    return await siteController.updateSite(req, res);
+});
 /**
  * @swagger
  * /api/site/{id}:
@@ -219,10 +209,10 @@ router.put('/:id', authenticateToken, validateSite, (req, res) => __awaiter(void
  *       500:
  *         description: Error del servidor
  */
-router.delete('/:id', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.delete('/:id', authenticateToken, async (req, res) => {
     logger.debug(`DELETE /api/site/${req.params.id}`);
-    return yield siteController.deleteSite(req, res);
-}));
+    return await siteController.deleteSite(req, res);
+});
 /**
  * @swagger
  * /api/site/geocode:
@@ -249,10 +239,10 @@ router.delete('/:id', authenticateToken, (req, res) => __awaiter(void 0, void 0,
  *       500:
  *         description: Error del servidor
  */
-router.post('/geocode', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/geocode', authenticateToken, async (req, res) => {
     logger.debug('POST /api/site/geocode - Body:', req.body);
-    return yield siteController.geocodeDireccion(req, res);
-}));
+    return await siteController.geocodeDireccion(req, res);
+});
 /**
  * @swagger
  * /api/site/bulk/cliente/{cliente}:
@@ -275,10 +265,10 @@ router.post('/geocode', authenticateToken, (req, res) => __awaiter(void 0, void 
  *       500:
  *         description: Error del servidor
  */
-router.delete('/bulk/cliente/:cliente', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.delete('/bulk/cliente/:cliente', authenticateToken, async (req, res) => {
     logger.debug(`DELETE /api/site/bulk/cliente/${req.params.cliente}`);
-    return yield siteController.bulkDeleteSites(req, res);
-}));
+    return await siteController.bulkDeleteSites(req, res);
+});
 /**
  * @swagger
  * /api/site/reprocess-addresses/{cliente}:
@@ -312,9 +302,9 @@ router.delete('/bulk/cliente/:cliente', authenticateToken, (req, res) => __await
  *       500:
  *         description: Error del servidor durante el reprocesamiento
  */
-router.post('/reprocess-addresses/:cliente', authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/reprocess-addresses/:cliente', authenticateToken, async (req, res) => {
     logger.debug(`POST /api/site/reprocess-addresses/${req.params.cliente}`);
-    return yield siteController.reprocessAddressesByCliente(req, res);
-}));
-module.exports = router;
+    return await siteController.reprocessAddressesByCliente(req, res);
+});
+export default router;
 //# sourceMappingURL=site.routes.js.map

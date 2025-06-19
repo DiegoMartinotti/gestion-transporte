@@ -5,6 +5,7 @@
  */
 
 // Importar server.ts (que contiene toda la lógica de la aplicación)
-import './server';
+import('./server');
 
 // No exportamos nada, ya que la aplicación se inicia directamente
+

@@ -91,7 +91,7 @@ export const login = async (req: Request<{}, ApiResponse, LoginRequest>, res: Re
         }
 
         const payload: JWTPayload = {
-            userId: usuario._id.toString(),
+            userId: (usuario._id as any).toString(),
             email: usuario.email
         };
 
@@ -115,7 +115,7 @@ export const login = async (req: Request<{}, ApiResponse, LoginRequest>, res: Re
         res.json({
             success: true,
             user: {
-                id: usuario._id.toString(),
+                id: (usuario._id as any).toString(),
                 email: usuario.email,
                 nombre: usuario.nombre
             }

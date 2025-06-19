@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import Viaje, { IViaje } from '../models/Viaje';
 import logger from '../utils/logger';
+import ApiResponse from '../utils/ApiResponse';
 import Cliente, { ICliente } from '../models/Cliente';
 import Personal, { IPersonal } from '../models/Personal';
 import Vehiculo, { IVehiculo } from '../models/Vehiculo';
@@ -256,7 +257,7 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
             return;
         }
 
-        logger.info(`Iniciando importación masiva de viajes para cliente: ${clienteDoc.Cliente} (${clienteId})`);
+        logger.info(`Iniciando importación masiva de viajes para cliente: ${clienteDoc.nombre} (${clienteId})`);
         logger.info(`Total de viajes a procesar: ${viajes.length}`);
 
         // Aquí continuaría la lógica de procesamiento de viajes...
@@ -307,10 +308,11 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
         await session.abortTransaction();
         session.endSession();
 
-        res.status(500).json({
-            success: false,
-            message: 'Error interno durante la importación',
-            error: error.message
-        });
+        return ApiResponse.error(
+            res,
+            'Error interno durante la importación',
+            500,
+            error.message
+        );
     }
 };

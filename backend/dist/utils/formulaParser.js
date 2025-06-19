@@ -1,49 +1,8 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.evaluarFormula = evaluarFormula;
-exports.procesarFuncionSI = procesarFuncionSI;
-exports.calcularTarifaPaletConFormula = calcularTarifaPaletConFormula;
 /**
  * Utilidad para evaluar fórmulas tipo Excel en JavaScript
  */
-const logger_1 = __importDefault(require("./logger"));
-const mathjs = __importStar(require("mathjs"));
+import logger from './logger';
+import * as mathjs from 'mathjs';
 // Configurar mathjs para modo seguro
 const limitedMath = mathjs.create(mathjs.all);
 limitedMath.config({
@@ -85,7 +44,7 @@ function evaluarFormula(formula, variables) {
             varsNumeric[nombre] = typeof valor === 'string' ? parseFloat(valor) : valor;
         }
         // Log para depuración
-        logger_1.default.debug('Variables:', varsNumeric);
+        logger.debug('Variables:', varsNumeric);
         // Reemplazar cada variable por su valor correspondiente
         for (const [nombre, valor] of Object.entries(varsNumeric)) {
             // Usamos una expresión regular con límites de palabra para evitar reemplazos parciales
@@ -96,7 +55,7 @@ function evaluarFormula(formula, variables) {
         expresion = expresion.replace(/,/g, '.');
         // Manejar función SI(condicion;valorVerdadero;valorFalso)
         expresion = procesarFuncionSI(expresion);
-        logger_1.default.debug('Expresión a evaluar:', expresion);
+        logger.debug('Expresión a evaluar:', expresion);
         try {
             // Evaluar la expresión de forma segura usando mathjs
             const resultado = mathjs.evaluate(expresion);
@@ -104,30 +63,30 @@ function evaluarFormula(formula, variables) {
             if (typeof resultado !== 'number' || isNaN(resultado)) {
                 throw new Error(`La fórmula no produjo un número válido: ${resultado}`);
             }
-            logger_1.default.debug('Resultado de la evaluación:', resultado);
+            logger.debug('Resultado de la evaluación:', resultado);
             return resultado;
         }
         catch (mathError) {
-            logger_1.default.error('Error al evaluar con mathjs:', mathError);
+            logger.error('Error al evaluar con mathjs:', mathError);
             // Intentar una evaluación alternativa con Function
             return evaluarAlternativo(expresion);
         }
     }
     catch (error) {
-        logger_1.default.error('Error al evaluar fórmula:', error);
-        logger_1.default.error('Fórmula original:', formula);
-        logger_1.default.debug('Variables:', variables);
+        logger.error('Error al evaluar fórmula:', error);
+        logger.error('Fórmula original:', formula);
+        logger.debug('Variables:', variables);
         // Si hay un error, intentar un cálculo simple con los valores recibidos
         try {
             const valorBase = variables.Valor || 0;
             const palets = variables.Palets || 0;
             const valorPeaje = variables.Peaje || 0;
             const total = valorBase * palets + valorPeaje;
-            logger_1.default.debug('Fallback a cálculo simple:', total);
+            logger.debug('Fallback a cálculo simple:', total);
             return total;
         }
         catch (fallbackError) {
-            logger_1.default.error('Error en cálculo fallback:', fallbackError);
+            logger.error('Error en cálculo fallback:', fallbackError);
             return 0;
         }
     }
@@ -155,19 +114,19 @@ function evaluarAlternativo(expresion) {
         expresion = expresion.replace(/\(([^?]+)\s*\?\s*([^:]+)\s*:\s*([^)]+)\)/g, (match, condicion, valorVerdadero, valorFalso) => {
             return `(${condicion} > 0 ? ${valorVerdadero} : ${valorFalso})`;
         });
-        logger_1.default.debug('Expresión alternativa:', expresion);
+        logger.debug('Expresión alternativa:', expresion);
         // Usar Function pero con un contexto controlado
         // @ts-ignore - Ignoramos advertencia de seguridad, ya que esta es una función de fallback
         const evaluador = new Function('return ' + expresion);
         const resultado = evaluador();
-        logger_1.default.debug('Resultado alternativo:', resultado);
+        logger.debug('Resultado alternativo:', resultado);
         if (typeof resultado !== 'number' || isNaN(resultado)) {
             throw new Error('Resultado no numérico');
         }
         return resultado;
     }
     catch (error) {
-        logger_1.default.error('Error en evaluación alternativa:', error);
+        logger.error('Error en evaluación alternativa:', error);
         return 0;
     }
 }
@@ -181,7 +140,7 @@ function evaluarAlternativo(expresion) {
  */
 function calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, formula) {
     // Agregar log detallado de los valores recibidos
-    logger_1.default.debug(`calcularTarifaPaletConFormula - Valores recibidos:
+    logger.debug(`calcularTarifaPaletConFormula - Valores recibidos:
     valorBase: ${valorBase} (tipo: ${typeof valorBase})
     valorPeaje: ${valorPeaje} (tipo: ${typeof valorPeaje})
     palets: ${palets} (tipo: ${typeof palets})
@@ -227,7 +186,7 @@ function calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, formula) {
         };
     }
     catch (error) {
-        logger_1.default.error('Error al calcular tarifa con fórmula personalizada:', error);
+        logger.error('Error al calcular tarifa con fórmula personalizada:', error);
         // Fallback a cálculo estándar
         const tarifaBase = valorBaseNum * paletsNum;
         const total = tarifaBase + valorPeajeNum;
@@ -238,4 +197,5 @@ function calcularTarifaPaletConFormula(valorBase, valorPeaje, palets, formula) {
         };
     }
 }
+export { evaluarFormula, procesarFuncionSI, calcularTarifaPaletConFormula };
 //# sourceMappingURL=formulaParser.js.map

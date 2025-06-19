@@ -1,20 +1,10 @@
-"use strict";
-const getAllSites = require('./getAllSites');
-const createSite = require('./createSite');
-const updateSite = require('./updateSite');
-const deleteSite = require('./deleteSite');
-const bulkCreateSites = require('./bulkCreateSites');
-const bulkDeleteSites = require('./bulkDeleteSites');
-const searchNearby = require('./searchNearby');
-const getSitesByCliente = require('./getSitesByCliente');
-module.exports = {
-    getAllSites,
-    createSite,
-    updateSite,
-    deleteSite,
-    bulkCreateSites,
-    bulkDeleteSites,
-    searchNearby,
-    getSitesByCliente
-};
+import getAllSites from './getAllSites';
+import createSite from './createSite';
+import updateSite from './updateSite';
+import deleteSite from './deleteSite';
+import bulkCreateSites from './bulkCreateSites';
+import bulkDeleteSites from './bulkDeleteSites';
+import searchNearby from './searchNearby';
+import getSitesByCliente from './getSitesByCliente';
+export { getAllSites, createSite, updateSite, deleteSite, bulkCreateSites, bulkDeleteSites, searchNearby, getSitesByCliente };
 //# sourceMappingURL=index.js.map

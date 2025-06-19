@@ -1,8 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const mongoose_1 = require("mongoose");
+import { Schema, model } from 'mongoose';
 // Schema de Mongoose para el Cliente
-const clienteSchema = new mongoose_1.Schema({
+const clienteSchema = new Schema({
     nombre: {
         type: String,
         required: true,
@@ -18,5 +16,5 @@ const clienteSchema = new mongoose_1.Schema({
     timestamps: true // Agrega createdAt y updatedAt
 });
 // Exportar el modelo con tipado
-exports.default = (0, mongoose_1.model)('Cliente', clienteSchema);
+export default model('Cliente', clienteSchema);
 //# sourceMappingURL=Cliente.js.map

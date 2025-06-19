@@ -1,18 +1,13 @@
-"use strict";
 /**
  * Configuración centralizada de middlewares de seguridad para la aplicación
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+import rateLimit from 'express-rate-limit';
 // Importar configuración global de rate limiting
-const config_1 = __importDefault(require("../config/config"));
+import config from '../config/config';
 // Configurar rate limiter global
-const limiter = (0, express_rate_limit_1.default)({
-    windowMs: config_1.default.rateLimiting.windowMs,
-    max: config_1.default.rateLimiting.max,
+const limiter = rateLimit({
+    windowMs: config.rateLimiting.windowMs,
+    max: config.rateLimiting.max,
     message: {
         error: 'Demasiadas solicitudes, por favor intente más tarde'
     },
@@ -54,5 +49,5 @@ const securityMiddleware = [
         next();
     }
 ];
-exports.default = securityMiddleware;
+export default securityMiddleware;
 //# sourceMappingURL=security.js.map
