@@ -1,19 +1,15 @@
 import express from 'express';
 const router = express.Router();
 import Tramo from '../models/Tramo';
-import Site from '../models/Site';
-import Cliente from '../models/Cliente';
 import * as tramoController from '../controllers/tramoController';
 import { authenticateToken } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
-
 // Middleware para debugging de solicitudes grandes
-router.use('/bulk', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.use('/bulk', (req, res, next) => {
     logger.debug('Recibiendo solicitud bulk import:');
     logger.debug('- Headers:', req.headers);
     logger.debug('- Cliente:', req.body?.cliente);
     logger.debug('- Cantidad tramos:', req.body?.tramos?.length || 0);
-    
     if (!req.body || !req.body.tramos) {
         logger.error('⚠️ CUERPO DE LA SOLICITUD VACÍO O INCOMPLETO');
         logger.error('Content-Type:', req.headers['content-type']);
@@ -29,16 +25,13 @@ router.use('/bulk', (req: express.Request, res: express.Response, next: express.
             }
         });
     }
-    
     next();
 });
-
 // Middleware para verificar el tipo de tramo
-router.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.use(async (req, res, next) => {
     if (['POST', 'PUT'].includes(req.method) && req.body.tipo) {
         // Normalizar el tipo a mayúsculas
         req.body.tipo = req.body.tipo.toUpperCase();
-        
         // Verificar que es un tipo válido
         if (!['TRMC', 'TRMI'].includes(req.body.tipo)) {
             return res.status(400).json({
@@ -49,70 +42,63 @@ router.use(async (req: express.Request, res: express.Response, next: express.Nex
     }
     next();
 });
-
 // IMPORTANTE: Primero las rutas específicas
 // Obtener tramos vigentes a una fecha determinada
-router.get('/vigentes/:fecha', async (req: express.Request, res: express.Response) => {
-  try {
-    const fecha = new Date(req.params.fecha);
-    
-    if (isNaN(fecha.getTime())) {
-      return res.status(400).json({ error: 'La fecha proporcionada no es válida' });
+router.get('/vigentes/:fecha', async (req, res) => {
+    try {
+        const fecha = new Date(req.params.fecha);
+        if (isNaN(fecha.getTime())) {
+            return res.status(400).json({ error: 'La fecha proporcionada no es válida' });
+        }
+        const tramos = await Tramo.find({
+            vigenciaDesde: { $lte: fecha },
+            vigenciaHasta: { $gte: fecha }
+        }).populate('origen', 'Site location')
+            .populate('destino', 'Site location');
+        res.json(tramos);
     }
-    
-    const tramos = await Tramo.find({
-      vigenciaDesde: { $lte: fecha },
-      vigenciaHasta: { $gte: fecha }
-    }).populate('origen', 'Site location')
-      .populate('destino', 'Site location');
-      
-    res.json(tramos);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
-
 // Mejorar la ruta para obtener tramos por cliente
-router.get('/cliente/:cliente', async (req: express.Request, res: express.Response) => {
-  try {
-    logger.info('Buscando tramos para cliente:', req.params.cliente);
-    
-    const tramos = await Tramo.find({ cliente: req.params.cliente })
-      .populate('origen', 'Site location')
-      .populate('destino', 'Site location');
-    
-    logger.info(`Se encontraron ${tramos.length} tramos para el cliente ${req.params.cliente}`);
-    
-    // Devolver en formato esperado por el frontend
-    res.json({
-      success: true,
-      data: tramos
-    });
-  } catch (error) {
-    logger.error('Error al obtener tramos por cliente:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: (error as Error).message,
-      error: (error as Error).toString()
-    });
-  }
-});
-
-// Obtener un tramo específico
-router.get('/:id', async (req: express.Request, res: express.Response) => {
-  try {
-    const tramo = await Tramo.findById(req.params.id)
-      .populate('origen')
-      .populate('destino');
-    if (!tramo) {
-      return res.status(404).json({ error: 'Tramo no encontrado' });
+router.get('/cliente/:cliente', async (req, res) => {
+    try {
+        logger.info('Buscando tramos para cliente:', req.params.cliente);
+        const tramos = await Tramo.find({ cliente: req.params.cliente })
+            .populate('origen', 'Site location')
+            .populate('destino', 'Site location');
+        logger.info(`Se encontraron ${tramos.length} tramos para el cliente ${req.params.cliente}`);
+        // Devolver en formato esperado por el frontend
+        res.json({
+            success: true,
+            data: tramos
+        });
     }
-    res.json(tramo);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
+    catch (error) {
+        logger.error('Error al obtener tramos por cliente:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            error: error.toString()
+        });
+    }
 });
-
+// Obtener un tramo específico
+router.get('/:id', async (req, res) => {
+    try {
+        const tramo = await Tramo.findById(req.params.id)
+            .populate('origen')
+            .populate('destino');
+        if (!tramo) {
+            return res.status(404).json({ error: 'Tramo no encontrado' });
+        }
+        res.json(tramo);
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // Después las rutas genéricas
 /**
  * @swagger
@@ -175,7 +161,6 @@ router.get('/:id', async (req: express.Request, res: express.Response) => {
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/', authenticateToken, tramoController.getAllTramos);
-
 // Crear nuevo tramo
 /**
  * @swagger
@@ -235,16 +220,14 @@ router.get('/', authenticateToken, tramoController.getAllTramos);
  *         description: Conflicto con tramos existentes
  */
 router.post('/', authenticateToken, tramoController.createTramo);
-
 // Mejorada la ruta bulk para manejar errores mejor
-router.post('/bulk', async (req: express.Request, res: express.Response) => {
+router.post('/bulk', async (req, res) => {
     try {
         logger.debug('Bulk import - Headers:', {
             contentType: req.headers['content-type'],
             contentLength: req.headers['content-length'],
             authorization: req.headers['authorization'] ? 'Presente' : 'Ausente'
         });
-
         // Validar formato de la solicitud
         if (!req.body) {
             logger.error('Cuerpo de la solicitud nulo o indefinido');
@@ -253,23 +236,19 @@ router.post('/bulk', async (req: express.Request, res: express.Response) => {
                 message: 'El cuerpo de la solicitud está vacío'
             });
         }
-
         const { cliente, tramos } = req.body;
-        
         logger.debug('Datos recibidos en bulk import:', {
             clientePresente: !!cliente,
             tramosPresente: !!tramos,
             tipoTramos: typeof tramos,
             tramosLength: tramos?.length || 0
         });
-
         if (!cliente) {
             return res.status(400).json({
                 success: false,
                 message: 'Cliente no especificado'
             });
         }
-
         if (!tramos || !Array.isArray(tramos)) {
             return res.status(400).json({
                 success: false,
@@ -280,47 +259,43 @@ router.post('/bulk', async (req: express.Request, res: express.Response) => {
                 }
             });
         }
-
         // Llamar al controlador para procesar los tramos
         await tramoController.bulkCreateTramos(req, res);
-    } catch (error) {
+    }
+    catch (error) {
         logger.error('Error no controlado en bulk import:', error);
         res.status(500).json({
             success: false,
             message: 'Error en la importación masiva de tramos',
-            error: (error as Error).message
+            error: error.message
         });
     }
 });
-
 // Nueva ruta para diagnóstico de duplicados
-router.post('/diagnostico-tipos', async (req: express.Request, res: express.Response) => {
+router.post('/diagnostico-tipos', async (req, res) => {
     try {
         const { cliente, origen, destino, metodoCalculo } = req.body;
-        
         if (!cliente) {
             return res.status(400).json({
                 success: false,
                 message: 'Cliente es requerido para el diagnóstico'
             });
         }
-
         // Construir la consulta base
-        const baseQuery: any = { cliente };
-        
+        const baseQuery = { cliente };
         // Añadir filtros opcionales
-        if (origen) baseQuery.origen = origen;
-        if (destino) baseQuery.destino = destino;
-        if (metodoCalculo) baseQuery.metodoCalculo = metodoCalculo;
-
+        if (origen)
+            baseQuery.origen = origen;
+        if (destino)
+            baseQuery.destino = destino;
+        if (metodoCalculo)
+            baseQuery.metodoCalculo = metodoCalculo;
         // Buscar todos los tramos que coincidan con los criterios
         const tramos = await Tramo.find(baseQuery)
             .populate('origen', 'Site')
             .populate('destino', 'Site')
             .lean();
-
         logger.info(`Encontrados ${tramos.length} tramos para diagnóstico con filtros:`, baseQuery);
-
         // Analizar los tramos por tipo
         const analisis = {
             totalTramos: tramos.length,
@@ -332,25 +307,22 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
             },
             tramosSinTipoNormalizado: tramos.filter(t => t.tipo && t.tipo !== 'TRMC' && t.tipo !== 'TRMI').map(t => ({
                 _id: t._id,
-                origen: (t.origen as any)?.Site,
-                destino: (t.destino as any)?.Site,
+                origen: t.origen?.Site,
+                destino: t.destino?.Site,
                 tipo: t.tipo
             })),
-            posiblesConflictos: [] as any[]
+            posiblesConflictos: []
         };
-
         // Encontrar pares de tramos que podrían estar en conflicto
         // (mismo origen-destino pero diferentes tipos)
-        const rutasUnicas: Record<string, any[]> = {};
-        
+        const rutasUnicas = {};
         tramos.forEach(tramo => {
-            const rutaKey = `${(tramo.origen as any)._id}-${(tramo.destino as any)._id}-${tramo.metodoCalculo}`;
+            const rutaKey = `${tramo.origen._id}-${tramo.destino._id}-${tramo.metodoCalculo}`;
             if (!rutasUnicas[rutaKey]) {
                 rutasUnicas[rutaKey] = [];
             }
             rutasUnicas[rutaKey].push(tramo);
         });
-
         // Identificar rutas con múltiples tipos
         for (const ruta in rutasUnicas) {
             const tramosRuta = rutasUnicas[ruta];
@@ -360,8 +332,8 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
                 if (tiposEnRuta.size > 1) {
                     analisis.posiblesConflictos.push({
                         ruta: ruta,
-                        origen: (tramosRuta[0].origen as any)?.Site,
-                        destino: (tramosRuta[0].destino as any)?.Site,
+                        origen: tramosRuta[0].origen?.Site,
+                        destino: tramosRuta[0].destino?.Site,
                         tipos: Array.from(tiposEnRuta),
                         tramos: tramosRuta.map(t => ({
                             _id: t._id,
@@ -374,46 +346,41 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
                 }
             }
         }
-
         res.json({
             success: true,
             analisis
         });
-    } catch (error) {
+    }
+    catch (error) {
         logger.error('Error en diagnóstico de tipos:', error);
         res.status(500).json({
             success: false,
             message: 'Error realizando el diagnóstico',
-            error: (error as Error).message
+            error: error.message
         });
     }
 });
-
 // Nuevo endpoint para corregir tipos de tramos
-router.post('/corregir-tipos', async (req: express.Request, res: express.Response) => {
+router.post('/corregir-tipos', async (req, res) => {
     try {
         const { tramoIds, nuevoTipo } = req.body;
-        
         if (!tramoIds || !Array.isArray(tramoIds) || tramoIds.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Se requieren IDs de tramos para corregir'
             });
         }
-        
         if (!nuevoTipo || !['TRMC', 'TRMI'].includes(nuevoTipo)) {
             return res.status(400).json({
                 success: false,
                 message: 'El nuevo tipo debe ser TRMC o TRMI'
             });
         }
-        
         const resultados = {
             procesados: tramoIds.length,
             actualizados: 0,
-            errores: [] as any[]
+            errores: []
         };
-        
         for (const id of tramoIds) {
             try {
                 const tramo = await Tramo.findById(id);
@@ -423,34 +390,35 @@ router.post('/corregir-tipos', async (req: express.Request, res: express.Respons
                     await tramo.save();
                     resultados.actualizados++;
                     logger.info(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
-                } else {
+                }
+                else {
                     resultados.errores.push({
                         id,
                         error: 'Tramo no encontrado'
                     });
                 }
-            } catch (error) {
+            }
+            catch (error) {
                 resultados.errores.push({
                     id,
-                    error: (error as Error).message
+                    error: error.message
                 });
             }
         }
-        
         res.json({
             success: true,
             resultados
         });
-    } catch (error) {
+    }
+    catch (error) {
         logger.error('Error corrigiendo tipos:', error);
         res.status(500).json({
             success: false,
             message: 'Error corrigiendo tipos',
-            error: (error as Error).message
+            error: error.message
         });
     }
 });
-
 // Actualizar tramo
 /**
  * @swagger
@@ -480,7 +448,6 @@ router.post('/corregir-tipos', async (req: express.Request, res: express.Respons
  *         description: Conflicto con otros tramos
  */
 router.put('/:id', authenticateToken, tramoController.updateTramo);
-
 // Eliminar tramo
 /**
  * @swagger
@@ -502,10 +469,8 @@ router.put('/:id', authenticateToken, tramoController.updateTramo);
  *         $ref: '#/components/responses/NotFoundError'
  */
 router.delete('/:id', authenticateToken, tramoController.deleteTramo);
-
 // Ruta para verificar posibles duplicados
 router.post('/verificarDuplicados', tramoController.verificarPosiblesDuplicados);
-
 // Ruta para actualización masiva de vigencias
 /**
  * @swagger
@@ -559,10 +524,8 @@ router.post('/verificarDuplicados', tramoController.verificarPosiblesDuplicados)
  *                         type: string
  */
 router.post('/updateVigenciaMasiva', authenticateToken, tramoController.updateVigenciaMasiva);
-
 // Ruta para calcular tarifa
 router.post('/calcular-tarifa', authenticateToken, tramoController.calcularTarifa);
-
 /**
  * @swagger
  * /api/tramos/distancias:
@@ -593,5 +556,5 @@ router.post('/calcular-tarifa', authenticateToken, tramoController.calcularTarif
  *                         type: number
  */
 router.get('/distancias', tramoController.getDistanciasCalculadas);
-
 export default router;
+//# sourceMappingURL=tramos.js.map
