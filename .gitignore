@@ -12,7 +12,7 @@ yarn-error.log
 .env.production.local
 
 # Directorios de compilación
-/dist
+dist/
 /build
 /out
 /.next
