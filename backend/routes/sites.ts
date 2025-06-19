@@ -20,17 +20,17 @@ router.post('/bulk', bulkCreateSites);
 router.get('/nearby', searchNearby);
 
 // Ruta para obtener sites por cliente
-router.get('/cliente/:clienteId', async (req: express.Request, res: express.Response) => {
+router.get('/cliente/:clienteId', async (req: express.Request, res: express.Response): Promise<void> => {
     try {
         const { clienteId } = req.params;
         const sites = await Site.find({ cliente: clienteId })
             .populate('cliente', 'nombre')
             .sort({ nombre: 1 });
         
-        return res.json(sites);
+        res.json(sites);
     } catch (error) {
         logger.error('Error al obtener sites por cliente:', error);
-        return res.status(500).json({ 
+        res.status(500).json({ 
             success: false, 
             message: 'Error al obtener sites por cliente',
             error: (error as Error).message 

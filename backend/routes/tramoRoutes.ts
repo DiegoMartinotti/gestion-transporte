@@ -24,16 +24,17 @@ router.post('/normalizar-tipos', tramoController.normalizarTramos);
 router.post('/test-tipos', tramoController.testImportacionTipos);
 
 // Diagnóstico específico para el problema de tipos
-router.post('/diagnose-tipos', async (req: Request, res: Response) => {
+router.post('/diagnose-tipos', async (req: Request, res: Response): Promise<void> => {
     try {
         // Requerir origen, destino, cliente como parámetros
         const { origen, destino, cliente } = req.body;
         
         if (!origen || !destino || !cliente) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: 'Se requieren origen, destino y cliente'
             });
+            return;
         }
         
         // Buscar todos los tramos con ese origen y destino
@@ -41,20 +42,24 @@ router.post('/diagnose-tipos', async (req: Request, res: Response) => {
             origen,
             destino,
             cliente
-        }).lean();
+        });
         
         // Agrupar por tipo para análisis
         const porTipo: { [key: string]: any[] } = {};
         tramos.forEach(t => {
-            if (!porTipo[t.tipo]) {
-                porTipo[t.tipo] = [];
+            // Obtener la tarifa vigente para acceder a las propiedades
+            const tarifaVigente = t.getTarifaVigente();
+            const tipo = tarifaVigente?.tipo || 'Sin tipo';
+            
+            if (!porTipo[tipo]) {
+                porTipo[tipo] = [];
             }
-            porTipo[t.tipo].push({
+            porTipo[tipo].push({
                 _id: t._id,
-                tipo: t.tipo,
-                vigenciaDesde: t.vigenciaDesde,
-                vigenciaHasta: t.vigenciaHasta,
-                metodoCalculo: t.metodoCalculo,
+                tipo: tarifaVigente?.tipo,
+                vigenciaDesde: tarifaVigente?.vigenciaDesde,
+                vigenciaHasta: tarifaVigente?.vigenciaHasta,
+                metodoCalculo: tarifaVigente?.metodoCalculo,
                 generatedId: generarTramoId(t)
             });
         });

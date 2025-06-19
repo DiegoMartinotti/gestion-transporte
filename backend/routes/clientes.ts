@@ -7,13 +7,14 @@ import {
     updateCliente, 
     deleteCliente 
 } from '../controllers/clienteController';
+import { authenticateToken } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
 
 // Rutas
-router.get('/', getClientes);
-router.get('/:id', getClienteById);
-router.post('/', createCliente);
-router.put('/:id', updateCliente);
-router.delete('/:id', deleteCliente);
+router.get('/', authenticateToken, getClientes as any);
+router.get('/:id', authenticateToken, getClienteById as any);
+router.post('/', authenticateToken, createCliente as any);
+router.put('/:id', authenticateToken, updateCliente as any);
+router.delete('/:id', authenticateToken, deleteCliente as any);
 
 export default router;

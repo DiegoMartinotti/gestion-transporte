@@ -17,11 +17,11 @@ router.get('/cliente/:clienteId', async (req, res) => {
         const sites = await Site.find({ cliente: clienteId })
             .populate('cliente', 'nombre')
             .sort({ nombre: 1 });
-        return res.json(sites);
+        res.json(sites);
     }
     catch (error) {
         logger.error('Error al obtener sites por cliente:', error);
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: 'Error al obtener sites por cliente',
             error: error.message

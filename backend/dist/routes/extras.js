@@ -32,7 +32,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
     try {
         const extra = await Extra.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!extra) {
-            return res.status(404).json({ error: 'Extra no encontrado' });
+            res.status(404).json({ error: 'Extra no encontrado' });
+            return;
         }
         res.json(extra);
     }
@@ -46,7 +47,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     try {
         const extra = await Extra.findByIdAndDelete(req.params.id);
         if (!extra) {
-            return res.status(404).json({ error: 'Extra no encontrado' });
+            res.status(404).json({ error: 'Extra no encontrado' });
+            return;
         }
         res.json({ message: 'Extra eliminado correctamente' });
     }

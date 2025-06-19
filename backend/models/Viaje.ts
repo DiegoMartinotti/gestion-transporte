@@ -466,7 +466,7 @@ viajeSchema.post('save', async function(doc) {
     try {
         // Si el total cambió, necesitamos recalcular el estado
         if (doc.isModified('total')) {
-            await actualizarEstadoPartida(doc._id.toString());
+            await actualizarEstadoPartida((doc._id as mongoose.Types.ObjectId).toString());
         }
     } catch (error) {
         logger.error('Error actualizando estado de partida:', error);

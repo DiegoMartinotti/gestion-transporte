@@ -1,11 +1,12 @@
 import express from 'express';
 const router = express.Router();
 import { getClientes, getClienteById, createCliente, updateCliente, deleteCliente } from '../controllers/clienteController';
+import { authenticateToken } from '../middleware/authMiddleware';
 // Rutas
-router.get('/', getClientes);
-router.get('/:id', getClienteById);
-router.post('/', createCliente);
-router.put('/:id', updateCliente);
-router.delete('/:id', deleteCliente);
+router.get('/', authenticateToken, getClientes);
+router.get('/:id', authenticateToken, getClienteById);
+router.post('/', authenticateToken, createCliente);
+router.put('/:id', authenticateToken, updateCliente);
+router.delete('/:id', authenticateToken, deleteCliente);
 export default router;
 //# sourceMappingURL=clientes.js.map
