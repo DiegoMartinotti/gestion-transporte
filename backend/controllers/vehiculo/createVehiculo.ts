@@ -1,13 +1,39 @@
-const vehiculoService = require('../../services/vehiculo/vehiculoService');
-const logger = require('../../utils/logger');
+import express from 'express';
+import { createVehiculo as createVehiculoService } from '../../services/vehiculo/vehiculoService';
+import logger from '../../utils/logger';
+
+interface DocumentacionVencimiento {
+  vencimiento?: string;
+}
+
+interface Documentacion {
+  seguro?: DocumentacionVencimiento;
+  vtv?: DocumentacionVencimiento;
+  ruta?: DocumentacionVencimiento;
+  senasa?: DocumentacionVencimiento;
+}
+
+interface VehiculoData {
+  dominio?: string;
+  empresa?: string;
+  tipo?: string;
+  activo?: boolean;
+  capacidad?: number | string;
+  documentacion?: Documentacion;
+}
+
+interface ValidationResult {
+  valido: boolean;
+  errores: string[];
+}
 
 /**
  * Valida los datos de entrada para la creación de un vehículo
  * @param {Object} data - Datos del vehículo a validar
  * @returns {Object} - Resultado de la validación { valido, errores }
  */
-const validarDatosVehiculo = (data) => {
-  const errores = [];
+const validarDatosVehiculo = (data: VehiculoData): ValidationResult => {
+  const errores: string[] = [];
   
   // Validar campos obligatorios
   if (!data) {
@@ -42,10 +68,10 @@ const validarDatosVehiculo = (data) => {
   
   // Validar formato de fechas en la documentación
   if (data.documentacion) {
-    const docs = ['seguro', 'vtv', 'ruta', 'senasa'];
+    const docs = ['seguro', 'vtv', 'ruta', 'senasa'] as const;
     docs.forEach(doc => {
-      if (data.documentacion[doc] && data.documentacion[doc].vencimiento) {
-        const fecha = new Date(data.documentacion[doc].vencimiento);
+      if (data.documentacion![doc] && data.documentacion![doc]!.vencimiento) {
+        const fecha = new Date(data.documentacion![doc]!.vencimiento!);
         if (isNaN(fecha.getTime())) {
           errores.push(`La fecha de vencimiento de ${doc} no es válida`);
         }
@@ -64,7 +90,7 @@ const validarDatosVehiculo = (data) => {
  * @route   POST /api/vehiculos
  * @access  Private
  */
-const createVehiculo = async (req, res) => {
+const createVehiculo = async (req: express.Request, res: express.Response): Promise<void> => {
   const inicioTiempo = Date.now();
   logger.info(`Petición recibida: POST /api/vehiculos`);
   
@@ -74,11 +100,12 @@ const createVehiculo = async (req, res) => {
     
     if (!valido) {
       logger.warn(`Validación fallida al crear vehículo: ${errores.join(', ')}`);
-      return res.status(400).json({ 
+      res.status(400).json({ 
         exito: false,
         mensaje: 'Datos de vehículo inválidos',
         errores 
       });
+      return;
     }
     
     // Normalizar el dominio (siempre en mayúsculas)
@@ -87,7 +114,7 @@ const createVehiculo = async (req, res) => {
     }
     
     // Crear el vehículo
-    const vehiculoGuardado = await vehiculoService.createVehiculo(req.body);
+    const vehiculoGuardado = await createVehiculoService(req.body);
     
     const tiempoTotal = Date.now() - inicioTiempo;
     logger.info(`Vehículo creado con ID ${vehiculoGuardado._id} (tiempo: ${tiempoTotal}ms)`);
@@ -101,34 +128,36 @@ const createVehiculo = async (req, res) => {
     const tiempoTotal = Date.now() - inicioTiempo;
     
     // Manejar errores específicos
-    if (error.message.includes('empresa') || 
-        error.message.includes('La empresa especificada no existe')) {
-      logger.warn(`Error al crear vehículo - Empresa no válida: ${error.message} (tiempo: ${tiempoTotal}ms)`);
-      return res.status(400).json({ 
+    if ((error as Error).message.includes('empresa') || 
+        (error as Error).message.includes('La empresa especificada no existe')) {
+      logger.warn(`Error al crear vehículo - Empresa no válida: ${(error as Error).message} (tiempo: ${tiempoTotal}ms)`);
+      res.status(400).json({ 
         exito: false,
         mensaje: 'La empresa especificada no existe',
-        error: error.message 
+        error: (error as Error).message 
       });
+      return;
     }
     
-    if (error.message.includes('dominio') || 
-        error.message.includes('Ya existe un vehículo con ese dominio')) {
-      logger.warn(`Error al crear vehículo - Dominio duplicado: ${error.message} (tiempo: ${tiempoTotal}ms)`);
-      return res.status(400).json({ 
+    if ((error as Error).message.includes('dominio') || 
+        (error as Error).message.includes('Ya existe un vehículo con ese dominio')) {
+      logger.warn(`Error al crear vehículo - Dominio duplicado: ${(error as Error).message} (tiempo: ${tiempoTotal}ms)`);
+      res.status(400).json({ 
         exito: false,
         mensaje: 'Ya existe un vehículo con ese dominio',
-        error: error.message 
+        error: (error as Error).message 
       });
+      return;
     }
     
     // Error genérico
-    logger.error(`Error al crear vehículo: ${error.message} (tiempo: ${tiempoTotal}ms)`, error);
+    logger.error(`Error al crear vehículo: ${(error as Error).message} (tiempo: ${tiempoTotal}ms)`, error);
     res.status(500).json({ 
       exito: false,
       mensaje: 'Error al crear vehículo', 
-      error: error.message 
+      error: (error as Error).message 
     });
   }
 };
 
-module.exports = createVehiculo; 
+export default createVehiculo;
