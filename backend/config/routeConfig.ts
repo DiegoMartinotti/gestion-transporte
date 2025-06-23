@@ -43,9 +43,9 @@ function configureApiRoutes(app: Application): void {
     // Importar routers
     // Nota: Usamos require en lugar de import porque estamos en una migración gradual
     // y estos módulos aún podrían estar en JavaScript
-    const authRouter = require('../routes/auth');
-    const apiRoutes = require('../routes/index');
-    const proxyRouter = require('../routes/proxy');
+    const authRouter = require('../routes/auth').default || require('../routes/auth');
+    const apiRoutes = require('../routes/index').default || require('../routes/index');
+    const proxyRouter = require('../routes/proxy').default || require('../routes/proxy');
     
     // Rutas públicas que no requieren autenticación
     app.use('/api/auth', authRouter);

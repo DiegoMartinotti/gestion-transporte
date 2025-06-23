@@ -1,8 +1,9 @@
 {
   "watch": ["**/*"],
-  "ext": "js,json,env",
-  "ignore": ["node_modules/", "logs/", ".git/"],
+  "ext": "js,json,env,ts",
+  "ignore": ["node_modules/", "logs/", ".git/", "dist/"],
   "delay": "500",
+  "exec": "ts-node",
   "env": {
     "NODE_ENV": "development"
   }
