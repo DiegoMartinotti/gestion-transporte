@@ -1,5 +1,22 @@
 # Plan de Implementación Frontend - Sistema de Gestión de Transporte
 
+## INSTRUCCIONES PARA AGENTES
+
+**IMPORTANTE**: Al trabajar en cualquier tarea de este plan:
+
+1. **MARCAR PROGRESO**: Cambiar `[ ]` por `[x]` cuando completes una tarea
+2. **AGREGAR NOTAS**: Usar formato `<!-- NOTA: descripción -->` después de items completados
+3. **DOCUMENTAR ARCHIVOS**: Mencionar rutas de archivos creados/modificados
+4. **CHECKPOINT VALIDATION**: Verificar que todos los items de una fase estén completos antes de marcar el checkpoint
+5. **COMMIT CHANGES**: Hacer commit de cambios al completar secciones significativas
+
+**Ejemplo de marcado:**
+```markdown
+- [x] **ComponenteName**: Descripción de la tarea <!-- COMPLETADO: /ruta/archivo.tsx -->
+```
+
+---
+
 ## Resumen Ejecutivo
 
 Este documento detalla la implementación de un frontend moderno usando **Mantine UI** para el Sistema de Gestión de Transporte. El desarrollo seguirá un enfoque incremental, desde componentes básicos hasta funcionalidades complejas, permitiendo pruebas continuas del sistema.
@@ -35,72 +52,72 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 1: FUNDACIÓN Y ARQUITECTURA BASE
 
 ### 1.1 Configuración Inicial del Proyecto
-- [ ] Crear proyecto React con TypeScript
-- [ ] Configurar Mantine UI con tema personalizado
-- [ ] Configurar modo oscuro por defecto
-- [ ] Configurar routing (React Router)
-- [ ] Configurar estado global (Context/Zustand)
-- [ ] Configurar cliente HTTP (Axios)
-- [ ] Configurar variables de entorno
+- [x] Crear proyecto React con TypeScript <!-- COMPLETADO: /frontend/package.json, tsconfig.json -->
+- [x] Configurar Mantine UI con tema personalizado <!-- COMPLETADO: /frontend/src/theme.ts -->
+- [x] Configurar modo oscuro por defecto <!-- COMPLETADO: /frontend/src/App.tsx -->
+- [x] Configurar routing (React Router) <!-- COMPLETADO: React Router v7.6.2 en App.tsx -->
+- [x] Configurar estado global (Context/Zustand) <!-- COMPLETADO: /frontend/src/contexts/AuthContext.tsx -->
+- [x] Configurar cliente HTTP (Axios) <!-- COMPLETADO: /frontend/src/services/api.ts con interceptors -->
+- [x] Configurar variables de entorno <!-- COMPLETADO: /frontend/src/constants/index.ts -->
 
 ### 1.2 Componentes Base Reutilizables
-- [ ] **LoadingOverlay**: Indicador de carga unificado
-- [ ] **ErrorBoundary**: Manejo centralizado de errores
-- [ ] **DataTable**: Tabla reutilizable con paginación, filtros, ordenamiento
-- [ ] **FormField**: Wrapper para campos de formulario consistentes
-- [ ] **DateRangePicker**: Selector de rangos de fecha
-- [ ] **SearchInput**: Buscador con debounce
-- [ ] **ConfirmModal**: Modal de confirmación reutilizable
-- [ ] **NotificationSystem**: Sistema de notificaciones toast
+- [x] **LoadingOverlay**: Indicador de carga unificado <!-- COMPLETADO: /frontend/src/components/base/LoadingOverlay.tsx -->
+- [x] **ErrorBoundary**: Manejo centralizado de errores <!-- COMPLETADO: /frontend/src/components/base/ErrorBoundary.tsx -->
+- [x] **DataTable**: Tabla reutilizable con paginación, filtros, ordenamiento <!-- COMPLETADO: /frontend/src/components/base/DataTable.tsx con TypeScript generics -->
+- [x] **FormField**: Wrapper para campos de formulario consistentes <!-- COMPLETADO: /frontend/src/components/base/FormField.tsx -->
+- [x] **DateRangePicker**: Selector de rangos de fecha <!-- COMPLETADO: /frontend/src/components/base/DateRangePicker.tsx -->
+- [x] **SearchInput**: Buscador con debounce <!-- COMPLETADO: /frontend/src/components/base/SearchInput.tsx -->
+- [x] **ConfirmModal**: Modal de confirmación reutilizable <!-- COMPLETADO: /frontend/src/components/base/ConfirmModal.tsx -->
+- [x] **NotificationSystem**: Sistema de notificaciones toast <!-- COMPLETADO: @mantine/notifications configurado en App.tsx -->
 
 ### 1.3 Layout y Navegación
-- [ ] **AppShell**: Shell principal con sidebar y header
-- [ ] **Navigation**: Menú de navegación con iconos
-- [ ] **Header**: Barra superior con usuario y configuraciones
-- [ ] **Breadcrumbs**: Navegación contextual
-- [ ] **ThemeToggle**: Alternador de tema claro/oscuro
+- [x] **AppShell**: Shell principal con sidebar y header <!-- COMPLETADO: Configurado en /frontend/src/App.tsx con header(60px) y navbar(250px) -->
+- [x] **Navigation**: Menú de navegación con iconos <!-- COMPLETADO: /frontend/src/components/ui/Navigation.tsx con Tabler icons -->
+- [x] **Header**: Barra superior con usuario y configuraciones <!-- COMPLETADO: Integrado en AppShell con título y theme toggle -->
+- [x] **Breadcrumbs**: Navegación contextual <!-- COMPLETADO: /frontend/src/components/base/Breadcrumbs.tsx integrado en App.tsx -->
+- [x] **ThemeToggle**: Alternador de tema claro/oscuro <!-- COMPLETADO: IconSun/IconMoon funcional en header -->
 
 ---
 
 ## FASE 2: AUTENTICACIÓN Y USUARIOS
 
 ### 2.1 Sistema de Autenticación
-- [ ] **LoginForm**: Formulario de login con validación
-- [ ] **AuthContext**: Contexto de autenticación
-- [ ] **ProtectedRoute**: Rutas protegidas
-- [ ] **TokenManager**: Gestión de tokens JWT
-- [ ] **UserProfile**: Perfil de usuario
-- [ ] **LogoutButton**: Botón de cierre de sesión
+- [x] **LoginForm**: Formulario de login con validación <!-- COMPLETADO: /frontend/src/pages/LoginPage.tsx con Mantine form -->
+- [x] **AuthContext**: Contexto de autenticación <!-- COMPLETADO: /frontend/src/contexts/AuthContext.tsx con loading states -->
+- [x] **ProtectedRoute**: Rutas protegidas <!-- COMPLETADO: /frontend/src/components/ProtectedRoute.tsx -->
+- [x] **TokenManager**: Gestión de tokens JWT <!-- COMPLETADO: /frontend/src/services/authService.ts con localStorage -->
+- [x] **UserProfile**: Perfil de usuario <!-- COMPLETADO: Integrado en Navigation con avatar y datos -->
+- [x] **LogoutButton**: Botón de cierre de sesión <!-- COMPLETADO: Integrado en Navigation con confirmación -->
 
-**Checkpoint 1**: ✅ Sistema base funcional con autenticación
+**Checkpoint 1**: ✅ Sistema base funcional con autenticación <!-- COMPLETADO: Autenticación JWT completamente funcional -->
 
 ---
 
 ## FASE 3: ENTIDADES BASE (Sin Dependencias Complejas)
 
 ### 3.1 Gestión de Clientes
-- [ ] **ClienteList**: Lista de clientes con búsqueda y filtros
-- [ ] **ClienteForm**: Formulario de creación/edición
-- [ ] **ClienteCard**: Tarjeta de cliente para vistas
-- [ ] **ClienteDetail**: Vista detallada con información completa
-- [ ] **ClienteSelector**: Selector reutilizable para otros formularios
+- [x] **ClienteList**: Lista de clientes con búsqueda y filtros <!-- COMPLETADO: /frontend/src/pages/clientes/ClientesPage.tsx con DataTable -->
+- [ ] **ClienteForm**: Formulario de creación/edición <!-- PENDIENTE: Solo operaciones básicas implementadas -->
+- [ ] **ClienteCard**: Tarjeta de cliente para vistas <!-- PENDIENTE: No implementado -->
+- [ ] **ClienteDetail**: Vista detallada con información completa <!-- PENDIENTE: No implementado -->
+- [ ] **ClienteSelector**: Selector reutilizable para otros formularios <!-- PENDIENTE: No implementado -->
 
 ### 3.2 Gestión de Empresas
-- [ ] **EmpresaList**: Lista de empresas (Propia/Subcontratada)
-- [ ] **EmpresaForm**: Formulario con campos específicos por tipo
-- [ ] **EmpresaCard**: Tarjeta con información básica
-- [ ] **EmpresaDetail**: Vista detallada con flota y personal
-- [ ] **EmpresaSelector**: Selector para asignaciones
+- [ ] **EmpresaList**: Lista de empresas (Propia/Subcontratada) <!-- BÁSICO: /frontend/src/pages/empresas/EmpresasPage.tsx placeholder -->
+- [ ] **EmpresaForm**: Formulario con campos específicos por tipo <!-- PENDIENTE: No implementado -->
+- [ ] **EmpresaCard**: Tarjeta con información básica <!-- PENDIENTE: No implementado -->
+- [ ] **EmpresaDetail**: Vista detallada con flota y personal <!-- PENDIENTE: No implementado -->
+- [ ] **EmpresaSelector**: Selector para asignaciones <!-- PENDIENTE: No implementado -->
 
 ### 3.3 Gestión de Personal
-- [ ] **PersonalList**: Lista de personal con filtros por tipo
-- [ ] **PersonalForm**: Formulario con documentación y períodos
-- [ ] **PersonalCard**: Tarjeta con foto y datos básicos
-- [ ] **PersonalDetail**: Vista detallada con historial
-- [ ] **DocumentacionTable**: Tabla de documentos con vencimientos
-- [ ] **ChoferSelector**: Selector específico para choferes
+- [ ] **PersonalList**: Lista de personal con filtros por tipo <!-- PENDIENTE: Solo placeholder "Coming Soon" -->
+- [ ] **PersonalForm**: Formulario con documentación y períodos <!-- PENDIENTE: No implementado -->
+- [ ] **PersonalCard**: Tarjeta con foto y datos básicos <!-- PENDIENTE: No implementado -->
+- [ ] **PersonalDetail**: Vista detallada con historial <!-- PENDIENTE: No implementado -->
+- [ ] **DocumentacionTable**: Tabla de documentos con vencimientos <!-- PENDIENTE: No implementado -->
+- [ ] **ChoferSelector**: Selector específico para choferes <!-- PENDIENTE: No implementado -->
 
-**Checkpoint 2**: ✅ Entidades base funcionando con CRUD completo
+**Checkpoint 2**: ⚡ Entidades base funcionando con CRUD completo <!-- PARCIAL: Solo Clientes tiene implementación básica -->
 
 ---
 
@@ -291,6 +308,28 @@ ImportacionTemporal (sistema de importación avanzado)
 - [ ] **ReportHistory**: Historial de reportes
 
 **Checkpoint 11**: ✅ Dashboard y reportes funcionando
+
+---
+
+## ESTADO ACTUAL DEL PROYECTO
+
+### ✅ COMPLETADO (FASE 1 + AUTENTICACIÓN)
+- **Fundación Técnica**: React + TypeScript + Mantine UI completamente configurado
+- **Arquitectura Base**: Componentes reutilizables, DataTable, ErrorBoundary, Loading states
+- **Sistema de Autenticación**: JWT completo con Context, rutas protegidas, login/logout
+- **Layout Responsive**: AppShell, Navigation, Header con theme toggle
+- **Gestión de Clientes**: Lista básica con filtros y operaciones CRUD preparadas
+- **Infraestructura**: API client, tipos TypeScript, constantes, servicios base
+
+### ⚡ EN PROGRESO
+- **Gestión de Empresas**: Página básica creada, falta CRUD completo
+- **Sistema Excel**: Preparado pero no implementado completamente
+
+### 🚧 PENDIENTE
+- **Entidades Restantes**: Personal, Sites, Tramos, Vehículos, Viajes (solo placeholders)
+- **Formularios Complejos**: Creación/edición detallada de entidades
+- **Sistema de Mapas**: Geocodificación y visualización
+- **Dashboard y Reportes**: No iniciado
 
 ---
 
