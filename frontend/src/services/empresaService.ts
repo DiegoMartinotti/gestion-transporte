@@ -6,30 +6,48 @@ export const empresaService = {
     const params = new URLSearchParams();
     
     if (filters.search) params.append('search', filters.search);
-    if (filters.activo !== undefined) params.append('activo', filters.activo.toString());
+    if (filters.activa !== undefined) params.append('activa', filters.activa.toString());
     if (filters.tipo) params.append('tipo', filters.tipo);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-    const response = await api.get<PaginatedResponse<Empresa>>(`/empresas?${params.toString()}`);
+    const response = await api.get<any>(`/empresas?${params.toString()}`);
+    
+    // El backend devuelve directamente el array, necesitamos adaptarlo
+    if (Array.isArray(response.data)) {
+      return {
+        data: response.data,
+        pagination: {
+          currentPage: filters.page || 1,
+          totalPages: 1,
+          totalItems: response.data.length,
+          itemsPerPage: response.data.length
+        }
+      };
+    }
+    
+    // Si viene en formato estándar, usar tal como viene
     return response.data as PaginatedResponse<Empresa>;
   },
 
   async getById(id: string): Promise<Empresa> {
     const response = await api.get<any>(`/empresas/${id}`);
-    return response.data.data;
+    // El backend de empresas devuelve directamente la empresa
+    return response.data;
   },
 
   async create(empresa: Partial<Empresa>): Promise<Empresa> {
     const response = await api.post<any>('/empresas', empresa);
-    return response.data.data;
+    // Verificar si viene en formato estándar o directo
+    return response.data.data || response.data;
   },
 
   async update(id: string, empresa: Partial<Empresa>): Promise<Empresa> {
     const response = await api.put<any>(`/empresas/${id}`, empresa);
-    return response.data.data;
+    // Verificar si viene en formato estándar o directo  
+    return response.data.data || response.data;
   },
 
   async delete(id: string): Promise<void> {

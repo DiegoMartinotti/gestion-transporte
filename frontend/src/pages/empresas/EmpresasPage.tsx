@@ -132,8 +132,8 @@ export default function EmpresasPage() {
             <IconBuilding size="0.9rem" color="blue" />
             <Text fw={500}>{value}</Text>
           </Group>
-          {record.contacto && (
-            <Text size="xs" c="dimmed">{record.contacto}</Text>
+          {record.contactoPrincipal && (
+            <Text size="xs" c="dimmed">{record.contactoPrincipal}</Text>
           )}
         </Stack>
       )
@@ -152,7 +152,7 @@ export default function EmpresasPage() {
       )
     },
     {
-      key: 'email',
+      key: 'mail',
       label: 'Email',
       render: (value: string) => value ? (
         <Group gap="xs">
@@ -177,7 +177,7 @@ export default function EmpresasPage() {
       render: (value: string) => value || '-'
     },
     {
-      key: 'activo',
+      key: 'activa',
       label: 'Estado',
       align: 'center',
       render: (value: boolean) => (
@@ -186,7 +186,7 @@ export default function EmpresasPage() {
           variant="light" 
           size="sm"
         >
-          {value ? 'Activo' : 'Inactivo'}
+          {value ? 'Activa' : 'Inactiva'}
         </Badge>
       )
     },

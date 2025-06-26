@@ -28,11 +28,14 @@ interface EmpresaFormProps {
 interface EmpresaFormData {
   nombre: string;
   tipo: 'Propia' | 'Subcontratada';
-  email: string;
-  telefono: string;
+  razonSocial: string;
   direccion: string;
-  contacto: string;
-  activo: boolean;
+  telefono: string;
+  mail: string;
+  cuit: string;
+  contactoPrincipal: string;
+  activa: boolean;
+  observaciones: string;
 }
 
 export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: EmpresaFormProps) {
@@ -42,11 +45,14 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
     initialValues: {
       nombre: empresa?.nombre || '',
       tipo: empresa?.tipo || 'Propia',
-      email: empresa?.email || '',
-      telefono: empresa?.telefono || '',
+      razonSocial: empresa?.razonSocial || '',
       direccion: empresa?.direccion || '',
-      contacto: empresa?.contacto || '',
-      activo: empresa?.activo ?? true
+      telefono: empresa?.telefono || '',
+      mail: empresa?.mail || '',
+      cuit: empresa?.cuit || '',
+      contactoPrincipal: empresa?.contactoPrincipal || '',
+      activa: empresa?.activa ?? true,
+      observaciones: empresa?.observaciones || ''
     },
     validate: {
       nombre: (value) => {
@@ -59,7 +65,7 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
         if (!value) return 'El tipo de empresa es obligatorio';
         return null;
       },
-      email: (value) => {
+      mail: (value) => {
         if (value && !/^\S+@\S+\.\S+$/.test(value)) {
           return 'Formato de email inválido';
         }
@@ -77,7 +83,7 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
         }
         return null;
       },
-      contacto: (value) => {
+      contactoPrincipal: (value) => {
         if (value && value.trim().length > 100) {
           return 'El contacto no puede tener más de 100 caracteres';
         }
@@ -93,10 +99,13 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
       const empresaData = {
         ...values,
         nombre: values.nombre.trim(),
-        email: values.email.trim() || undefined,
-        telefono: values.telefono.trim() || undefined,
+        razonSocial: values.razonSocial.trim() || undefined,
         direccion: values.direccion.trim() || undefined,
-        contacto: values.contacto.trim() || undefined
+        telefono: values.telefono.trim() || undefined,
+        mail: values.mail.trim() || undefined,
+        cuit: values.cuit.trim() || undefined,
+        contactoPrincipal: values.contactoPrincipal.trim() || undefined,
+        observaciones: values.observaciones.trim() || undefined
       };
 
       let result: Empresa;
@@ -178,6 +187,17 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
               </FieldWrapper>
             </Group>
 
+            <FieldWrapper
+              label="Razón Social"
+              description="Razón social completa de la empresa"
+            >
+              <TextInput
+                placeholder="Ingrese la razón social"
+                {...form.getInputProps('razonSocial')}
+                disabled={loading}
+              />
+            </FieldWrapper>
+
             <Group grow>
               <FieldWrapper
                 label="Email"
@@ -186,7 +206,7 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
                 <TextInput
                   type="email"
                   placeholder="empresa@ejemplo.com"
-                  {...form.getInputProps('email')}
+                  {...form.getInputProps('mail')}
                   disabled={loading}
                 />
               </FieldWrapper>
@@ -198,6 +218,30 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
                 <TextInput
                   placeholder="+54 11 4444-5555"
                   {...form.getInputProps('telefono')}
+                  disabled={loading}
+                />
+              </FieldWrapper>
+            </Group>
+
+            <Group grow>
+              <FieldWrapper
+                label="CUIT"
+                description="Número de CUIT de la empresa"
+              >
+                <TextInput
+                  placeholder="20-12345678-9"
+                  {...form.getInputProps('cuit')}
+                  disabled={loading}
+                />
+              </FieldWrapper>
+
+              <FieldWrapper
+                label="Persona de Contacto"
+                description="Nombre de la persona de contacto principal"
+              >
+                <TextInput
+                  placeholder="Nombre del contacto"
+                  {...form.getInputProps('contactoPrincipal')}
                   disabled={loading}
                 />
               </FieldWrapper>
@@ -216,12 +260,13 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
             </FieldWrapper>
 
             <FieldWrapper
-              label="Persona de Contacto"
-              description="Nombre de la persona de contacto principal"
+              label="Observaciones"
+              description="Observaciones adicionales sobre la empresa"
             >
-              <TextInput
-                placeholder="Nombre del contacto"
-                {...form.getInputProps('contacto')}
+              <Textarea
+                placeholder="Ingrese observaciones adicionales"
+                rows={2}
+                {...form.getInputProps('observaciones')}
                 disabled={loading}
               />
             </FieldWrapper>
@@ -231,13 +276,13 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
               description="Define si la empresa está activa para operaciones"
             >
               <Switch
-                label={form.values.activo ? 'Empresa Activa' : 'Empresa Inactiva'}
-                {...form.getInputProps('activo', { type: 'checkbox' })}
+                label={form.values.activa ? 'Empresa Activa' : 'Empresa Inactiva'}
+                {...form.getInputProps('activa', { type: 'checkbox' })}
                 disabled={loading}
               />
             </FieldWrapper>
 
-            {!form.values.activo && (
+            {!form.values.activa && (
               <Alert 
                 icon={<IconAlertCircle size="1rem" />} 
                 color="yellow"

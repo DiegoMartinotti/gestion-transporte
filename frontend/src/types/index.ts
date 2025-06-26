@@ -33,11 +33,16 @@ export interface Empresa {
   _id: string;
   nombre: string;
   tipo: 'Propia' | 'Subcontratada';
-  email?: string;
-  telefono?: string;
+  razonSocial?: string;
   direccion?: string;
-  contacto?: string;
-  activo: boolean;
+  telefono?: string;
+  mail?: string;
+  cuit?: string;
+  contactoPrincipal?: string;
+  flota?: string[];
+  personal?: string[];
+  activa: boolean;
+  observaciones?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -218,6 +223,7 @@ export interface ClienteFilters extends BaseFilters {}
 
 export interface EmpresaFilters extends BaseFilters {
   tipo?: 'Propia' | 'Subcontratada';
+  activa?: boolean;
 }
 
 export interface PersonalFilters extends BaseFilters {
