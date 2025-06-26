@@ -21,30 +21,17 @@ import {
   IconMail,
   IconPhone,
   IconUser,
-  IconTruck
+  IconTruck,
+  IconEye,
+  IconBuilding
 } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
+import { Empresa, EmpresaFilters } from '../../types';
+import { empresaService } from '../../services/empresaService';
 import { DEFAULT_PAGE_SIZE } from '../../constants';
-
-// Temporal interface hasta que se implemente el backend
-interface Empresa {
-  _id: string;
-  nombre: string;
-  contacto?: string;
-  email?: string;
-  telefono?: string;
-  direccion?: string;
-  activo: boolean;
-  createdAt: Date;
-}
-
-interface EmpresaFilters {
-  search?: string;
-  activo?: boolean;
-}
 
 export default function EmpresasPage() {
   const navigate = useNavigate();
@@ -58,48 +45,27 @@ export default function EmpresasPage() {
   const [empresaToDelete, setEmpresaToDelete] = useState<Empresa | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Datos mock temporales
-  const mockEmpresas: Empresa[] = [
-    {
-      _id: '1',
-      nombre: 'Transportes del Norte S.A.',
-      contacto: 'Juan Pérez',
-      email: 'contacto@transportesdelnorte.com',
-      telefono: '+54 11 4444-5555',
-      direccion: 'Av. Córdoba 1234, CABA',
-      activo: true,
-      createdAt: new Date('2024-01-15')
-    },
-    {
-      _id: '2',
-      nombre: 'Logística Sur',
-      contacto: 'María González',
-      email: 'info@logisticasur.com',
-      telefono: '+54 11 5555-6666',
-      direccion: 'Av. Rivadavia 5678, CABA',
-      activo: true,
-      createdAt: new Date('2024-02-20')
-    }
-  ];
-
-  const loadEmpresas = async () => {
+  const loadEmpresas = useCallback(async () => {
     try {
       setLoading(true);
-      // Simular carga de datos
-      setTimeout(() => {
-        setEmpresas(mockEmpresas);
-        setTotalItems(mockEmpresas.length);
-        setLoading(false);
-      }, 500);
+      const response = await empresaService.getAll({
+        ...filters,
+        page: currentPage,
+        limit: pageSize
+      });
+      
+      setEmpresas(response.data);
+      setTotalItems(response.pagination.totalItems);
     } catch (error) {
       console.error('Error loading empresas:', error);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [filters, currentPage, pageSize]);
 
   useEffect(() => {
     loadEmpresas();
-  }, [currentPage, pageSize, filters]);
+  }, [loadEmpresas]);
 
   const handleFiltersChange = (newFilters: EmpresaFilters) => {
     setFilters(newFilters);
@@ -111,39 +77,48 @@ export default function EmpresasPage() {
     
     try {
       setDeleteLoading(true);
-      // Simular eliminación
-      setTimeout(() => {
-        notifications.show({
-          title: 'Empresa eliminada',
-          message: `La empresa "${empresaToDelete.nombre}" ha sido eliminada correctamente`,
-          color: 'green'
-        });
-        
-        setDeleteModalOpened(false);
-        setEmpresaToDelete(null);
-        setDeleteLoading(false);
-        loadEmpresas();
-      }, 1000);
+      await empresaService.delete(empresaToDelete._id);
+      
+      notifications.show({
+        title: 'Empresa eliminada',
+        message: `La empresa "${empresaToDelete.nombre}" ha sido eliminada correctamente`,
+        color: 'green'
+      });
+      
+      setDeleteModalOpened(false);
+      setEmpresaToDelete(null);
+      await loadEmpresas();
     } catch (error) {
       console.error('Error deleting empresa:', error);
+    } finally {
       setDeleteLoading(false);
     }
   };
 
   const handleExport = async () => {
-    notifications.show({
-      title: 'Funcionalidad pendiente',
-      message: 'La exportación de empresas será implementada próximamente',
-      color: 'blue'
-    });
+    try {
+      await empresaService.exportToExcel();
+      notifications.show({
+        title: 'Exportación exitosa',
+        message: 'Las empresas han sido exportadas a Excel',
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error exporting empresas:', error);
+    }
   };
 
   const handleGetTemplate = async () => {
-    notifications.show({
-      title: 'Funcionalidad pendiente',
-      message: 'La plantilla de empresas será implementada próximamente',
-      color: 'blue'
-    });
+    try {
+      await empresaService.getTemplate();
+      notifications.show({
+        title: 'Plantilla descargada',
+        message: 'La plantilla de importación ha sido descargada',
+        color: 'green'
+      });
+    } catch (error) {
+      console.error('Error downloading template:', error);
+    }
   };
 
   const columns: DataTableColumn<Empresa>[] = [
@@ -153,11 +128,27 @@ export default function EmpresasPage() {
       sortable: true,
       render: (value: string, record: Empresa) => (
         <Stack gap={2}>
-          <Text fw={500}>{value}</Text>
+          <Group gap="xs">
+            <IconBuilding size="0.9rem" color="blue" />
+            <Text fw={500}>{value}</Text>
+          </Group>
           {record.contacto && (
             <Text size="xs" c="dimmed">{record.contacto}</Text>
           )}
         </Stack>
+      )
+    },
+    {
+      key: 'tipo',
+      label: 'Tipo',
+      render: (value: 'Propia' | 'Subcontratada') => (
+        <Badge 
+          color={value === 'Propia' ? 'blue' : 'orange'} 
+          variant="light" 
+          size="sm"
+        >
+          {value}
+        </Badge>
       )
     },
     {
@@ -219,7 +210,17 @@ export default function EmpresasPage() {
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item leftSection={<IconEdit size="0.9rem" />}>
+            <Menu.Item 
+              leftSection={<IconEye size="0.9rem" />}
+              onClick={() => navigate(`/empresas/${record._id}`)}
+            >
+              Ver Detalles
+            </Menu.Item>
+            
+            <Menu.Item 
+              leftSection={<IconEdit size="0.9rem" />}
+              onClick={() => navigate(`/empresas/${record._id}/edit`)}
+            >
               Editar
             </Menu.Item>
             <Menu.Divider />
@@ -285,6 +286,7 @@ export default function EmpresasPage() {
               
               <Button
                 leftSection={<IconPlus size="1rem" />}
+                onClick={() => navigate('/empresas/new')}
               >
                 Nueva Empresa
               </Button>

@@ -1,0 +1,1 @@
+export { ClienteSelector } from './ClienteSelector';
