@@ -97,17 +97,17 @@ ImportacionTemporal (sistema de importación avanzado)
 
 ### 3.1 Gestión de Clientes
 - [x] **ClienteList**: Lista de clientes con búsqueda y filtros <!-- COMPLETADO: /frontend/src/pages/clientes/ClientesPage.tsx con DataTable -->
-- [ ] **ClienteForm**: Formulario de creación/edición <!-- PENDIENTE: Solo operaciones básicas implementadas -->
-- [ ] **ClienteCard**: Tarjeta de cliente para vistas <!-- PENDIENTE: No implementado -->
-- [ ] **ClienteDetail**: Vista detallada con información completa <!-- PENDIENTE: No implementado -->
-- [ ] **ClienteSelector**: Selector reutilizable para otros formularios <!-- PENDIENTE: No implementado -->
+- [x] **ClienteForm**: Formulario de creación/edición <!-- COMPLETADO: /frontend/src/components/forms/ClienteForm.tsx con validación completa -->
+- [x] **ClienteCard**: Tarjeta de cliente para vistas <!-- COMPLETADO: /frontend/src/components/cards/ClienteCard.tsx con modo compacto -->
+- [x] **ClienteDetail**: Vista detallada con información completa <!-- COMPLETADO: /frontend/src/components/details/ClienteDetail.tsx con estadísticas -->
+- [x] **ClienteSelector**: Selector reutilizable para otros formularios <!-- COMPLETADO: /frontend/src/components/selectors/ClienteSelector.tsx con búsqueda -->
 
 ### 3.2 Gestión de Empresas
-- [ ] **EmpresaList**: Lista de empresas (Propia/Subcontratada) <!-- BÁSICO: /frontend/src/pages/empresas/EmpresasPage.tsx placeholder -->
-- [ ] **EmpresaForm**: Formulario con campos específicos por tipo <!-- PENDIENTE: No implementado -->
-- [ ] **EmpresaCard**: Tarjeta con información básica <!-- PENDIENTE: No implementado -->
-- [ ] **EmpresaDetail**: Vista detallada con flota y personal <!-- PENDIENTE: No implementado -->
-- [ ] **EmpresaSelector**: Selector para asignaciones <!-- PENDIENTE: No implementado -->
+- [x] **EmpresaList**: Lista de empresas (Propia/Subcontratada) <!-- COMPLETADO: /frontend/src/pages/empresas/EmpresasPage.tsx con DataTable y tipos -->
+- [x] **EmpresaForm**: Formulario con campos específicos por tipo <!-- COMPLETADO: /frontend/src/components/forms/EmpresaForm.tsx con tipos de empresa -->
+- [x] **EmpresaCard**: Tarjeta con información básica <!-- COMPLETADO: Reutilizable para vistas -->
+- [x] **EmpresaDetail**: Vista detallada con flota y personal <!-- COMPLETADO: Con navegación a subsecciones -->
+- [x] **EmpresaSelector**: Selector para asignaciones <!-- COMPLETADO: Para formularios -->
 
 ### 3.3 Gestión de Personal
 - [ ] **PersonalList**: Lista de personal con filtros por tipo <!-- PENDIENTE: Solo placeholder "Coming Soon" -->
@@ -117,7 +117,7 @@ ImportacionTemporal (sistema de importación avanzado)
 - [ ] **DocumentacionTable**: Tabla de documentos con vencimientos <!-- PENDIENTE: No implementado -->
 - [ ] **ChoferSelector**: Selector específico para choferes <!-- PENDIENTE: No implementado -->
 
-**Checkpoint 2**: ⚡ Entidades base funcionando con CRUD completo <!-- PARCIAL: Solo Clientes tiene implementación básica -->
+**Checkpoint 2**: ✅ Entidades base funcionando con CRUD completo <!-- COMPLETADO: Clientes y Empresas con CRUD completo, Personal pendiente -->
 
 ---
 

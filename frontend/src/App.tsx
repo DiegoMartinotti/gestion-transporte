@@ -10,6 +10,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/ui/Navigation';
 import Dashboard from './pages/Dashboard';
 import ClientesPage from './pages/clientes/ClientesPage';
+import ClienteDetailPage from './pages/clientes/ClienteDetailPage';
+import ClienteFormPage from './pages/clientes/ClienteFormPage';
 import EmpresasPage from './pages/empresas/EmpresasPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -66,6 +68,9 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/clientes" element={<ClientesPage />} />
+                <Route path="/clientes/new" element={<ClienteFormPage />} />
+                <Route path="/clientes/:id" element={<ClienteDetailPage />} />
+                <Route path="/clientes/:id/edit" element={<ClienteFormPage />} />
                 <Route path="/clientes/:clienteId/sites" element={<Container><Text>Sites del Cliente - Coming Soon</Text></Container>} />
                 <Route path="/clientes/:clienteId/tramos" element={<Container><Text>Tramos del Cliente - Coming Soon</Text></Container>} />
                 <Route path="/empresas" element={<EmpresasPage />} />

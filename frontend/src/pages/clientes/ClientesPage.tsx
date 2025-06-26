@@ -21,9 +21,10 @@ import {
   IconMail,
   IconPhone,
   IconMapPin,
-  IconRoute
+  IconRoute,
+  IconEye
 } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
@@ -43,7 +44,7 @@ export default function ClientesPage() {
   const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const loadClientes = async () => {
+  const loadClientes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await clienteService.getAll({
@@ -59,11 +60,11 @@ export default function ClientesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, currentPage, pageSize]);
 
   useEffect(() => {
     loadClientes();
-  }, [currentPage, pageSize, filters]);
+  }, [loadClientes]);
 
   const handleFiltersChange = (newFilters: ClienteFilters) => {
     setFilters(newFilters);
@@ -192,7 +193,17 @@ export default function ClientesPage() {
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item leftSection={<IconEdit size="0.9rem" />}>
+            <Menu.Item 
+              leftSection={<IconEye size="0.9rem" />}
+              onClick={() => navigate(`/clientes/${record._id}`)}
+            >
+              Ver Detalles
+            </Menu.Item>
+            
+            <Menu.Item 
+              leftSection={<IconEdit size="0.9rem" />}
+              onClick={() => navigate(`/clientes/${record._id}/edit`)}
+            >
               Editar
             </Menu.Item>
             <Menu.Divider />
@@ -258,6 +269,7 @@ export default function ClientesPage() {
               
               <Button
                 leftSection={<IconPlus size="1rem" />}
+                onClick={() => navigate('/clientes/new')}
               >
                 Nuevo Cliente
               </Button>

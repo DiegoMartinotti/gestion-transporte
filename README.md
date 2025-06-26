@@ -1,64 +1,88 @@
-# Sistema de Gestión de Viajes
+# Sistema de Gestión de Transporte
 
 ## Descripción General
 
-Este proyecto es un sistema completo para la gestión de viajes, rutas de transporte, clientes y sitios. Está diseñado para empresas de logística y transporte que necesitan administrar eficientemente sus operaciones.
+Este proyecto es un **Sistema de Gestión de Transporte** (Transportation Management System) - un sistema completo full-stack para la gestión de logística de transporte incluyendo clientes, sitios, rutas, vehículos, viajes y facturación. Cuenta con una API REST backend completamente migrada a TypeScript y un frontend moderno en desarrollo.
 
 El sistema permite:
 - Gestionar clientes y sus ubicaciones (sites)
 - Administrar tramos y rutas de transporte
-- Calcular tarifas para diferentes rutas
-- Planificar y dar seguimiento a viajes
+- Calcular tarifas complejas con fórmulas personalizadas por cliente
+- Planificar y dar seguimiento a viajes con múltiples vehículos
+- Gestión de geocodificación y cálculos de distancia
+- Sistema de extras y modificaciones de precios
 - Importar y exportar datos en formato Excel
-- Autenticación y autorización de usuarios
+- Autenticación JWT y autorización de usuarios
 
-La aplicación está construida con una arquitectura moderna de frontend y backend separados, siguiendo principios de programación funcional y con un enfoque en la seguridad y la experiencia de usuario.
+El sistema está construido con una arquitectura moderna de frontend y backend separados, siguiendo principios de programación funcional y con un enfoque en la seguridad, rate limiting y experiencia de usuario.
 
 ## Tecnologías Utilizadas
 
-### Backend
+### Backend (TypeScript - Completamente migrado)
 - **Node.js** y **Express.js**: Para el servidor API RESTful
 - **MongoDB** con **Mongoose**: Como base de datos y ORM
 - **JWT**: Para autenticación y autorización
 - **bcryptjs**: Para el hash seguro de contraseñas
 - **Swagger/OpenAPI**: Para documentación interactiva de la API
+- **TypeScript**: ✅ **Migración 100% completa** con configuración estricta
+- **MathJS**: Para cálculos dinámicos de fórmulas de precios
+- **Rate Limiting**: Control de límites de peticiones
+- **Geocoding API**: Integración para cálculos de distancia
 
-### Frontend
-- **React 19**: Biblioteca para construir la interfaz de usuario
-- **React Router 7**: Para la navegación entre páginas
-- **Material-UI (MUI)**: Framework de componentes UI
+### Frontend (En desarrollo activo)
+- **React**: Biblioteca para construir la interfaz de usuario
+- **Mantine**: Framework de componentes UI moderno
+- **TypeScript**: Para tipado estático en el frontend
+- **React Router**: Para la navegación entre páginas
 - **Axios**: Para realizar peticiones HTTP
 - **XLSX**: Para importación/exportación de datos Excel
-- **TanStack Table**: Para tablas de datos avanzadas
+
+### Estado de Migración TypeScript
+
+✅ **MIGRACIÓN BACKEND COMPLETA (100%)**:
+- `config/`, `middleware/`, `utils/`, `validators/` ✅
+- `controllers/`, `services/`, `routes/` ✅
+- **Todos los modelos**: Cliente, Empresa, Extra, Personal, OrdenCompra, Site, Tramo, Usuario, Vehiculo, Viaje ✅
+- **Archivos principales**: server.ts, app.ts, index.ts ✅
+- **33 controladores, 6 servicios, 17 rutas**: Todo migrado ✅
 
 ### Herramientas de Desarrollo
 - **Nodemon**: Para reinicio automático del servidor durante desarrollo
-- **Concurrently**: Para ejecutar múltiples comandos simultáneamente
+- **TypeScript**: Configuración estricta completa
 - **dotenv**: Para gestión de variables de entorno
+- **Concurrently**: Para ejecutar múltiples comandos simultáneamente
+- **Vite**: Build tool moderno para el frontend
 
-## Novedades de la Versión 2.0
+## Arquitectura del Sistema
 
-La versión 2.0 incluye importantes mejoras estructurales y de rendimiento:
+### Jerarquía del Dominio de Transporte
+```
+Cliente → Site → Tramo → Viaje
+```
 
-### Sistema de Importación Excel Estandarizado
-- Nueva interfaz unificada para todas las importaciones masivas
-- Plantillas Excel mejoradas con validaciones y hojas de ayuda
-- Procesamiento asíncrono para archivos grandes mediante Web Workers
-- Validación de datos más robusta y mensajes de error claros
-- [Guía completa de importación Excel](docs/importacion-excel.md)
+- **Cliente**: Empresas que necesitan servicios de transporte
+- **Site**: Ubicaciones físicas de los clientes (con geocodificación)
+- **Tramo**: Segmentos de ruta entre sitios con reglas de precios específicas
+- **Viaje**: Viajes individuales usando tramos con cálculos de precios complejos
+- **Vehículo**: Configuraciones de vehículos que soportan múltiples camiones por viaje
 
-### Arquitectura Mejorada
-- Componentes más pequeños y especializados para mejor mantenimiento
-- Sistema de hooks personalizados para reutilización de lógica
-- Servicios API centralizados y coherentes
-- Backend modularizado con separación clara de responsabilidades
-- Mejor manejo de errores y respuestas HTTP
+### Características Clave del Sistema de Negocio
 
-### Rendimiento Optimizado
-- Menor tiempo de carga inicial
-- Reducción de re-renders innecesarios
-- Procesamiento por lotes para operaciones masivas
-- Mejor experiencia de usuario durante operaciones largas
+1. **Sistema de Precios Complejo**:
+   - Tarifas históricas con versionado
+   - Fórmulas personalizadas por cliente usando MathJS
+   - Múltiples métodos de cálculo (distancia, peso, tiempo)
+   - Cargos extras y modificaciones
+
+2. **Integración de Geocodificación**:
+   - Servicio proxy para búsquedas de ubicación
+   - Cálculos de distancia entre sitios
+   - Llamadas a API externa con límite de tasa
+
+3. **Importación/Exportación Excel**:
+   - Operaciones masivas con plantillas personalizadas
+   - Transformación y validación de datos
+   - Preservación de datos históricos
 
 ## Estándares del Proyecto
 
@@ -89,11 +113,16 @@ Para contribuir al proyecto, asegúrate de revisar y seguir estos estándares de
    cd sistema-gestion-viajes
    ```
 
-2. **Instalar todas las dependencias**
+2. **Instalar dependencias**
    ```bash
-   npm run install-all
+   # Backend
+   cd backend
+   npm install
+   
+   # Frontend (si está disponible)
+   cd ../frontend
+   npm install
    ```
-   Este comando instalará las dependencias del proyecto principal, frontend y backend.
 
 3. **Configurar variables de entorno**
    
@@ -105,71 +134,107 @@ Para contribuir al proyecto, asegúrate de revisar y seguir estos estándares de
    NODE_ENV=development
    ```
 
-   En el directorio raíz del frontend, crea un archivo `.env` con:
-   ```
-   REACT_APP_API_URL=http://localhost:5000/api
-   REACT_APP_ENV=development
-   ```
-
 4. **Iniciar la aplicación en modo desarrollo**
    ```bash
+   # Solo backend
+   cd backend
    npm run dev
+   
+   # Full-stack (cuando el frontend esté disponible)
+   npm run dev:all
    ```
-   Este comando iniciará tanto el servidor backend como el frontend.
 
 ## Estructura del Proyecto
 
 ```
-sistema-gestion-viajes/
-├── backend/                        # Servidor API
-│   ├── config/                     # Configuración (base de datos, etc.)
-│   ├── controllers/                # Controladores de la API
-│   │   ├── tramo/                  # Controladores de tramos divididos por funcionalidad
-│   │   ├── vehiculo/               # Controladores de vehículos divididos por funcionalidad
-│   │   └── ...                     # Otros controladores divididos
-│   ├── middleware/                 # Middleware (autenticación, validación)
-│   ├── models/                     # Modelos de datos Mongoose
-│   ├── routes/                     # Rutas de la API
-│   ├── services/                   # Servicios y lógica de negocio
-│   ├── utils/                      # Utilidades y helpers
-│   ├── validators/                 # Validadores de entrada
-│   └── server.js                   # Aplicación Express y punto de entrada
+gestion-transporte/
+├── backend/                        # API REST del servidor (TypeScript ✅)
+│   ├── config/                     # Configuración (TypeScript ✅)
+│   ├── controllers/                # Controladores de la API (TypeScript ✅ - 33 archivos)
+│   ├── middleware/                 # Middleware (TypeScript ✅)
+│   ├── models/                     # Modelos Mongoose (TypeScript ✅)
+│   ├── routes/                     # Rutas de la API (TypeScript ✅ - 17 archivos)
+│   ├── services/                   # Servicios y lógica de negocio (TypeScript ✅ - 6 archivos)
+│   ├── utils/                      # Utilidades y helpers (TypeScript ✅)
+│   ├── validators/                 # Validadores de entrada (TypeScript ✅)
+│   ├── server.ts                   # Aplicación Express y punto de entrada
+│   ├── tsconfig.json               # Configuración TypeScript
+│   └── package.json                # Dependencias del backend
 │
+├── frontend/                       # Aplicación React (En desarrollo)
+│   ├── src/                        # Código fuente del frontend
+│   ├── public/                     # Archivos estáticos
+│   ├── package.json                # Dependencias del frontend
+│   └── vite.config.ts              # Configuración de Vite
 │
-├── docs/                           # Documentación del proyecto
-│   ├── API.md                      # Documentación de la API
-│   ├── importacion-excel.md        # Guía de importación masiva con Excel
-│   └── technical/                  # Documentación técnica detallada
-│
-├── scripts/                        # Scripts de utilidad
-├── .gitignore                      # Archivos ignorados por Git
-├── package.json                    # Dependencias del proyecto principal
-└── README.md                       # Este archivo
+├── CLAUDE.md                       # Instrucciones para Claude Code
+├── README.md                       # Este archivo
+└── .gitignore                      # Archivos ignorados por Git
 ```
 
 ## Uso
 
 ### Acceso a la Aplicación
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:3000 (cuando esté disponible)
 - API Backend: http://localhost:5000/api
 - Documentación API (Swagger): http://localhost:5000/api-docs
+
+### Endpoints Principales
+
+Principales endpoints siguiendo patrones RESTful:
+- `/api/auth` - Autenticación JWT
+- `/api/clientes` - Gestión de clientes  
+- `/api/sites` - Gestión de ubicaciones con geocodificación
+- `/api/tramos` - Segmentos de ruta con precios complejos
+- `/api/viajes` - Gestión de viajes y cálculos
+- `/api/vehiculos` - Gestión de flota de vehículos
+- `/api/extras` - Cargos adicionales
 
 ### Autenticación
 Para acceder al sistema, utiliza las siguientes credenciales de prueba:
 - Email: admin@ejemplo.com
 - Contraseña: password123
 
+## Comandos de Desarrollo
+
+```bash
+# Backend
+cd backend
+npm run dev                 # Iniciar servidor de desarrollo con nodemon
+npm run build              # Compilar TypeScript a JavaScript
+npm start                  # Ejecutar build de producción
+npm run setup-env          # Configurar variables de entorno
+
+# Frontend (cuando esté disponible)
+cd frontend
+npm run dev                 # Iniciar servidor de desarrollo
+npm run build              # Build de producción
+npm run preview            # Preview del build
+
+# Full-stack
+npm run dev:all            # Iniciar backend y frontend simultáneamente
+```
+
+## Seguridad y Rate Limiting
+
+- Autenticación JWT con expiración configurable
+- Rate limiting: 100 req/15min general, 10 req/min para proxy de geocodificación
+- Validación de entrada usando validadores personalizados (TypeScript)
+- Headers CORS y de seguridad configurados
+
+## Base de Datos (MongoDB)
+
+Usando Mongoose ODM con:
+- Relaciones complejas entre entidades de transporte
+- Preservación de datos históricos para precios
+- Indexación geoespacial para datos de ubicación
+- Validación personalizada y middleware
+
 ## Pruebas
 
 Para ejecutar las pruebas del backend:
 ```bash
 cd backend
-npm test
-```
-
-Para ejecutar las pruebas del frontend:
-```bash
-cd frontend
 npm test
 ```
 
@@ -185,10 +250,11 @@ npm test
 
 ### Convenciones de Código
 - Utiliza programación funcional cuando sea posible
-- Sigue las convenciones de estilo estándar de JavaScript/React
+- Sigue las convenciones de estilo estándar de JavaScript/TypeScript
 - Documenta todas las funciones públicas con JSDoc
 - Escribe pruebas unitarias para toda la funcionalidad nueva
 - Valida y sanitiza todas las entradas de usuario
+- Mantén la funcionalidad JavaScript existente durante la migración
 
 ## Licencia
 
