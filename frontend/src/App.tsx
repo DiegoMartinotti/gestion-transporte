@@ -4,7 +4,7 @@ import { ModalsProvider } from '@mantine/modals';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { IconSun, IconMoon } from '@tabler/icons-react';
 import { theme } from './theme';
-import { ErrorBoundary } from './components/base';
+import { ErrorBoundary, Breadcrumbs } from './components/base';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/ui/Navigation';
@@ -62,6 +62,7 @@ function AppContent() {
             </AppShell.Navbar>
 
             <AppShell.Main>
+              <Breadcrumbs />
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/clientes" element={<ClientesPage />} />
