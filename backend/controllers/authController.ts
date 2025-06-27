@@ -108,7 +108,7 @@ export const login = async (req: Request<{}, ApiResponse, LoginRequest>, res: Re
         res.cookie('token', token, {
             httpOnly: true, // Impide acceso por JavaScript del cliente
             secure: config.env === 'production' || config.env === 'staging', // HTTPS en producción y staging
-            sameSite: 'strict', // Previene CSRF
+            sameSite: config.env === 'production' ? 'strict' : 'lax', // Lax en desarrollo para permitir cross-origin
             maxAge: config.jwtCookieMaxAge, // Tiempo de vida en milisegundos
             path: '/', // La cookie es válida para todo el dominio
             domain: (config as any).cookieDomain || undefined // Dominio específico si está configurado

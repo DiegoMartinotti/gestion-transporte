@@ -124,12 +124,12 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 4: SISTEMA EXCEL UNIFICADO
 
 ### 4.1 Componentes de Importación/Exportación
-- [ ] **ExcelUploadZone**: Zona de drag & drop unificada
-- [ ] **ExcelTemplateGenerator**: Generador de plantillas base
-- [ ] **ExcelValidationReport**: Reporte de validación con errores
-- [ ] **ExcelImportProgress**: Barra de progreso para importaciones
-- [ ] **ExcelDataPreview**: Vista previa de datos a importar
-- [ ] **ReferenceDataSheets**: Generador de hojas de referencia
+- [x] **ExcelUploadZone**: Zona de drag & drop unificada <!-- COMPLETADO: /frontend/src/components/excel/ExcelUploadZone.tsx -->
+- [x] **ExcelTemplateGenerator**: Generador de plantillas base <!-- COMPLETADO: /frontend/src/components/excel/ExcelTemplateGenerator.tsx -->
+- [x] **ExcelValidationReport**: Reporte de validación con errores <!-- COMPLETADO: /frontend/src/components/excel/ExcelValidationReport.tsx -->
+- [x] **ExcelImportProgress**: Barra de progreso para importaciones <!-- COMPLETADO: /frontend/src/components/excel/ExcelImportProgress.tsx -->
+- [x] **ExcelDataPreview**: Vista previa de datos a importar <!-- COMPLETADO: /frontend/src/components/excel/ExcelDataPreview.tsx -->
+- [x] **ReferenceDataSheets**: Generador de hojas de referencia <!-- COMPLETADO: /frontend/src/components/excel/ReferenceDataSheets.tsx -->
 
 ### 4.2 Plantillas Excel Base
 - [ ] **ClienteTemplate**: Plantilla con campos obligatorios marcados (*)
