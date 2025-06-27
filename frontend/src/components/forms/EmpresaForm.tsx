@@ -33,6 +33,8 @@ interface EmpresaFormData {
   telefono: string;
   mail: string;
   cuit: string;
+  rut: string;
+  sitioWeb: string;
   contactoPrincipal: string;
   activa: boolean;
   observaciones: string;
@@ -50,6 +52,8 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
       telefono: empresa?.telefono || '',
       mail: empresa?.mail || '',
       cuit: empresa?.cuit || '',
+      rut: empresa?.rut || '',
+      sitioWeb: empresa?.sitioWeb || '',
       contactoPrincipal: empresa?.contactoPrincipal || '',
       activa: empresa?.activa ?? true,
       observaciones: empresa?.observaciones || ''
@@ -88,6 +92,18 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
           return 'El contacto no puede tener más de 100 caracteres';
         }
         return null;
+      },
+      cuit: (value) => {
+        if (value && !/^\d{2}-\d{8}-\d{1}$/.test(value) && !/^\d{11}$/.test(value)) {
+          return 'CUIT debe tener formato XX-XXXXXXXX-X o 11 dígitos';
+        }
+        return null;
+      },
+      sitioWeb: (value) => {
+        if (value && !/^https?:\/\//.test(value)) {
+          return 'El sitio web debe comenzar con http:// o https://';
+        }
+        return null;
       }
     }
   });
@@ -104,6 +120,8 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
         telefono: values.telefono.trim() || undefined,
         mail: values.mail.trim() || undefined,
         cuit: values.cuit.trim() || undefined,
+        rut: values.rut.trim() || undefined,
+        sitioWeb: values.sitioWeb.trim() || undefined,
         contactoPrincipal: values.contactoPrincipal.trim() || undefined,
         observaciones: values.observaciones.trim() || undefined
       };
@@ -226,11 +244,35 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
             <Group grow>
               <FieldWrapper
                 label="CUIT"
-                description="Número de CUIT de la empresa"
+                description="Número de CUIT de la empresa (formato: XX-XXXXXXXX-X)"
               >
                 <TextInput
                   placeholder="20-12345678-9"
                   {...form.getInputProps('cuit')}
+                  disabled={loading}
+                />
+              </FieldWrapper>
+
+              <FieldWrapper
+                label="RUT"
+                description="RUT de la empresa (si corresponde)"
+              >
+                <TextInput
+                  placeholder="Ingrese el RUT"
+                  {...form.getInputProps('rut')}
+                  disabled={loading}
+                />
+              </FieldWrapper>
+            </Group>
+
+            <Group grow>
+              <FieldWrapper
+                label="Sitio Web"
+                description="Sitio web oficial de la empresa"
+              >
+                <TextInput
+                  placeholder="https://www.empresa.com"
+                  {...form.getInputProps('sitioWeb')}
                   disabled={loading}
                 />
               </FieldWrapper>
