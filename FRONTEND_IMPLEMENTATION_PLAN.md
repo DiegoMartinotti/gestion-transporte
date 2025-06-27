@@ -103,21 +103,21 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **ClienteSelector**: Selector reutilizable para otros formularios <!-- COMPLETADO: /frontend/src/components/selectors/ClienteSelector.tsx con búsqueda -->
 
 ### 3.2 Gestión de Empresas
-- [x] **EmpresaList**: Lista de empresas (Propia/Subcontratada) <!-- COMPLETADO: /frontend/src/pages/empresas/EmpresasPage.tsx con DataTable y tipos -->
-- [x] **EmpresaForm**: Formulario con campos específicos por tipo <!-- COMPLETADO: /frontend/src/components/forms/EmpresaForm.tsx con tipos de empresa -->
-- [x] **EmpresaCard**: Tarjeta con información básica <!-- COMPLETADO: Reutilizable para vistas -->
-- [x] **EmpresaDetail**: Vista detallada con flota y personal <!-- COMPLETADO: Con navegación a subsecciones -->
+- [x] **EmpresaList**: Lista de empresas (Propia/Subcontratada) <!-- COMPLETADO: /frontend/src/pages/empresas/EmpresasPage.tsx con BD real conectada -->
+- [x] **EmpresaForm**: Formulario con campos específicos por tipo <!-- COMPLETADO: /frontend/src/components/forms/EmpresaForm.tsx con todos los campos del backend -->
+- [x] **EmpresaCard**: Tarjeta con información básica <!-- COMPLETADO: Tipos corregidos para BD -->
+- [x] **EmpresaDetail**: Vista detallada con flota y personal <!-- COMPLETADO: Estructura preparada -->
 - [x] **EmpresaSelector**: Selector para asignaciones <!-- COMPLETADO: Para formularios -->
 
 ### 3.3 Gestión de Personal
-- [ ] **PersonalList**: Lista de personal con filtros por tipo <!-- PENDIENTE: Solo placeholder "Coming Soon" -->
-- [ ] **PersonalForm**: Formulario con documentación y períodos <!-- PENDIENTE: No implementado -->
-- [ ] **PersonalCard**: Tarjeta con foto y datos básicos <!-- PENDIENTE: No implementado -->
-- [ ] **PersonalDetail**: Vista detallada con historial <!-- PENDIENTE: No implementado -->
-- [ ] **DocumentacionTable**: Tabla de documentos con vencimientos <!-- PENDIENTE: No implementado -->
-- [ ] **ChoferSelector**: Selector específico para choferes <!-- PENDIENTE: No implementado -->
+- [x] **PersonalList**: Lista de personal con filtros por tipo <!-- COMPLETADO: /frontend/src/pages/personal/PersonalPage.tsx con tabs y filtros avanzados -->
+- [x] **PersonalForm**: Formulario con documentación y períodos <!-- COMPLETADO: /frontend/src/components/forms/PersonalForm.tsx con nested objects complejos -->
+- [x] **PersonalCard**: Tarjeta con foto y datos básicos <!-- COMPLETADO: /frontend/src/components/cards/PersonalCard.tsx con estado documentación -->
+- [x] **PersonalDetail**: Vista detallada con historial <!-- COMPLETADO: /frontend/src/components/details/PersonalDetail.tsx con info completa -->
+- [x] **DocumentacionTable**: Tabla de documentos con vencimientos <!-- COMPLETADO: /frontend/src/components/tables/DocumentacionTable.tsx con alerts -->
+- [x] **ChoferSelector**: Selector específico para choferes <!-- COMPLETADO: /frontend/src/components/selectors/PersonalSelector.tsx con ConductorSelector -->
 
-**Checkpoint 2**: ✅ Entidades base funcionando con CRUD completo <!-- COMPLETADO: Clientes y Empresas con CRUD completo, Personal pendiente -->
+**Checkpoint 2**: ✅ Entidades base funcionando con CRUD completo <!-- COMPLETADO: Clientes, Empresas y Personal con sistema completo de gestión -->
 
 ---
 

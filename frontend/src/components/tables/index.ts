@@ -1,0 +1,1 @@
+export { DocumentacionTable } from './DocumentacionTable';

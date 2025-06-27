@@ -38,6 +38,8 @@ export interface Empresa {
   telefono?: string;
   mail?: string;
   cuit?: string;
+  rut?: string;
+  sitioWeb?: string;
   contactoPrincipal?: string;
   flota?: string[];
   personal?: string[];
@@ -47,21 +49,108 @@ export interface Empresa {
   updatedAt: Date;
 }
 
+// Personal and related interfaces - aligned with backend model
+export interface PersonalDireccion {
+  calle?: string;
+  numero?: string;
+  localidad?: string;
+  provincia?: string;
+  codigoPostal?: string;
+}
+
+export interface PersonalContacto {
+  telefono?: string;
+  telefonoEmergencia?: string;
+  email?: string;
+}
+
+export interface PeriodoEmpleo {
+  fechaIngreso: Date;
+  fechaEgreso?: Date;
+  motivo?: string;
+  categoria?: string;
+}
+
+export interface LicenciaConducir {
+  numero?: string;
+  categoria?: string;
+  vencimiento?: Date;
+}
+
+export interface CarnetProfesional {
+  numero?: string;
+  vencimiento?: Date;
+}
+
+export interface EvaluacionMedica {
+  fecha?: Date;
+  vencimiento?: Date;
+  resultado?: string;
+}
+
+export interface Psicofisico {
+  fecha?: Date;
+  vencimiento?: Date;
+  resultado?: string;
+}
+
+export interface PersonalDocumentacion {
+  licenciaConducir?: LicenciaConducir;
+  carnetProfesional?: CarnetProfesional;
+  evaluacionMedica?: EvaluacionMedica;
+  psicofisico?: Psicofisico;
+}
+
+export interface DatosLaborales {
+  categoria?: string;
+  obraSocial?: string;
+  art?: string;
+}
+
+export interface Capacitacion {
+  nombre?: string;
+  fecha?: Date;
+  vencimiento?: Date;
+  institucion?: string;
+  certificado?: string;
+}
+
+export interface Incidente {
+  fecha?: Date;
+  tipo?: 'Accidente' | 'Infracción' | 'Otro';
+  descripcion?: string;
+  consecuencias?: string;
+}
+
+export interface VencimientoInfo {
+  tipo: string;
+  vencimiento: Date;
+}
+
 export interface Personal {
   _id: string;
   nombre: string;
   apellido: string;
-  email?: string;
-  telefono?: string;
-  direccion?: string;
-  tipo: 'Chofer' | 'Administrativo' | 'Operativo';
+  dni: string;
+  cuil?: string;
+  tipo: 'Conductor' | 'Administrativo' | 'Mecánico' | 'Supervisor' | 'Otro';
+  fechaNacimiento?: Date;
+  direccion?: PersonalDireccion;
+  contacto?: PersonalContacto;
   empresa: string | Empresa;
+  numeroLegajo?: string;
+  periodosEmpleo: PeriodoEmpleo[];
+  documentacion?: PersonalDocumentacion;
+  datosLaborales?: DatosLaborales;
+  capacitaciones?: Capacitacion[];
+  incidentes?: Incidente[];
   activo: boolean;
-  documentacion?: DocumentoPersonal[];
+  observaciones?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
+// Keep legacy interface for backward compatibility
 export interface DocumentoPersonal {
   tipo: string;
   numero: string;
@@ -227,7 +316,7 @@ export interface EmpresaFilters extends BaseFilters {
 }
 
 export interface PersonalFilters extends BaseFilters {
-  tipo?: 'Chofer' | 'Administrativo' | 'Operativo';
+  tipo?: 'Conductor' | 'Administrativo' | 'Mecánico' | 'Supervisor' | 'Otro';
   empresa?: string;
 }
 

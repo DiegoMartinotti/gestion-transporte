@@ -79,6 +79,11 @@ class ApiService {
     return response.data;
   }
 
+  async patch<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+    const response = await this.client.patch(url, data);
+    return response.data;
+  }
+
   // File upload
   async uploadFile<T>(url: string, file: File, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> {
     const formData = new FormData();

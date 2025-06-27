@@ -20,6 +20,7 @@ interface RegisterRequest {
     nombre: string;
     email: string;
     password: string;
+    roles?: string[];
 }
 
 /**
@@ -28,6 +29,7 @@ interface RegisterRequest {
 interface JWTPayload {
     userId: string;
     email: string;
+    roles: string[];
 }
 
 /**
@@ -92,7 +94,8 @@ export const login = async (req: Request<{}, ApiResponse, LoginRequest>, res: Re
 
         const payload: JWTPayload = {
             userId: (usuario._id as any).toString(),
-            email: usuario.email
+            email: usuario.email,
+            roles: usuario.roles || ['user']
         };
 
         const token = jwt.sign(
@@ -142,7 +145,7 @@ export const login = async (req: Request<{}, ApiResponse, LoginRequest>, res: Re
  */
 export const register = async (req: Request<{}, ApiResponse, RegisterRequest>, res: Response<ApiResponse>): Promise<void> => {
     try {
-        const { nombre, email, password } = req.body;
+        const { nombre, email, password, roles } = req.body;
         
         const usuarioExistente: IUsuario | null = await Usuario.findOne({ email });
         if (usuarioExistente) {
@@ -156,7 +159,8 @@ export const register = async (req: Request<{}, ApiResponse, RegisterRequest>, r
         const usuario = new Usuario({
             nombre,
             email,
-            password // No hacer hash aquí, el modelo ya lo hace
+            password, // No hacer hash aquí, el modelo ya lo hace
+            roles: roles || ['user']
         });
 
         await usuario.save();

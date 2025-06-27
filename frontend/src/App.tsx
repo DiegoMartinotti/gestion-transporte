@@ -13,6 +13,7 @@ import ClientesPage from './pages/clientes/ClientesPage';
 import ClienteDetailPage from './pages/clientes/ClienteDetailPage';
 import ClienteFormPage from './pages/clientes/ClienteFormPage';
 import EmpresasPage from './pages/empresas/EmpresasPage';
+import { PersonalPage } from './pages/personal/PersonalPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import '@mantine/core/styles.css';
@@ -76,7 +77,7 @@ function AppContent() {
                 <Route path="/empresas" element={<EmpresasPage />} />
                 <Route path="/empresas/:empresaId/personal" element={<Container><Text>Personal de la Empresa - Coming Soon</Text></Container>} />
                 <Route path="/empresas/:empresaId/vehiculos" element={<Container><Text>Vehículos de la Empresa - Coming Soon</Text></Container>} />
-                <Route path="/personal" element={<Container><Text>Personal - Coming Soon</Text></Container>} />
+                <Route path="/personal" element={<PersonalPage />} />
                 <Route path="/sites" element={<Container><Text>Sites - Coming Soon</Text></Container>} />
                 <Route path="/tramos" element={<Container><Text>Tramos - Coming Soon</Text></Container>} />
                 <Route path="/vehiculos" element={<Container><Text>Vehículos - Coming Soon</Text></Container>} />

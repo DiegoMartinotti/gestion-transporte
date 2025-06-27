@@ -4,6 +4,7 @@ import mongoose, { Document, Schema, model } from 'mongoose';
 export interface ICliente extends Document {
   nombre: string;
   cuit: string;
+  activo: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,6 +21,10 @@ const clienteSchema = new Schema({
     type: String,
     required: true,
     trim: true
+  },
+  activo: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true // Agrega createdAt y updatedAt

@@ -49,5 +49,4 @@ config.dev.js
 .eslintcache
 .stylelintcache
 
-# Frontend demo (no subir a git)
-frontend-mantine-demo/
+

@@ -8,6 +8,7 @@ export interface IUsuario extends Document {
     email: string;
     password: string;
     nombre: string;
+    roles: string[];
     createdAt: Date;
     updatedAt: Date;
     
@@ -40,6 +41,11 @@ const usuarioSchema = new Schema<IUsuario>({
     nombre: {
         type: String,
         required: true
+    },
+    roles: {
+        type: [String],
+        default: ['user'],
+        enum: ['user', 'admin', 'manager']
     }
 }, {
     timestamps: true
