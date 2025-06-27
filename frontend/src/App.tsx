@@ -70,22 +70,22 @@ function AppContent() {
               <Breadcrumbs />
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/clientes" element={<ClientesPage />} />
-                <Route path="/clientes/new" element={<ClienteFormPage />} />
-                <Route path="/clientes/:id" element={<ClienteDetailPage />} />
-                <Route path="/clientes/:id/edit" element={<ClienteFormPage />} />
-                <Route path="/clientes/:clienteId/sites" element={<Container><Text>Sites del Cliente - Coming Soon</Text></Container>} />
-                <Route path="/clientes/:clienteId/tramos" element={<Container><Text>Tramos del Cliente - Coming Soon</Text></Container>} />
-                <Route path="/empresas" element={<EmpresasPage />} />
-                <Route path="/empresas/:id" element={<EmpresaDetailPage />} />
-                <Route path="/empresas/:id/edit" element={<Container><Text>Empresa Edit - Coming Soon</Text></Container>} />
-                <Route path="/empresas/:id/personal" element={<Container><Text>Personal de la Empresa - Coming Soon</Text></Container>} />
-                <Route path="/empresas/:id/vehiculos" element={<Container><Text>Vehículos de la Empresa - Coming Soon</Text></Container>} />
-                <Route path="/personal" element={<PersonalPage />} />
-                <Route path="/sites" element={<Container><Text>Sites - Coming Soon</Text></Container>} />
-                <Route path="/tramos" element={<Container><Text>Tramos - Coming Soon</Text></Container>} />
-                <Route path="/vehiculos" element={<Container><Text>Vehículos - Coming Soon</Text></Container>} />
-                <Route path="/viajes" element={<Container><Text>Viajes - Coming Soon</Text></Container>} />
+                <Route path="clientes" element={<ClientesPage />} />
+                <Route path="clientes/new" element={<ClienteFormPage />} />
+                <Route path="clientes/:id" element={<ClienteDetailPage />} />
+                <Route path="clientes/:id/edit" element={<ClienteFormPage />} />
+                <Route path="clientes/:clienteId/sites" element={<Container><Text>Sites del Cliente - Coming Soon</Text></Container>} />
+                <Route path="clientes/:clienteId/tramos" element={<Container><Text>Tramos del Cliente - Coming Soon</Text></Container>} />
+                <Route path="empresas" element={<EmpresasPage />} />
+                <Route path="empresas/:id" element={<EmpresaDetailPage />} />
+                <Route path="empresas/:id/edit" element={<Container><Text>Empresa Edit - Coming Soon</Text></Container>} />
+                <Route path="empresas/:id/personal" element={<Container><Text>Personal de la Empresa - Coming Soon</Text></Container>} />
+                <Route path="empresas/:id/vehiculos" element={<Container><Text>Vehículos de la Empresa - Coming Soon</Text></Container>} />
+                <Route path="personal" element={<PersonalPage />} />
+                <Route path="sites" element={<Container><Text>Sites - Coming Soon</Text></Container>} />
+                <Route path="tramos" element={<Container><Text>Tramos - Coming Soon</Text></Container>} />
+                <Route path="vehiculos" element={<Container><Text>Vehículos - Coming Soon</Text></Container>} />
+                <Route path="viajes" element={<Container><Text>Viajes - Coming Soon</Text></Container>} />
               </Routes>
             </AppShell.Main>
           </AppShell>
