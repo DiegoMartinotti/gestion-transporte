@@ -49,4 +49,9 @@ config.dev.js
 .eslintcache
 .stylelintcache
 
+# Archivos de cookies y tokens
+cookies.txt
+**/cookies.txt
+*.cookies
+
 

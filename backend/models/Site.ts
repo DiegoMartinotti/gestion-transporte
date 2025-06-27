@@ -45,8 +45,7 @@ const siteSchema = new Schema<ISite>({
     cliente: {
         type: Schema.Types.ObjectId,
         ref: 'Cliente',
-        required: [true, 'El cliente es obligatorio'],
-        index: true
+        required: [true, 'El cliente es obligatorio']
     },
     codigo: {
         type: String,
