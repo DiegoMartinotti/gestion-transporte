@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard';
 import ClientesPage from './pages/clientes/ClientesPage';
 import ClienteDetailPage from './pages/clientes/ClienteDetailPage';
 import EmpresasPage from './pages/empresas/EmpresasPage';
+import EmpresaDetailPage from './pages/empresas/EmpresaDetailPage';
 import { PersonalPage } from './pages/personal/PersonalPage';
 
 export default function Router() {
@@ -20,7 +21,7 @@ export default function Router() {
         
         {/* Empresas routes */}
         <Route path="/empresas" element={<EmpresasPage />} />
-        <Route path="/empresas/:id" element={<div>Empresa Detail - Coming Soon</div>} />
+        <Route path="/empresas/:id" element={<EmpresaDetailPage />} />
         <Route path="/empresas/:id/edit" element={<div>Empresa Edit - Coming Soon</div>} />
         <Route path="/empresas/:id/personal" element={<div>Empresa Personal - Coming Soon</div>} />
         <Route path="/empresas/:id/vehiculos" element={<div>Empresa Vehiculos - Coming Soon</div>} />
