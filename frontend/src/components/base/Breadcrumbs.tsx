@@ -1,7 +1,7 @@
 import { Breadcrumbs as MantineBreadcrumbs, Anchor, Text, Skeleton } from '@mantine/core';
 import { useLocation, Link } from 'react-router-dom';
 import { IconChevronRight } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useEntityNames } from '../../contexts/EntityNamesContext';
 
 interface BreadcrumbItem {
@@ -42,7 +42,10 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
   const [loading, setLoading] = useState(false);
 
   // Generar breadcrumbs automáticamente basado en la ruta actual
-  const pathSegments = location.pathname.split('/').filter(Boolean);
+  const pathSegments = useMemo(() => 
+    location.pathname.split('/').filter(Boolean), 
+    [location.pathname]
+  );
 
   // Efecto para resolver nombres de entidades
   useEffect(() => {

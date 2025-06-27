@@ -44,29 +44,38 @@ export const empresaService = {
 
   async getById(id: string): Promise<Empresa> {
     const response = await api.get<Empresa>(`/empresas/${id}`);
-    // El ApiService devuelve ApiResponse<T>, necesitamos extraer los datos
-    if (!response.data) {
+    // El backend puede devolver directamente el objeto o dentro de data
+    if (response.data) {
+      return response.data;
+    } else if (response) {
+      return response as unknown as Empresa;
+    } else {
       throw new Error('Empresa no encontrada');
     }
-    return response.data;
   },
 
   async create(empresa: Partial<Empresa>): Promise<Empresa> {
     const response = await api.post<Empresa>('/empresas', empresa);
-    // El ApiService devuelve ApiResponse<T>, necesitamos extraer los datos
-    if (!response.data) {
+    // El backend puede devolver directamente el objeto o dentro de data
+    if (response.data) {
+      return response.data;
+    } else if (response) {
+      return response as unknown as Empresa;
+    } else {
       throw new Error('Error al crear la empresa');
     }
-    return response.data;
   },
 
   async update(id: string, empresa: Partial<Empresa>): Promise<Empresa> {
     const response = await api.put<Empresa>(`/empresas/${id}`, empresa);
-    // El ApiService devuelve ApiResponse<T>, necesitamos extraer los datos
-    if (!response.data) {
+    // El backend puede devolver directamente el objeto o dentro de data
+    if (response.data) {
+      return response.data;
+    } else if (response) {
+      return response as unknown as Empresa;
+    } else {
       throw new Error('Error al actualizar la empresa');
     }
-    return response.data;
   },
 
   async delete(id: string): Promise<void> {
