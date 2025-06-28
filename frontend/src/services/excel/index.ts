@@ -161,3 +161,16 @@ export class ExcelService {
 }
 
 export default ExcelService;
+
+// Instancia global para funciones de conveniencia
+const excelService = new ExcelService();
+
+// Export convenience functions
+export const previewExcelFile = (file: File, sampleSize?: number) => 
+  excelService.previewExcelFile(file, sampleSize);
+
+export const validateExcelFile = (file: File, entityType?: 'cliente' | 'empresa' | 'personal') => 
+  excelService.validateExcelFile(file, entityType || 'cliente');
+
+export const processExcelFile = (file: File, options: any) => 
+  excelService.processExcelFile(file, options.entityType || 'cliente', options);

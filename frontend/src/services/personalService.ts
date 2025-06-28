@@ -1,5 +1,8 @@
 import { apiService } from './api';
 import type { Personal, PersonalFilters, ApiResponse, PaginatedResponse } from '../types';
+import { TemplateFactory } from '../templates/excel';
+import { ExcelProcessor } from './excel/ExcelProcessor';
+import { previewExcelFile, validateExcelFile, processExcelFile } from './excel';
 
 export const personalService = {
   // Get all personal with optional filters
@@ -163,8 +166,49 @@ export const personalService = {
     return response.data?.data || { valid: false, message: 'Error de validación' };
   },
 
-  // Export to Excel
-  exportToExcel: async (filters?: PersonalFilters): Promise<Blob> => {
+  // Excel functionality
+  getTemplate: async (): Promise<void> => {
+    const PersonalTemplate = await import('../templates/excel/PersonalTemplate');
+    try {
+      await TemplateFactory.downloadTemplate('personal', { 
+        filename: 'plantilla_personal.xlsx' 
+      });
+    } catch (error) {
+      console.warn('Frontend template failed, falling back to backend:', error);
+      // Fallback to backend template
+      await apiService.downloadFile('/personal/template', 'plantilla_personal.xlsx');
+    }
+  },
+
+  exportToExcel: async (filters?: PersonalFilters): Promise<void> => {
+    try {
+      const filename = `personal_${new Date().toISOString().split('T')[0]}.xlsx`;
+      await apiService.downloadFile('/personal/export', filename);
+    } catch (error) {
+      console.error('Error exporting personal:', error);
+      throw error;
+    }
+  },
+
+  // Excel import functions
+  previewExcelFile: async (file: File, sampleSize?: number): Promise<any> => {
+    return await previewExcelFile(file, sampleSize);
+  },
+
+  validateExcelFile: async (file: File): Promise<any> => {
+    return await validateExcelFile(file);
+  },
+
+  processExcelFile: async (file: File, options: any): Promise<any> => {
+    return await processExcelFile(file, { 
+      ...options, 
+      endpoint: '/personal/import',
+      entityType: 'personal'
+    });
+  },
+
+  // Legacy export method (for backward compatibility)
+  exportToExcelLegacy: async (filters?: PersonalFilters): Promise<Blob> => {
     const params = new URLSearchParams();
     
     if (filters?.search) params.append('search', filters.search);
@@ -178,7 +222,7 @@ export const personalService = {
     return response.data;
   },
 
-  // Import from Excel
+  // Legacy import method
   importFromExcel: async (file: File): Promise<{
     success: number;
     errors: Array<{ row: number; errors: string[] }>;

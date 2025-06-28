@@ -20,6 +20,7 @@ export interface PaginatedResponse<T> {
 export interface Cliente {
   _id: string;
   nombre: string;
+  cuit: string;
   email?: string;
   telefono?: string;
   direccion?: string;

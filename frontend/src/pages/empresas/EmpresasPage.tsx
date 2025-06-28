@@ -29,6 +29,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
+import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import { Empresa, EmpresaFilters } from '../../types';
 import { empresaService } from '../../services/empresaService';
 import { DEFAULT_PAGE_SIZE } from '../../constants';
@@ -44,6 +45,7 @@ export default function EmpresasPage() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [empresaToDelete, setEmpresaToDelete] = useState<Empresa | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   const loadEmpresas = useCallback(async () => {
     try {
@@ -119,6 +121,11 @@ export default function EmpresasPage() {
     } catch (error) {
       console.error('Error downloading template:', error);
     }
+  };
+
+  const handleImportComplete = async (result: any) => {
+    setImportModalOpened(false);
+    await loadEmpresas(); // Reload data after import
   };
 
   const columns: DataTableColumn<Empresa>[] = [
@@ -272,6 +279,7 @@ export default function EmpresasPage() {
               <Button
                 variant="outline"
                 leftSection={<IconUpload size="1rem" />}
+                onClick={() => setImportModalOpened(true)}
               >
                 Importar
               </Button>
@@ -322,6 +330,18 @@ export default function EmpresasPage() {
         message={`¿Estás seguro de que deseas eliminar la empresa "${empresaToDelete?.nombre}"? Esta acción no se puede deshacer.`}
         type="delete"
         loading={deleteLoading}
+      />
+
+      <ExcelImportModal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        title="Importar Empresas desde Excel"
+        entityType="empresa"
+        onImportComplete={handleImportComplete}
+        processExcelFile={empresaService.processExcelFile.bind(empresaService)}
+        validateExcelFile={empresaService.validateExcelFile.bind(empresaService)}
+        previewExcelFile={empresaService.previewExcelFile.bind(empresaService)}
+        getTemplate={empresaService.getTemplate.bind(empresaService)}
       />
     </Container>
   );
