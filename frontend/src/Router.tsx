@@ -5,6 +5,7 @@ import ClienteDetailPage from './pages/clientes/ClienteDetailPage';
 import EmpresasPage from './pages/empresas/EmpresasPage';
 import EmpresaDetailPage from './pages/empresas/EmpresaDetailPage';
 import { PersonalPage } from './pages/personal/PersonalPage';
+import { SitesPage } from './pages/sites';
 
 export default function Router() {
   return (
@@ -28,7 +29,7 @@ export default function Router() {
         
         {/* Other routes */}
         <Route path="/personal" element={<PersonalPage />} />
-        <Route path="/sites" element={<div>Sites - Coming Soon</div>} />
+        <Route path="/sites" element={<SitesPage />} />
         <Route path="/tramos" element={<div>Tramos - Coming Soon</div>} />
         <Route path="/vehiculos" element={<div>Vehículos - Coming Soon</div>} />
         <Route path="/viajes" element={<div>Viajes - Coming Soon</div>} />
