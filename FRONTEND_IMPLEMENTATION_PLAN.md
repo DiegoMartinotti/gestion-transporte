@@ -132,10 +132,10 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **ReferenceDataSheets**: Generador de hojas de referencia <!-- COMPLETADO: /frontend/src/components/excel/ReferenceDataSheets.tsx -->
 
 ### 4.2 Plantillas Excel Base
-- [ ] **ClienteTemplate**: Plantilla con campos obligatorios marcados (*)
-- [ ] **EmpresaTemplate**: Plantilla con tipos de empresa
-- [ ] **PersonalTemplate**: Plantilla con documentación requerida
-- [ ] **ReferenceSheets**: Hojas con datos de BD existentes
+- [x] **ClienteTemplate**: Plantilla con campos obligatorios marcados (*) <!-- COMPLETADO: /frontend/src/templates/excel/ClienteTemplate.ts -->
+- [x] **EmpresaTemplate**: Plantilla con tipos de empresa <!-- COMPLETADO: /frontend/src/templates/excel/EmpresaTemplate.ts -->
+- [x] **PersonalTemplate**: Plantilla con documentación requerida <!-- COMPLETADO: /frontend/src/templates/excel/PersonalTemplate.ts -->
+- [x] **ReferenceSheets**: Hojas con datos de BD existentes <!-- COMPLETADO: /frontend/src/templates/excel/ReferenceDataSheets.ts -->
 
 ### 4.3 Lógica de Importación
 - [ ] **ExcelProcessor**: Procesador central de archivos Excel
