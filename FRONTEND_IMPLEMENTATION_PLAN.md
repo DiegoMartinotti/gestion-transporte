@@ -138,10 +138,10 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **ReferenceSheets**: Hojas con datos de BD existentes <!-- COMPLETADO: /frontend/src/templates/excel/ReferenceDataSheets.ts -->
 
 ### 4.3 Lógica de Importación
-- [ ] **ExcelProcessor**: Procesador central de archivos Excel
-- [ ] **ValidationEngine**: Motor de validación por entidad
-- [ ] **ErrorRecovery**: Sistema de recuperación de errores
-- [ ] **BulkOperations**: Operaciones masivas optimizadas
+- [x] **ExcelProcessor**: Procesador central de archivos Excel <!-- COMPLETADO: /frontend/src/services/excel/ExcelProcessor.ts -->
+- [x] **ValidationEngine**: Motor de validación por entidad <!-- COMPLETADO: /frontend/src/services/excel/ValidationEngine.ts -->
+- [x] **ErrorRecovery**: Sistema de recuperación de errores <!-- COMPLETADO: /frontend/src/services/excel/ErrorRecovery.ts -->
+- [x] **BulkOperations**: Operaciones masivas optimizadas <!-- COMPLETADO: /frontend/src/services/excel/BulkOperations.ts -->
 
 **Checkpoint 3**: ✅ Sistema Excel funcional para entidades base
 
