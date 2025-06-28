@@ -28,6 +28,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
+import { ExcelImportModal } from '../../components/modals';
 import { Cliente, ClienteFilters } from '../../types';
 import { clienteService } from '../../services/clienteService';
 import { DEFAULT_PAGE_SIZE } from '../../constants';
@@ -43,6 +44,7 @@ export default function ClientesPage() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   const loadClientes = useCallback(async () => {
     try {
@@ -118,6 +120,17 @@ export default function ClientesPage() {
     } catch (error) {
       console.error('Error downloading template:', error);
     }
+  };
+
+  const handleImportComplete = async (result: any) => {
+    setImportModalOpened(false);
+    await loadClientes(); // Reload data after import
+    
+    notifications.show({
+      title: 'Importación completada',
+      message: `Se importaron ${result.summary?.insertedRows || 0} clientes correctamente`,
+      color: 'green'
+    });
   };
 
   const columns: DataTableColumn<Cliente>[] = [
@@ -255,6 +268,7 @@ export default function ClientesPage() {
               <Button
                 variant="outline"
                 leftSection={<IconUpload size="1rem" />}
+                onClick={() => setImportModalOpened(true)}
               >
                 Importar
               </Button>
@@ -305,6 +319,18 @@ export default function ClientesPage() {
         message={`¿Estás seguro de que deseas eliminar el cliente "${clienteToDelete?.nombre}"? Esta acción no se puede deshacer.`}
         type="delete"
         loading={deleteLoading}
+      />
+
+      <ExcelImportModal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        title="Importar Clientes desde Excel"
+        entityType="cliente"
+        onImportComplete={handleImportComplete}
+        processExcelFile={clienteService.processExcelFile}
+        validateExcelFile={clienteService.validateExcelFile}
+        previewExcelFile={clienteService.previewExcelFile}
+        getTemplate={clienteService.getTemplate}
       />
     </Container>
   );

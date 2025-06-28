@@ -1,5 +1,8 @@
 import { apiService as api } from './api';
 import { Empresa, EmpresaFilters, PaginatedResponse } from '../types';
+import { TemplateFactory } from '../templates/excel';
+import { ExcelProcessor } from './excel/ExcelProcessor';
+import { previewExcelFile, validateExcelFile, processExcelFile } from './excel';
 
 export const empresaService = {
   async getAll(filters: EmpresaFilters = {}): Promise<PaginatedResponse<Empresa>> {
@@ -82,33 +85,44 @@ export const empresaService = {
     await api.delete<any>(`/empresas/${id}`);
   },
 
-  async exportToExcel(): Promise<void> {
-    const response = await api.getClient().get('/empresas/export', {
-      responseType: 'blob',
-    });
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'empresas.xlsx');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+  // Excel functionality
+  async getTemplate(): Promise<void> {
+    const EmpresaTemplate = await import('../templates/excel/EmpresaTemplate');
+    try {
+      await TemplateFactory.downloadTemplate('empresa', { 
+        filename: 'plantilla_empresas.xlsx' 
+      });
+    } catch (error) {
+      console.warn('Frontend template failed, falling back to backend:', error);
+      // Fallback to backend template
+      await api.downloadFile('/empresas/template', 'plantilla_empresas.xlsx');
+    }
   },
 
-  async getTemplate(): Promise<void> {
-    const response = await api.getClient().get('/empresas/template', {
-      responseType: 'blob',
+  async exportToExcel(): Promise<void> {
+    try {
+      const filename = `empresas_${new Date().toISOString().split('T')[0]}.xlsx`;
+      await api.downloadFile('/empresas/export', filename);
+    } catch (error) {
+      console.error('Error exporting empresas:', error);
+      throw error;
+    }
+  },
+
+  // Excel import functions
+  async previewExcelFile(file: File, sampleSize?: number): Promise<any> {
+    return await previewExcelFile(file, sampleSize);
+  },
+
+  async validateExcelFile(file: File): Promise<any> {
+    return await validateExcelFile(file);
+  },
+
+  async processExcelFile(file: File, options: any): Promise<any> {
+    return await processExcelFile(file, { 
+      ...options, 
+      endpoint: '/empresas/import',
+      entityType: 'empresa'
     });
-    
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'template_empresas.xlsx');
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
   }
 };

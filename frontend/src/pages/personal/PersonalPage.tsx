@@ -37,6 +37,7 @@ import {
   IconTrash,
   IconDownload,
   IconUpload,
+  IconFileText,
 } from '@tabler/icons-react';
 import type { Personal, PersonalFilters, Empresa } from '../../types';
 import { personalService } from '../../services/personalService';
@@ -45,6 +46,7 @@ import { PersonalCard } from '../../components/cards/PersonalCard';
 import { PersonalForm } from '../../components/forms/PersonalForm';
 import { PersonalDetail } from '../../components/details/PersonalDetail';
 import { DocumentacionTable } from '../../components/tables/DocumentacionTable';
+import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import DataTable from '../../components/base/DataTable';
 import SearchInput from '../../components/base/SearchInput';
 import ConfirmModal from '../../components/base/ConfirmModal';
@@ -79,6 +81,7 @@ export const PersonalPage: React.FC = () => {
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [detailOpened, { open: openDetail, close: closeDetail }] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -200,21 +203,29 @@ export const PersonalPage: React.FC = () => {
     setSelectedPersonal(null);
   };
 
+  const handleGetTemplate = async () => {
+    try {
+      await personalService.getTemplate();
+      notifications.show({
+        title: 'Plantilla descargada',
+        message: 'La plantilla de importación ha sido descargada',
+        color: 'green'
+      });
+    } catch (error: any) {
+      notifications.show({
+        title: 'Error',
+        message: error.message || 'Error al descargar plantilla',
+        color: 'red',
+      });
+    }
+  };
+
   const handleExport = async () => {
     try {
-      const blob = await personalService.exportToExcel(filters);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `personal_${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
+      await personalService.exportToExcel(filters);
       notifications.show({
-        title: 'Éxito',
-        message: 'Datos exportados correctamente',
+        title: 'Exportación exitosa',
+        message: 'El personal ha sido exportado a Excel',
         color: 'green',
       });
     } catch (error: any) {
@@ -226,13 +237,9 @@ export const PersonalPage: React.FC = () => {
     }
   };
 
-  const handleImport = () => {
-    // TODO: Implement import functionality
-    notifications.show({
-      title: 'Funcionalidad en desarrollo',
-      message: 'La importación de Excel estará disponible próximamente',
-      color: 'blue',
-    });
+  const handleImportComplete = async (result: any) => {
+    setImportModalOpened(false);
+    await loadPersonal(); // Reload data after import
   };
 
   // Get statistics
@@ -364,15 +371,22 @@ export const PersonalPage: React.FC = () => {
           </div>
           <Group>
             <Button
+              leftSection={<IconFileText size={16} />}
+              variant="outline"
+              onClick={handleGetTemplate}
+            >
+              Plantilla
+            </Button>
+            <Button
               leftSection={<IconFileImport size={16} />}
-              variant="light"
-              onClick={handleImport}
+              variant="outline"
+              onClick={() => setImportModalOpened(true)}
             >
               Importar
             </Button>
             <Button
               leftSection={<IconFileExport size={16} />}
-              variant="light"
+              variant="outline"
               onClick={handleExport}
             >
               Exportar
@@ -588,6 +602,19 @@ export const PersonalPage: React.FC = () => {
           }
           confirmLabel="Eliminar"
           type="delete"
+        />
+
+        {/* Excel Import Modal */}
+        <ExcelImportModal
+          opened={importModalOpened}
+          onClose={() => setImportModalOpened(false)}
+          title="Importar Personal desde Excel"
+          entityType="personal"
+          onImportComplete={handleImportComplete}
+          processExcelFile={personalService.processExcelFile.bind(personalService)}
+          validateExcelFile={personalService.validateExcelFile.bind(personalService)}
+          previewExcelFile={personalService.previewExcelFile.bind(personalService)}
+          getTemplate={personalService.getTemplate.bind(personalService)}
         />
       </Stack>
     </Container>

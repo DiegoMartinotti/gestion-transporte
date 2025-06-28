@@ -26,6 +26,7 @@ interface ClienteFormProps {
 
 interface ClienteFormData {
   nombre: string;
+  cuit: string;
   email: string;
   telefono: string;
   direccion: string;
@@ -39,6 +40,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
   const form = useForm<ClienteFormData>({
     initialValues: {
       nombre: cliente?.nombre || '',
+      cuit: cliente?.cuit || '',
       email: cliente?.email || '',
       telefono: cliente?.telefono || '',
       direccion: cliente?.direccion || '',
@@ -50,6 +52,14 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
         if (!value.trim()) return 'El nombre es obligatorio';
         if (value.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres';
         if (value.trim().length > 100) return 'El nombre no puede tener más de 100 caracteres';
+        return null;
+      },
+      cuit: (value) => {
+        if (!value.trim()) return 'El CUIT es obligatorio';
+        const cuitRegex = /^(20|23|24|27|30|33|34)-\d{8}-\d$/;
+        if (!cuitRegex.test(value.trim())) {
+          return 'CUIT inválido. Formato: XX-XXXXXXXX-X';
+        }
         return null;
       },
       email: (value) => {
@@ -86,6 +96,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
       const clienteData = {
         ...values,
         nombre: values.nombre.trim(),
+        cuit: values.cuit.trim(),
         email: values.email.trim() || undefined,
         telefono: values.telefono.trim() || undefined,
         direccion: values.direccion.trim() || undefined,
@@ -149,6 +160,18 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
               <TextInput
                 placeholder="Ingrese el nombre del cliente"
                 {...form.getInputProps('nombre')}
+                disabled={loading}
+              />
+            </FieldWrapper>
+
+            <FieldWrapper
+              label="CUIT"
+              required
+              description="CUIT del cliente (formato: XX-XXXXXXXX-X)"
+            >
+              <TextInput
+                placeholder="20-12345678-9"
+                {...form.getInputProps('cuit')}
                 disabled={loading}
               />
             </FieldWrapper>
