@@ -170,8 +170,8 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 6: VEHÍCULOS Y DOCUMENTACIÓN
 
 ### 6.1 Gestión de Vehículos
-- [ ] **VehiculoList**: Lista con filtros por empresa y estado
-- [ ] **VehiculoForm**: Formulario con documentación
+- [x] **VehiculoList**: Lista con filtros por empresa y estado <!-- COMPLETADO: /frontend/src/pages/vehiculos/VehiculosPage.tsx con filtros avanzados, tabs de vencimientos -->
+- [x] **VehiculoForm**: Formulario con documentación <!-- COMPLETADO: /frontend/src/components/forms/VehiculoForm.tsx con 3 tabs: básicos, documentación, características -->
 - [ ] **VehiculoCard**: Tarjeta con estado de documentos
 - [ ] **VehiculoDetail**: Vista detallada con historial
 - [ ] **DocumentExpiration**: Alertas de vencimientos
