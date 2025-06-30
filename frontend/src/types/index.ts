@@ -165,12 +165,14 @@ export interface Site {
   codigo?: string;
   direccion?: string;
   localidad?: string;
+  ciudad?: string;
   provincia?: string;
   cliente: string | Cliente;
   coordenadas: {
     lat: number;
     lng: number;
   } | null;
+  activo?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
