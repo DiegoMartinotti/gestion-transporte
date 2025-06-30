@@ -12,7 +12,8 @@ import {
   ActionIcon,
   Stack,
   Anchor,
-  Tooltip
+  Tooltip,
+  SegmentedControl
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { 
@@ -24,9 +25,12 @@ import {
   IconBuilding,
   IconPhone,
   IconExternalLink,
-  IconMap2
+  IconMap2,
+  IconTable,
+  IconMap
 } from '@tabler/icons-react';
 import { DataTable, ConfirmModal } from '../../components/base';
+import SiteMap from '../../components/maps/SiteMap';
 import { Site, SiteFilters, Cliente } from '../../types';
 import { siteService } from '../../services/siteService';
 import { clienteService } from '../../services/clienteService';
@@ -35,6 +39,8 @@ const SitesPage: React.FC = () => {
   const [sites, setSites] = useState<Site[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'table' | 'map'>('table');
+  const [selectedSite, setSelectedSite] = useState<Site | undefined>();
   const [filters, setFilters] = useState<SiteFilters>({
     page: 1,
     limit: 10,
@@ -256,9 +262,35 @@ const SitesPage: React.FC = () => {
       <Stack gap="md">
         <Group justify="space-between">
           <Title order={1}>Gestión de Sites</Title>
-          <Button leftSection={<IconPlus size={16} />}>
-            Nuevo Site
-          </Button>
+          <Group>
+            <SegmentedControl
+              value={viewMode}
+              onChange={(value: string) => setViewMode(value as 'table' | 'map')}
+              data={[
+                {
+                  label: (
+                    <Group gap={4} justify="center">
+                      <IconTable size={16} />
+                      <span>Tabla</span>
+                    </Group>
+                  ),
+                  value: 'table'
+                },
+                {
+                  label: (
+                    <Group gap={4} justify="center">
+                      <IconMap size={16} />
+                      <span>Mapa</span>
+                    </Group>
+                  ),
+                  value: 'map'
+                }
+              ]}
+            />
+            <Button leftSection={<IconPlus size={16} />}>
+              Nuevo Site
+            </Button>
+          </Group>
         </Group>
 
         <Paper p="md" withBorder>
@@ -295,26 +327,45 @@ const SitesPage: React.FC = () => {
           </Grid>
         </Paper>
 
-        <DataTable
-          data={sites}
-          columns={columns}
-          loading={loading}
-          totalItems={pagination.totalItems}
-          currentPage={pagination.currentPage}
-          pageSize={pagination.itemsPerPage}
-          onPageChange={handlePageChange}
-          onPageSizeChange={(pageSize) => handleFilterChange('limit', pageSize)}
-          onFiltersChange={(filters) => {
-            if (filters.search !== undefined) handleFilterChange('search', filters.search);
-            if (filters.sortBy && filters.sortOrder) {
-              setFilters(prev => ({
-                ...prev,
-                sortBy: filters.sortBy!,
-                sortOrder: filters.sortOrder!
-              }));
-            }
-          }}
-        />
+        {viewMode === 'table' ? (
+          <DataTable
+            data={sites}
+            columns={columns}
+            loading={loading}
+            totalItems={pagination.totalItems}
+            currentPage={pagination.currentPage}
+            pageSize={pagination.itemsPerPage}
+            onPageChange={handlePageChange}
+            onPageSizeChange={(pageSize) => handleFilterChange('limit', pageSize)}
+            onFiltersChange={(filters) => {
+              if (filters.search !== undefined) handleFilterChange('search', filters.search);
+              if (filters.sortBy && filters.sortOrder) {
+                setFilters(prev => ({
+                  ...prev,
+                  sortBy: filters.sortBy!,
+                  sortOrder: filters.sortOrder!
+                }));
+              }
+            }}
+          />
+        ) : (
+          <SiteMap
+            sites={sites}
+            selectedSite={selectedSite}
+            onSiteSelect={setSelectedSite}
+            onSiteEdit={(site) => {
+              // TODO: Implementar edición de site
+              notifications.show({
+                title: 'Funcionalidad pendiente',
+                message: 'La edición de sites desde el mapa estará disponible pronto',
+                color: 'blue'
+              });
+            }}
+            height={600}
+            showFilters={false} // Los filtros ya están arriba
+            clientes={clientes}
+          />
+        )}
       </Stack>
 
       <ConfirmModal

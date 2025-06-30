@@ -152,10 +152,10 @@ ImportacionTemporal (sistema de importación avanzado)
 ### 5.1 Gestión de Sites
 - [x] **SiteList**: Lista con filtros por cliente <!-- COMPLETADO: /frontend/src/pages/sites/SitesPage.tsx con DataTable, filtros por cliente y estado, integración con Google Maps -->
 - [x] **SiteForm**: Formulario con geocodificación automática <!-- COMPLETADO: /frontend/src/components/forms/SiteForm.tsx con geocodificación, validación de coordenadas, integración con provincias argentinas -->
-- [ ] **SiteMap**: Mapa interactivo con ubicaciones
+- [x] **SiteMap**: Mapa interactivo con ubicaciones <!-- COMPLETADO: /frontend/src/components/maps/SiteMap.tsx con Google Maps, marcadores, filtros, info windows -->
 - [x] **SiteSelector**: Selector con búsqueda geográfica <!-- COMPLETADO: /frontend/src/components/selectors/SiteSelector.tsx con cálculo de distancias, filtros por cliente, integración con Google Maps -->
-- [ ] **CoordinateInput**: Input para coordenadas manuales
-- [ ] **AddressGeocoder**: Geocodificador de direcciones
+- [x] **CoordinateInput**: Input para coordenadas manuales <!-- COMPLETADO: /frontend/src/components/inputs/CoordinateInput.tsx con validación, geolocalización, copy/paste -->
+- [x] **AddressGeocoder**: Geocodificador de direcciones <!-- COMPLETADO: /frontend/src/components/geocoding/AddressGeocoder.tsx con búsqueda automática, resultados múltiples -->
 
 ### 5.2 Integración de Mapas
 - [ ] **MapView**: Componente de mapa reutilizable
@@ -163,7 +163,7 @@ ImportacionTemporal (sistema de importación avanzado)
 - [ ] **DistanceCalculator**: Calculadora de distancias
 - [ ] **RouteVisuizer**: Visualizador de rutas
 
-**Checkpoint 4**: ✅ Gestión de ubicaciones con mapas funcional
+**Checkpoint 4**: ✅ Gestión de ubicaciones con mapas funcional <!-- COMPLETADO: Sistema completo de Sites con mapa interactivo Google Maps, geocodificación, coordenadas manuales -->
 
 ---
 
