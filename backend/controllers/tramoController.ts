@@ -642,8 +642,9 @@ export const getAllTramos = async (req: AuthenticatedRequest, res: Response<ApiR
         const totalTramos = await Tramo.countDocuments();
         
         const tramos = await Tramo.find()
-            .populate('origen', 'Site')
-            .populate('destino', 'Site')
+            .populate('origen', 'nombre direccion location')
+            .populate('destino', 'nombre direccion location')
+            .populate('cliente', 'nombre')
             .skip(skip)
             .limit(limit);
             
