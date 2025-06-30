@@ -57,7 +57,15 @@ interface Tramo {
     nombre: string;
   };
   distancia: number;
-  tarifasHistoricas: Array<{
+  // Campos de la tarifa vigente a nivel raíz (desde el backend)
+  tipo?: 'TRMC' | 'TRMI';
+  metodoCalculo?: 'Kilometro' | 'Palet' | 'Fijo';
+  valor?: number;
+  valorPeaje?: number;
+  vigenciaDesde?: string;
+  vigenciaHasta?: string;
+  // Arrays y objetos opcionales
+  tarifasHistoricas?: Array<{
     _id: string;
     tipo: 'TRMC' | 'TRMI';
     metodoCalculo: 'Kilometro' | 'Palet' | 'Fijo';
@@ -74,8 +82,9 @@ interface Tramo {
     vigenciaDesde: string;
     vigenciaHasta: string;
   };
-  createdAt: string;
-  updatedAt: string;
+  originalId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Cliente {
@@ -121,6 +130,7 @@ const TramosPage: React.FC = () => {
       ]);
       
       const processedTramos = Array.isArray(tramosData) ? tramosData : (tramosData as any)?.data || [];
+      console.log('Datos de tramos recibidos:', processedTramos.length, 'tramos');
       setTramos(processedTramos);
       setClientes(Array.isArray(clientesData) ? clientesData : clientesData.data);
       setSites((Array.isArray(sitesData) ? sitesData : sitesData.data).map((site: any) => ({
@@ -144,6 +154,7 @@ const TramosPage: React.FC = () => {
   const filteredTramos = tramos.filter(tramo => {
     // Validar que el tramo tenga las propiedades necesarias
     if (!tramo || !tramo.origen || !tramo.destino || !tramo.cliente) {
+      console.log('Tramo filtrado por datos incompletos:', tramo);
       return false;
     }
     
@@ -158,13 +169,15 @@ const TramosPage: React.FC = () => {
     
     let matchesTab = true;
     if (activeTab === 'con-tarifa') {
-      matchesTab = !!tramo.tarifaVigente;
+      matchesTab = !!(tramo.tipo || tramo.tarifaVigente);
     } else if (activeTab === 'sin-tarifa') {
-      matchesTab = !tramo.tarifaVigente;
+      matchesTab = !(tramo.tipo || tramo.tarifaVigente);
     }
     
     return matchesSearch && matchesCliente && matchesOrigen && matchesDestino && matchesTab;
   });
+  
+  console.log('Tramos filtrados:', filteredTramos.length, 'de', tramos.length);
 
   // Sites filtrados por cliente seleccionado
   const sitesFiltered = sites.filter(site => 
@@ -243,17 +256,52 @@ const TramosPage: React.FC = () => {
   };
 
   const getTarifaStatus = (value: any, tramo: Tramo) => {
-    if (!tramo || !tramo.tarifaVigente) {
+    // Usar campos del nivel raíz (desde el backend) o del objeto tarifaVigente como fallback
+    const tipo = tramo.tipo || tramo.tarifaVigente?.tipo;
+    const metodoCalculo = tramo.metodoCalculo || tramo.tarifaVigente?.metodoCalculo;
+    const valor = tramo.valor || tramo.tarifaVigente?.valor;
+    const vigenciaDesde = tramo.vigenciaDesde || tramo.tarifaVigente?.vigenciaDesde;
+    const vigenciaHasta = tramo.vigenciaHasta || tramo.tarifaVigente?.vigenciaHasta;
+    
+    if (!tipo || !metodoCalculo || valor === undefined) {
       return <Badge color="red" size="sm">Sin tarifa</Badge>;
     }
     
-    const { tipo, metodoCalculo, valor } = tramo.tarifaVigente;
+    const formatDate = (dateString: string | undefined) => {
+      if (!dateString) return 'N/A';
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    };
+    
+    const isExpired = vigenciaHasta && new Date(vigenciaHasta) < new Date();
+    const isExpiringSoon = vigenciaHasta && 
+      new Date(vigenciaHasta) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 días
+    
     return (
-      <Group gap="xs">
-        <Badge color="blue" size="sm">{tipo}</Badge>
-        <Badge color="green" size="sm">{metodoCalculo}</Badge>
-        <Text size="sm" fw={500}>${valor}</Text>
-      </Group>
+      <Stack gap="xs">
+        <Group gap="xs">
+          <Badge color="blue" size="sm">{tipo}</Badge>
+          <Badge color="green" size="sm">{metodoCalculo}</Badge>
+          <Text size="sm" fw={500}>${valor}</Text>
+        </Group>
+        <Stack gap={2}>
+          <Text size="xs" c="dimmed">
+            Desde: {formatDate(vigenciaDesde)}
+          </Text>
+          <Text 
+            size="xs" 
+            c={isExpired ? "red" : isExpiringSoon ? "orange" : "dimmed"}
+            fw={isExpired || isExpiringSoon ? 500 : 400}
+          >
+            Hasta: {formatDate(vigenciaHasta)}
+            {isExpired && ' (VENCIDA)'}
+            {isExpiringSoon && !isExpired && ' (Próx. vencimiento)'}
+          </Text>
+        </Stack>
+      </Stack>
     );
   };
 
@@ -391,8 +439,8 @@ const TramosPage: React.FC = () => {
 
   const tramosStats = {
     total: tramos.length,
-    conTarifa: tramos.filter(t => t.tarifaVigente).length,
-    sinTarifa: tramos.filter(t => !t.tarifaVigente).length
+    conTarifa: tramos.filter(t => t.tipo || t.tarifaVigente).length,
+    sinTarifa: tramos.filter(t => !(t.tipo || t.tarifaVigente)).length
   };
 
   return (
@@ -523,7 +571,7 @@ const TramosPage: React.FC = () => {
         size="xl"
       >
         <TramoForm
-          tramo={selectedTramo}
+          tramo={selectedTramo as any}
           clientes={clientes}
           sites={sites as any}
           onSubmit={handleFormSubmit}
