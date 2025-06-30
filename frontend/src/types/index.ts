@@ -162,19 +162,15 @@ export interface DocumentoPersonal {
 export interface Site {
   _id: string;
   nombre: string;
-  direccion: string;
-  ciudad: string;
-  provincia: string;
-  codigoPostal?: string;
-  pais: string;
+  codigo?: string;
+  direccion?: string;
+  localidad?: string;
+  provincia?: string;
   cliente: string | Cliente;
   coordenadas: {
     lat: number;
     lng: number;
-  };
-  contacto?: string;
-  telefono?: string;
-  activo: boolean;
+  } | null;
   createdAt: Date;
   updatedAt: Date;
 }

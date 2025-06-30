@@ -83,30 +83,34 @@ interface BulkImportResult {
  * @param cliente - Client name
  * @returns List of sites
  */
-export const getSites = tryCatch(async (req: AuthenticatedRequest, res: Response<ApiResponse<SiteFormattedData[]>>): Promise<void> => {
+export const getSites = tryCatch(async (req: AuthenticatedRequest, res: Response<ApiResponse<any[]>>): Promise<void> => {
     const { cliente } = req.query;
     
-    if (!cliente || typeof cliente !== 'string') {
-        throw new ValidationError('Cliente es requerido');
-    }
+    // Construir el filtro: si se proporciona cliente, filtra por él; si no, obtiene todos
+    const filter = cliente && typeof cliente === 'string' ? { cliente: cliente } : {};
 
-    const sites = await Site.find({ cliente: cliente })
+    const sites = await Site.find(filter)
+        .populate('cliente', 'nombre')
         .lean()
         .exec();
 
-    // Mapear los campos para que el frontend reciba nombre y codigo
-    const sitesFormateados: SiteFormattedData[] = sites.map(site => ({
-        _id: site._id.toString(),
-        nombre: site.nombre,
-        tipo: '', // Campo tipo no existe en el modelo
-        codigo: site.codigo || '',
-        direccion: site.direccion || '',
-        localidad: site.localidad || '',
-        provincia: site.provincia || '',
-        coordenadas: site.location && Array.isArray(site.location.coordinates)
-            ? { lng: site.location.coordinates[0], lat: site.location.coordinates[1] }
-            : null
-    }));
+    // Filtrar sites válidos y mapear los campos para que coincidan con la interfaz Site del frontend
+    const sitesFormateados = sites
+        .filter(site => site && site._id) // Filtrar elementos null/undefined
+        .map(site => ({
+            _id: site._id.toString(),
+            nombre: site.nombre || '',
+            codigo: site.codigo || '',
+            direccion: site.direccion || '',
+            localidad: site.localidad || '',
+            provincia: site.provincia || '',
+            cliente: site.cliente, // Ya viene populated con {_id, nombre}
+            coordenadas: site.location && Array.isArray(site.location.coordinates)
+                ? { lng: site.location.coordinates[0], lat: site.location.coordinates[1] }
+                : null,
+            createdAt: site.createdAt,
+            updatedAt: site.updatedAt
+        }));
 
     logger.debug('Sites procesados:', sitesFormateados);
 

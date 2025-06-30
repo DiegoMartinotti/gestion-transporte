@@ -24,12 +24,12 @@ export interface UpdateSiteData extends Partial<CreateSiteData> {
 
 class SiteService {
   async getAll(filters?: SiteFilters): Promise<PaginatedResponse<Site>> {
-    const response = await apiService.get<Site[]>('/sites', filters);
+    const response = await apiService.get<any>('/sites', filters);
     
     // Backend returns { success: true, count: number, data: Site[] }
-    // But our response wrapper only gives us response.data
+    // response is the full backend response
     const totalItems = (response as any).count || 0;
-    const siteData = response.data || [];
+    const siteData = (response as any).data || [];
     
     // Transform backend response to match frontend expectation
     const page = filters?.page || 1;
