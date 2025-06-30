@@ -170,12 +170,12 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 6: VEHÍCULOS Y DOCUMENTACIÓN
 
 ### 6.1 Gestión de Vehículos
-- [x] **VehiculoList**: Lista con filtros por empresa y estado <!-- COMPLETADO: /frontend/src/pages/vehiculos/VehiculosPage.tsx con filtros avanzados, tabs de vencimientos -->
+- [x] **VehiculoList**: Lista con filtros por empresa y estado <!-- COMPLETADO: /frontend/src/pages/vehiculos/VehiculosPage.tsx con filtros avanzados, tabs de vencimientos, vista lista/cards -->
 - [x] **VehiculoForm**: Formulario con documentación <!-- COMPLETADO: /frontend/src/components/forms/VehiculoForm.tsx con 3 tabs: básicos, documentación, características -->
-- [ ] **VehiculoCard**: Tarjeta con estado de documentos
-- [ ] **VehiculoDetail**: Vista detallada con historial
-- [ ] **DocumentExpiration**: Alertas de vencimientos
-- [ ] **VehiculoSelector**: Selector para viajes
+- [x] **VehiculoCard**: Tarjeta con estado de documentos <!-- COMPLETADO: /frontend/src/components/cards/VehiculoCard.tsx con estado de documentación, badges, progress bar -->
+- [x] **VehiculoDetail**: Vista detallada con historial <!-- COMPLETADO: /frontend/src/components/details/VehiculoDetail.tsx con información completa, estado documentación, timeline -->
+- [x] **DocumentExpiration**: Alertas de vencimientos <!-- COMPLETADO: /frontend/src/components/alerts/DocumentExpiration.tsx con notificaciones automáticas, filtros, timeline -->
+- [x] **VehiculoSelector**: Selector para viajes <!-- COMPLETADO: /frontend/src/components/selectors/VehiculoSelector.tsx con filtros avanzados, documentación, múltiple selección -->
 
 ### 6.2 Sistema de Documentación
 - [ ] **DocumentTable**: Tabla de documentos por vehículo

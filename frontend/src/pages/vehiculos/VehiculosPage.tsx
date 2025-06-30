@@ -14,13 +14,15 @@ import {
   ActionIcon,
   Grid
 } from '@mantine/core';
-import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash, IconLayoutGrid, IconList } from '@tabler/icons-react';
+import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash, IconLayoutGrid, IconList, IconEye } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import DataTable from '../../components/base/DataTable';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import ConfirmModal from '../../components/base/ConfirmModal';
 import VehiculoForm from '../../components/forms/VehiculoForm';
 import { VehiculoCard } from '../../components/cards/VehiculoCard';
+import { VehiculoDetail } from '../../components/details/VehiculoDetail';
+import { DocumentExpiration } from '../../components/alerts/DocumentExpiration';
 import { vehiculoService } from '../../services/vehiculoService';
 import { empresaService } from '../../services/empresaService';
 import { Vehiculo, VehiculoFilter, VehiculoTipo, VehiculoConVencimientos } from '../../types/vehiculo';
@@ -38,6 +40,8 @@ export default function VehiculosPage() {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [vehiculoForDetail, setVehiculoForDetail] = useState<Vehiculo | null>(null);
 
   const tiposVehiculo: VehiculoTipo[] = ['Camión', 'Acoplado', 'Semirremolque', 'Bitren', 'Furgón', 'Utilitario'];
 
@@ -115,6 +119,16 @@ export default function VehiculosPage() {
     setSelectedVehiculo(null);
   };
 
+  const openDetailModal = (vehiculo: Vehiculo) => {
+    setVehiculoForDetail(vehiculo);
+    setDetailModalOpen(true);
+  };
+
+  const closeDetailModal = () => {
+    setDetailModalOpen(false);
+    setVehiculoForDetail(null);
+  };
+
   const handleFormSuccess = () => {
     loadData();
     closeFormModal();
@@ -170,7 +184,7 @@ export default function VehiculosPage() {
     {
       key: 'empresa',
       label: 'Empresa',
-      render: (value: any, vehiculo: Vehiculo) => getEmpresaNombre(vehiculo.empresa)
+      render: (value: any, vehiculo: Vehiculo) => getEmpresaNombre(typeof vehiculo.empresa === 'string' ? vehiculo.empresa : vehiculo.empresa._id)
     },
     {
       key: 'año',
@@ -187,6 +201,14 @@ export default function VehiculosPage() {
       label: 'Acciones',
       render: (value: any, vehiculo: Vehiculo) => (
         <Group gap="xs">
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            color="green"
+            onClick={() => openDetailModal(vehiculo)}
+          >
+            <IconEye size={16} />
+          </ActionIcon>
           <ActionIcon
             size="sm"
             variant="subtle"
@@ -326,6 +348,7 @@ export default function VehiculosPage() {
                     vehiculo={vehiculo}
                     onEdit={openEditModal}
                     onDelete={openDeleteModal}
+                    onView={openDetailModal}
                   />
                 </Grid.Col>
               ))}
@@ -343,23 +366,37 @@ export default function VehiculosPage() {
         </Tabs.Panel>
 
         <Tabs.Panel value="vencimientos">
-          {vehiculosVencimientos?.length > 0 && (
-            <Alert
-              icon={<IconAlertTriangle size={16} />}
-              title="Atención"
-              color="orange"
-              mb="md"
-            >
-              Hay {vehiculosVencimientos?.length || 0} vehículo(s) con documentación próxima a vencer o vencida.
-            </Alert>
-          )}
-
-          <DataTable
-            data={vehiculosVencimientos || []}
-            columns={vencimientosColumns}
-            loading={loading}
-            emptyMessage="No hay vehículos con vencimientos próximos"
+          <DocumentExpiration 
+            vehiculos={vehiculos}
+            mostrarVencidos={true}
+            mostrarProximos={true}
+            mostrarVigentes={false}
+            onEditVehiculo={(vehiculoId) => {
+              const vehiculo = vehiculos.find(v => v._id === vehiculoId);
+              if (vehiculo) openEditModal(vehiculo);
+            }}
           />
+
+          {vehiculosVencimientos?.length > 0 && (
+            <>
+              <Alert
+                icon={<IconAlertTriangle size={16} />}
+                title="Lista de Vehículos con Vencimientos"
+                color="orange"
+                mb="md"
+                mt="md"
+              >
+                Hay {vehiculosVencimientos?.length || 0} vehículo(s) con documentación próxima a vencer o vencida.
+              </Alert>
+
+              <DataTable
+                data={vehiculosVencimientos || []}
+                columns={vencimientosColumns}
+                loading={loading}
+                emptyMessage="No hay vehículos con vencimientos próximos"
+              />
+            </>
+          )}
         </Tabs.Panel>
       </Tabs>
 
@@ -376,6 +413,16 @@ export default function VehiculosPage() {
         onClose={closeFormModal}
         vehiculo={selectedVehiculo}
         onSuccess={handleFormSuccess}
+      />
+
+      <VehiculoDetail
+        vehiculo={vehiculoForDetail}
+        opened={detailModalOpen}
+        onClose={closeDetailModal}
+        onEdit={(vehiculo) => {
+          closeDetailModal();
+          openEditModal(vehiculo);
+        }}
       />
 
       <LoadingOverlay loading={loading}>

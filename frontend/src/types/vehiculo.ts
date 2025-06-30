@@ -7,7 +7,7 @@ export interface Vehiculo {
   año?: number;
   numeroChasis?: string;
   numeroMotor?: string;
-  empresa: string; // ObjectId de Empresa
+  empresa: string | { _id: string; nombre: string }; // ObjectId de Empresa o objeto empresa
   documentacion: VehiculoDocumentacion;
   caracteristicas: VehiculoCaracteristicas;
   mantenimiento: MantenimientoRecord[];
@@ -47,6 +47,13 @@ export interface VehiculoCaracteristicas {
   alto?: number; // en metros
   configuracionEjes?: string;
   tipoCarroceria?: string;
+  capacidadCombustible?: number; // en litros
+  tipoCombustible?: string;
+  dimensiones?: {
+    largo?: number;
+    ancho?: number;
+    alto?: number;
+  };
 }
 
 export interface MantenimientoRecord {
