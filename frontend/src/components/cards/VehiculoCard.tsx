@@ -1,5 +1,5 @@
 import { Card, Badge, Text, Group, Stack, ActionIcon, Tooltip, Progress, Box } from '@mantine/core';
-import { IconCalendar, IconEdit, IconTrash, IconAlertTriangle, IconCheck, IconX } from '@tabler/icons-react';
+import { IconCalendar, IconEdit, IconTrash, IconAlertTriangle, IconCheck, IconX, IconEye } from '@tabler/icons-react';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Vehiculo } from '../../types/vehiculo';
@@ -8,6 +8,7 @@ interface VehiculoCardProps {
   vehiculo: Vehiculo;
   onEdit?: (vehiculo: Vehiculo) => void;
   onDelete?: (id: string) => void;
+  onView?: (vehiculo: Vehiculo) => void;
 }
 
 interface DocumentoEstado {
@@ -105,7 +106,7 @@ const getEstadoGeneral = (documentos: DocumentoEstado[]): { estado: string; colo
   }
 };
 
-export const VehiculoCard: React.FC<VehiculoCardProps> = ({ vehiculo, onEdit, onDelete }) => {
+export const VehiculoCard: React.FC<VehiculoCardProps> = ({ vehiculo, onEdit, onDelete, onView }) => {
   const documentos = getDocumentosEstado(vehiculo);
   const estadoGeneral = getEstadoGeneral(documentos);
 
@@ -120,6 +121,17 @@ export const VehiculoCard: React.FC<VehiculoCardProps> = ({ vehiculo, onEdit, on
             </Badge>
           </Group>
           <Group gap="xs">
+            {onView && (
+              <Tooltip label="Ver detalles">
+                <ActionIcon 
+                  variant="light" 
+                  color="green" 
+                  onClick={() => onView(vehiculo)}
+                >
+                  <IconEye size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
             {onEdit && (
               <Tooltip label="Editar vehículo">
                 <ActionIcon 

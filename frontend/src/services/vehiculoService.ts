@@ -2,6 +2,19 @@ import api from './api';
 import { Vehiculo, VehiculoFilter, VehiculoConVencimientos } from '../types/vehiculo';
 
 export const vehiculoService = {
+  // Obtener todos los vehículos con filtros (alias para compatibilidad)
+  getAll: async (filters: VehiculoFilter = {}) => {
+    const params = new URLSearchParams();
+    
+    if (filters.empresa) params.append('empresa', filters.empresa);
+    if (filters.tipo) params.append('tipo', filters.tipo);
+    if (filters.activo !== undefined) params.append('activo', filters.activo.toString());
+    if (filters.search) params.append('search', filters.search);
+    
+    const response = await api.get(`/vehiculos?${params.toString()}`);
+    return response;
+  },
+
   // Obtener todos los vehículos con filtros
   getVehiculos: async (filters: VehiculoFilter = {}) => {
     const params = new URLSearchParams();
