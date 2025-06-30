@@ -11,14 +11,16 @@ import {
   Badge,
   Tabs,
   Alert,
-  ActionIcon
+  ActionIcon,
+  Grid
 } from '@mantine/core';
-import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash, IconLayoutGrid, IconList } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import DataTable from '../../components/base/DataTable';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import ConfirmModal from '../../components/base/ConfirmModal';
 import VehiculoForm from '../../components/forms/VehiculoForm';
+import { VehiculoCard } from '../../components/cards/VehiculoCard';
 import { vehiculoService } from '../../services/vehiculoService';
 import { empresaService } from '../../services/empresaService';
 import { Vehiculo, VehiculoFilter, VehiculoTipo, VehiculoConVencimientos } from '../../types/vehiculo';
@@ -35,6 +37,7 @@ export default function VehiculosPage() {
   const [activeTab, setActiveTab] = useState<string | null>('todos');
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
 
   const tiposVehiculo: VehiculoTipo[] = ['Camión', 'Acoplado', 'Semirremolque', 'Bitren', 'Furgón', 'Utilitario'];
 
@@ -248,12 +251,31 @@ export default function VehiculosPage() {
 
         <Tabs.Panel value="todos">
           <Card withBorder mb="md">
-            <Title order={4} mb="md">
+            <Group justify="space-between" mb="md">
+              <Title order={4}>
+                <Group gap="sm">
+                  <IconFilter size={20} />
+                  Filtros
+                </Group>
+              </Title>
               <Group gap="sm">
-                <IconFilter size={20} />
-                Filtros
+                <Text size="sm" c="dimmed">Vista:</Text>
+                <ActionIcon
+                  variant={viewMode === 'list' ? 'filled' : 'light'}
+                  color="blue"
+                  onClick={() => setViewMode('list')}
+                >
+                  <IconList size={16} />
+                </ActionIcon>
+                <ActionIcon
+                  variant={viewMode === 'cards' ? 'filled' : 'light'}
+                  color="blue"
+                  onClick={() => setViewMode('cards')}
+                >
+                  <IconLayoutGrid size={16} />
+                </ActionIcon>
               </Group>
-            </Title>
+            </Group>
             <Group>
               <TextInput
                 placeholder="Buscar por dominio, marca o modelo..."
@@ -289,12 +311,35 @@ export default function VehiculosPage() {
             </Group>
           </Card>
 
-          <DataTable
-            data={vehiculos || []}
-            columns={vehiculosColumns}
-            loading={loading}
-            emptyMessage="No se encontraron vehículos"
-          />
+          {viewMode === 'list' ? (
+            <DataTable
+              data={vehiculos || []}
+              columns={vehiculosColumns}
+              loading={loading}
+              emptyMessage="No se encontraron vehículos"
+            />
+          ) : (
+            <Grid>
+              {vehiculos.map((vehiculo) => (
+                <Grid.Col key={vehiculo._id} span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
+                  <VehiculoCard
+                    vehiculo={vehiculo}
+                    onEdit={openEditModal}
+                    onDelete={openDeleteModal}
+                  />
+                </Grid.Col>
+              ))}
+              {vehiculos.length === 0 && !loading && (
+                <Grid.Col span={12}>
+                  <Card withBorder>
+                    <Text ta="center" c="dimmed" py="xl">
+                      No se encontraron vehículos
+                    </Text>
+                  </Card>
+                </Grid.Col>
+              )}
+            </Grid>
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="vencimientos">
