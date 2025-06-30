@@ -158,10 +158,10 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **AddressGeocoder**: Geocodificador de direcciones <!-- COMPLETADO: /frontend/src/components/geocoding/AddressGeocoder.tsx con búsqueda automática, resultados múltiples -->
 
 ### 5.2 Integración de Mapas
-- [ ] **MapView**: Componente de mapa reutilizable
-- [ ] **LocationPicker**: Selector de ubicación en mapa
-- [ ] **DistanceCalculator**: Calculadora de distancias
-- [ ] **RouteVisuizer**: Visualizador de rutas
+- [x] **MapView**: Componente de mapa reutilizable <!-- COMPLETADO: /frontend/src/components/maps/MapView.tsx con Google Maps, controles, fullscreen, hook personalizado -->
+- [x] **LocationPicker**: Selector de ubicación en mapa <!-- COMPLETADO: /frontend/src/components/maps/LocationPicker.tsx con click en mapa, búsqueda, coordenadas manuales -->
+- [x] **DistanceCalculator**: Calculadora de distancias <!-- COMPLETADO: /frontend/src/components/maps/DistanceCalculator.tsx con Google Distance Matrix API, cálculo de costos -->
+- [x] **RouteVisuizer**: Visualizador de rutas <!-- COMPLETADO: /frontend/src/components/maps/RouteVisualizer.tsx con Google Directions API, rutas alternativas, instrucciones -->
 
 **Checkpoint 4**: ✅ Gestión de ubicaciones con mapas funcional <!-- COMPLETADO: Sistema completo de Sites con mapa interactivo Google Maps, geocodificación, coordenadas manuales -->
 
