@@ -7,11 +7,9 @@ import {
   Select,
   Grid,
   Paper,
-  Badge,
   Text,
   ActionIcon,
   Stack,
-  Anchor,
   Tooltip,
   SegmentedControl
 } from '@mantine/core';
@@ -23,7 +21,6 @@ import {
   IconEye,
   IconMapPin,
   IconBuilding,
-  IconPhone,
   IconExternalLink,
   IconMap2,
   IconTable,

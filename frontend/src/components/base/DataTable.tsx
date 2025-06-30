@@ -7,14 +7,12 @@ import {
   TextInput, 
   Select, 
   Pagination, 
-  ActionIcon,
   Badge,
-  Box,
   Center,
   Skeleton
 } from '@mantine/core';
 import { IconSearch, IconSortAscending, IconSortDescending, IconSelector } from '@tabler/icons-react';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../../constants';
 import { BaseFilters } from '../../types';
 

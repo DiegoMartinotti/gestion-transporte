@@ -9,7 +9,6 @@ import {
   Stack,
   Badge,
   Card,
-  Button,
   Select,
   Switch
 } from '@mantine/core';
@@ -17,7 +16,6 @@ import {
   IconMapPin,
   IconEye,
   IconRoute,
-  IconRefresh,
   IconCurrentLocation,
   IconMap
 } from '@tabler/icons-react';

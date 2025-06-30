@@ -178,12 +178,12 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **VehiculoSelector**: Selector para viajes <!-- COMPLETADO: /frontend/src/components/selectors/VehiculoSelector.tsx con filtros avanzados, documentación, múltiple selección -->
 
 ### 6.2 Sistema de Documentación
-- [ ] **DocumentTable**: Tabla de documentos por vehículo
-- [ ] **ExpirationAlerts**: Sistema de alertas automáticas
-- [ ] **DocumentUpload**: Subida de archivos de documentos
-- [ ] **ExpirationCalendar**: Calendario de vencimientos
+- [x] **DocumentTable**: Tabla de documentos por vehículo <!-- COMPLETADO: /frontend/src/components/tables/DocumentTable.tsx con filtros, estados, CRUD completo -->
+- [x] **ExpirationAlerts**: Sistema de alertas automáticas <!-- COMPLETADO: /frontend/src/components/alerts/ExpirationAlerts.tsx con notificaciones, estadísticas, alertas por prioridad -->
+- [x] **DocumentUpload**: Subida de archivos de documentos <!-- COMPLETADO: /frontend/src/components/upload/DocumentUpload.tsx con drag&drop, preview, validación -->
+- [x] **ExpirationCalendar**: Calendario de vencimientos <!-- COMPLETADO: /frontend/src/components/calendar/ExpirationCalendar.tsx con vista mensual, filtros, indicadores -->
 
-**Checkpoint 5**: ✅ Gestión de vehículos con control de documentación
+**Checkpoint 5**: ✅ Gestión de vehículos con control de documentación <!-- COMPLETADO: Sistema completo de vehículos con documentación, alertas de vencimiento, calendario, subida de archivos -->
 
 ---
 
