@@ -9,6 +9,7 @@ import EmpresaDetailPage from './pages/empresas/EmpresaDetailPage';
 import { PersonalPage } from './pages/personal/PersonalPage';
 import { SitesPage } from './pages/sites';
 import VehiculosPage from './pages/vehiculos/VehiculosPage';
+import TramosPage from './pages/tramos/TramosPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/LoginPage';
@@ -44,7 +45,7 @@ export default function AppRoutes() {
         {/* Other routes */}
         <Route path="/personal" element={<PersonalPage />} />
         <Route path="/sites" element={<SitesPage />} />
-        <Route path="/tramos" element={<Container><Text>Tramos - Coming Soon</Text></Container>} />
+        <Route path="/tramos" element={<TramosPage />} />
         <Route path="/vehiculos" element={<VehiculosPage />} />
         <Route path="/viajes" element={<Container><Text>Viajes - Coming Soon</Text></Container>} />
       </Route>

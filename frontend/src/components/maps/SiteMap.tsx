@@ -213,7 +213,7 @@ export default function SiteMap({
         map.fitBounds(bounds, padding);
       }
     }
-  }, [map, filteredSites, infoWindow, onSiteSelect, clientes]);
+  }, [map, filteredSites, infoWindow, onSiteSelect, clientes, markers]);
 
   // Destacar site seleccionado
   useEffect(() => {

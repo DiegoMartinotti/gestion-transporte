@@ -190,12 +190,12 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 7: RUTAS Y TARIFAS (SISTEMA COMPLEJO)
 
 ### 7.1 Gestión de Tramos
-- [ ] **TramoList**: Lista con filtros avanzados
-- [ ] **TramoForm**: Formulario con cálculo automático de distancia
-- [ ] **TramoDetail**: Vista detallada con historial de tarifas
-- [ ] **TarifaHistorial**: Tabla de tarifas históricas
-- [ ] **TarifaForm**: Formulario de tarifas con validación temporal
-- [ ] **TramoSelector**: Selector para viajes
+- [x] **TramoList**: Lista con filtros avanzados <!-- COMPLETADO: /frontend/src/pages/tramos/TramosPage.tsx con filtros por cliente, origen, destino, tabs por estado tarifas -->
+- [x] **TramoForm**: Formulario con cálculo automático de distancia <!-- COMPLETADO: /frontend/src/components/forms/TramoForm.tsx con tabs, validación conflictos, calculadora distancia -->
+- [x] **TramoDetail**: Vista detallada con historial de tarifas <!-- COMPLETADO: /frontend/src/components/details/TramoDetail.tsx con timeline tarifas, calculadora costos -->
+- [x] **TarifaHistorial**: Tabla de tarifas históricas <!-- COMPLETADO: /frontend/src/components/tables/TarifaHistorial.tsx con filtros, ordenamiento, estados -->
+- [x] **TarifaForm**: Formulario de tarifas con validación temporal <!-- COMPLETADO: /frontend/src/components/forms/TarifaForm.tsx con validación superposición fechas -->
+- [x] **TramoSelector**: Selector para viajes <!-- COMPLETADO: /frontend/src/components/selectors/TramoSelector.tsx con filtros avanzados, múltiple selección -->
 
 ### 7.2 Sistema de Tarifas
 - [ ] **TarifaCalculator**: Calculadora de tarifas en tiempo real

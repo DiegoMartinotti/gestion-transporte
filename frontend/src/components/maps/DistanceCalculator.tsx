@@ -22,10 +22,9 @@ import {
   IconGasStation,
   IconCalculator,
   IconRefresh,
-  IconArrowRight,
   IconNavigation
 } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
+// import { notifications } from '@mantine/notifications';
 import { Site } from '../../types';
 
 interface DistanceResult {
