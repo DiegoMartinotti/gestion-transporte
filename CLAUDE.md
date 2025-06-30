@@ -108,6 +108,8 @@ Using Mongoose ODM with:
 
 ## Development Notes
 
+- El front (puerto 3000) y el back (puerto 3001) estan siempre en hot reload.
+
 - **Error Handling**: Centralized error handling with structured logging
 - **Configuration**: Environment-based config in config/ directory  
 - **Documentation**: JSDoc comments throughout codebase
