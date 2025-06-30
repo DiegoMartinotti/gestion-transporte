@@ -92,15 +92,17 @@ export default function SiteSelector({
 
       // Calcular distancias si se proporciona fromLocation
       if (showDistance && fromLocation) {
-        const sitesWithDistance: SiteWithDistance[] = sitesData.map(site => ({
-          ...site,
-          distance: calculateDistance(
-            fromLocation.lat,
-            fromLocation.lng,
-            site.coordenadas.lat,
-            site.coordenadas.lng
-          )
-        }));
+        const sitesWithDistance: SiteWithDistance[] = sitesData
+          .filter(site => site.coordenadas) // Solo sites con coordenadas
+          .map(site => ({
+            ...site,
+            distance: calculateDistance(
+              fromLocation.lat,
+              fromLocation.lng,
+              site.coordenadas!.lat,
+              site.coordenadas!.lng
+            )
+          }));
 
         // Ordenar por distancia
         sitesWithDistance.sort((a, b) => (a.distance || 0) - (b.distance || 0));
@@ -128,6 +130,7 @@ export default function SiteSelector({
 
   const openGoogleMaps = (site: Site, event: React.MouseEvent) => {
     event.stopPropagation();
+    if (!site.coordenadas) return;
     const url = `https://maps.google.com/?q=${site.coordenadas.lat},${site.coordenadas.lng}`;
     window.open(url, '_blank');
   };
@@ -161,10 +164,10 @@ export default function SiteSelector({
           </Group>
 
           <Text size="xs" c="dimmed" truncate>
-            {site.ciudad}, {site.provincia}
+            {site.localidad}, {site.provincia}
           </Text>
 
-          {showCoordinates && (
+          {showCoordinates && site.coordenadas && (
             <Text size="xs" c="dimmed">
               {site.coordenadas.lat.toFixed(4)}, {site.coordenadas.lng.toFixed(4)}
             </Text>

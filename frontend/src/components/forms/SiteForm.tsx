@@ -71,15 +71,15 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
     initialValues: {
       nombre: site?.nombre || '',
       direccion: site?.direccion || '',
-      ciudad: site?.ciudad || '',
+      ciudad: site?.localidad || '',
       provincia: site?.provincia || '',
-      codigoPostal: site?.codigoPostal || '',
-      pais: site?.pais || 'Argentina',
+      codigoPostal: '',
+      pais: 'Argentina',
       cliente: typeof site?.cliente === 'string' ? site.cliente : site?.cliente?._id || '',
       coordenadas: site?.coordenadas || { lat: 0, lng: 0 },
-      contacto: site?.contacto || '',
-      telefono: site?.telefono || '',
-      activo: site?.activo ?? true
+      contacto: '',
+      telefono: '',
+      activo: true
     },
     validate: {
       nombre: (value) => (!value ? 'El nombre es requerido' : null),

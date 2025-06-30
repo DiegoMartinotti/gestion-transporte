@@ -115,23 +115,6 @@ const SitesPage: React.FC = () => {
     }
   };
 
-  const handleToggleActive = async (site: Site) => {
-    try {
-      await siteService.toggleActive(site._id);
-      notifications.show({
-        title: 'Éxito',
-        message: `Site ${site.activo ? 'desactivado' : 'activado'} correctamente`,
-        color: 'green'
-      });
-      loadSites();
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo cambiar el estado del site',
-        color: 'red'
-      });
-    }
-  };
 
   const getClienteNombre = (cliente: string | Cliente): string => {
     if (typeof cliente === 'string') {
@@ -142,6 +125,7 @@ const SitesPage: React.FC = () => {
   };
 
   const openGoogleMaps = (site: Site) => {
+    if (!site.coordenadas) return;
     const url = `https://maps.google.com/?q=${site.coordenadas.lat},${site.coordenadas.lng}`;
     window.open(url, '_blank');
   };
@@ -151,12 +135,12 @@ const SitesPage: React.FC = () => {
       key: 'nombre',
       label: 'Nombre',
       sortable: true,
-      render: (site: Site) => (
+      render: (value: any, site: Site) => (
         <Stack gap={4}>
-          <Text fw={500}>{site.nombre}</Text>
+          <Text fw={500}>{site?.nombre || 'Sin nombre'}</Text>
           <Group gap={4}>
             <IconMapPin size={14} style={{ color: 'var(--mantine-color-gray-6)' }} />
-            <Text size="xs" c="dimmed">{site.ciudad}, {site.provincia}</Text>
+            <Text size="xs" c="dimmed">{site?.localidad || 'Sin localidad'}, {site?.provincia || 'Sin provincia'}</Text>
           </Group>
         </Stack>
       )
@@ -165,96 +149,88 @@ const SitesPage: React.FC = () => {
       key: 'cliente',
       label: 'Cliente',
       sortable: true,
-      render: (site: Site) => (
+      render: (value: any, site: Site) => (
         <Group gap={8}>
           <IconBuilding size={16} style={{ color: 'var(--mantine-color-blue-6)' }} />
-          <Text>{getClienteNombre(site.cliente)}</Text>
+          <Text>{site && site.cliente ? getClienteNombre(site.cliente) : 'Sin cliente'}</Text>
         </Group>
       )
     },
     {
       key: 'direccion',
       label: 'Dirección',
-      render: (site: Site) => (
+      render: (value: any, site: Site) => (
         <Stack gap={4}>
-          <Text size="sm">{site.direccion}</Text>
-          {site.codigoPostal && (
-            <Text size="xs" c="dimmed">CP: {site.codigoPostal}</Text>
+          <Text size="sm">{site?.direccion || '-'}</Text>
+          {site?.codigo && (
+            <Text size="xs" c="dimmed">Código: {site.codigo}</Text>
           )}
         </Stack>
       )
     },
     {
-      key: 'contacto',
-      label: 'Contacto',
-      render: (site: Site) => (
+      key: 'fechas',
+      label: 'Fechas',
+      render: (value: any, site: Site) => (
         <Stack gap={4}>
-          {site.contacto && <Text size="sm">{site.contacto}</Text>}
-          {site.telefono && (
-            <Group gap={4}>
-              <IconPhone size={14} style={{ color: 'var(--mantine-color-gray-6)' }} />
-              <Text size="xs">{site.telefono}</Text>
-            </Group>
-          )}
+          <Text size="xs" c="dimmed">
+            Creado: {site?.createdAt ? new Date(site.createdAt).toLocaleDateString() : 'No disponible'}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Actualizado: {site?.updatedAt ? new Date(site.updatedAt).toLocaleDateString() : 'No disponible'}
+          </Text>
         </Stack>
       )
     },
     {
       key: 'coordenadas',
       label: 'Ubicación',
-      render: (site: Site) => (
+      render: (value: any, site: Site) => (
         <Group gap={8}>
-          <Stack gap={2}>
-            <Text size="xs" c="dimmed">
-              Lat: {site.coordenadas.lat.toFixed(6)}
-            </Text>
-            <Text size="xs" c="dimmed">
-              Lng: {site.coordenadas.lng.toFixed(6)}
-            </Text>
-          </Stack>
-          <Tooltip label="Ver en Google Maps">
-            <ActionIcon
-              size="sm"
-              variant="subtle"
-              color="blue"
-              onClick={() => openGoogleMaps(site)}
-            >
-              <IconExternalLink size={14} />
-            </ActionIcon>
-          </Tooltip>
+          {site?.coordenadas ? (
+            <>
+              <Stack gap={2}>
+                <Text size="xs" c="dimmed">
+                  Lat: {site.coordenadas.lat.toFixed(6)}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Lng: {site.coordenadas.lng.toFixed(6)}
+                </Text>
+              </Stack>
+              <Tooltip label="Ver en Google Maps">
+                <ActionIcon
+                  size="sm"
+                  variant="subtle"
+                  color="blue"
+                  onClick={() => openGoogleMaps(site)}
+                >
+                  <IconExternalLink size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </>
+          ) : (
+            <Text size="xs" c="dimmed">Sin coordenadas</Text>
+          )}
         </Group>
-      )
-    },
-    {
-      key: 'activo',
-      label: 'Estado',
-      render: (site: Site) => (
-        <Badge
-          color={site.activo ? 'green' : 'red'}
-          variant="filled"
-          size="sm"
-          style={{ cursor: 'pointer' }}
-          onClick={() => handleToggleActive(site)}
-        >
-          {site.activo ? 'Activo' : 'Inactivo'}
-        </Badge>
       )
     },
     {
       key: 'actions',
       label: 'Acciones',
-      render: (site: Site) => (
+      render: (value: any, site: Site) => (
         <Group gap={4}>
           <Tooltip label="Ver detalles">
             <ActionIcon size="sm" variant="subtle" color="blue">
               <IconEye size={16} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Ver en mapa">
-            <ActionIcon size="sm" variant="subtle" color="green" onClick={() => openGoogleMaps(site)}>
-              <IconMap2 size={16} />
-            </ActionIcon>
-          </Tooltip>
+          {site?.coordenadas && (
+            <Tooltip label="Ver en mapa">
+              <ActionIcon size="sm" variant="subtle" color="green" onClick={() => openGoogleMaps(site)}>
+                <IconMap2 size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
           <Tooltip label="Editar">
             <ActionIcon size="sm" variant="subtle" color="yellow">
               <IconEdit size={16} />
@@ -265,7 +241,7 @@ const SitesPage: React.FC = () => {
               size="sm" 
               variant="subtle" 
               color="red"
-              onClick={() => setDeleteModal({ isOpen: true, site })}
+              onClick={() => site && setDeleteModal({ isOpen: true, site })}
             >
               <IconTrash size={16} />
             </ActionIcon>
@@ -300,22 +276,6 @@ const SitesPage: React.FC = () => {
                 ]}
                 value={filters.cliente || ''}
                 onChange={(value) => handleFilterChange('cliente', value || undefined)}
-                clearable
-              />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 2 }}>
-              <Select
-                label="Estado"
-                placeholder="Todos"
-                data={[
-                  { value: '', label: 'Todos' },
-                  { value: 'true', label: 'Activos' },
-                  { value: 'false', label: 'Inactivos' }
-                ]}
-                value={filters.activo?.toString() || ''}
-                onChange={(value) => 
-                  handleFilterChange('activo', value ? value === 'true' : undefined)
-                }
                 clearable
               />
             </Grid.Col>
