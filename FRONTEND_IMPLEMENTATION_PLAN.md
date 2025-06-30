@@ -150,10 +150,10 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 5: UBICACIONES Y GEOCODIFICACIÓN
 
 ### 5.1 Gestión de Sites
-- [ ] **SiteList**: Lista con filtros por cliente
-- [ ] **SiteForm**: Formulario con geocodificación automática
+- [x] **SiteList**: Lista con filtros por cliente <!-- COMPLETADO: /frontend/src/pages/sites/SitesPage.tsx con DataTable, filtros por cliente y estado, integración con Google Maps -->
+- [x] **SiteForm**: Formulario con geocodificación automática <!-- COMPLETADO: /frontend/src/components/forms/SiteForm.tsx con geocodificación, validación de coordenadas, integración con provincias argentinas -->
 - [ ] **SiteMap**: Mapa interactivo con ubicaciones
-- [ ] **SiteSelector**: Selector con búsqueda geográfica
+- [x] **SiteSelector**: Selector con búsqueda geográfica <!-- COMPLETADO: /frontend/src/components/selectors/SiteSelector.tsx con cálculo de distancias, filtros por cliente, integración con Google Maps -->
 - [ ] **CoordinateInput**: Input para coordenadas manuales
 - [ ] **AddressGeocoder**: Geocodificador de direcciones
 
