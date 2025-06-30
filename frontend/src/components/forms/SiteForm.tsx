@@ -65,7 +65,6 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
-  const [geocodeResult, setGeocodeResult] = useState<{ lat: number; lng: number } | null>(null);
 
   const form = useForm<CreateSiteData>({
     initialValues: {
@@ -131,7 +130,6 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
     try {
       setGeocoding(true);
       const coords = await siteService.geocodeAddress(fullAddress);
-      setGeocodeResult(coords);
       
       form.setFieldValue('coordenadas', coords);
       
