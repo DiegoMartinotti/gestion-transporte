@@ -88,7 +88,7 @@ router.post('/diagnose-tipos', async (req: Request, res: Response): Promise<void
 router.post('/updateVigenciaMasiva', tramoController.updateVigenciaMasiva);
 
 // Ruta para calcular tarifa
-router.post('/calcular-tarifa', tramoController.calcularTarifa);
+router.post('/:id/calculate-tarifa', tramoController.calcularTarifa);
 
 // Ruta para obtener distancias calculadas
 router.get('/distancias', tramoController.getDistanciasCalculadas);

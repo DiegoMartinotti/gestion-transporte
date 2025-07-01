@@ -198,13 +198,13 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **TramoSelector**: Selector para viajes <!-- COMPLETADO: /frontend/src/components/selectors/TramoSelector.tsx con filtros avanzados, múltiple selección -->
 
 ### 7.2 Sistema de Tarifas
-- [ ] **TarifaCalculator**: Calculadora de tarifas en tiempo real
-- [ ] **TarifaVersioning**: Control de versiones de tarifas
-- [ ] **TarifaConflictDetector**: Detector de conflictos temporales
-- [ ] **TipoCalculoSelector**: Selector de métodos de cálculo
-- [ ] **TarifaPreview**: Vista previa de cálculos
+- [x] **TarifaCalculator**: Calculadora de tarifas en tiempo real <!-- COMPLETADO: /frontend/src/components/calculators/TarifaCalculator.tsx con cálculo dinámico, desglose detallado, indicadores por camión/km -->
+- [x] **TarifaVersioning**: Control de versiones de tarifas <!-- COMPLETADO: /frontend/src/components/versioning/TarifaVersioning.tsx con timeline, activación/desactivación, modal edición -->
+- [x] **TarifaConflictDetector**: Detector de conflictos temporales <!-- COMPLETADO: /frontend/src/components/detectors/TarifaConflictDetector.tsx con detección automática, resolución de conflictos -->
+- [x] **TipoCalculoSelector**: Selector de métodos de cálculo <!-- COMPLETADO: /frontend/src/components/selectors/TipoCalculoSelector.tsx con 6 tipos, validación fórmulas, configuraciones -->
+- [x] **TarifaPreview**: Vista previa de cálculos <!-- COMPLETADO: /frontend/src/components/preview/TarifaPreview.tsx con escenarios, comparación, desglose completo -->
 
-**Checkpoint 6**: ✅ Sistema de rutas y tarifas funcionando
+**Checkpoint 6**: ✅ Sistema de rutas y tarifas funcionando <!-- COMPLETADO: Sistema completo de tarifas con calculadora tiempo real, versionado, detección conflictos, selector métodos cálculo, vista previa -->
 
 ---
 

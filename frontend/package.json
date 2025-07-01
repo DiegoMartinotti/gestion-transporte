@@ -14,6 +14,7 @@
     "@mantine/notifications": "^8.1.1",
     "@mantine/spotlight": "^8.1.1",
     "@tabler/icons-react": "^3.34.0",
+    "@tanstack/react-query": "^5.81.5",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

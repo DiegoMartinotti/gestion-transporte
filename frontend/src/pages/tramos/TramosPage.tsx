@@ -39,58 +39,10 @@ import { siteService } from '../../services/siteService';
 import TramoForm from '../../components/forms/TramoForm';
 import TramoDetail from '../../components/details/TramoDetail';
 import ConfirmModal from '../../components/base/ConfirmModal';
-
-interface Tramo {
-  _id: string;
-  origen: {
-    _id: string;
-    nombre: string;
-    direccion: string;
-  };
-  destino: {
-    _id: string;
-    nombre: string;
-    direccion: string;
-  };
-  cliente: {
-    _id: string;
-    nombre: string;
-  };
-  distancia: number;
-  // Campos de la tarifa vigente a nivel raíz (desde el backend)
-  tipo?: 'TRMC' | 'TRMI';
-  metodoCalculo?: 'Kilometro' | 'Palet' | 'Fijo';
-  valor?: number;
-  valorPeaje?: number;
-  vigenciaDesde?: string;
-  vigenciaHasta?: string;
-  // Arrays y objetos opcionales
-  tarifasHistoricas?: Array<{
-    _id: string;
-    tipo: 'TRMC' | 'TRMI';
-    metodoCalculo: 'Kilometro' | 'Palet' | 'Fijo';
-    valor: number;
-    valorPeaje: number;
-    vigenciaDesde: string;
-    vigenciaHasta: string;
-  }>;
-  tarifaVigente?: {
-    tipo: 'TRMC' | 'TRMI';
-    metodoCalculo: 'Kilometro' | 'Palet' | 'Fijo';
-    valor: number;
-    valorPeaje: number;
-    vigenciaDesde: string;
-    vigenciaHasta: string;
-  };
-  originalId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface Cliente {
-  _id: string;
-  nombre: string;
-}
+import { TarifaCalculator } from '../../components/calculators/TarifaCalculator';
+import { TarifaVersioning } from '../../components/versioning/TarifaVersioning';
+import { TramosSelector } from '../../components/selectors/TramosSelector';
+import { Tramo, Cliente, Site } from '../../types/tramo';
 
 interface LocalSite {
   _id: string;
@@ -537,29 +489,61 @@ const TramosPage: React.FC = () => {
           <Tabs.Tab value="sin-tarifa" color="red">
             Sin Tarifa ({tramosStats.sinTarifa})
           </Tabs.Tab>
+          <Tabs.Tab value="calculadora" color="blue">
+            Calculadora de Tarifas
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value={activeTab}>
-          <Paper p="md" withBorder>
-            <LoadingOverlay visible={loading} />
-            
-            {viewMode === 'list' ? (
-              <DataTable
-                data={filteredTramos}
-                columns={columns}
-                loading={loading}
-                emptyMessage="No se encontraron tramos"
+          {activeTab === 'calculadora' ? (
+            <Stack gap="md">
+              <TramosSelector
+                onTramoSelect={(tramo) => setSelectedTramo(tramo)}
+                selectedTramo={selectedTramo}
               />
-            ) : (
-              <Grid>
-                {filteredTramos.map(tramo => (
-                  <Grid.Col key={tramo._id} span={{ base: 12, sm: 6, md: 4 }}>
-                    {renderTramoCard(tramo)}
-                  </Grid.Col>
-                ))}
-              </Grid>
-            )}
-          </Paper>
+              
+              {selectedTramo && (
+                <>
+                  <TarifaCalculator 
+                    tramoId={selectedTramo._id}
+                    onCalculationChange={(result) => {
+                      // Manejar resultado del cálculo
+                      console.log('Resultado cálculo:', result);
+                    }}
+                  />
+                  
+                  <TarifaVersioning
+                    tramoId={selectedTramo._id}
+                    onVersionSelect={(version) => {
+                      // Manejar selección de versión
+                      console.log('Versión seleccionada:', version);
+                    }}
+                  />
+                </>
+              )}
+            </Stack>
+          ) : (
+            <Paper p="md" withBorder>
+              <LoadingOverlay visible={loading} />
+              
+              {viewMode === 'list' ? (
+                <DataTable
+                  data={filteredTramos}
+                  columns={columns}
+                  loading={loading}
+                  emptyMessage="No se encontraron tramos"
+                />
+              ) : (
+                <Grid>
+                  {filteredTramos.map(tramo => (
+                    <Grid.Col key={tramo._id} span={{ base: 12, sm: 6, md: 4 }}>
+                      {renderTramoCard(tramo)}
+                    </Grid.Col>
+                  ))}
+                </Grid>
+              )}
+            </Paper>
+          )}
         </Tabs.Panel>
       </Tabs>
 
