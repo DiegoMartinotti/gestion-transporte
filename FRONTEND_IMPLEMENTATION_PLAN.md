@@ -211,11 +211,11 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 8: EXTRAS Y FÓRMULAS PERSONALIZADAS
 
 ### 8.1 Gestión de Extras
-- [ ] **ExtraList**: Lista de extras por cliente
-- [ ] **ExtraForm**: Formulario con vigencia temporal
-- [ ] **ExtraCard**: Tarjeta con información de vigencia
-- [ ] **ExtraSelector**: Selector múltiple para viajes
-- [ ] **ExtraCalculator**: Calculadora de extras
+- [x] **ExtraList**: Lista de extras por cliente <!-- COMPLETADO: /frontend/src/pages/extras/ExtrasPage.tsx con filtros, tabs por vigencia, búsqueda -->
+- [x] **ExtraForm**: Formulario con vigencia temporal <!-- COMPLETADO: /frontend/src/components/forms/ExtraForm.tsx con validación temporal, prevención superposición -->
+- [x] **ExtraCard**: Tarjeta con información de vigencia <!-- COMPLETADO: /frontend/src/components/cards/ExtraCard.tsx con progress bar vigencia, alertas vencimiento -->
+- [x] **ExtraSelector**: Selector múltiple para viajes <!-- COMPLETADO: /frontend/src/components/selectors/ExtraSelector.tsx con cantidades, subtotales, control múltiple -->
+- [x] **ExtraCalculator**: Calculadora de extras <!-- COMPLETADO: /frontend/src/components/calculators/ExtraCalculator.tsx con desglose detallado, cálculos dinámicos -->
 
 ### 8.2 Fórmulas Personalizadas
 - [ ] **FormulaEditor**: Editor de fórmulas con MathJS
