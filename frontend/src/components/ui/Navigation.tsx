@@ -9,7 +9,8 @@ import {
   IconRoute, 
   IconTruck, 
   IconMap,
-  IconLogout
+  IconLogout,
+  IconCalculator
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -22,6 +23,7 @@ const navigationItems = [
   { label: 'Tramos', icon: IconRoute, link: '/tramos' },
   { label: 'Vehículos', icon: IconTruck, link: '/vehiculos' },
   { label: 'Viajes', icon: IconMap, link: '/viajes' },
+  { label: 'Calculadora', icon: IconCalculator, link: '/calculadora' },
 ];
 
 export default function Navigation() {

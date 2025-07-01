@@ -1236,15 +1236,36 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
         if (!tarifaSeleccionada) {
             const tarifaVigente = (tramo as any).getTarifaVigente(fechaConsulta, tipoTramo);
             
-            if (!tarifaVigente && !permitirTramoNoVigente) {
-                res.status(404).json({
-                    success: false,
-                    message: `No se encontró una tarifa vigente de tipo ${tipoTramo} para la fecha ${fecha}`
-                });
-                return;
+            if (!tarifaVigente) {
+                // Si no hay tarifa vigente, buscar la más reciente del tipo solicitado
+                logger.debug(`No se encontró tarifa vigente de tipo ${tipoTramo}, buscando la más reciente`);
+                
+                if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
+                    const tarifasDelTipo = tramo.tarifasHistoricas.filter(t => t.tipo === tipoTramo);
+                    
+                    if (tarifasDelTipo.length > 0) {
+                        // Ordenar por fecha de vigencia hasta (más reciente primero)
+                        tarifasDelTipo.sort((a, b) => new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime());
+                        tarifaSeleccionada = tarifasDelTipo[0];
+                        
+                        logger.debug(`Usando tarifa más reciente de tipo ${tipoTramo}:`, {
+                            id: tarifaSeleccionada._id,
+                            valor: tarifaSeleccionada.valor,
+                            vigenciaHasta: tarifaSeleccionada.vigenciaHasta
+                        });
+                    }
+                }
+                
+                if (!tarifaSeleccionada && !permitirTramoNoVigente) {
+                    res.status(404).json({
+                        success: false,
+                        message: `No se encontró una tarifa vigente ni histórica de tipo ${tipoTramo} para la fecha ${fecha}`
+                    });
+                    return;
+                }
+            } else {
+                tarifaSeleccionada = tarifaVigente;
             }
-            
-            tarifaSeleccionada = tarifaVigente;
             
             if (metodoCalculo && tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
                 logger.debug(`Buscando tarifa con método de cálculo: ${metodoCalculo} y tipo: ${tipoTramo}`);
