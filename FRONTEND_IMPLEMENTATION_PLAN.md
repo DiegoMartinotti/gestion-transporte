@@ -218,13 +218,14 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **ExtraCalculator**: Calculadora de extras <!-- COMPLETADO: /frontend/src/components/calculators/ExtraCalculator.tsx con desglose detallado, cálculos dinámicos -->
 
 ### 8.2 Fórmulas Personalizadas
-- [ ] **FormulaEditor**: Editor de fórmulas con MathJS
-- [ ] **FormulaValidator**: Validador de sintaxis
-- [ ] **FormulaPreview**: Vista previa de cálculos
-- [ ] **VariableHelper**: Ayuda para variables disponibles
-- [ ] **FormulaHistory**: Historial de fórmulas por cliente
+- [x] **FormulaEditor**: Editor de fórmulas con MathJS <!-- COMPLETADO: /frontend/src/components/forms/FormulaForm.tsx - Editor completo con validación tiempo real, conflictos de vigencia, ejemplos -->
+- [x] **FormulaValidator**: Validador de sintaxis <!-- COMPLETADO: /frontend/src/components/validators/FormulaValidator.tsx - Validación con MathJS y alertas visuales -->
+- [x] **FormulaPreview**: Vista previa de cálculos <!-- COMPLETADO: /frontend/src/components/preview/FormulaPreview.tsx - Calculadora personalizada y escenarios de prueba -->
+- [x] **VariableHelper**: Ayuda para variables disponibles <!-- COMPLETADO: /frontend/src/components/helpers/VariableHelper.tsx - Panel completo con variables, funciones, operadores y ejemplos -->
+- [x] **FormulaHistory**: Historial de fórmulas por cliente <!-- COMPLETADO: /frontend/src/components/tables/FormulaHistorialTable.tsx - Tabla con timeline, states de vigencia, CRUD completo -->
+- [x] **FormulaService**: Servicio completo para API de fórmulas <!-- COMPLETADO: /frontend/src/services/formulaService.ts - Con validación, cálculo, conflictos, historial -->
 
-**Checkpoint 7**: ✅ Sistema de extras y fórmulas funcionando
+**Checkpoint 7**: ✅ Sistema de extras y fórmulas funcionando <!-- COMPLETADO: Sistema completo de fórmulas personalizadas con editor MathJS, validación tiempo real, vista previa con escenarios, ayuda de variables/funciones, historial cronológico con timeline -->
 
 ---
 
