@@ -109,6 +109,7 @@ const CalculadoraPage: React.FC = () => {
                 <Grid.Col span={12}>
                   <TarifaCalculator 
                     tramoId={selectedTramo._id}
+                    tramo={selectedTramo}
                     onCalculationChange={(result) => {
                       console.log('Resultado cálculo:', result);
                     }}

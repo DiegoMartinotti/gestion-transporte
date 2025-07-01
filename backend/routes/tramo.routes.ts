@@ -6,6 +6,7 @@
 import express from 'express';
 const router = express.Router();
 import * as tramoController from '../controllers/tramo';
+import * as tramoControllerTS from '../controllers/tramoController';
 import logger from '../utils/logger';
 
 // Middleware para debugging de solicitudes grandes
@@ -38,6 +39,17 @@ router.use('/bulk', (req: express.Request, res: express.Response, next: express.
 // Rutas específicas
 router.get('/cliente/:cliente', tramoController.getTramosByCliente);
 router.get('/distancias', tramoController.getDistanciasCalculadas);
+
+// Ruta para calcular tarifa
+router.post('/:id/calculate-tarifa', tramoControllerTS.calcularTarifa);
+
+// Rutas para tarifas históricas (por implementar)
+// router.get('/:id/tarifas', tramoControllerTS.getTarifaVersions);
+// router.post('/:id/tarifas', tramoControllerTS.createTarifaVersion);
+// router.put('/:id/tarifas/:versionId', tramoControllerTS.updateTarifaVersion);
+// router.patch('/:id/tarifas/:versionId/toggle', tramoControllerTS.toggleTarifaVersion);
+// router.post('/:id/tarifas/detect-conflicts', tramoControllerTS.detectConflicts);
+// router.post('/:id/tarifas/preview', tramoControllerTS.previewCalculation);
 
 // Exportar el router
 export default router;

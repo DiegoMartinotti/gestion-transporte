@@ -23,6 +23,7 @@ import { calculateTarifa } from '../../services/tarifaService';
 
 interface TarifaCalculatorProps {
   tramoId?: string;
+  tramo?: any; // Información completa del tramo
   onCalculationChange?: (calculation: CalculationResult) => void;
   readonly?: boolean;
 }
@@ -55,20 +56,22 @@ interface CalculationResult {
 
 export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
   tramoId,
+  tramo,
   onCalculationChange,
   readonly = false
 }) => {
   const [params, setParams] = useState<CalculationParams>({
-    cliente: '',
-    origen: '',
-    destino: '',
+    cliente: typeof tramo?.cliente === 'string' ? tramo.cliente : tramo?.cliente?._id || '',
+    origen: tramo?.origen?._id || tramo?.origen || '',
+    destino: tramo?.destino?._id || tramo?.destino || '',
     fecha: new Date().toISOString().split('T')[0],
     palets: 1,
-    tipoTramo: 'Sider',
+    tipoTramo: 'TRMC',
     tramoId: tramoId
   });
 
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const [availableTypes, setAvailableTypes] = useState<string[]>(['TRMC', 'TRMI']);
 
   const calculationMutation = useMutation({
     mutationFn: (data: { tramoId: string; params: CalculationParams }) =>
@@ -81,19 +84,48 @@ export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
 
   const handleCalculate = () => {
     if (!tramoId) return;
-    calculationMutation.mutate({ tramoId, params });
+    console.log('Calculando tarifa con:', { tramoId, params, tramo });
+    // Extraer solo el ID real del tramo (sin el sufijo del tipo)
+    const realTramoId = tramoId.split('-')[0];
+    console.log('ID real del tramo:', realTramoId);
+    calculationMutation.mutate({ tramoId: realTramoId, params });
   };
 
   const handleParamChange = (field: keyof CalculationParams, value: any) => {
     setParams(prev => ({ ...prev, [field]: value }));
   };
 
+  // Actualizar parámetros cuando cambia el tramo
+  useEffect(() => {
+    if (tramo) {
+      setParams(prev => ({
+        ...prev,
+        cliente: typeof tramo.cliente === 'string' ? tramo.cliente : tramo.cliente?._id || '',
+        origen: tramo.origen?._id || tramo.origen || '',
+        destino: tramo.destino?._id || tramo.destino || '',
+        tramoId: tramoId
+      }));
+      
+      // Si hay tarifas históricas, obtener los tipos disponibles
+      if (tramo.tarifasHistoricas && Array.isArray(tramo.tarifasHistoricas) && tramo.tarifasHistoricas.length > 0) {
+        const tipos = Array.from(new Set(tramo.tarifasHistoricas.map((t: any) => t.tipo).filter(Boolean))) as string[];
+        if (tipos.length > 0) {
+          setAvailableTypes(tipos);
+          // Si el tipo actual no está en los disponibles, usar el primero
+          if (!tipos.includes(params.tipoTramo)) {
+            setParams(prev => ({ ...prev, tipoTramo: tipos[0] }));
+          }
+        }
+      }
+    }
+  }, [tramo, tramoId]);
+
+  // Calcular automáticamente cuando hay datos suficientes
   useEffect(() => {
     if (tramoId && params.palets && params.cliente && params.origen && params.destino) {
-      setParams(prev => ({ ...prev, tramoId }));
       handleCalculate();
     }
-  }, [tramoId, params.palets, params.cliente, params.origen, params.destino]);
+  }, [tramoId, params.palets, params.cliente, params.origen, params.destino, params.tipoTramo]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -129,9 +161,10 @@ export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
                 <TextInput
                   label="Cliente"
                   placeholder="Nombre del cliente"
-                  value={params.cliente}
+                  value={tramo?.cliente?.nombre || params.cliente}
                   onChange={(event) => handleParamChange('cliente', event.currentTarget.value)}
-                  disabled={readonly}
+                  disabled={readonly || !!tramo}
+                  readOnly={!!tramo}
                 />
                 
                 <DateInput
@@ -147,17 +180,19 @@ export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
                 <TextInput
                   label="Origen"
                   placeholder="Sitio de origen"
-                  value={params.origen}
+                  value={tramo?.origen?.nombre || params.origen}
                   onChange={(event) => handleParamChange('origen', event.currentTarget.value)}
-                  disabled={readonly}
+                  disabled={readonly || !!tramo}
+                  readOnly={!!tramo}
                 />
                 
                 <TextInput
                   label="Destino"
                   placeholder="Sitio de destino"
-                  value={params.destino}
+                  value={tramo?.destino?.nombre || params.destino}
                   onChange={(event) => handleParamChange('destino', event.currentTarget.value)}
-                  disabled={readonly}
+                  disabled={readonly || !!tramo}
+                  readOnly={!!tramo}
                 />
               </SimpleGrid>
 
@@ -176,11 +211,7 @@ export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
                   placeholder="Seleccionar tipo"
                   value={params.tipoTramo}
                   onChange={(value) => handleParamChange('tipoTramo', value)}
-                  data={[
-                    { value: 'Sider', label: 'Sider' },
-                    { value: 'Bitren', label: 'Bitrén' },
-                    { value: 'General', label: 'General' }
-                  ]}
+                  data={availableTypes?.map(tipo => ({ value: tipo, label: tipo })) || []}
                   disabled={readonly}
                 />
               </SimpleGrid>
@@ -216,7 +247,7 @@ export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
 
                 {/* Desglose detallado */}
                 <Stack gap="xs">
-                  {result.desglose.map((item, index) => (
+                  {result.desglose && Array.isArray(result.desglose) && result.desglose.map((item, index) => (
                     <Group key={index} justify="space-between">
                       <Text size="sm">{item.concepto}</Text>
                       <Text size="sm" fw={500}>

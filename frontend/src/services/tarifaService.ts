@@ -55,37 +55,37 @@ export interface TarifaConflict {
 export const tarifaService = {
   // Calcular tarifa en tiempo real
   calculateTarifa: async (tramoId: string, params: CalculationParams): Promise<CalculationResult> => {
-    const response = await api.post(`/tramos/${tramoId}/calculate-tarifa`, params);
+    const response = await api.post(`/tramo/${tramoId}/calculate-tarifa`, params);
     return response.data as CalculationResult;
   },
 
   // Obtener versiones de tarifas
   getTarifaVersions: async (tramoId: string): Promise<TarifaVersion[]> => {
-    const response = await api.get(`/tramos/${tramoId}/tarifas`);
+    const response = await api.get(`/tramo/${tramoId}/tarifas`);
     return response.data as TarifaVersion[];
   },
 
   // Crear nueva versión de tarifa
   createTarifaVersion: async (tramoId: string, version: Partial<TarifaVersion>): Promise<TarifaVersion> => {
-    const response = await api.post(`/tramos/${tramoId}/tarifas`, version);
+    const response = await api.post(`/tramo/${tramoId}/tarifas`, version);
     return response.data as TarifaVersion;
   },
 
   // Actualizar versión de tarifa
   updateTarifaVersion: async (tramoId: string, versionId: string, version: Partial<TarifaVersion>): Promise<TarifaVersion> => {
-    const response = await api.put(`/tramos/${tramoId}/tarifas/${versionId}`, version);
+    const response = await api.put(`/tramo/${tramoId}/tarifas/${versionId}`, version);
     return response.data as TarifaVersion;
   },
 
   // Activar/desactivar versión
   toggleTarifaVersion: async (tramoId: string, versionId: string, activa: boolean): Promise<TarifaVersion> => {
-    const response = await api.patch(`/tramos/${tramoId}/tarifas/${versionId}/toggle`, { activa });
+    const response = await api.patch(`/tramo/${tramoId}/tarifas/${versionId}/toggle`, { activa });
     return response.data as TarifaVersion;
   },
 
   // Detectar conflictos de fechas
   detectConflicts: async (tramoId: string, version: Partial<TarifaVersion>): Promise<TarifaConflict[]> => {
-    const response = await api.post(`/tramos/${tramoId}/tarifas/detect-conflicts`, version);
+    const response = await api.post(`/tramo/${tramoId}/tarifas/detect-conflicts`, version);
     return response.data as TarifaConflict[];
   },
 
@@ -97,7 +97,7 @@ export const tarifaService = {
 
   // Vista previa de cálculo con nueva tarifa
   previewCalculation: async (tramoId: string, version: Partial<TarifaVersion>, params: CalculationParams): Promise<CalculationResult> => {
-    const response = await api.post(`/tramos/${tramoId}/tarifas/preview`, { version, params });
+    const response = await api.post(`/tramo/${tramoId}/tarifas/preview`, { version, params });
     return response.data as CalculationResult;
   }
 };

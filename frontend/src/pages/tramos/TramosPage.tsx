@@ -506,6 +506,7 @@ const TramosPage: React.FC = () => {
                 <>
                   <TarifaCalculator 
                     tramoId={selectedTramo._id}
+                    tramo={selectedTramo}
                     onCalculationChange={(result) => {
                       // Manejar resultado del cálculo
                       console.log('Resultado cálculo:', result);
