@@ -31,7 +31,7 @@ import {
   IconAlertTriangle
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { evaluate } from 'mathjs';
+import * as math from 'mathjs';
 
 interface FormulaPersonalizada {
   _id: string;
@@ -155,7 +155,7 @@ export const FormulaProcessor: React.FC<FormulaProcessorProps> = ({
       });
 
       // Evaluar la fórmula
-      const resultado = evaluate(formulaToUse, scope);
+      const resultado = math.evaluate(formulaToUse, scope);
       const endTime = performance.now();
 
       const formulaResult: FormulaResult = {
