@@ -395,12 +395,10 @@ export function OrdenesCompraPage() {
             columns={columns}
             data={ordenes}
             loading={loading}
-            pagination={{
-              page: pagination.page,
-              totalPages: pagination.totalPages,
-              onPageChange: (page: number) => setPagination(prev => ({ ...prev, page }))
-            }}
-            emptyText="No se encontraron órdenes de compra"
+            currentPage={pagination.page}
+            totalItems={pagination.total}
+            onPageChange={(page: number) => setPagination(prev => ({ ...prev, page }))}
+            emptyMessage="No se encontraron órdenes de compra"
           />
         </Card>
       </Stack>

@@ -74,6 +74,11 @@ export function useViaje(viajeId: string) {
       montoBase: 85000,
       montoExtras: 5000,
       montoTotal: 90000,
+      total: 90000,
+      origen: 'Puerto Buenos Aires',
+      destino: 'Rosario Centro',
+      estadoPartida: 'Abierta',
+      totalCobrado: 0,
       documentos: [
         {
           id: '1',

@@ -74,6 +74,11 @@ export function useViajes() {
       montoBase: 85000,
       montoExtras: 5000,
       montoTotal: 90000,
+      total: 90000,
+      origen: 'Puerto Buenos Aires',
+      destino: 'Rosario Centro',
+      estadoPartida: 'Abierta',
+      totalCobrado: 0,
       createdAt: '2025-07-01T08:00:00Z',
       updatedAt: '2025-07-01T08:00:00Z'
     },
@@ -141,6 +146,11 @@ export function useViajes() {
       montoBase: 75000,
       montoExtras: 0,
       montoTotal: 75000,
+      total: 75000,
+      origen: 'La Plata Industrial',
+      destino: 'Córdoba Capital',
+      estadoPartida: 'Abierta',
+      totalCobrado: 25000,
       createdAt: '2025-07-01T10:00:00Z',
       updatedAt: '2025-07-01T12:00:00Z'
     },
@@ -202,6 +212,11 @@ export function useViajes() {
       montoBase: 45000,
       montoExtras: 0,
       montoTotal: 45000,
+      total: 45000,
+      origen: 'Puerto Buenos Aires',
+      destino: 'Mar del Plata Puerto',
+      estadoPartida: 'Cerrada',
+      totalCobrado: 45000,
       createdAt: '2025-06-30T14:00:00Z',
       updatedAt: '2025-06-30T21:00:00Z'
     }
@@ -250,6 +265,11 @@ export function useViajes() {
         montoBase: viajeData.montoBase,
         montoExtras: viajeData.montoExtras,
         montoTotal: viajeData.montoTotal,
+        total: viajeData.montoTotal,
+        origen: 'Origen Simulado',
+        destino: 'Destino Simulado',
+        estadoPartida: 'Abierta',
+        totalCobrado: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
