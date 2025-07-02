@@ -19,7 +19,7 @@ export function EstadoPartidaIndicator({
   showProgress = false,
   showTooltip = true
 }: EstadoPartidaIndicatorProps) {
-  const isAbierta = estado === 'Abierta';
+  const isAbierta = estado === 'abierta';
   const percentage = totalViaje > 0 ? Math.min((totalCobrado / totalViaje) * 100, 100) : 0;
   
   const formatCurrency = (amount: number) => {

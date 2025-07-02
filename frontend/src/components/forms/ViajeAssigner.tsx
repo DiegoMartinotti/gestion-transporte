@@ -257,7 +257,7 @@ export function ViajeAssigner({
                       
                       <Table.Td>
                         <EstadoPartidaIndicator
-                          estado={viaje.estadoPartida || 'Abierta'}
+                          estado={viaje.estadoPartida || 'abierta'}
                           totalViaje={viaje.total}
                           totalCobrado={viaje.totalCobrado || 0}
                           size="xs"
