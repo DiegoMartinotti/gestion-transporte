@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Paper,
   Title,
   Group,
   Button,
@@ -17,8 +16,6 @@ import {
   Pagination,
   TextInput,
   Select,
-  Loader,
-  Progress,
   Tooltip,
   Menu,
   Divider,
@@ -27,11 +24,7 @@ import {
   Skeleton,
   Checkbox,
   Code,
-  Tabs,
-  NumberInput,
-  Switch,
-  Anchor,
-  Timeline
+  Tabs
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
@@ -49,39 +42,24 @@ import {
   IconFileTypeCsv,
   IconPhoto,
   IconClock,
-  IconUser,
-  IconFile,
-  IconCalendar,
   IconCheck,
   IconX,
-  IconAlertTriangle,
   IconDots,
-  IconCloudDownload,
   IconAlertCircle,
   IconSortAscending,
   IconSortDescending,
   IconShare,
   IconArchive,
-  IconRestore,
-  IconChevronDown,
-  IconChevronUp,
-  IconFolder,
-  IconFolderOpen,
   IconDatabase,
-  IconChartBar,
-  IconTable,
-  IconSettings,
-  IconPlayerPlay,
-  IconPlayerStop
+  IconSettings
 } from '@tabler/icons-react';
-import { format, formatDistance, formatDistanceToNow, isAfter, isBefore } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   ReportExecution,
   ReportDefinition,
   ExportFormat,
-  ReportExecutionStatus,
-  ReportData
+  ReportExecutionStatus
 } from '../../types/reports';
 import { reportService } from '../../services/reportService';
 
