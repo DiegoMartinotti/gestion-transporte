@@ -145,7 +145,7 @@ export function ExtrasPage() {
     {
       key: 'tipo',
       label: 'Tipo',
-      render: (_value: any, extra: Extra) => (
+      render: (extra: Extra) => (
         <Group gap="xs">
           <IconCoin size={16} />
           <Text fw={500}>{extra.tipo}</Text>
@@ -155,7 +155,7 @@ export function ExtrasPage() {
     {
       key: 'descripcion',
       label: 'Descripción',
-      render: (_value: any, extra: Extra) => (
+      render: (extra: Extra) => (
         <Text size="sm" c="dimmed">
           {extra.descripcion || '-'}
         </Text>
@@ -164,7 +164,7 @@ export function ExtrasPage() {
     {
       key: 'valor',
       label: 'Valor',
-      render: (_value: any, extra: Extra) => (
+      render: (extra: Extra) => (
         <Text fw={500} c="blue">
           ${extra.valor.toLocaleString()}
         </Text>
@@ -173,7 +173,7 @@ export function ExtrasPage() {
     {
       key: 'vigencia',
       label: 'Vigencia',
-      render: (_value: any, extra: Extra) => {
+      render: (extra: Extra) => {
         const status = getVigenciaStatus(extra);
         return (
           <Stack gap="xs">
@@ -190,7 +190,7 @@ export function ExtrasPage() {
     {
       key: 'actions',
       label: 'Acciones',
-      render: (_value: any, extra: Extra) => (
+      render: (extra: Extra) => (
         <Menu withinPortal position="bottom-end">
           <Menu.Target>
             <ActionIcon variant="subtle" color="gray">

@@ -274,7 +274,7 @@ export const PersonalPage: React.FC = () => {
     {
       key: 'nombre',
       label: 'Nombre',
-      render: (value: any, person: Personal) => (
+      render: (person: Personal) => (
         <div>
           <Text size="sm" fw={500}>
             {person.nombre} {person.apellido}
@@ -288,7 +288,7 @@ export const PersonalPage: React.FC = () => {
     {
       key: 'tipo',
       label: 'Tipo',
-      render: (value: any, person: Personal) => (
+      render: (person: Personal) => (
         <Badge
           color={
             person.tipo === 'Conductor' ? 'blue' :
@@ -305,7 +305,7 @@ export const PersonalPage: React.FC = () => {
     {
       key: 'empresa',
       label: 'Empresa',
-      render: (value: any, person: Personal) => {
+      render: (person: Personal) => {
         const empresa = typeof person.empresa === 'object' ? person.empresa : null;
         return empresa ? empresa.nombre : 'Sin empresa';
       },
@@ -313,7 +313,7 @@ export const PersonalPage: React.FC = () => {
     {
       key: 'contacto',
       label: 'Contacto',
-      render: (value: any, person: Personal) => (
+      render: (person: Personal) => (
         <div>
           {person.contacto?.telefono && (
             <Text size="xs">{person.contacto.telefono}</Text>
@@ -327,7 +327,7 @@ export const PersonalPage: React.FC = () => {
     {
       key: 'activo',
       label: 'Estado',
-      render: (value: any, person: Personal) => (
+      render: (person: Personal) => (
         <Badge color={person.activo ? 'green' : 'gray'} variant="light">
           {person.activo ? 'Activo' : 'Inactivo'}
         </Badge>
@@ -336,7 +336,7 @@ export const PersonalPage: React.FC = () => {
     {
       key: 'actions',
       label: 'Acciones',
-      render: (value: any, person: Personal) => (
+      render: (person: Personal) => (
         <Group gap="xs">
           <Tooltip label="Ver detalles">
             <ActionIcon size="sm" onClick={() => handleViewPersonal(person)}>

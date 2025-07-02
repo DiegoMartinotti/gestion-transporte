@@ -138,9 +138,9 @@ export default function ClientesPage() {
       key: 'nombre',
       label: 'Nombre',
       sortable: true,
-      render: (value: string, record: Cliente) => (
+      render: (record: Cliente) => (
         <Stack gap={2}>
-          <Text fw={500}>{value}</Text>
+          <Text fw={500}>{record.nombre}</Text>
           {record.contacto && (
             <Text size="xs" c="dimmed">{record.contacto}</Text>
           )}
@@ -150,39 +150,39 @@ export default function ClientesPage() {
     {
       key: 'email',
       label: 'Email',
-      render: (value: string) => value ? (
+      render: (record: Cliente) => record.email ? (
         <Group gap="xs">
           <IconMail size="0.9rem" />
-          <Text size="sm">{value}</Text>
+          <Text size="sm">{record.email}</Text>
         </Group>
       ) : '-'
     },
     {
       key: 'telefono',
       label: 'Teléfono',
-      render: (value: string) => value ? (
+      render: (record: Cliente) => record.telefono ? (
         <Group gap="xs">
           <IconPhone size="0.9rem" />
-          <Text size="sm">{value}</Text>
+          <Text size="sm">{record.telefono}</Text>
         </Group>
       ) : '-'
     },
     {
       key: 'direccion',
       label: 'Dirección',
-      render: (value: string) => value || '-'
+      render: (record: Cliente) => record.direccion || '-'
     },
     {
       key: 'activo',
       label: 'Estado',
       align: 'center',
-      render: (value: boolean) => (
+      render: (record: Cliente) => (
         <Badge 
-          color={value ? 'green' : 'red'} 
+          color={record.activo ? 'green' : 'red'} 
           variant="light" 
           size="sm"
         >
-          {value ? 'Activo' : 'Inactivo'}
+          {record.activo ? 'Activo' : 'Inactivo'}
         </Badge>
       )
     },
@@ -190,14 +190,14 @@ export default function ClientesPage() {
       key: 'createdAt',
       label: 'Fecha Creación',
       sortable: true,
-      render: (value: Date) => new Date(value).toLocaleDateString('es-AR')
+      render: (record: Cliente) => new Date(record.createdAt).toLocaleDateString('es-AR')
     },
     {
       key: 'actions',
       label: 'Acciones',
       align: 'center',
       width: 100,
-      render: (_, record: Cliente) => (
+      render: (record: Cliente) => (
         <Menu shadow="md" width={200}>
           <Menu.Target>
             <ActionIcon variant="subtle" color="gray">

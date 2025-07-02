@@ -138,7 +138,7 @@ const SitesPage: React.FC = () => {
       key: 'nombre',
       label: 'Nombre',
       sortable: true,
-      render: (value: any, site: Site) => (
+      render: (site: Site) => (
         <Stack gap={4}>
           <Text fw={500}>{site?.nombre || 'Sin nombre'}</Text>
           <Group gap={4}>
@@ -152,7 +152,7 @@ const SitesPage: React.FC = () => {
       key: 'cliente',
       label: 'Cliente',
       sortable: true,
-      render: (value: any, site: Site) => (
+      render: (site: Site) => (
         <Group gap={8}>
           <IconBuilding size={16} style={{ color: 'var(--mantine-color-blue-6)' }} />
           <Text>{site && site.cliente ? getClienteNombre(site.cliente) : 'Sin cliente'}</Text>
@@ -162,7 +162,7 @@ const SitesPage: React.FC = () => {
     {
       key: 'direccion',
       label: 'Dirección',
-      render: (value: any, site: Site) => (
+      render: (site: Site) => (
         <Stack gap={4}>
           <Text size="sm">{site?.direccion || '-'}</Text>
           {site?.codigo && (
@@ -174,7 +174,7 @@ const SitesPage: React.FC = () => {
     {
       key: 'fechas',
       label: 'Fechas',
-      render: (value: any, site: Site) => (
+      render: (site: Site) => (
         <Stack gap={4}>
           <Text size="xs" c="dimmed">
             Creado: {site?.createdAt ? new Date(site.createdAt).toLocaleDateString() : 'No disponible'}
@@ -188,7 +188,7 @@ const SitesPage: React.FC = () => {
     {
       key: 'coordenadas',
       label: 'Ubicación',
-      render: (value: any, site: Site) => (
+      render: (site: Site) => (
         <Group gap={8}>
           {site?.coordenadas ? (
             <>
@@ -220,7 +220,7 @@ const SitesPage: React.FC = () => {
     {
       key: 'actions',
       label: 'Acciones',
-      render: (value: any, site: Site) => (
+      render: (site: Site) => (
         <Group gap={4}>
           <Tooltip label="Ver detalles">
             <ActionIcon size="sm" variant="subtle" color="blue">

@@ -20,7 +20,7 @@ export interface DataTableColumn<T = any> {
   key: string;
   label: string;
   sortable?: boolean;
-  render?: (value: any, record: T) => React.ReactNode;
+  render?: (record: T) => React.ReactNode;
   width?: string | number;
   align?: 'left' | 'center' | 'right';
 }
@@ -106,7 +106,7 @@ export default function DataTable<T = any>({
     const value = (record as any)[column.key];
     
     if (column.render) {
-      return column.render(value, record);
+      return column.render(record);
     }
 
     if (typeof value === 'boolean') {

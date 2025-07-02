@@ -166,40 +166,40 @@ export default function VehiculosPage() {
     {
       key: 'dominio',
       label: 'Dominio',
-      render: (value: any, vehiculo: Vehiculo) => (
+      render: (vehiculo: Vehiculo) => (
         <Text fw={500}>{vehiculo.dominio}</Text>
       )
     },
     {
       key: 'tipo',
       label: 'Tipo',
-      render: (value: any, vehiculo: Vehiculo) => vehiculo.tipo
+      render: (vehiculo: Vehiculo) => vehiculo.tipo
     },
     {
       key: 'marca_modelo',
       label: 'Marca/Modelo',
-      render: (value: any, vehiculo: Vehiculo) => 
+      render: (vehiculo: Vehiculo) => 
         `${vehiculo.marca || ''} ${vehiculo.modelo || ''}`.trim() || 'N/A'
     },
     {
       key: 'empresa',
       label: 'Empresa',
-      render: (value: any, vehiculo: Vehiculo) => getEmpresaNombre(typeof vehiculo.empresa === 'string' ? vehiculo.empresa : vehiculo.empresa._id)
+      render: (vehiculo: Vehiculo) => getEmpresaNombre(typeof vehiculo.empresa === 'string' ? vehiculo.empresa : vehiculo.empresa._id)
     },
     {
       key: 'año',
       label: 'Año',
-      render: (value: any, vehiculo: Vehiculo) => vehiculo.año || 'N/A'
+      render: (vehiculo: Vehiculo) => vehiculo.año || 'N/A'
     },
     {
       key: 'activo',
       label: 'Estado',
-      render: (value: any, vehiculo: Vehiculo) => getStatusBadge(vehiculo)
+      render: (vehiculo: Vehiculo) => getStatusBadge(vehiculo)
     },
     {
       key: 'actions',
       label: 'Acciones',
-      render: (value: any, vehiculo: Vehiculo) => (
+      render: (vehiculo: Vehiculo) => (
         <Group gap="xs">
           <ActionIcon
             size="sm"
@@ -235,7 +235,7 @@ export default function VehiculosPage() {
     {
       key: 'vencimientos',
       label: 'Vencimientos',
-      render: (value: any, vehiculo: VehiculoConVencimientos) => 
+      render: (vehiculo: VehiculoConVencimientos) => 
         getVencimientosBadge(vehiculo.vencimientosProximos || [])
     }
   ];
