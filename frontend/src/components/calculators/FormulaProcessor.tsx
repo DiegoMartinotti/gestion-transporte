@@ -31,7 +31,8 @@ import {
   IconAlertTriangle
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import * as math from 'mathjs';
+// Import mathjs using require to avoid TS module resolution issues
+const math = require('mathjs');
 
 interface FormulaPersonalizada {
   _id: string;
