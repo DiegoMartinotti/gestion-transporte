@@ -4,3 +4,4 @@ export { clienteService } from './clienteService';
 export { empresaService } from './empresaService';
 export { personalService } from './personalService';
 export { siteService } from './siteService';
+export { reportService } from './reportService';

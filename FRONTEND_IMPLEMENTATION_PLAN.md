@@ -304,13 +304,13 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **RecentActivity**: Actividad reciente
 
 ### 12.2 Sistema de Reportes
-- [ ] **ReportBuilder**: Constructor de reportes
-- [ ] **ReportViewer**: Visualizador de reportes
-- [ ] **ExportOptions**: Opciones de exportación
-- [ ] **ScheduledReports**: Reportes programados
-- [ ] **ReportHistory**: Historial de reportes
+- [x] **ReportBuilder**: Constructor de reportes <!-- COMPLETADO: /frontend/src/components/reports/ReportBuilder.tsx - Constructor completo con tabs, validación, fuentes de datos, campos, filtros, agrupación, gráficos -->
+- [x] **ReportViewer**: Visualizador de reportes <!-- COMPLETADO: /frontend/src/components/reports/ReportViewer.tsx - Visor completo con tablas interactivas, gráficos recharts, paginación, ordenamiento, filtros, fullscreen -->
+- [x] **ExportOptions**: Opciones de exportación <!-- COMPLETADO: /frontend/src/components/reports/ExportOptions.tsx - Exportación completa PDF/Excel/CSV/Image con configuraciones avanzadas, validación, preview -->
+- [x] **ScheduledReports**: Reportes programados <!-- COMPLETADO: /frontend/src/components/reports/ScheduledReports.tsx - Sistema completo de programación con frecuencias, horarios, destinatarios, estado, próxima ejecución -->
+- [x] **ReportHistory**: Historial de reportes <!-- COMPLETADO: /frontend/src/components/reports/ReportHistory.tsx - Historial completo con filtros, tabs, estadísticas, descarga, acciones masivas, auto-refresh -->
 
-**Checkpoint 11**: ✅ Dashboard y reportes funcionando
+**Checkpoint 11**: ✅ Dashboard y reportes funcionando <!-- COMPLETADO: Sistema completo de reportes con constructor visual, visualizador con recharts, exportación múltiple formato, programación automatizada, historial con gestión completa -->
 
 ---
 

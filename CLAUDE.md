@@ -113,6 +113,7 @@ Using Mongoose ODM with:
 ## Development Notes
 
 - El front (puerto 3000) y el back (puerto 3001) estan siempre en hot reload.
+- **IMPORTANTE**: NUNCA usar `npm run build` ya que tarda mucho. Usar `npx tsc --noEmit` para verificación rápida de TypeScript.
 
 - **Error Handling**: Centralized error handling with structured logging
 - **Configuration**: Environment-based config in config/ directory  
