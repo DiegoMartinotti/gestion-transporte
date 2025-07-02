@@ -10,7 +10,7 @@ export function useViajes() {
   const viajesSimulados: Viaje[] = [
     {
       _id: '1',
-      numeroViaje: 1001,
+      numeroViaje: '1001',
       fecha: '2025-07-01T10:00:00Z',
       cliente: {
         _id: 'cliente1',
@@ -79,7 +79,7 @@ export function useViajes() {
     },
     {
       _id: '2',
-      numeroViaje: 1002,
+      numeroViaje: '1002',
       fecha: '2025-07-01T14:00:00Z',
       cliente: {
         _id: 'cliente2',
@@ -146,7 +146,7 @@ export function useViajes() {
     },
     {
       _id: '3',
-      numeroViaje: 1003,
+      numeroViaje: '1003',
       fecha: '2025-06-30T16:00:00Z',
       cliente: {
         _id: 'cliente1',
@@ -228,7 +228,7 @@ export function useViajes() {
       await new Promise(resolve => setTimeout(resolve, 500));
       const nuevoViaje: Viaje = {
         _id: Date.now().toString(),
-        numeroViaje: Math.max(...viajes.map(v => v.numeroViaje)) + 1,
+        numeroViaje: (Math.max(...viajes.map(v => parseInt(v.numeroViaje))) + 1).toString(),
         fecha: viajeData.fecha.toISOString(),
         cliente: { _id: viajeData.cliente, nombre: 'Cliente Simulado' },
         tramo: { 

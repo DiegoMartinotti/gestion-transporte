@@ -3,6 +3,39 @@ import { Cliente, ClienteFilters, PaginatedResponse } from '../types';
 import { TemplateFactory } from '../templates/excel';
 import { ExcelService } from './excel';
 
+export class ClienteService {
+  private static baseUrl = '/clientes';
+
+  static async getAll(filters?: ClienteFilters): Promise<PaginatedResponse<Cliente>> {
+    const response = await apiService.get<Cliente[]>(this.baseUrl, filters);
+    
+    // Backend returns { success: true, count: number, data: Cliente[] }
+    // But our response wrapper only gives us response.data
+    const totalItems = (response as any).count || 0;
+    const clientData = response.data || [];
+    
+    // Transform backend response to match frontend expectation
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const totalPages = Math.ceil(totalItems / limit);
+    
+    return {
+      data: clientData,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems,
+        itemsPerPage: limit
+      }
+    };
+  }
+
+  static async getById(id: string): Promise<Cliente> {
+    const response = await apiService.get<Cliente>(`${this.baseUrl}/${id}`);
+    return response.data!;
+  }
+}
+
 export const clienteService = {
   // Get all clients with filters
   async getAll(filters?: ClienteFilters): Promise<PaginatedResponse<Cliente>> {

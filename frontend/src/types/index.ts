@@ -20,14 +20,15 @@ export interface PaginatedResponse<T> {
 export interface Cliente {
   _id: string;
   nombre: string;
-  cuit: string;
+  cuit?: string;
   email?: string;
   telefono?: string;
   direccion?: string;
   contacto?: string;
   activo: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  observaciones?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Empresa {
