@@ -342,3 +342,6 @@ export interface ViajeFilters extends BaseFilters {
   fechaDesde?: Date;
   fechaHasta?: Date;
 }
+
+// Re-export reports types
+export * from './reports';

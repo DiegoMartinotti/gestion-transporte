@@ -15,6 +15,7 @@ import { ViajesPage } from './pages/viajes/ViajesPage';
 import { OrdenesCompraPage } from './pages/ordenes-compra/OrdenesCompraPage';
 import CalculadoraPage from './pages/calculadora/CalculadoraPage';
 import { ImportPage } from './pages/import/ImportPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/LoginPage';
@@ -57,6 +58,7 @@ export default function AppRoutes() {
         <Route path="/ordenes-compra" element={<OrdenesCompraPage />} />
         <Route path="/calculadora" element={<CalculadoraPage />} />
         <Route path="/import" element={<ImportPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
       </Route>
     </Routes>
   );
