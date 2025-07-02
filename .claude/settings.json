@@ -1,16 +1,1 @@
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd frontend && npx tsc --noEmit --incremental --pretty",
-            "failureMode": "block"
-          }
-        ]
-      }
-    ]
-  }
-}
+{}

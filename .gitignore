@@ -55,3 +55,4 @@ cookies.txt
 *.cookies
 
 
+frontend/tsconfig.tsbuildinfo

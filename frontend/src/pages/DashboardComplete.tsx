@@ -1,10 +1,10 @@
-import { Container, Stack, Title, SimpleGrid, Divider } from '@mantine/core';
+import { Container, Stack, Title, Group, SimpleGrid, Divider } from '@mantine/core';
 import { MainDashboard } from '../components/dashboards/MainDashboard';
 import { ChartsContainer } from '../components/dashboards/ChartsContainer';
 import { QuickActions } from '../components/dashboards/QuickActions';
 import { RecentActivity } from '../components/dashboards/RecentActivity';
 
-export default function Dashboard() {
+export default function DashboardComplete() {
   return (
     <Container size="xl" py="md">
       <Stack gap="xl">
