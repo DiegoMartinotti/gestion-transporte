@@ -285,10 +285,10 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **ImportPage**: Página principal de importación <!-- COMPLETADO: /frontend/src/pages/import/ImportPage.tsx - Página con tabs para wizard, historial y recuperación -->
 
 ### 11.2 Validación Avanzada
-- [ ] **CrossEntityValidator**: Validador entre entidades
-- [ ] **BusinessRuleValidator**: Validador de reglas de negocio
-- [ ] **DataIntegrityChecker**: Verificador de integridad
-- [ ] **ConflictResolver**: Resolvedor de conflictos
+- [x] **CrossEntityValidator**: Validador entre entidades <!-- COMPLETADO: /frontend/src/components/validators/CrossEntityValidator.tsx - Validador completo para relaciones entre entidades con 8 reglas predefinidas -->
+- [x] **BusinessRuleValidator**: Validador de reglas de negocio <!-- COMPLETADO: /frontend/src/components/validators/BusinessRuleValidator.tsx - Sistema completo con 10+ reglas financieras/operacionales/temporales/capacidad/documentación, configurables con switches -->
+- [x] **DataIntegrityChecker**: Verificador de integridad <!-- COMPLETADO: /frontend/src/components/validators/DataIntegrityChecker.tsx - Verificador con 12 checks de unicidad/completitud/consistencia/referencias, organizados por tabs -->
+- [x] **ConflictResolver**: Resolvedor de conflictos <!-- COMPLETADO: /frontend/src/components/validators/ConflictResolver.tsx - Resolvedor avanzado con estrategias múltiples, edición manual, resolución bulk, auto-resolución -->
 
 **Checkpoint 10**: ✅ Sistema de importación avanzado funcionando
 
