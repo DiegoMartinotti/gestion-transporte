@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  Paper,
   Title,
   Group,
   Button,
@@ -13,45 +12,31 @@ import {
   Badge,
   ActionIcon,
   Loader,
-  Alert,
   Tabs,
   Select,
-  NumberInput,
   Pagination,
-  Switch,
   Tooltip,
   Menu,
   Modal,
   TextInput,
   Box,
   Center,
-  Divider,
   Container,
   Skeleton
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
 import {
   IconTable,
   IconDownload,
   IconRefresh,
-  IconFilter,
   IconSettings,
   IconMaximize,
-  IconMinimize,
   IconDots,
   IconSearch,
   IconSortAscending,
   IconSortDescending,
-  IconEye,
   IconFileExport,
-  IconTableExport,
-  IconChartBar,
-  IconChartLine,
-  IconChartArea,
-  IconChartPie,
-  IconZoomIn,
-  IconZoomOut
+  IconChartBar
 } from '@tabler/icons-react';
 import {
   ResponsiveContainer,
@@ -69,11 +54,6 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   Legend,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
   ScatterChart,
   Scatter
 } from 'recharts';
@@ -83,7 +63,6 @@ import {
   ChartConfig,
   ExportConfig
 } from '../../types/reports';
-import { reportService } from '../../services/reportService';
 
 interface ReportViewerProps {
   reportDefinition: ReportDefinition;
@@ -116,7 +95,6 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('table');
   const [selectedChart, setSelectedChart] = useState<number>(0);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [tableState, setTableState] = useState<TableState>({
     page: 1,
     pageSize: 50,
@@ -126,7 +104,6 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   });
 
   const [fullscreenModalOpened, { open: openFullscreenModal, close: closeFullscreenModal }] = useDisclosure(false);
-  const [filterModalOpened, { open: openFilterModal, close: closeFilterModal }] = useDisclosure(false);
 
   // Procesar datos para la tabla
   const processedTableData = useMemo(() => {
@@ -511,10 +488,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               <Tooltip label="Pantalla completa">
                 <ActionIcon
                   variant="light"
-                  onClick={() => {
-                    setIsFullscreen(true);
-                    openFullscreenModal();
-                  }}
+                  onClick={openFullscreenModal}
                 >
                   <IconMaximize size={16} />
                 </ActionIcon>

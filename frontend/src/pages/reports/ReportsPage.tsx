@@ -15,8 +15,7 @@ import {
   Modal,
   Alert,
   Loader,
-  Menu,
-  Tooltip
+  Menu
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -31,7 +30,6 @@ import {
   IconTrash,
   IconDots,
   IconSettings,
-  IconDownload,
   IconRefresh
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
@@ -47,7 +45,6 @@ import {
   ReportData,
   ReportTemplate,
   ExportConfig,
-  ScheduledReport,
   ReportExecution
 } from '../../types/reports';
 import { reportService } from '../../services/reportService';
@@ -87,8 +84,6 @@ export const ReportsPage: React.FC = () => {
   const [reportLoading, setReportLoading] = useState(false);
 
   // Modals
-  const [builderModalOpened, { open: openBuilderModal, close: closeBuilderModal }] = useDisclosure(false);
-  const [viewerModalOpened, { open: openViewerModal, close: closeViewerModal }] = useDisclosure(false);
   const [templatesModalOpened, { open: openTemplatesModal, close: closeTemplatesModal }] = useDisclosure(false);
 
   // Load data
