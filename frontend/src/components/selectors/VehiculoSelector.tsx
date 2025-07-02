@@ -19,6 +19,8 @@ interface VehiculoSelectorProps {
   clearable?: boolean;
   error?: string;
   multiple?: boolean;
+  disabled?: boolean;
+  excludeIds?: string[];
 }
 
 export function VehiculoSelector({
@@ -29,7 +31,9 @@ export function VehiculoSelector({
   required = false,
   clearable = false,
   error,
-  multiple = false
+  multiple = false,
+  disabled = false,
+  excludeIds = []
 }: VehiculoSelectorProps) {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([
     {
