@@ -207,7 +207,7 @@ const TramosPage: React.FC = () => {
     setSelectedDestino('');
   };
 
-  const getTarifaStatus = (value: any, tramo: Tramo) => {
+  const getTarifaStatus = (tramo: Tramo) => {
     // Usar campos del nivel raíz (desde el backend) o del objeto tarifaVigente como fallback
     const tipo = tramo.tipo || tramo.tarifaVigente?.tipo;
     const metodoCalculo = tramo.metodoCalculo || tramo.tarifaVigente?.metodoCalculo;
@@ -261,7 +261,7 @@ const TramosPage: React.FC = () => {
     {
       key: 'ruta',
       label: 'Ruta',
-      render: (value: any, tramo: Tramo) => {
+      render: (tramo: Tramo) => {
         if (!tramo || !tramo.origen || !tramo.destino) {
           return <Text size="sm" c="dimmed">Datos incompletos</Text>;
         }
@@ -286,7 +286,7 @@ const TramosPage: React.FC = () => {
     {
       key: 'cliente',
       label: 'Cliente',
-      render: (value: any, tramo: Tramo) => {
+      render: (tramo: Tramo) => {
         if (!tramo || !tramo.cliente) {
           return <Text size="sm" c="dimmed">Sin cliente</Text>;
         }
@@ -348,7 +348,7 @@ const TramosPage: React.FC = () => {
           <IconRoute size={20} />
           <Text fw={500}>{tramo.cliente.nombre}</Text>
         </Group>
-        {getTarifaStatus(null, tramo)}
+        {getTarifaStatus(tramo)}
       </Group>
       
       <Stack gap="xs" mb="md">

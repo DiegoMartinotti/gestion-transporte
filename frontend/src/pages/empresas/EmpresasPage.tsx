@@ -133,11 +133,11 @@ export default function EmpresasPage() {
       key: 'nombre',
       label: 'Nombre',
       sortable: true,
-      render: (value: string, record: Empresa) => (
+      render: (record: Empresa) => (
         <Stack gap={2}>
           <Group gap="xs">
             <IconBuilding size="0.9rem" color="blue" />
-            <Text fw={500}>{value}</Text>
+            <Text fw={500}>{record.nombre}</Text>
           </Group>
           {record.contactoPrincipal && (
             <Text size="xs" c="dimmed">{record.contactoPrincipal}</Text>
@@ -148,52 +148,52 @@ export default function EmpresasPage() {
     {
       key: 'tipo',
       label: 'Tipo',
-      render: (value: 'Propia' | 'Subcontratada') => (
+      render: (record: Empresa) => (
         <Badge 
-          color={value === 'Propia' ? 'blue' : 'orange'} 
+          color={record.tipo === 'Propia' ? 'blue' : 'orange'} 
           variant="light" 
           size="sm"
         >
-          {value}
+          {record.tipo}
         </Badge>
       )
     },
     {
       key: 'mail',
       label: 'Email',
-      render: (value: string) => value ? (
+      render: (record: Empresa) => record.mail ? (
         <Group gap="xs">
           <IconMail size="0.9rem" />
-          <Text size="sm">{value}</Text>
+          <Text size="sm">{record.mail}</Text>
         </Group>
       ) : '-'
     },
     {
       key: 'telefono',
       label: 'Teléfono',
-      render: (value: string) => value ? (
+      render: (record: Empresa) => record.telefono ? (
         <Group gap="xs">
           <IconPhone size="0.9rem" />
-          <Text size="sm">{value}</Text>
+          <Text size="sm">{record.telefono}</Text>
         </Group>
       ) : '-'
     },
     {
       key: 'direccion',
       label: 'Dirección',
-      render: (value: string) => value || '-'
+      render: (record: Empresa) => record.direccion || '-'
     },
     {
       key: 'activa',
       label: 'Estado',
       align: 'center',
-      render: (value: boolean) => (
+      render: (record: Empresa) => (
         <Badge 
-          color={value ? 'green' : 'red'} 
+          color={record.activa ? 'green' : 'red'} 
           variant="light" 
           size="sm"
         >
-          {value ? 'Activa' : 'Inactiva'}
+          {record.activa ? 'Activa' : 'Inactiva'}
         </Badge>
       )
     },
@@ -201,14 +201,14 @@ export default function EmpresasPage() {
       key: 'createdAt',
       label: 'Fecha Creación',
       sortable: true,
-      render: (value: Date) => new Date(value).toLocaleDateString('es-AR')
+      render: (record: Empresa) => new Date(record.createdAt).toLocaleDateString('es-AR')
     },
     {
       key: 'actions',
       label: 'Acciones',
       align: 'center',
       width: 100,
-      render: (_, record: Empresa) => (
+      render: (record: Empresa) => (
         <Menu shadow="md" width={200}>
           <Menu.Target>
             <ActionIcon variant="subtle" color="gray">

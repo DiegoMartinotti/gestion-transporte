@@ -11,6 +11,7 @@ import { SitesPage } from './pages/sites';
 import VehiculosPage from './pages/vehiculos/VehiculosPage';
 import TramosPage from './pages/tramos/TramosPage';
 import { ExtrasPage } from './pages/extras/ExtrasPage';
+import { ViajesPage } from './pages/viajes/ViajesPage';
 import CalculadoraPage from './pages/calculadora/CalculadoraPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
@@ -50,7 +51,7 @@ export default function AppRoutes() {
         <Route path="/tramos" element={<TramosPage />} />
         <Route path="/vehiculos" element={<VehiculosPage />} />
         <Route path="/extras" element={<ExtrasPage />} />
-        <Route path="/viajes" element={<Container><Text>Viajes - Coming Soon</Text></Container>} />
+        <Route path="/viajes" element={<ViajesPage />} />
         <Route path="/calculadora" element={<CalculadoraPage />} />
       </Route>
     </Routes>

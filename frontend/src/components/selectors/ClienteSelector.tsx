@@ -1,66 +1,44 @@
-import { Select, SelectProps } from '@mantine/core';
-import { useState, useEffect } from 'react';
-import { Cliente } from '../../types';
-import { clienteService } from '../../services/clienteService';
+import { Select } from '@mantine/core';
+import { useClientes } from '../../hooks/useClientes';
 
-interface ClienteSelectorProps extends Omit<SelectProps, 'data'> {
-  onClienteSelect?: (cliente: Cliente | null) => void;
-  includeInactive?: boolean;
+interface ClienteSelectorProps {
+  value?: string | null;
+  onChange: (value: string | null) => void;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
   clearable?: boolean;
+  error?: string;
 }
 
 export function ClienteSelector({
-  onClienteSelect,
-  includeInactive = false,
-  clearable = true,
-  ...props
+  value,
+  onChange,
+  label,
+  placeholder = "Selecciona un cliente",
+  required = false,
+  clearable = false,
+  error
 }: ClienteSelectorProps) {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { clientes, loading } = useClientes();
 
-  useEffect(() => {
-    loadClientes();
-  }, [includeInactive]);
-
-  const loadClientes = async () => {
-    try {
-      setLoading(true);
-      const response = await clienteService.getAll({
-        activo: includeInactive ? undefined : true,
-        limit: 1000 // Obtener todos los clientes
-      });
-      
-      setClientes(response.data);
-    } catch (error) {
-      console.error('Error loading clientes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const selectData = clientes.map(cliente => ({
+  const data = clientes.map(cliente => ({
     value: cliente._id,
-    label: cliente.activo ? cliente.nombre : `${cliente.nombre} (Inactivo)`
+    label: cliente.nombre
   }));
-
-  const handleChange = (value: string | null) => {
-    const selectedCliente = value ? clientes.find(c => c._id === value) || null : null;
-    onClienteSelect?.(selectedCliente);
-    if (props.onChange) {
-      props.onChange(value, null as any);
-    }
-  };
 
   return (
     <Select
-      {...props}
-      data={selectData}
-      searchable
+      label={label}
+      placeholder={placeholder}
+      data={data}
+      value={value}
+      onChange={onChange}
+      required={required}
       clearable={clearable}
-      onChange={handleChange}
-      placeholder={props.placeholder || "Seleccionar cliente..."}
-      nothingFoundMessage="No se encontraron clientes"
-      disabled={loading || props.disabled}
+      error={error}
+      searchable
+      disabled={loading}
     />
   );
 }

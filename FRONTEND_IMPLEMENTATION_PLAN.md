@@ -231,19 +231,19 @@ ImportacionTemporal (sistema de importación avanzado)
 
 ## FASE 9: VIAJES (FUNCIONALIDAD PRINCIPAL)
 
-### 9.1 Gestión de Viajes
-- [ ] **ViajeList**: Lista con filtros complejos y estado
-- [ ] **ViajeForm**: Formulario complejo con cálculos dinámicos
-- [ ] **ViajeDetail**: Vista detallada con desglose de costos
-- [ ] **ViajeCard**: Tarjeta con información resumida
-- [ ] **ViajeTracker**: Seguimiento de estado de viajes
+### 9.1 Gestión de Viajes ✅
+- [x] **ViajeList**: Lista con filtros complejos y estado
+- [x] **ViajeForm**: Formulario complejo con cálculos dinámicos
+- [x] **ViajeDetail**: Vista detallada con desglose de costos
+- [x] **ViajeCard**: Tarjeta con información resumida
+- [x] **ViajeTracker**: Seguimiento de estado de viajes
 
-### 9.2 Cálculos Dinámicos
-- [ ] **TarifaCalculator**: Calculadora de tarifas en tiempo real
-- [ ] **TotalCalculator**: Calculadora de totales con extras
-- [ ] **FormulaProcessor**: Procesador de fórmulas personalizadas
-- [ ] **CostBreakdown**: Desglose detallado de costos
-- [ ] **ViajeValidator**: Validador de datos de viaje
+### 9.2 Cálculos Dinámicos ✅
+- [x] **TarifaCalculator**: Calculadora de tarifas en tiempo real <!-- COMPLETADO: Ya existía en /frontend/src/components/calculators/TarifaCalculator.tsx -->
+- [x] **TotalCalculator**: Calculadora de totales con extras <!-- COMPLETADO: /frontend/src/components/calculators/TotalCalculator.tsx -->
+- [x] **FormulaProcessor**: Procesador de fórmulas personalizadas <!-- COMPLETADO: /frontend/src/components/calculators/FormulaProcessor.tsx -->
+- [x] **CostBreakdown**: Desglose detallado de costos <!-- COMPLETADO: /frontend/src/components/calculators/CostBreakdown.tsx -->
+- [x] **ViajeValidator**: Validador de datos de viaje <!-- COMPLETADO: /frontend/src/components/validators/ViajeValidator.tsx -->
 
 ### 9.3 Configuración Multi-Vehículo
 - [ ] **VehiculoAssigner**: Asignador de múltiples vehículos
