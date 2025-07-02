@@ -331,7 +331,7 @@ export const ErrorCorrection: React.FC<ErrorCorrectionProps> = ({
             <Group>
               <TextInput
                 placeholder="Buscar errores..."
-                icon={<IconSearch size={16} />}
+                leftSection={<IconSearch size={16} />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.currentTarget.value)}
                 style={{ width: 300 }}
@@ -339,7 +339,7 @@ export const ErrorCorrection: React.FC<ErrorCorrectionProps> = ({
               
               <Select
                 placeholder="Filtrar por severidad"
-                icon={<IconFilter size={16} />}
+                leftSection={<IconFilter size={16} />}
                 value={filterSeverity}
                 onChange={(value) => setFilterSeverity(value || 'all')}
                 data={[
@@ -354,7 +354,7 @@ export const ErrorCorrection: React.FC<ErrorCorrectionProps> = ({
             <Group>
               <Button
                 variant="light"
-                leftIcon={<IconWand size={16} />}
+                leftSection={<IconWand size={16} />}
                 onClick={bulkFixCommonErrors}
               >
                 Corrección automática
@@ -362,7 +362,7 @@ export const ErrorCorrection: React.FC<ErrorCorrectionProps> = ({
               
               <Button
                 variant="light"
-                leftIcon={<IconBulb size={16} />}
+                leftSection={<IconBulb size={16} />}
                 onClick={() => setShowBulkActions(!showBulkActions)}
               >
                 Acciones masivas
@@ -371,7 +371,7 @@ export const ErrorCorrection: React.FC<ErrorCorrectionProps> = ({
           </Group>
           
           <Collapse in={showBulkActions}>
-            <Alert icon={<IconInfoCircle size={16} />} c="blue">
+            <Alert icon={<IconInfoCircle size={16} />} color="blue">
               <Stack gap="xs">
                 <Text size="sm">
                   Las acciones masivas permiten corregir automáticamente errores comunes:
@@ -578,7 +578,7 @@ export const ErrorCorrection: React.FC<ErrorCorrectionProps> = ({
         </Button>
         
         <Button
-          leftIcon={<IconCheck size={16} />}
+          leftSection={<IconCheck size={16} />}
           onClick={applyCorrections}
           disabled={stats.pendingErrors > 0}
         >

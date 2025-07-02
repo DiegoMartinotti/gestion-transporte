@@ -49,7 +49,7 @@ import {
   IconArrowUp,
   IconArrowDown,
 } from '@tabler/icons-react';
-import { DateRangePicker } from '../base/DateRangePicker';
+import DateRangePicker from '../base/DateRangePicker';
 import { formatDistanceToNow } from '../../utils/dateUtils';
 
 interface ImportRecord {
@@ -214,8 +214,10 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
       const aValue = a[sortField];
       const bValue = b[sortField];
       
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      if (aValue != null && bValue != null) {
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      }
       return 0;
     });
     
@@ -271,18 +273,18 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
   };
 
   return (
-    <Stack spacing="lg">
+    <Stack gap="lg">
       {/* Encabezado y estadísticas */}
       <Card withBorder>
-        <Group position="apart" mb="md">
+        <Group justify="space-between" mb="md">
           <div>
             <Title order={3}>Historial de importaciones</Title>
-            <Text size="sm" color="dimmed">
+            <Text size="sm" c="dimmed">
               Registro completo de todas las importaciones realizadas
             </Text>
           </div>
           <Button
-            leftIcon={<IconFileImport size={16} />}
+            leftSection={<IconFileImport size={16} />}
             onClick={() => {
               // Navegar a nueva importación
             }}
@@ -293,32 +295,32 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
         
         <SimpleGrid cols={4} spacing="md">
           <Card withBorder>
-            <Stack spacing={4} align="center">
-              <ThemeIcon size="lg" radius="md" color="blue" variant="light">
+            <Stack gap={4} align="center">
+              <ThemeIcon size="lg" radius="md" c="blue" variant="light">
                 <IconHistory size={20} />
               </ThemeIcon>
-              <Text size="xs" color="dimmed">Total importaciones</Text>
-              <Text size="xl" weight={700}>{stats.totalImports}</Text>
+              <Text size="xs" c="dimmed">Total importaciones</Text>
+              <Text size="xl" fw={700}>{stats.totalImports}</Text>
             </Stack>
           </Card>
           
           <Card withBorder>
-            <Stack spacing={4} align="center">
-              <ThemeIcon size="lg" radius="md" color="green" variant="light">
+            <Stack gap={4} align="center">
+              <ThemeIcon size="lg" radius="md" c="green" variant="light">
                 <IconCheck size={20} />
               </ThemeIcon>
-              <Text size="xs" color="dimmed">Exitosas</Text>
-              <Text size="xl" weight={700} color="green">{stats.successfulImports}</Text>
+              <Text size="xs" c="dimmed">Exitosas</Text>
+              <Text size="xl" fw={700} c="green">{stats.successfulImports}</Text>
             </Stack>
           </Card>
           
           <Card withBorder>
-            <Stack spacing={4} align="center">
-              <ThemeIcon size="lg" radius="md" color="blue" variant="light">
+            <Stack gap={4} align="center">
+              <ThemeIcon size="lg" radius="md" c="blue" variant="light">
                 <IconDatabase size={20} />
               </ThemeIcon>
-              <Text size="xs" color="dimmed">Registros procesados</Text>
-              <Text size="xl" weight={700}>{stats.totalRecordsProcessed.toLocaleString()}</Text>
+              <Text size="xs" c="dimmed">Registros procesados</Text>
+              <Text size="xl" fw={700}>{stats.totalRecordsProcessed.toLocaleString()}</Text>
             </Stack>
           </Card>
           
@@ -330,13 +332,13 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                 sections={[{ value: stats.averageSuccessRate, color: 'green' }]}
                 label={
                   <Center>
-                    <Text size="xs" weight={700}>
+                    <Text size="xs" fw={700}>
                       {Math.round(stats.averageSuccessRate)}%
                     </Text>
                   </Center>
                 }
               />
-              <Text size="xs" color="dimmed" ml="sm">
+              <Text size="xs" c="dimmed" ml="sm">
                 Tasa de éxito promedio
               </Text>
             </Center>
@@ -346,11 +348,11 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
       
       {/* Filtros */}
       <Paper p="md" withBorder>
-        <Stack spacing="sm">
+        <Stack gap="sm">
           <Group>
             <TextInput
               placeholder="Buscar por archivo o usuario..."
-              icon={<IconSearch size={16} />}
+              leftSection={<IconSearch size={16} />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.currentTarget.value)}
               style={{ flex: 1 }}
@@ -358,7 +360,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             
             <Select
               placeholder="Tipo de entidad"
-              icon={<IconFilter size={16} />}
+              leftSection={<IconFilter size={16} />}
               value={filterEntity}
               onChange={(value) => setFilterEntity(value || 'all')}
               data={[
@@ -376,7 +378,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             
             <Select
               placeholder="Estado"
-              icon={<IconFilter size={16} />}
+              leftSection={<IconFilter size={16} />}
               value={filterStatus}
               onChange={(value) => setFilterStatus(value || 'all')}
               data={[
@@ -391,10 +393,11 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
           </Group>
           
           <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
+            startDate={dateRange[0]}
+            endDate={dateRange[1]}
+            onStartDateChange={(date) => setDateRange([date, dateRange[1]])}
+            onEndDateChange={(date) => setDateRange([dateRange[0], date])}
             placeholder="Filtrar por fecha"
-            icon={<IconCalendar size={16} />}
           />
         </Stack>
       </Paper>
@@ -406,28 +409,28 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             <thead>
               <tr>
                 <th style={{ cursor: 'pointer' }} onClick={() => handleSort('timestamp')}>
-                  <Group spacing={4}>
+                  <Group gap={4}>
                     Fecha
                     <SortIcon field="timestamp" />
                   </Group>
                 </th>
                 <th>Entidad</th>
                 <th style={{ cursor: 'pointer' }} onClick={() => handleSort('fileName')}>
-                  <Group spacing={4}>
+                  <Group gap={4}>
                     Archivo
                     <SortIcon field="fileName" />
                   </Group>
                 </th>
                 <th>Usuario</th>
                 <th style={{ cursor: 'pointer' }} onClick={() => handleSort('totalRecords')}>
-                  <Group spacing={4}>
+                  <Group gap={4}>
                     Registros
                     <SortIcon field="totalRecords" />
                   </Group>
                 </th>
                 <th>Resultado</th>
                 <th style={{ cursor: 'pointer' }} onClick={() => handleSort('duration')}>
-                  <Group spacing={4}>
+                  <Group gap={4}>
                     Duración
                     <SortIcon field="duration" />
                   </Group>
@@ -445,9 +448,9 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                 return (
                   <tr key={imp.id}>
                     <td>
-                      <Stack spacing={0}>
+                      <Stack gap={0}>
                         <Text size="sm">{imp.timestamp.toLocaleDateString()}</Text>
-                        <Text size="xs" color="dimmed">
+                        <Text size="xs" c="dimmed">
                           {imp.timestamp.toLocaleTimeString()}
                         </Text>
                       </Stack>
@@ -458,9 +461,9 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                       </Badge>
                     </td>
                     <td>
-                      <Stack spacing={0}>
+                      <Stack gap={0}>
                         <Text size="sm">{imp.fileName}</Text>
-                        <Text size="xs" color="dimmed">
+                        <Text size="xs" c="dimmed">
                           {formatFileSize(imp.fileSize)}
                         </Text>
                       </Stack>
@@ -472,23 +475,23 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                       <Text size="sm">{imp.totalRecords.toLocaleString()}</Text>
                     </td>
                     <td>
-                      <Stack spacing={0}>
+                      <Stack gap={0}>
                         <Progress
                           value={successRate}
                           size="sm"
                           color={successRate === 100 ? 'green' : successRate > 50 ? 'yellow' : 'red'}
                         />
-                        <Group spacing={4} mt={4}>
-                          <Text size="xs" color="green">
+                        <Group gap={4} mt={4}>
+                          <Text size="xs" c="green">
                             ✓ {imp.successfulRecords}
                           </Text>
                           {imp.failedRecords > 0 && (
-                            <Text size="xs" color="red">
+                            <Text size="xs" c="red">
                               ✗ {imp.failedRecords}
                             </Text>
                           )}
                           {imp.warningRecords > 0 && (
-                            <Text size="xs" color="yellow">
+                            <Text size="xs" c="yellow">
                               ⚠ {imp.warningRecords}
                             </Text>
                           )}
@@ -519,7 +522,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                         
                         <Menu.Dropdown>
                           <Menu.Item
-                            icon={<IconEye size={14} />}
+                            leftSection={<IconEye size={14} />}
                             onClick={() => {
                               setSelectedImport(imp);
                               setShowDetailsModal(true);
@@ -530,7 +533,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                           
                           {imp.status === 'failed' && onRetryImport && (
                             <Menu.Item
-                              icon={<IconRefresh size={14} />}
+                              leftSection={<IconRefresh size={14} />}
                               onClick={() => onRetryImport(imp.id)}
                             >
                               Reintentar importación
@@ -538,7 +541,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                           )}
                           
                           <Menu.Item
-                            icon={<IconFileExport size={14} />}
+                            leftSection={<IconFileExport size={14} />}
                             onClick={() => onExportReport?.(imp.id)}
                           >
                             Exportar reporte
@@ -547,8 +550,8 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                           <Menu.Divider />
                           
                           <Menu.Item
-                            color="red"
-                            icon={<IconTrash size={14} />}
+                            c="red"
+                            leftSection={<IconTrash size={14} />}
                           >
                             Eliminar registro
                           </Menu.Item>
@@ -564,11 +567,11 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
         
         {sortedImports.length === 0 && (
           <Center p="xl">
-            <Stack align="center" spacing="xs">
-              <ThemeIcon size="xl" radius="md" color="gray" variant="light">
+            <Stack align="center" gap="xs">
+              <ThemeIcon size="xl" radius="md" c="gray" variant="light">
                 <IconHistory size={30} />
               </ThemeIcon>
-              <Text color="dimmed">No se encontraron importaciones</Text>
+              <Text c="dimmed">No se encontraron importaciones</Text>
             </Stack>
           </Center>
         )}
@@ -582,35 +585,35 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
         size="lg"
       >
         {selectedImport && (
-          <Stack spacing="md">
+          <Stack gap="md">
             <SimpleGrid cols={2} spacing="md">
               <Paper p="sm" withBorder>
-                <Stack spacing={4}>
-                  <Text size="xs" color="dimmed">Archivo</Text>
-                  <Text weight={500}>{selectedImport.fileName}</Text>
+                <Stack gap={4}>
+                  <Text size="xs" c="dimmed">Archivo</Text>
+                  <Text fw={500}>{selectedImport.fileName}</Text>
                 </Stack>
               </Paper>
               
               <Paper p="sm" withBorder>
-                <Stack spacing={4}>
-                  <Text size="xs" color="dimmed">Usuario</Text>
-                  <Text weight={500}>{selectedImport.user}</Text>
+                <Stack gap={4}>
+                  <Text size="xs" c="dimmed">Usuario</Text>
+                  <Text fw={500}>{selectedImport.user}</Text>
                 </Stack>
               </Paper>
               
               <Paper p="sm" withBorder>
-                <Stack spacing={4}>
-                  <Text size="xs" color="dimmed">Fecha y hora</Text>
-                  <Text weight={500}>
+                <Stack gap={4}>
+                  <Text size="xs" c="dimmed">Fecha y hora</Text>
+                  <Text fw={500}>
                     {selectedImport.timestamp.toLocaleString()}
                   </Text>
                 </Stack>
               </Paper>
               
               <Paper p="sm" withBorder>
-                <Stack spacing={4}>
-                  <Text size="xs" color="dimmed">Duración</Text>
-                  <Text weight={500}>{formatDuration(selectedImport.duration)}</Text>
+                <Stack gap={4}>
+                  <Text size="xs" c="dimmed">Duración</Text>
+                  <Text fw={500}>{formatDuration(selectedImport.duration)}</Text>
                 </Stack>
               </Paper>
             </SimpleGrid>
@@ -621,30 +624,30 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             
             <SimpleGrid cols={3} spacing="sm">
               <Card withBorder>
-                <Stack spacing={4} align="center">
+                <Stack gap={4} align="center">
                   <IconCheck size={20} color="var(--mantine-color-green-6)" />
-                  <Text size="xs" color="dimmed">Exitosos</Text>
-                  <Text size="lg" weight={700} color="green">
+                  <Text size="xs" c="dimmed">Exitosos</Text>
+                  <Text size="lg" fw={700} c="green">
                     {selectedImport.successfulRecords}
                   </Text>
                 </Stack>
               </Card>
               
               <Card withBorder>
-                <Stack spacing={4} align="center">
+                <Stack gap={4} align="center">
                   <IconX size={20} color="var(--mantine-color-red-6)" />
-                  <Text size="xs" color="dimmed">Fallidos</Text>
-                  <Text size="lg" weight={700} color="red">
+                  <Text size="xs" c="dimmed">Fallidos</Text>
+                  <Text size="lg" fw={700} c="red">
                     {selectedImport.failedRecords}
                   </Text>
                 </Stack>
               </Card>
               
               <Card withBorder>
-                <Stack spacing={4} align="center">
+                <Stack gap={4} align="center">
                   <IconAlertCircle size={20} color="var(--mantine-color-yellow-6)" />
-                  <Text size="xs" color="dimmed">Advertencias</Text>
-                  <Text size="lg" weight={700} color="yellow">
+                  <Text size="xs" c="dimmed">Advertencias</Text>
+                  <Text size="lg" fw={700} c="yellow">
                     {selectedImport.warningRecords}
                   </Text>
                 </Stack>
@@ -680,11 +683,11 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
               </>
             )}
             
-            <Group position="right">
+            <Group justify="flex-end">
               <Button variant="default" onClick={() => setShowDetailsModal(false)}>
                 Cerrar
               </Button>
-              <Button leftIcon={<IconDownload size={16} />}>
+              <Button leftSection={<IconDownload size={16} />}>
                 Descargar reporte
               </Button>
             </Group>
