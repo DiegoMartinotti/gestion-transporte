@@ -287,13 +287,13 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
   };
 
   return (
-    <Stack spacing="lg">
+    <Stack gap="lg">
       {/* Encabezado */}
       <Card withBorder>
-        <Group position="apart">
+        <Group justify="space-between">
           <div>
             <Title order={3}>Recuperación de fallos</Title>
-            <Text size="sm" color="dimmed">
+            <Text size="sm" c="dimmed">
               Analiza y recupera los datos que no se pudieron importar
             </Text>
           </div>
@@ -310,32 +310,32 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
       {/* Resumen del fallo */}
       <SimpleGrid cols={4} spacing="md">
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <Text size="xs" color="dimmed">Total registros</Text>
-            <Text size="xl" weight={700}>{failure.totalRecords}</Text>
+          <Stack gap={4} align="center">
+            <Text size="xs" c="dimmed">Total registros</Text>
+            <Text size="xl" fw={700}>{failure.totalRecords}</Text>
           </Stack>
         </Card>
         
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <Text size="xs" color="dimmed">Procesados</Text>
-            <Text size="xl" weight={700} color="green">
+          <Stack gap={4} align="center">
+            <Text size="xs" c="dimmed">Procesados</Text>
+            <Text size="xl" fw={700} c="green">
               {failure.processedRecords - failure.failedRecords}
             </Text>
           </Stack>
         </Card>
         
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <Text size="xs" color="dimmed">Fallidos</Text>
-            <Text size="xl" weight={700} color="red">{failure.failedRecords}</Text>
+          <Stack gap={4} align="center">
+            <Text size="xs" c="dimmed">Fallidos</Text>
+            <Text size="xl" fw={700} c="red">{failure.failedRecords}</Text>
           </Stack>
         </Card>
         
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <Text size="xs" color="dimmed">Tasa de éxito</Text>
-            <Text size="xl" weight={700}>
+          <Stack gap={4} align="center">
+            <Text size="xs" c="dimmed">Tasa de éxito</Text>
+            <Text size="xl" fw={700}>
               {Math.round(failureAnalysis.successRate)}%
             </Text>
           </Stack>
@@ -344,9 +344,9 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
       
       {/* Detalles del error */}
       <Paper p="md" withBorder>
-        <Stack spacing="sm">
-          <Group position="apart">
-            <Text weight={500}>Detalles del error</Text>
+        <Stack gap="sm">
+          <Group justify="space-between">
+            <Text fw={500}>Detalles del error</Text>
             <Badge>{new Date(failure.timestamp).toLocaleString()}</Badge>
           </Group>
           
@@ -354,7 +354,7 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
             icon={getErrorIcon(failure.errorType)}
             color={getSeverityColor(failureAnalysis.severity)}
           >
-            <Text weight={500}>{failure.errorMessage}</Text>
+            <Text fw={500}>{failure.errorMessage}</Text>
           </Alert>
           
           {failure.stackTrace && (
@@ -376,20 +376,20 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
       
       {/* Opciones de recuperación */}
       <Paper p="md" withBorder>
-        <Stack spacing="md">
-          <Group position="apart">
-            <Text weight={500}>Opciones de recuperación</Text>
+        <Stack gap="md">
+          <Group justify="space-between">
+            <Text fw={500}>Opciones de recuperación</Text>
             <Button
               size="xs"
               variant="subtle"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              rightIcon={<IconSettings size={14} />}
+              rightSection={<IconSettings size={14} />}
             >
               Configuración avanzada
             </Button>
           </Group>
           
-          <Stack spacing="sm">
+          <Stack gap="sm">
             {recoveryOptions.map(option => (
               <Card
                 key={option.id}
@@ -399,7 +399,7 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
                   cursor: option.available ? 'pointer' : 'not-allowed',
                 }}
               >
-                <Group position="apart">
+                <Group justify="space-between">
                   <Group>
                     <Checkbox
                       checked={selectedOptions.has(option.id)}
@@ -424,12 +424,12 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
                       {option.icon}
                     </ThemeIcon>
                     <div>
-                      <Text weight={500}>{option.name}</Text>
-                      <Text size="sm" color="dimmed">
+                      <Text fw={500}>{option.name}</Text>
+                      <Text size="sm" c="dimmed">
                         {option.description}
                       </Text>
                       {option.reason && (
-                        <Text size="xs" color="red" mt={4}>
+                        <Text size="xs" c="red" mt={4}>
                           {option.reason}
                         </Text>
                       )}
@@ -442,14 +442,14 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
           
           {showAdvanced && (
             <Paper p="sm" withBorder>
-              <Stack spacing="sm">
-                <Text size="sm" weight={500}>Configuración avanzada</Text>
+              <Stack gap="sm">
+                <Text size="sm" fw={500}>Configuración avanzada</Text>
                 <SimpleGrid cols={2} spacing="sm">
                   <NumberInput
                     label="Tamaño de lote"
                     description="Registros por lote"
                     value={retryConfig.batchSize}
-                    onChange={(val) => setRetryConfig(prev => ({ ...prev, batchSize: val || 100 }))}
+                    onChange={(val) => setRetryConfig(prev => ({ ...prev, batchSize: Number(val) || 100 }))}
                     min={1}
                     max={1000}
                   />
@@ -457,7 +457,7 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
                     label="Delay entre reintentos"
                     description="Milisegundos"
                     value={retryConfig.retryDelay}
-                    onChange={(val) => setRetryConfig(prev => ({ ...prev, retryDelay: val || 1000 }))}
+                    onChange={(val) => setRetryConfig(prev => ({ ...prev, retryDelay: Number(val) || 1000 }))}
                     min={100}
                     max={10000}
                   />
@@ -465,7 +465,7 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
                     label="Máximo de reintentos"
                     description="Por registro"
                     value={retryConfig.maxRetries}
-                    onChange={(val) => setRetryConfig(prev => ({ ...prev, maxRetries: val || 3 }))}
+                    onChange={(val) => setRetryConfig(prev => ({ ...prev, maxRetries: Number(val) || 3 }))}
                     min={1}
                     max={10}
                   />
@@ -484,9 +484,9 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
       {/* Estado de recuperación */}
       {recoveryState.status !== 'idle' && (
         <Paper p="md" withBorder>
-          <Stack spacing="md">
-            <Group position="apart">
-              <Text weight={500}>Progreso de recuperación</Text>
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Text fw={500}>Progreso de recuperación</Text>
               <Badge color={recoveryState.status === 'completed' ? 'green' : 'blue'}>
                 {recoveryState.status === 'analyzing' && 'Analizando...'}
                 {recoveryState.status === 'recovering' && 'Recuperando...'}
@@ -500,11 +500,11 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
               size="lg"
               radius="md"
               striped={recoveryState.status === 'recovering'}
-              animate={recoveryState.status === 'recovering'}
+              animated={recoveryState.status === 'recovering'}
             />
             
             {recoveryState.currentAction && (
-              <Text size="sm" color="dimmed">
+              <Text size="sm" c="dimmed">
                 {recoveryState.currentAction}...
               </Text>
             )}
@@ -529,7 +529,7 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
                     }
                   >
                     <Text size="sm">{log.message}</Text>
-                    <Text size="xs" color="dimmed">
+                    <Text size="xs" c="dimmed">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </Text>
                   </Timeline.Item>
@@ -541,12 +541,12 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
       )}
       
       {/* Acciones */}
-      <Group position="apart">
+      <Group justify="space-between">
         <Group>
           {recoveryState.status === 'completed' && (
             <Button
               variant="light"
-              leftIcon={<IconFileExport size={16} />}
+              leftSection={<IconFileExport size={16} />}
               onClick={() => {
                 // Exportar logs
               }}
@@ -564,7 +564,7 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
           )}
           
           <Button
-            leftIcon={
+            leftSection={
               recoveryState.status === 'recovering' ? 
                 <IconPlayerPause size={16} /> : 
                 <IconPlayerPlay size={16} />
@@ -584,7 +584,7 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
         onClose={() => setShowExportModal(false)}
         title="Exportar registros fallidos"
       >
-        <Stack spacing="md">
+        <Stack gap="md">
           <Alert icon={<IconInfoCircle size={16} />}>
             Se exportarán {failure.failedRecords} registros que no pudieron ser procesados.
           </Alert>
@@ -604,11 +604,11 @@ export const FailureRecovery: React.FC<FailureRecoveryProps> = ({
             defaultChecked
           />
           
-          <Group position="right">
+          <Group justify="flex-end">
             <Button variant="default" onClick={() => setShowExportModal(false)}>
               Cancelar
             </Button>
-            <Button leftIcon={<IconDownload size={16} />}>
+            <Button leftSection={<IconDownload size={16} />}>
               Descargar
             </Button>
           </Group>

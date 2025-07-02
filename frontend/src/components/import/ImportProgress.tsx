@@ -125,13 +125,13 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
   };
 
   return (
-    <Stack spacing="md">
+    <Stack gap="md">
       {/* Progreso principal */}
       <Paper p="md" withBorder>
-        <Stack spacing="sm">
-          <Group position="apart">
+        <Stack gap="sm">
+          <Group justify="space-between">
             <Group>
-              <Text weight={500}>Progreso de importación</Text>
+              <Text fw={500}>Progreso de importación</Text>
               <Badge color={getStatusColor()} leftSection={getStatusIcon()}>
                 {processed} / {total}
               </Badge>
@@ -159,21 +159,16 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
             radius="md"
             color={getStatusColor()}
             striped={isProcessing}
-            animate={isProcessing}
-            sections={[
-              { value: (successful / total) * 100, color: 'green' },
-              { value: (warnings / total) * 100, color: 'yellow' },
-              { value: (errors / total) * 100, color: 'red' },
-            ]}
+            animated={isProcessing}
           />
           
-          <Group position="apart">
-            <Text size="sm" color="dimmed">
+          <Group justify="space-between">
+            <Text size="sm" c="dimmed">
               {Math.round(progress)}% completado
             </Text>
             
             {isProcessing && stats.estimatedCompletion && (
-              <Text size="sm" color="dimmed">
+              <Text size="sm" c="dimmed">
                 Tiempo estimado: {formatDistanceToNow(stats.estimatedCompletion)}
               </Text>
             )}
@@ -184,42 +179,42 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
       {/* Estadísticas rápidas */}
       <SimpleGrid cols={4} spacing="md">
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <ThemeIcon size="lg" radius="md" color="blue" variant="light">
+          <Stack gap={4} align="center">
+            <ThemeIcon size="lg" radius="md" c="blue" variant="light">
               <IconFileImport size={20} />
             </ThemeIcon>
-            <Text size="xs" color="dimmed">Procesados</Text>
-            <Text size="xl" weight={700}>{processed}</Text>
+            <Text size="xs" c="dimmed">Procesados</Text>
+            <Text size="xl" fw={700}>{processed}</Text>
           </Stack>
         </Card>
         
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <ThemeIcon size="lg" radius="md" color="green" variant="light">
+          <Stack gap={4} align="center">
+            <ThemeIcon size="lg" radius="md" c="green" variant="light">
               <IconFileCheck size={20} />
             </ThemeIcon>
-            <Text size="xs" color="dimmed">Exitosos</Text>
-            <Text size="xl" weight={700} color="green">{successful}</Text>
+            <Text size="xs" c="dimmed">Exitosos</Text>
+            <Text size="xl" fw={700} c="green">{successful}</Text>
           </Stack>
         </Card>
         
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <ThemeIcon size="lg" radius="md" color="yellow" variant="light">
+          <Stack gap={4} align="center">
+            <ThemeIcon size="lg" radius="md" c="yellow" variant="light">
               <IconFileAlert size={20} />
             </ThemeIcon>
-            <Text size="xs" color="dimmed">Advertencias</Text>
-            <Text size="xl" weight={700} color="yellow">{warnings}</Text>
+            <Text size="xs" c="dimmed">Advertencias</Text>
+            <Text size="xl" fw={700} c="yellow">{warnings}</Text>
           </Stack>
         </Card>
         
         <Card withBorder>
-          <Stack spacing={4} align="center">
-            <ThemeIcon size="lg" radius="md" color="red" variant="light">
+          <Stack gap={4} align="center">
+            <ThemeIcon size="lg" radius="md" c="red" variant="light">
               <IconFileX size={20} />
             </ThemeIcon>
-            <Text size="xs" color="dimmed">Errores</Text>
-            <Text size="xl" weight={700} color="red">{errors}</Text>
+            <Text size="xs" c="dimmed">Errores</Text>
+            <Text size="xl" fw={700} c="red">{errors}</Text>
           </Stack>
         </Card>
       </SimpleGrid>
@@ -227,14 +222,14 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
       {/* Detalles expandibles */}
       <Collapse in={showDetails}>
         <Paper p="md" withBorder>
-          <Stack spacing="md">
+          <Stack gap="md">
             <Title order={5}>Detalles del proceso</Title>
             
             <SimpleGrid cols={2} spacing="lg">
               {/* Gráfico de anillo */}
               <Card withBorder>
                 <Stack align="center">
-                  <Text size="sm" weight={500}>Tasa de éxito</Text>
+                  <Text size="sm" fw={500}>Tasa de éxito</Text>
                   <RingProgress
                     size={120}
                     thickness={12}
@@ -244,11 +239,11 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                     ]}
                     label={
                       <Center>
-                        <Stack spacing={0} align="center">
-                          <Text size="xl" weight={700}>
+                        <Stack gap={0} align="center">
+                          <Text size="xl" fw={700}>
                             {Math.round(stats.successRate)}%
                           </Text>
-                          <Text size="xs" color="dimmed">
+                          <Text size="xs" c="dimmed">
                             éxito
                           </Text>
                         </Stack>
@@ -260,11 +255,11 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
               
               {/* Estadísticas de rendimiento */}
               <Card withBorder>
-                <Stack spacing="xs">
-                  <Text size="sm" weight={500}>Rendimiento</Text>
+                <Stack gap="xs">
+                  <Text size="sm" fw={500}>Rendimiento</Text>
                   
-                  <Group position="apart">
-                    <Group spacing="xs">
+                  <Group justify="space-between">
+                    <Group gap="xs">
                       <IconTrendingUp size={16} color="var(--mantine-color-blue-6)" />
                       <Text size="sm">Velocidad:</Text>
                     </Group>
@@ -273,8 +268,8 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                     </Badge>
                   </Group>
                   
-                  <Group position="apart">
-                    <Group spacing="xs">
+                  <Group justify="space-between">
+                    <Group gap="xs">
                       <IconClock size={16} color="var(--mantine-color-blue-6)" />
                       <Text size="sm">Tiempo transcurrido:</Text>
                     </Group>
@@ -283,8 +278,8 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                     </Badge>
                   </Group>
                   
-                  <Group position="apart">
-                    <Group spacing="xs">
+                  <Group justify="space-between">
+                    <Group gap="xs">
                       <IconPercentage size={16} color="var(--mantine-color-blue-6)" />
                       <Text size="sm">Progreso por lote:</Text>
                     </Group>
@@ -304,7 +299,7 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                 bullet={<IconDatabase size={12} />}
                 title="Inicio del proceso"
               >
-                <Text color="dimmed" size="sm">
+                <Text c="dimmed" size="sm">
                   {startTime.toLocaleTimeString()} - Iniciando importación de {total} registros
                 </Text>
               </Timeline.Item>
@@ -314,7 +309,7 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                   bullet={<IconListCheck size={12} />}
                   title={`Lotes procesados: ${currentBatch - 1}`}
                 >
-                  <Text color="dimmed" size="sm">
+                  <Text c="dimmed" size="sm">
                     Completados {(currentBatch - 1) * Math.floor(total / totalBatches)} registros
                   </Text>
                 </Timeline.Item>
@@ -324,9 +319,9 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                 <Timeline.Item
                   bullet={<IconAlertCircle size={12} />}
                   title="Advertencias detectadas"
-                  color="yellow"
+                  c="yellow"
                 >
-                  <Text color="dimmed" size="sm">
+                  <Text c="dimmed" size="sm">
                     Se encontraron {warnings} advertencias durante el proceso
                   </Text>
                 </Timeline.Item>
@@ -336,9 +331,9 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                 <Timeline.Item
                   bullet={<IconX size={12} />}
                   title="Errores encontrados"
-                  color="red"
+                  c="red"
                 >
-                  <Text color="dimmed" size="sm">
+                  <Text c="dimmed" size="sm">
                     {errors} registros no pudieron ser importados
                   </Text>
                 </Timeline.Item>
@@ -348,9 +343,9 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                 <Timeline.Item
                   bullet={<IconCheck size={12} />}
                   title="Proceso completado"
-                  color="green"
+                  c="green"
                 >
-                  <Text color="dimmed" size="sm">
+                  <Text c="dimmed" size="sm">
                     Importación finalizada en {Math.floor(stats.elapsedTime / 60)}m {Math.floor(stats.elapsedTime % 60)}s
                   </Text>
                 </Timeline.Item>
@@ -367,7 +362,7 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
           title="Errores en la importación"
           color="red"
         >
-          <Stack spacing="sm">
+          <Stack gap="sm">
             <Text size="sm">
               Se encontraron {errors} errores durante la importación. 
               Puede revisar el detalle de los errores y corregirlos manualmente.
@@ -378,8 +373,8 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
                 <Button
                   size="sm"
                   variant="light"
-                  color="red"
-                  leftIcon={<IconRefresh size={16} />}
+                  c="red"
+                  leftSection={<IconRefresh size={16} />}
                   onClick={onRetry}
                 >
                   Reintentar importación

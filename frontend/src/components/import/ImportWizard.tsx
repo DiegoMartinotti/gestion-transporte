@@ -214,7 +214,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
               onChange={(value) => setEntityType(value || '')}
               size="md"
               required
-              icon={<IconDatabase size={20} />}
+              leftSection={<IconDatabase size={20} />}
             />
             
             {entityType && (
@@ -269,7 +269,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
                 <Badge size="lg" variant="filled">
                   {importState.file.name}
                 </Badge>
-                <Badge size="lg" color="blue" variant="light">
+                <Badge size="lg" c="blue" variant="light">
                   {importState.data.length} registros
                 </Badge>
               </Group>
@@ -277,7 +277,15 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
             
             <ExcelDataPreview
               data={importState.data}
-              rows={10}
+              columns={importState.data.length > 0 ? 
+                Object.keys(importState.data[0]).map(key => ({
+                  key,
+                  label: key,
+                  type: 'text' as const,
+                  visible: true
+                })) : []
+              }
+              pageSize={10}
               entityType={entityType}
             />
             
@@ -335,9 +343,26 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
             </SimpleGrid>
             
             <ExcelValidationReport
-              errors={importState.validationErrors}
-              data={importState.data}
-              onCorrect={handleCorrection}
+              validationErrors={importState.validationErrors.map(error => ({
+                ...error,
+                column: error.field,
+                message: error.error
+              }))}
+              validationSummary={{
+                totalRows: importState.data.length,
+                validRows: importState.data.length - importState.validationErrors.filter(e => e.severity === 'error').length,
+                rowsWithErrors: importState.validationErrors.filter(e => e.severity === 'error').length,
+                rowsWithWarnings: importState.validationErrors.filter(e => e.severity === 'warning').length,
+                totalErrors: importState.validationErrors.filter(e => e.severity === 'error').length,
+                totalWarnings: importState.validationErrors.filter(e => e.severity === 'warning').length,
+                duplicatedRows: [],
+                missingRequiredFields: [],
+                invalidDataTypes: []
+              }}
+              onFixSuggestion={(error) => {
+                // Handle individual error fix suggestion
+                console.log('Fix suggestion for error:', error);
+              }}
             />
           </Stack>
         );
@@ -380,7 +405,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
               <IconCheck size={80} color="var(--mantine-color-green-6)" />
             </Center>
             
-            <Title order={3} align="center">
+            <Title order={3} ta="center">
               Importación completada
             </Title>
             
@@ -408,7 +433,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
                   <Card withBorder>
                     <Stack gap="xs" align="center">
                       <Text size="sm" c="dimmed">Fallidos</Text>
-                      <Text size="xl" fw={700} color="red">
+                      <Text size="xl" fw={700} c="red">
                         {importState.importResult.failed}
                       </Text>
                     </Stack>
@@ -468,7 +493,6 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
         <Stepper
           active={active}
           onStepClick={setActive}
-          breakpoint="sm"
           mb="xl"
         >
           <Stepper.Step
