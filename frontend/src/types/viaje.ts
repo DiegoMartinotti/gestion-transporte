@@ -1,6 +1,6 @@
 export interface Viaje {
   _id: string;
-  numeroViaje: number;
+  numeroViaje: string;
   fecha: string;
   cliente?: {
     _id: string;
@@ -62,6 +62,12 @@ export interface Viaje {
   montoBase?: number;
   montoExtras?: number;
   montoTotal?: number;
+  // Propiedades adicionales para OrdenCompra
+  total: number;
+  origen?: string;
+  destino?: string;
+  estadoPartida?: 'Abierta' | 'Cerrada';
+  totalCobrado?: number;
   documentos?: Array<{
     id: string;
     nombre: string;

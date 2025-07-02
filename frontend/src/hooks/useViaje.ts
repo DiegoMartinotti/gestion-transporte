@@ -10,7 +10,7 @@ export function useViaje(viajeId: string) {
   const viajesSimulados: Viaje[] = [
     {
       _id: '1',
-      numeroViaje: 1001,
+      numeroViaje: '1001',
       fecha: '2025-07-01T10:00:00Z',
       cliente: {
         _id: 'cliente1',

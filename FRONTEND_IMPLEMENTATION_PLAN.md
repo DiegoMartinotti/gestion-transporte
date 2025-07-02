@@ -257,11 +257,11 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 10: FACTURACIÓN Y ÓRDENES DE COMPRA
 
 ### 10.1 Gestión de Órdenes de Compra
-- [ ] **OrdenCompraList**: Lista con estados de partida
-- [ ] **OrdenCompraForm**: Formulario con asignación de viajes
-- [ ] **OrdenCompraDetail**: Vista detallada con viajes asignados
-- [ ] **EstadoPartidaIndicator**: Indicador visual de estado
-- [ ] **ViajeAssigner**: Asignador de viajes a OC
+- [x] **OrdenCompraList**: Lista con estados de partida <!-- COMPLETADO: /frontend/src/pages/ordenes-compra/OrdenesCompraPage.tsx con filtros avanzados, estadísticas, tabla completa -->
+- [x] **OrdenCompraForm**: Formulario con asignación de viajes <!-- COMPLETADO: /frontend/src/components/forms/OrdenCompraForm.tsx con asignación múltiple de viajes, cálculos dinámicos -->
+- [x] **OrdenCompraDetail**: Vista detallada con viajes asignados <!-- COMPLETADO: /frontend/src/components/details/OrdenCompraDetail.tsx con timeline, resumen financiero, acciones de estado -->
+- [x] **EstadoPartidaIndicator**: Indicador visual de estado <!-- COMPLETADO: /frontend/src/components/indicators/EstadoPartidaIndicator.tsx con progress bar, tooltips informativos -->
+- [x] **ViajeAssigner**: Asignador de viajes a OC <!-- COMPLETADO: /frontend/src/components/forms/ViajeAssigner.tsx con modal de selección múltiple, importes editables -->
 
 ### 10.2 Sistema de Partidas
 - [ ] **PartidaCalculator**: Calculadora automática de estados

@@ -12,6 +12,7 @@ import VehiculosPage from './pages/vehiculos/VehiculosPage';
 import TramosPage from './pages/tramos/TramosPage';
 import { ExtrasPage } from './pages/extras/ExtrasPage';
 import { ViajesPage } from './pages/viajes/ViajesPage';
+import { OrdenesCompraPage } from './pages/ordenes-compra/OrdenesCompraPage';
 import CalculadoraPage from './pages/calculadora/CalculadoraPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
@@ -52,6 +53,7 @@ export default function AppRoutes() {
         <Route path="/vehiculos" element={<VehiculosPage />} />
         <Route path="/extras" element={<ExtrasPage />} />
         <Route path="/viajes" element={<ViajesPage />} />
+        <Route path="/ordenes-compra" element={<OrdenesCompraPage />} />
         <Route path="/calculadora" element={<CalculadoraPage />} />
       </Route>
     </Routes>
