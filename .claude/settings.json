@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [[ \"${filePath}\" == *.ts ]]; then npx tsc --noEmit \"${filePath}\"; fi"
+            "command": "cd frontend && npx tsc --noEmit --incremental --pretty",
+            "failureMode": "block"
           }
         ]
       }
