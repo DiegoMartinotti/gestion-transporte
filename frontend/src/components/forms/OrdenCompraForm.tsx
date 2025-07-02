@@ -197,9 +197,9 @@ export function OrdenCompraForm({
                 placeholder="Seleccionar fecha"
                 leftSection={<IconCalendar size={16} />}
                 required
-                value={form.values.fecha ? new Date(form.values.fecha) : null}
-                onChange={(date: Date | null) => 
-                  form.setFieldValue('fecha', date ? date.toISOString().split('T')[0] : '')
+                value={form.values.fecha}
+                onChange={(value: string | null) => 
+                  form.setFieldValue('fecha', value || '')
                 }
                 error={form.errors.fecha}
               />
