@@ -66,7 +66,7 @@ export interface Viaje {
   total: number;
   origen?: string;
   destino?: string;
-  estadoPartida?: 'Abierta' | 'Cerrada';
+  estadoPartida?: import('./ordenCompra').EstadoPartida;
   totalCobrado?: number;
   documentos?: Array<{
     id: string;

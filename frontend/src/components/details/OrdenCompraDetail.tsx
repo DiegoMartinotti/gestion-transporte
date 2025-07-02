@@ -397,7 +397,7 @@ export function OrdenCompraDetail({
                   
                   <Table.Td>
                     <EstadoPartidaIndicator
-                      estado={viaje?.estadoPartida || 'Abierta'}
+                      estado={viaje?.estadoPartida || 'abierta'}
                       totalViaje={viaje?.total || 0}
                       totalCobrado={viaje?.totalCobrado || 0}
                       size="sm"

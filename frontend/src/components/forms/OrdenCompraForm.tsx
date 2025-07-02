@@ -275,7 +275,7 @@ export function OrdenCompraForm({
                         </Table.Td>
                         <Table.Td>
                           <Badge
-                            color={viaje?.estadoPartida === 'Cerrada' ? 'green' : 'yellow'}
+                            color={viaje?.estadoPartida === 'pagada' ? 'green' : 'yellow'}
                             size="sm"
                           >
                             {viaje?.estadoPartida || 'N/A'}

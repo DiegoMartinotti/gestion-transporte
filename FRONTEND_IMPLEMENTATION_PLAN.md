@@ -264,12 +264,12 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **ViajeAssigner**: Asignador de viajes a OC <!-- COMPLETADO: /frontend/src/components/forms/ViajeAssigner.tsx con modal de selección múltiple, importes editables -->
 
 ### 10.2 Sistema de Partidas
-- [ ] **PartidaCalculator**: Calculadora automática de estados
-- [ ] **PartidaReport**: Reporte de partidas abiertas/cerradas
-- [ ] **PaymentTracker**: Seguimiento de pagos
-- [ ] **BillingDashboard**: Dashboard de facturación
+- [x] **PartidaCalculator**: Calculadora automática de estados <!-- COMPLETADO: /frontend/src/components/calculators/PartidaCalculator.tsx - Calculadora completa con estadísticas, progreso, recálculo automático, alertas vencimientos -->
+- [x] **PartidaReport**: Reporte de partidas abiertas/cerradas <!-- COMPLETADO: /frontend/src/components/reports/PartidaReport.tsx - Reporte completo con tabs resumen/detalle/vencimientos, filtros avanzados, exportación Excel/PDF -->
+- [x] **PaymentTracker**: Seguimiento de pagos <!-- COMPLETADO: /frontend/src/components/tracking/PaymentTracker.tsx - Sistema completo seguimiento con registro pagos/contactos, timeline, alertas, tabs por prioridad -->
+- [x] **BillingDashboard**: Dashboard de facturación <!-- COMPLETADO: /frontend/src/components/dashboards/BillingDashboard.tsx - Dashboard completo con métricas, alertas, eficiencia cobranza, top clientes, tendencias -->
 
-**Checkpoint 9**: ✅ Sistema de facturación funcionando
+**Checkpoint 9**: ✅ Sistema de facturación funcionando <!-- COMPLETADO: Sistema completo de partidas con calculadora estados, reportes detallados, seguimiento de pagos con historial, dashboard de facturación con métricas y alertas -->
 
 ---
 

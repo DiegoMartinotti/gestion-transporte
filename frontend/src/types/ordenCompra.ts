@@ -23,7 +23,7 @@ export interface OrdenCompraFormData {
   estado: 'Pendiente' | 'Facturada' | 'Cancelada';
 }
 
-export type EstadoPartida = 'Abierta' | 'Cerrada';
+export type EstadoPartida = 'abierta' | 'pagada' | 'vencida';
 
 export interface OrdenCompraFilter {
   cliente?: string;
