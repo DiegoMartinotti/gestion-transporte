@@ -246,11 +246,11 @@ ImportacionTemporal (sistema de importación avanzado)
 - [x] **ViajeValidator**: Validador de datos de viaje <!-- COMPLETADO: /frontend/src/components/validators/ViajeValidator.tsx -->
 
 ### 9.3 Configuración Multi-Vehículo
-- [ ] **VehiculoAssigner**: Asignador de múltiples vehículos
-- [ ] **VehicleTypeDetector**: Detector automático de tipo de unidad
-- [ ] **ConfigurationPreview**: Vista previa de configuración
+- [x] **VehiculoAssigner**: Asignador de múltiples vehículos <!-- COMPLETADO: /frontend/src/components/viajes/VehiculoAssigner.tsx - Sistema completo de asignación múltiple con validación duplicados, estado documentación -->
+- [x] **VehicleTypeDetector**: Detector automático de tipo de unidad <!-- COMPLETADO: /frontend/src/components/viajes/VehicleTypeDetector.tsx - Detección automática con análisis de capacidad, carrocería, ejes, confianza -->
+- [x] **ConfigurationPreview**: Vista previa de configuración <!-- COMPLETADO: /frontend/src/components/viajes/ConfigurationPreview.tsx - Vista previa completa con resumen, riesgos, costos, validación -->
 
-**Checkpoint 8**: ✅ Sistema de viajes funcionando completamente
+**Checkpoint 8**: ✅ Sistema de viajes funcionando completamente <!-- COMPLETADO: Sistema completo de viajes con asignación multi-vehículo, detección automática de tipos, vista previa configuración, calculadoras dinámicas, validación integral -->
 
 ---
 

@@ -19,6 +19,8 @@ interface PersonalSelectorProps {
   error?: string;
   multiple?: boolean;
   tipo?: string;
+  disabled?: boolean;
+  excludeIds?: string[];
 }
 
 export function PersonalSelector({
@@ -30,7 +32,9 @@ export function PersonalSelector({
   clearable = false,
   error,
   multiple = false,
-  tipo
+  tipo,
+  disabled = false,
+  excludeIds = []
 }: PersonalSelectorProps) {
   const [personal, setPersonal] = useState<Personal[]>([
     {
