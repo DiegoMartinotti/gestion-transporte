@@ -33,6 +33,7 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.6.2",
     "react-scripts": "5.0.1",
+    "recharts": "^3.0.2",
     "typescript": "^5.8.3",
     "web-vitals": "^5.0.3",
     "xlsx": "^0.18.5"
