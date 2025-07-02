@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{\n  \"type\": \"command\",\n  \"command\": \"npx tsc --noEmit\"\n}"
+          }
+        ]
+      }
+    ]
+  }
+}
