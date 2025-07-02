@@ -2,11 +2,11 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "{\n  \"type\": \"command\",\n  \"command\": \"npx tsc --noEmit\"\n}"
+            "command": "if [[ \"${filePath}\" == *.ts ]]; then npx tsc --noEmit \"${filePath}\"; fi"
           }
         ]
       }

@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MANDATORY: MCP Context7 Consultation
+
+**CRITICAL**: Before writing any code (using Edit, Write, MultiEdit tools), ALWAYS consult MCP Context7 first to get current documentation for the libraries, frameworks, or APIs being used. This ensures code follows latest best practices and correct usage patterns.
+
 ## Project Overview
 
 This is a Transportation Management System (Sistema de Gestión de Transporte) - a comprehensive backend REST API for managing transportation logistics including clients, sites, routes, vehicles, trips, and billing. The system is currently undergoing active migration from JavaScript to TypeScript.
