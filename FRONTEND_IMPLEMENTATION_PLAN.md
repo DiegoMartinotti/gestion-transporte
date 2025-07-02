@@ -276,11 +276,13 @@ ImportacionTemporal (sistema de importación avanzado)
 ## FASE 11: SISTEMA DE IMPORTACIÓN AVANZADO
 
 ### 11.1 Importación Multi-Etapa
-- [ ] **ImportWizard**: Wizard de importación paso a paso
-- [ ] **FailureRecovery**: Sistema de recuperación de fallos
-- [ ] **ImportProgress**: Progreso detallado de importación
-- [ ] **ErrorCorrection**: Interface de corrección de errores
-- [ ] **ImportHistory**: Historial de importaciones
+- [x] **ImportWizard**: Wizard de importación paso a paso <!-- COMPLETADO: /frontend/src/components/import/ImportWizard.tsx - Wizard completo con 6 pasos, validación, carga de archivos -->
+- [x] **FailureRecovery**: Sistema de recuperación de fallos <!-- COMPLETADO: /frontend/src/components/import/FailureRecovery.tsx - Sistema completo con análisis, opciones de recuperación, logs -->
+- [x] **ImportProgress**: Progreso detallado de importación <!-- COMPLETADO: /frontend/src/components/import/ImportProgress.tsx - Progreso con estadísticas, timeline, alertas -->
+- [x] **ErrorCorrection**: Interface de corrección de errores <!-- COMPLETADO: /frontend/src/components/import/ErrorCorrection.tsx - Corrección manual y automática, acciones masivas -->
+- [x] **ImportHistory**: Historial de importaciones <!-- COMPLETADO: /frontend/src/components/import/ImportHistory.tsx - Historial completo con filtros, estadísticas, detalles -->
+- [x] **ImportService**: Servicio de gestión de importaciones <!-- COMPLETADO: /frontend/src/services/importService.ts - API completa para importación, validación, plantillas, historial -->
+- [x] **ImportPage**: Página principal de importación <!-- COMPLETADO: /frontend/src/pages/import/ImportPage.tsx - Página con tabs para wizard, historial y recuperación -->
 
 ### 11.2 Validación Avanzada
 - [ ] **CrossEntityValidator**: Validador entre entidades
