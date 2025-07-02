@@ -427,4 +427,84 @@ npm run type-check   # Verificación tipos
 
 ---
 
+## FASE 13: OPTIMIZACIÓN Y REFACTORIZACIÓN
+
+### 13.1 Eliminación de Duplicaciones
+- [ ] **DocumentExpirationSystem**: Unificar DocumentExpiration + ExpirationAlerts en componente único
+- [ ] **GenericDocumentTable**: Crear tabla genérica para reemplazar DocumentacionTable + DocumentTable
+- [ ] **PersonalSelectorRefactor**: Hacer PersonalSelector configurable para incluir funcionalidad de ChoferSelector
+- [ ] **CalculatorBase**: Crear hook/clase base compartida para todas las calculadoras
+- [ ] **StatusTrackerBase**: Unificar ViajeTracker + PaymentTracker en componente base configurable
+
+### 13.2 Consolidaciones Funcionales
+- [ ] **ExpirationManagerBase**: Componente base para manejar alertas + calendario de vencimientos
+- [ ] **DocumentValidatorGeneric**: Validador genérico para documentos de personal y vehículos
+- [ ] **TotalCalculatorRefactor**: Incorporar funcionalidad de ExtraCalculator dentro de TotalCalculator
+- [ ] **AlertSystemUnified**: Sistema unificado de alertas y notificaciones
+- [ ] **SelectorFactory**: Factory pattern para crear selectores reutilizables
+
+### 13.3 Limpieza de Código TypeScript
+- [ ] **ReportHistoryFix**: Remover variable no utilizada `onReportView` (línea 108)
+- [ ] **ReportViewerCleanup**: Remover variables no utilizadas `field`, `index`, `entry` (líneas 189, 217, 303)
+- [ ] **ReportsPageFix**: Remover variable no utilizada `blob` (línea 492)
+- [ ] **ESLintFix**: Ejecutar linter y corregir todos los warnings de variables no utilizadas
+- [ ] **TypeScriptValidation**: Verificar tipos y resolver inconsistencias
+
+### 13.4 Optimizaciones de Performance
+- [ ] **ComponentMemoization**: Aplicar React.memo a componentes pesados de renderizado
+- [ ] **HookOptimization**: Optimizar custom hooks con useMemo/useCallback
+- [ ] **LazyLoadingEnhancement**: Implementar lazy loading para componentes de formularios complejos
+- [ ] **VirtualScrollingUpgrade**: Mejorar tablas grandes con virtual scrolling
+- [ ] **CodeSplittingReview**: Revisar y optimizar code splitting por rutas
+
+**Checkpoint 12**: ✅ Código optimizado sin duplicaciones
+
+---
+
+## FASE 14: TESTING Y VALIDACIÓN FINAL
+
+### 14.1 Testing Unitario
+- [ ] **ComponentTests**: Tests unitarios para componentes base y calculadoras
+- [ ] **ServiceTests**: Tests para servicios API y lógica de negocio
+- [ ] **HookTests**: Tests para custom hooks y contextos
+- [ ] **ValidatorTests**: Tests para validadores y reglas de negocio
+- [ ] **UtilTests**: Tests para funciones utilitarias
+
+### 14.2 Testing Integración
+- [ ] **FormIntegrationTests**: Tests de formularios completos con validación
+- [ ] **APIIntegrationTests**: Tests de integración con backend
+- [ ] **WorkflowTests**: Tests de flujos completos (crear cliente → site → tramo → viaje)
+- [ ] **CalculationTests**: Tests de cálculos complejos end-to-end
+- [ ] **ImportExportTests**: Tests de importación/exportación Excel
+
+### 14.3 Testing E2E
+- [ ] **LoginFlowTest**: Test completo de autenticación
+- [ ] **CRUDOperationsTest**: Tests CRUD para todas las entidades
+- [ ] **ComplexWorkflowTest**: Test de creación de viaje completo
+- [ ] **ReportGenerationTest**: Test de generación y exportación de reportes
+- [ ] **ErrorHandlingTest**: Tests de manejo de errores y recovery
+
+**Checkpoint 13**: ✅ Sistema completamente testeado y validado
+
+---
+
+## RESUMEN DE DUPLICACIONES IDENTIFICADAS
+
+### 🔴 **ELIMINACIONES REQUERIDAS**
+1. **DocumentExpiration** + **ExpirationAlerts** → **DocumentExpirationSystem**
+2. **DocumentacionTable** + **DocumentTable** → **GenericDocumentTable**
+3. **ChoferSelector** → Configuración de **PersonalSelector**
+
+### 🟡 **REFACTORIZACIONES SUGERIDAS**
+1. **ExtraCalculator** → Integrar en **TotalCalculator**
+2. **ViajeTracker** + **PaymentTracker** → **StatusTrackerBase**
+3. Crear **CalculatorBase** para lógica compartida
+
+### 🟢 **LIMPIEZA DE CÓDIGO**
+1. Variables TypeScript no utilizadas en archivos de reportes
+2. Warnings de ESLint por resolver
+3. Optimizaciones de performance pendientes
+
+---
+
 Este plan permite un desarrollo incremental y testeable, construyendo desde componentes simples hasta funcionalidades complejas, siempre manteniendo la coherencia de la experiencia de usuario y la reutilización de componentes.
