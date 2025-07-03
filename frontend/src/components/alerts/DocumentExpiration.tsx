@@ -28,7 +28,7 @@ import {
 } from '@tabler/icons-react';
 import { format, differenceInDays, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { notifications } from '@mantine/notifications';
 
 interface DocumentoVencimiento {
@@ -195,15 +195,16 @@ export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
   onEditPersonal,
   compact = false
 }) => {
-  const [documentos, setDocumentos] = useState<DocumentoVencimiento[]>([]);
   const [detailModalOpened, setDetailModalOpened] = useState(false);
   const [alertasHabilitadas, setAlertasHabilitadas] = useState(true);
+  const notificationShownRef = useRef(false);
 
-  useEffect(() => {
+  // Memoizar procesamiento de documentos para evitar bucles infinitos
+  const documentos = useMemo(() => {
     const docsVehiculos = procesarDocumentosVehiculos(vehiculos, diasAlerta);
     const docsPersonal = procesarDocumentosPersonal(personal, diasAlerta);
     
-    const todosDocumentos = [...docsVehiculos, ...docsPersonal]
+    return [...docsVehiculos, ...docsPersonal]
       .filter(doc => {
         if (doc.estado === 'vencido' && !mostrarVencidos) return false;
         if (doc.estado === 'proximo' && !mostrarProximos) return false;
@@ -218,33 +219,42 @@ export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
         }
         return a.diasRestantes - b.diasRestantes;
       });
+  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
 
-    setDocumentos(todosDocumentos);
+  // Efecto para resetear flag cuando cambian los datos
+  useEffect(() => {
+    notificationShownRef.current = false;
+  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
 
-    // Mostrar notificación automática si hay documentos vencidos o próximos a vencer
-    if (alertasHabilitadas) {
-      const vencidos = todosDocumentos.filter(doc => doc.estado === 'vencido').length;
-      const proximos = todosDocumentos.filter(doc => doc.estado === 'proximo').length;
-
-      if (vencidos > 0) {
-        notifications.show({
-          title: 'Documentos Vencidos',
-          message: `${vencidos} documento${vencidos > 1 ? 's' : ''} vencido${vencidos > 1 ? 's' : ''}`,
-          color: 'red',
-          icon: <IconAlertTriangle />,
-          autoClose: 5000,
-        });
-      } else if (proximos > 0) {
-        notifications.show({
-          title: 'Documentos por Vencer',
-          message: `${proximos} documento${proximos > 1 ? 's' : ''} próximo${proximos > 1 ? 's' : ''} a vencer`,
-          color: 'yellow',
-          icon: <IconAlertTriangle />,
-          autoClose: 5000,
-        });
-      }
+  // Efecto separado para mostrar notificaciones (evita loops infinitos)
+  useEffect(() => {
+    if (!alertasHabilitadas || notificationShownRef.current || documentos.length === 0) {
+      return;
     }
-  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes, alertasHabilitadas]);
+
+    const vencidos = documentos.filter(doc => doc.estado === 'vencido').length;
+    const proximos = documentos.filter(doc => doc.estado === 'proximo').length;
+
+    if (vencidos > 0) {
+      notifications.show({
+        title: 'Documentos Vencidos',
+        message: `${vencidos} documento${vencidos > 1 ? 's' : ''} vencido${vencidos > 1 ? 's' : ''}`,
+        color: 'red',
+        icon: <IconAlertTriangle />,
+        autoClose: 5000,
+      });
+      notificationShownRef.current = true;
+    } else if (proximos > 0) {
+      notifications.show({
+        title: 'Documentos por Vencer',
+        message: `${proximos} documento${proximos > 1 ? 's' : ''} próximo${proximos > 1 ? 's' : ''} a vencer`,
+        color: 'yellow',
+        icon: <IconAlertTriangle />,
+        autoClose: 5000,
+      });
+      notificationShownRef.current = true;
+    }
+  }, [documentos, alertasHabilitadas]);
 
   if (documentos.length === 0) {
     return (

@@ -67,6 +67,12 @@ function DataTable<T = any>({
 
   // Memoize calculated values
   const totalPages = useMemo(() => Math.ceil(totalItems / pageSize), [totalItems, pageSize]);
+  
+  // Memoize page size options
+  const pageSizeOptions = useMemo(() => PAGE_SIZE_OPTIONS.map(size => ({ 
+    value: size.toString(), 
+    label: size.toString() 
+  })), []);
 
   // Memoize event handlers to prevent unnecessary re-renders
   const handleSearchChange = useCallback((value: string) => {
@@ -163,10 +169,7 @@ function DataTable<T = any>({
               <Select
                 value={pageSize.toString()}
                 onChange={(value) => onPageSizeChange?.(parseInt(value || '10'))}
-                data={useMemo(() => PAGE_SIZE_OPTIONS.map(size => ({ 
-                  value: size.toString(), 
-                  label: size.toString() 
-                })), [])}
+                data={pageSizeOptions}
                 w={80}
               />
               <Text size="sm">por página</Text>
