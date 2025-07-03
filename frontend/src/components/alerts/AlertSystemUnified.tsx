@@ -10,26 +10,18 @@ import {
   Select,
   Paper,
   Title,
-  ThemeIcon,
   Modal,
-  ScrollArea,
   Alert,
   Tabs,
   Button,
   SimpleGrid,
-  Progress,
   Timeline,
-  Collapse,
-  TextInput,
   NumberInput,
   Switch
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import {
   IconCalendar,
-  IconChevronLeft,
-  IconChevronRight,
-  IconFilter,
   IconTruck,
   IconUser,
   IconFileText,
@@ -38,12 +30,9 @@ import {
   IconRefresh,
   IconBell,
   IconBellOff,
-  IconChevronDown,
-  IconChevronUp,
   IconSettings,
   IconCheck,
   IconX,
-  IconClock,
   IconHistory
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';

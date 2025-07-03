@@ -186,7 +186,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     setTableState(prev => ({ ...prev, pageSize, page: 1 }));
   };
 
-  const formatCellValue = (value: any, header: string, field?: any) => {
+  const formatCellValue = (value: any, header: string) => {
     if (value === null || value === undefined) return '-';
     
     // Determinar el tipo de campo para formateo
@@ -214,7 +214,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     return String(value);
   };
 
-  const renderChart = (chartConfig: ChartConfig, index: number) => {
+  const renderChart = (chartConfig: ChartConfig) => {
     const commonProps = {
       data: processedChartData,
       margin: { top: 5, right: 30, left: 20, bottom: 5 }
@@ -300,7 +300,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                 outerRadius={80}
                 label
               >
-                {pieData.map((entry, index) => (
+                {pieData.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </Pie>
@@ -517,7 +517,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
             </Center>
           ) : (
             <Box>
-              {renderChart(reportDefinition.charts[selectedChart], selectedChart)}
+              {renderChart(reportDefinition.charts[selectedChart])}
             </Box>
           )}
         </Card>
@@ -532,7 +532,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                   <Card withBorder>
                     <Text size="sm" fw={500} mb="xs">{chart.title}</Text>
                     <Box style={{ height: 200 }}>
-                      {renderChart({ ...chart, height: 200 }, index)}
+                      {renderChart({ ...chart, height: 200 })}
                     </Box>
                   </Card>
                 </Grid.Col>
@@ -647,7 +647,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
         >
           {reportDefinition.charts?.[selectedChart] && (
             <Box h="80vh">
-              {renderChart(reportDefinition.charts[selectedChart], selectedChart)}
+              {renderChart(reportDefinition.charts[selectedChart])}
             </Box>
           )}
         </Modal>

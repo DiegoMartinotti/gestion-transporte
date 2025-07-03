@@ -65,7 +65,6 @@ import { reportService } from '../../services/reportService';
 
 interface ReportHistoryProps {
   reportDefinitions: ReportDefinition[];
-  onReportView?: (execution: ReportExecution) => void;
   onReportDownload?: (execution: ReportExecution) => void;
   onReportRerun?: (reportId: string) => void;
 }
@@ -105,7 +104,6 @@ const FORMAT_OPTIONS = [
 
 export const ReportHistory: React.FC<ReportHistoryProps> = ({
   reportDefinitions,
-  onReportView,
   onReportDownload,
   onReportRerun
 }) => {

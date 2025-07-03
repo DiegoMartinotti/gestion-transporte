@@ -489,7 +489,7 @@ export const ReportsPage: React.FC = () => {
               <ExportOptions
                 reportDefinition={selectedReport}
                 reportData={reportData}
-                onExportComplete={(blob, filename) => {
+                onExportComplete={(_, filename) => {
                   notifications.show({
                     title: 'Exportación completada',
                     message: `Archivo ${filename} descargado correctamente`,
