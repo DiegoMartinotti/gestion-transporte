@@ -6,7 +6,7 @@ import {
   IconAlertCircle,
   IconSettings,
 } from '@tabler/icons-react';
-import { ImportWizard } from '../../components/import/ImportWizard';
+import ImportWizard from '../../components/import/ImportWizard';
 import { ImportHistory } from '../../components/import/ImportHistory';
 import { FailureRecovery } from '../../components/import/FailureRecovery';
 import { showNotification } from '@mantine/notifications';

@@ -20,7 +20,7 @@ import {
   IconSettings,
   IconRefresh
 } from '@tabler/icons-react';
-import { TarifaCalculator } from '../../components/calculators/TarifaCalculator';
+import TarifaCalculator from '../../components/calculators/TarifaCalculator';
 import { TarifaVersioning } from '../../components/versioning/TarifaVersioning';
 import { TarifaConflictDetector } from '../../components/detectors/TarifaConflictDetector';
 import { TipoCalculoSelector } from '../../components/selectors/TipoCalculoSelector';
@@ -110,7 +110,7 @@ const CalculadoraPage: React.FC = () => {
                   <TarifaCalculator 
                     tramoId={selectedTramo._id}
                     tramo={selectedTramo}
-                    onCalculationChange={(result) => {
+                    onCalculationChange={(result: any) => {
                       console.log('Resultado cálculo:', result);
                     }}
                   />

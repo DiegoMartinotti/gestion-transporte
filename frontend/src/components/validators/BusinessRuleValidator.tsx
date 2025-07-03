@@ -57,6 +57,10 @@ interface BusinessRuleValidatorProps {
   onValidationComplete?: (results: ValidationResult[]) => void;
   onRuleToggle?: (ruleId: string, enabled: boolean) => void;
   autoValidate?: boolean;
+  entityType?: string;
+  enabledByDefault?: boolean;
+  showCategoryFilter?: boolean;
+  showSeverityFilter?: boolean;
 }
 
 const defaultBusinessRules: BusinessRule[] = [
@@ -302,7 +306,7 @@ const defaultBusinessRules: BusinessRule[] = [
   }
 ];
 
-export const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
+const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
   data,
   contextData,
   rules = defaultBusinessRules,
@@ -600,4 +604,18 @@ export const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
   );
 };
 
-export default BusinessRuleValidator;
+// Comparador para React.memo
+const arePropsEqual = (prevProps: BusinessRuleValidatorProps, nextProps: BusinessRuleValidatorProps): boolean => {
+  return (
+    prevProps.data?.length === nextProps.data?.length &&
+    prevProps.entityType === nextProps.entityType &&
+    prevProps.enabledByDefault === nextProps.enabledByDefault &&
+    prevProps.showCategoryFilter === nextProps.showCategoryFilter &&
+    prevProps.showSeverityFilter === nextProps.showSeverityFilter &&
+    JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data) &&
+    JSON.stringify(prevProps.contextData) === JSON.stringify(nextProps.contextData) &&
+    JSON.stringify(prevProps.rules) === JSON.stringify(nextProps.rules)
+  );
+};
+
+export default React.memo(BusinessRuleValidator, arePropsEqual);

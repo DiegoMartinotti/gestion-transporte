@@ -1,3 +1,4 @@
+import React from 'react';
 import { NavLink, Stack, Divider, Text, Group, Avatar, ActionIcon } from '@mantine/core';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -32,7 +33,7 @@ const navigationItems = [
   { label: 'Importación', icon: IconFileImport, link: '/import' },
 ];
 
-export default function Navigation() {
+function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -93,3 +94,5 @@ export default function Navigation() {
     </Stack>
   );
 }
+
+export default React.memo(Navigation);

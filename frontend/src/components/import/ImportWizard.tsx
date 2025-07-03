@@ -39,7 +39,7 @@ import {
   IconFileSpreadsheet,
 } from '@tabler/icons-react';
 import { ExcelUploadZone } from '../excel/ExcelUploadZone';
-import { ExcelDataPreview } from '../excel/ExcelDataPreview';
+import ExcelDataPreview from '../excel/ExcelDataPreview';
 import { ExcelValidationReport } from '../excel/ExcelValidationReport';
 import { ImportProgress } from './ImportProgress';
 import { ErrorCorrection } from './ErrorCorrection';
@@ -89,7 +89,7 @@ const ENTITY_TYPES = [
   { value: 'extras', label: 'Extras' },
 ];
 
-export const ImportWizard: React.FC<ImportWizardProps> = ({
+const ImportWizard: React.FC<ImportWizardProps> = ({
   entityType: initialEntityType,
   onComplete,
   onCancel,
@@ -598,3 +598,14 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({
     </Container>
   );
 };
+
+// Comparador para React.memo
+const arePropsEqual = (prevProps: ImportWizardProps, nextProps: ImportWizardProps): boolean => {
+  return (
+    prevProps.entityType === nextProps.entityType &&
+    prevProps.onComplete === nextProps.onComplete &&
+    prevProps.onCancel === nextProps.onCancel
+  );
+};
+
+export default React.memo(ImportWizard, arePropsEqual);

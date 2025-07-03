@@ -77,7 +77,7 @@ interface RouteVisualizerProps {
   autoCalculate?: boolean;
 }
 
-export default function RouteVisualizer({
+function RouteVisualizer({
   origin,
   destination,
   waypoints = [],
@@ -549,3 +549,23 @@ export default function RouteVisualizer({
     </Stack>
   );
 }
+
+// Comparador para React.memo
+const arePropsEqual = (prevProps: RouteVisualizerProps, nextProps: RouteVisualizerProps): boolean => {
+  return (
+    prevProps.height === nextProps.height &&
+    prevProps.travelMode === nextProps.travelMode &&
+    prevProps.optimizeWaypoints === nextProps.optimizeWaypoints &&
+    prevProps.avoidHighways === nextProps.avoidHighways &&
+    prevProps.avoidTolls === nextProps.avoidTolls &&
+    prevProps.showSteps === nextProps.showSteps &&
+    prevProps.showAlternatives === nextProps.showAlternatives &&
+    prevProps.autoCalculate === nextProps.autoCalculate &&
+    JSON.stringify(prevProps.origin) === JSON.stringify(nextProps.origin) &&
+    JSON.stringify(prevProps.destination) === JSON.stringify(nextProps.destination) &&
+    JSON.stringify(prevProps.waypoints) === JSON.stringify(nextProps.waypoints) &&
+    JSON.stringify(prevProps.sites) === JSON.stringify(nextProps.sites)
+  );
+};
+
+export default React.memo(RouteVisualizer, arePropsEqual);

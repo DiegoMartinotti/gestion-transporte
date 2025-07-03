@@ -1,3 +1,4 @@
+import React from 'react';
 import { 
   Table, 
   Paper, 
@@ -43,7 +44,7 @@ interface DataTableProps<T = any> {
   keyExtractor?: (record: T) => string;
 }
 
-export default function DataTable<T = any>({
+function DataTable<T = any>({
   columns,
   data,
   loading = false,
@@ -256,3 +257,61 @@ export default function DataTable<T = any>({
     </Stack>
   );
 }
+
+// Comparador personalizado para React.memo
+const arePropsEqual = <T,>(prevProps: DataTableProps<T>, nextProps: DataTableProps<T>): boolean => {
+  // Comparar propiedades simples
+  if (
+    prevProps.loading !== nextProps.loading ||
+    prevProps.totalItems !== nextProps.totalItems ||
+    prevProps.currentPage !== nextProps.currentPage ||
+    prevProps.pageSize !== nextProps.pageSize ||
+    prevProps.searchPlaceholder !== nextProps.searchPlaceholder ||
+    prevProps.showSearch !== nextProps.showSearch ||
+    prevProps.showPagination !== nextProps.showPagination ||
+    prevProps.showPageSize !== nextProps.showPageSize ||
+    prevProps.emptyMessage !== nextProps.emptyMessage
+  ) {
+    return false;
+  }
+
+  // Comparar arrays de datos (comparación superficial para performance)
+  if (prevProps.data?.length !== nextProps.data?.length) {
+    return false;
+  }
+  
+  // Comparar estructura de columnas
+  if (prevProps.columns?.length !== nextProps.columns?.length) {
+    return false;
+  }
+  
+  // Comparación más profunda solo si las longitudes son iguales
+  if (prevProps.data && nextProps.data) {
+    for (let i = 0; i < prevProps.data.length; i++) {
+      if (prevProps.data[i] !== nextProps.data[i]) {
+        return false;
+      }
+    }
+  }
+  
+  if (prevProps.columns && nextProps.columns) {
+    for (let i = 0; i < prevProps.columns.length; i++) {
+      const prevCol = prevProps.columns[i];
+      const nextCol = nextProps.columns[i];
+      if (
+        prevCol.key !== nextCol.key ||
+        prevCol.label !== nextCol.label ||
+        prevCol.sortable !== nextCol.sortable ||
+        prevCol.width !== nextCol.width ||
+        prevCol.align !== nextCol.align
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
+
+// Exportar el componente memoizado
+export default React.memo(DataTable, arePropsEqual) as typeof DataTable;

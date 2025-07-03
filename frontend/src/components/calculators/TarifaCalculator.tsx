@@ -54,7 +54,7 @@ interface CalculationResult {
   }[];
 }
 
-export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
+const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
   tramoId,
   tramo,
   onCalculationChange,
@@ -321,3 +321,15 @@ export const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
     </Paper>
   );
 };
+
+// Comparador para React.memo
+const arePropsEqual = (prevProps: TarifaCalculatorProps, nextProps: TarifaCalculatorProps): boolean => {
+  return (
+    prevProps.tramoId === nextProps.tramoId &&
+    prevProps.readonly === nextProps.readonly &&
+    // Comparación profunda del objeto tramo
+    JSON.stringify(prevProps.tramo) === JSON.stringify(nextProps.tramo)
+  );
+};
+
+export default React.memo(TarifaCalculator, arePropsEqual);

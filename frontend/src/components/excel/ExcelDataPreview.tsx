@@ -74,7 +74,7 @@ export interface ExcelDataPreviewProps {
   isReadOnly?: boolean;
 }
 
-export const ExcelDataPreview: React.FC<ExcelDataPreviewProps> = ({
+const ExcelDataPreview: React.FC<ExcelDataPreviewProps> = ({
   data,
   columns,
   fileName = 'archivo.xlsx',
@@ -490,4 +490,18 @@ export const ExcelDataPreview: React.FC<ExcelDataPreviewProps> = ({
   );
 };
 
-export default ExcelDataPreview;
+// Comparador para React.memo
+const arePropsEqual = (prevProps: ExcelDataPreviewProps, nextProps: ExcelDataPreviewProps): boolean => {
+  return (
+    prevProps.fileName === nextProps.fileName &&
+    prevProps.entityType === nextProps.entityType &&
+    prevProps.pageSize === nextProps.pageSize &&
+    prevProps.isReadOnly === nextProps.isReadOnly &&
+    prevProps.data?.length === nextProps.data?.length &&
+    prevProps.columns?.length === nextProps.columns?.length &&
+    JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data) &&
+    JSON.stringify(prevProps.columns) === JSON.stringify(nextProps.columns)
+  );
+};
+
+export default React.memo(ExcelDataPreview, arePropsEqual);
