@@ -236,6 +236,7 @@ const TramosPage: React.FC = () => {
     const tipo = tramo.tipo || tramo.tarifaVigente?.tipo;
     const metodoCalculo = tramo.metodoCalculo || tramo.tarifaVigente?.metodoCalculo;
     const valor = tramo.valor || tramo.tarifaVigente?.valor;
+    const valorPeaje = tramo.valorPeaje || tramo.tarifaVigente?.valorPeaje;
     const vigenciaDesde = tramo.vigenciaDesde || tramo.tarifaVigente?.vigenciaDesde;
     const vigenciaHasta = tramo.vigenciaHasta || tramo.tarifaVigente?.vigenciaHasta;
     
@@ -262,6 +263,9 @@ const TramosPage: React.FC = () => {
           <Badge color="blue" size="sm">{tipo}</Badge>
           <Badge color="green" size="sm">{metodoCalculo}</Badge>
           <Text size="sm" fw={500}>${valor}</Text>
+          {valorPeaje && valorPeaje > 0 && (
+            <Text size="sm" fw={500} c="orange">Peaje: ${valorPeaje}</Text>
+          )}
         </Group>
         <Stack gap={2}>
           <Text size="xs" c="dimmed">
