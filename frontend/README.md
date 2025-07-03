@@ -1,46 +1,98 @@
-# Getting Started with Create React App
+# Frontend - Sistema de Gestión de Transporte
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Descripción
+Frontend desarrollado con React + TypeScript + Mantine UI para el sistema de gestión de transporte.
 
-## Available Scripts
+## Tecnologías Principales
+- **React 18** con TypeScript
+- **Mantine UI v8.1** - Component library con tema oscuro
+- **React Router v7** - Routing client-side
+- **Axios** - Cliente HTTP con interceptors
+- **React Hook Form** - Manejo de formularios
+- **Recharts/Nivo** - Visualización de datos
 
-In the project directory, you can run:
+## Estructura del Proyecto
 
-### `npm start`
+```
+frontend/
+├── src/
+│   ├── components/      # Componentes reutilizables
+│   │   ├── base/       # Componentes core (DataTable, forms, etc.)
+│   │   ├── forms/      # Formularios específicos por entidad
+│   │   ├── cards/      # Cards para entidades
+│   │   ├── excel/      # Componentes import/export Excel
+│   │   ├── modals/     # Modales de diálogo
+│   │   ├── selectors/  # Selectores/dropdowns de entidades
+│   │   ├── calculators/ # Calculadoras de tarifas
+│   │   ├── maps/       # Componentes de mapas
+│   │   ├── reports/    # Generación de reportes
+│   │   └── ...         # Otros componentes especializados
+│   ├── pages/          # Componentes de páginas/rutas
+│   ├── services/       # Servicios API y lógica de negocio
+│   ├── hooks/          # Custom React hooks
+│   ├── contexts/       # Contextos React (Auth, etc.)
+│   ├── types/          # Definiciones TypeScript
+│   └── utils/          # Funciones helper
+├── tests/              # Archivos de prueba
+└── public/             # Assets estáticos
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Páginas Implementadas
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Gestión Principal
+- **Dashboard**: KPIs, gráficos, actividad reciente
+- **Clientes**: CRUD completo con Excel import/export
+- **Sites**: Gestión de ubicaciones con geocodificación
+- **Tramos**: Configuración de rutas con pricing
+- **Viajes**: Gestión de viajes con cálculos complejos
 
-### `npm test`
+### Recursos y Configuración
+- **Vehículos**: Gestión de flota con tracking de documentos
+- **Personal**: Gestión de empleados/choferes
+- **Empresas**: Gestión de compañías
+- **Extras**: Configuración de cargos adicionales
+- **Calculadora**: Calculadora independiente de precios
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Herramientas
+- **Importación**: Sistema unificado para todas las entidades
+- **Reports**: Herramientas de exportación y análisis
 
-### `npm run build`
+## Características Clave
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Sistema Excel Unificado
+- **Hook**: `useExcelOperations` - Centraliza export, template e import
+- **Service**: `BaseExcelService` - API consistente para todas las entidades
+- **Componentes**: ExcelImportModal, ExcelUploadZone, ExcelTemplateGenerator
+- **Plantillas**: Generación automática con campos obligatorios (*)
+- **Referencias**: Hojas con datos existentes para completar formularios
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Diseño y UX
+- **Tema Oscuro**: Por defecto con alternador claro/oscuro
+- **Responsive**: Interfaces mobile-friendly
+- **Lazy Loading**: Code splitting para performance
+- **Validación en Tiempo Real**: Reglas de negocio client-side
+- **Type Safety**: Cobertura completa de TypeScript
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Comandos de Desarrollo
 
-### `npm run eject`
+```bash
+# Iniciar servidor de desarrollo
+npm start
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+# Crear build de producción
+npm run build
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Ejecutar pruebas
+npm test
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+# Verificación rápida de TypeScript
+npx tsc --noEmit
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Acceso
+- **URL**: http://localhost:3000
+- **Puerto**: 3000 (con hot-reload)
+- **Backend**: Conecta a API en puerto 3001
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Autenticación
+Sistema JWT con contexto React, rutas protegidas y gestión automática de tokens.
