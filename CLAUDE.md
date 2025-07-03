@@ -8,21 +8,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Transportation Management System (Sistema de Gestión de Transporte) - a comprehensive backend REST API for managing transportation logistics including clients, sites, routes, vehicles, trips, and billing. 
+This is a Transportation Management System (Sistema de Gestión de Transporte) - a comprehensive full-stack application for managing transportation logistics including clients, sites, routes, vehicles, trips, and billing. The system consists of a REST API backend (Node.js/Express/TypeScript) and a modern React frontend.
 
-## Common Development Commands
-
+### Quick Start
 ```bash
-# Development
-npm run dev                 # Start development server with nodemon
-npm run build              # Compile TypeScript to JavaScript
-npm start                  # Run production build
-npm run setup-env          # Set up environment configuration
+# Terminal 1: Backend (port 3001)
+cd backend && npm run dev
 
-# Environment specific
-npm run start-dev          # Set development environment and start
-npm run start-prod         # Set production environment and start
+# Terminal 2: Frontend (port 3000) 
+cd frontend && npm start
+
+# TypeScript check
+npx tsc --noEmit
 ```
+
+Both servers run in hot-reload mode. Access the app at http://localhost:3000
 
 ## TypeScript 
 
@@ -44,6 +44,7 @@ backend/
 ├── utils/           # Helper functions (TypeScript)
 └── validators/      # Input validation (TypeScript)
 ```
+
 
 ### Core Domain Models
 
@@ -99,6 +100,11 @@ Using Mongoose ODM with:
 - Geospatial indexing for location data
 - Custom validation and middleware
 
+## Frontend Stack
+- **React 18** + TypeScript + Mantine UI
+- **Features**: Dark theme, Excel system, real-time validation
+- **Details**: Ver `/frontend/README.md` para documentación completa
+
 ## Development Notes
 
 - El front (puerto 3000) y el back (puerto 3001) estan siempre en hot reload.
@@ -132,6 +138,7 @@ The frontend has a unified Excel system that MUST be used for all import/export 
 - **Components**: ExcelImportModal, ExcelUploadZone, ExcelTemplateGenerator, etc.
 - **Never duplicate** Excel functionality in individual pages or services
 
+
 ### Before Creating New Components
 1. Check if a similar component already exists in the codebase
 2. Verify if existing components can be extended or configured for your needs
@@ -139,17 +146,6 @@ The frontend has a unified Excel system that MUST be used for all import/export 
 4. Always run `npx tsc --noEmit` after changes to ensure type safety
 
 ## Git Workflow
-
-**IMPORTANT**: Always commit changes following best practices:
-- Commit after completing logical units of work (e.g., migrating a complete module, fixing a specific issue)
-- Commit before major refactoring or risky changes to preserve working state
-- Use descriptive commit messages that explain the "why" not just the "what"
-- Stage related files together in atomic commits
-- Run tests and build verification before committing when possible
-
-Commit frequency guidelines:
-- After migrating a complete file or module to TypeScript
-- After fixing compilation errors or type issues
-- Before starting work on a new component or feature
-- When reaching stable milestones during development
-- Before making experimental or potentially breaking changes
+- Commit after completing logical units of work
+- Use descriptive commit messages explaining the "why"
+- Run `npx tsc --noEmit` before committing
