@@ -430,11 +430,11 @@ npm run type-check   # Verificación tipos
 ## FASE 13: OPTIMIZACIÓN Y REFACTORIZACIÓN
 
 ### 13.1 Eliminación de Duplicaciones
-- [ ] **DocumentExpirationSystem**: Unificar DocumentExpiration + ExpirationAlerts en componente único
-- [ ] **GenericDocumentTable**: Crear tabla genérica para reemplazar DocumentacionTable + DocumentTable
-- [ ] **PersonalSelectorRefactor**: Hacer PersonalSelector configurable para incluir funcionalidad de ChoferSelector
-- [ ] **CalculatorBase**: Crear hook/clase base compartida para todas las calculadoras
-- [ ] **StatusTrackerBase**: Unificar ViajeTracker + PaymentTracker en componente base configurable
+- [x] **DocumentExpirationSystem**: Unificar DocumentExpiration + ExpirationAlerts en componente único <!-- COMPLETADO: /frontend/src/components/alerts/DocumentExpirationSystem.tsx - Componente unificado con funcionalidades de ambos sistemas -->
+- [x] **GenericDocumentTable**: Crear tabla genérica para reemplazar DocumentacionTable + DocumentTable <!-- COMPLETADO: /frontend/src/components/tables/GenericDocumentTable.tsx - Tabla unificada con funcionalidades de ambas tablas de documentos -->
+- [x] **PersonalSelectorRefactor**: Hacer PersonalSelector configurable para incluir funcionalidad de ChoferSelector <!-- COMPLETADO: /frontend/src/components/selectors/PersonalSelector.tsx - Componente refactorizado con filtros avanzados y ChoferSelector incluido -->
+- [x] **CalculatorBase**: Crear hook/clase base compartida para todas las calculadoras <!-- COMPLETADO: /frontend/src/hooks/useCalculatorBase.ts + /frontend/src/components/calculators/CalculatorBase.tsx - Hook y componente base reutilizable para todas las calculadoras -->
+- [x] **StatusTrackerBase**: Unificar ViajeTracker + PaymentTracker en componente base configurable <!-- COMPLETADO: /frontend/src/components/tracking/StatusTrackerBase.tsx - Componente base unificado para tracking de estados con timeline y eventos -->
 
 ### 13.2 Consolidaciones Funcionales
 - [ ] **ExpirationManagerBase**: Componente base para manejar alertas + calendario de vencimientos
@@ -457,7 +457,7 @@ npm run type-check   # Verificación tipos
 - [ ] **VirtualScrollingUpgrade**: Mejorar tablas grandes con virtual scrolling
 - [ ] **CodeSplittingReview**: Revisar y optimizar code splitting por rutas
 
-**Checkpoint 12**: ✅ Código optimizado sin duplicaciones
+**Checkpoint 12**: ✅ Eliminación de duplicaciones completada <!-- COMPLETADO: 5/5 refactorizaciones de eliminación de duplicaciones completadas -->
 
 ---
 
