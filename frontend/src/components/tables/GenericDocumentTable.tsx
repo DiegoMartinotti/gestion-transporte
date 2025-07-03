@@ -27,15 +27,12 @@ import {
   IconDownload,
   IconUpload,
   IconAlertTriangle,
-  IconCheck,
   IconX,
   IconCalendar,
   IconSearch,
   IconEye,
-  IconFilter,
   IconLicense,
   IconStethoscope,
-  IconCalendarEvent,
   IconTruck,
   IconUser
 } from '@tabler/icons-react';

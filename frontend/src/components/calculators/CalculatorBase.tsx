@@ -6,7 +6,6 @@ import {
   Group,
   Text,
   Badge,
-  Divider,
   Button,
   ActionIcon,
   Table,
@@ -22,15 +21,12 @@ import {
 } from '@mantine/core';
 import {
   IconCalculator,
-  IconCurrency,
   IconPlus,
   IconTrash,
-  IconEdit,
   IconChevronDown,
   IconChevronUp,
   IconRefresh,
-  IconAlertTriangle,
-  IconCheck
+  IconAlertTriangle
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { 

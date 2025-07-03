@@ -12,45 +12,29 @@ import {
   Button,
   Grid,
   Alert,
-  ActionIcon,
   Modal,
   Stack,
   Textarea,
-  NumberInput,
-  Switch,
   Tabs,
   RingProgress,
   Center,
-  Tooltip,
-  ThemeIcon,
   Box,
-  SimpleGrid,
-  Divider
+  SimpleGrid
 } from '@mantine/core';
-import { DatePickerInput, DateInput, TimeInput } from '@mantine/dates';
+// import { DatePickerInput, DateInput, TimeInput } from '@mantine/dates';
 import {
-  IconCheck,
-  IconX,
   IconClock,
   IconAlertTriangle,
   IconPlus,
-  IconEdit,
-  IconEye,
-  IconBell,
   IconFlag,
   IconTruck,
   IconMapPin,
   IconUser,
-  IconCalendar,
   IconNote,
   IconCurrency,
-  IconMail,
-  IconPhone,
-  IconFileText,
   IconHistory,
   IconCreditCard,
-  IconInfoCircle,
-  IconAlertCircle
+  IconInfoCircle
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
