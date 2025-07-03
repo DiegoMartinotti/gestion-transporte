@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Container,
   Title,
@@ -19,7 +19,6 @@ import { notifications } from '@mantine/notifications';
 import DataTable from '../../components/base/DataTable';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import ConfirmModal from '../../components/base/ConfirmModal';
-import VehiculoForm from '../../components/forms/VehiculoForm';
 import { VehiculoCard } from '../../components/cards/VehiculoCard';
 import { VehiculoDetail } from '../../components/details/VehiculoDetail';
 import { DocumentExpiration } from '../../components/alerts/DocumentExpiration';
@@ -27,6 +26,9 @@ import { vehiculoService } from '../../services/vehiculoService';
 import { empresaService } from '../../services/empresaService';
 import { Vehiculo, VehiculoFilter, VehiculoTipo, VehiculoConVencimientos } from '../../types/vehiculo';
 import { Empresa } from '../../types';
+
+// Lazy load del formulario complejo
+const VehiculoForm = lazy(() => import('../../components/forms/VehiculoForm'));
 
 export default function VehiculosPage() {
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
@@ -408,12 +410,14 @@ export default function VehiculosPage() {
         message="¿Está seguro que desea eliminar este vehículo? Esta acción no se puede deshacer."
       />
 
-      <VehiculoForm
-        opened={formModalOpen}
-        onClose={closeFormModal}
-        vehiculo={selectedVehiculo}
-        onSuccess={handleFormSuccess}
-      />
+      <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>}>
+        <VehiculoForm
+          opened={formModalOpen}
+          onClose={closeFormModal}
+          vehiculo={selectedVehiculo}
+          onSuccess={handleFormSuccess}
+        />
+      </Suspense>
 
       <VehiculoDetail
         vehiculo={vehiculoForDetail}

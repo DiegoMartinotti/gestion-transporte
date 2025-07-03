@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Container, Tabs, Badge, Group, Text } from '@mantine/core';
 import {
   IconFileImport,
@@ -6,10 +6,12 @@ import {
   IconAlertCircle,
   IconSettings,
 } from '@tabler/icons-react';
-import ImportWizard from '../../components/import/ImportWizard';
 import { ImportHistory } from '../../components/import/ImportHistory';
 import { FailureRecovery } from '../../components/import/FailureRecovery';
 import { showNotification } from '@mantine/notifications';
+
+// Lazy load del wizard de importación complejo
+const ImportWizard = lazy(() => import('../../components/import/ImportWizard'));
 
 // Datos de ejemplo para recuperación de fallos
 const MOCK_FAILURE = {
@@ -97,9 +99,11 @@ export const ImportPage: React.FC = () => {
         </Tabs.List>
         
         <Tabs.Panel value="wizard" pt="xl">
-          <ImportWizard
-            onComplete={handleImportComplete}
-          />
+          <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando wizard de importación...</div>}>
+            <ImportWizard
+              onComplete={handleImportComplete}
+            />
+          </Suspense>
         </Tabs.Panel>
         
         <Tabs.Panel value="history" pt="xl">
