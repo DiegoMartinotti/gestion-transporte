@@ -14,7 +14,8 @@ import {
   IconCalculator,
   IconCoin,
   IconFileText,
-  IconFileImport
+  IconFileImport,
+  IconReportAnalytics
 } from '@tabler/icons-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -31,6 +32,7 @@ const navigationItems = [
   { label: 'Órdenes de Compra', icon: IconFileText, link: '/ordenes-compra' },
   { label: 'Calculadora', icon: IconCalculator, link: '/calculadora' },
   { label: 'Importación', icon: IconFileImport, link: '/import' },
+  { label: 'Reportes', icon: IconReportAnalytics, link: '/reports' },
 ];
 
 function Navigation() {
