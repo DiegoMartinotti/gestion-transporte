@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import {
   Container,
   Title,
@@ -34,9 +34,6 @@ import {
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-import { ReportBuilder } from '../../components/reports/ReportBuilder';
-import { ReportViewer } from '../../components/reports/ReportViewer';
 import { ExportOptions } from '../../components/reports/ExportOptions';
 import { ScheduledReports } from '../../components/reports/ScheduledReports';
 import { ReportHistory } from '../../components/reports/ReportHistory';
@@ -48,6 +45,10 @@ import {
   ReportExecution
 } from '../../types/reports';
 import { reportService } from '../../services/reportService';
+
+// Lazy load de componentes complejos de reportes
+const ReportBuilder = lazy(() => import('../../components/reports/ReportBuilder').then(module => ({ default: module.ReportBuilder })));
+const ReportViewer = lazy(() => import('../../components/reports/ReportViewer').then(module => ({ default: module.ReportViewer })));
 
 interface ReportTemplateCardProps {
   template: ReportTemplate;
@@ -468,23 +469,27 @@ export const ReportsPage: React.FC = () => {
 
         {/* Builder Tab */}
         <Tabs.Panel value="builder" pt="md">
-          <ReportBuilder
-            reportId={selectedReport?.id}
-            onSave={handleReportSaved}
-          />
+          <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando constructor de reportes...</div>}>
+            <ReportBuilder
+              reportId={selectedReport?.id}
+              onSave={handleReportSaved}
+            />
+          </Suspense>
         </Tabs.Panel>
 
         {/* Viewer Tab */}
         <Tabs.Panel value="viewer" pt="md">
           {selectedReport && reportData ? (
             <Stack gap="md">
-              <ReportViewer
-                reportDefinition={selectedReport}
-                data={reportData}
-                loading={reportLoading}
-                onRefresh={() => handleExecuteReport(selectedReport)}
-                onExport={handleExport}
-              />
+              <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando visualizador de reportes...</div>}>
+                <ReportViewer
+                  reportDefinition={selectedReport}
+                  data={reportData}
+                  loading={reportLoading}
+                  onRefresh={() => handleExecuteReport(selectedReport)}
+                  onExport={handleExport}
+                />
+              </Suspense>
               
               <ExportOptions
                 reportDefinition={selectedReport}

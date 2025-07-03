@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Paper,
   Title,
@@ -36,13 +36,15 @@ import SearchInput from '../../components/base/SearchInput';
 import { tramoService } from '../../services/tramoService';
 import { clienteService } from '../../services/clienteService';
 import { siteService } from '../../services/siteService';
-import TramoForm from '../../components/forms/TramoForm';
 import TramoDetail from '../../components/details/TramoDetail';
 import ConfirmModal from '../../components/base/ConfirmModal';
 import TarifaCalculator from '../../components/calculators/TarifaCalculator';
 import { TarifaVersioning } from '../../components/versioning/TarifaVersioning';
 import { TramosSelector } from '../../components/selectors/TramosSelector';
 import { Tramo, Cliente, Site } from '../../types/tramo';
+
+// Lazy load del formulario complejo
+const TramoForm = lazy(() => import('../../components/forms/TramoForm'));
 
 interface LocalSite {
   _id: string;
@@ -555,13 +557,15 @@ const TramosPage: React.FC = () => {
         title={selectedTramo ? 'Editar Tramo' : 'Nuevo Tramo'}
         size="xl"
       >
-        <TramoForm
-          tramo={selectedTramo as any}
-          clientes={clientes}
-          sites={sites as any}
-          onSubmit={handleFormSubmit}
-          onCancel={closeForm}
-        />
+        <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>}>
+          <TramoForm
+            tramo={selectedTramo as any}
+            clientes={clientes}
+            sites={sites as any}
+            onSubmit={handleFormSubmit}
+            onCancel={closeForm}
+          />
+        </Suspense>
       </Modal>
 
       {/* Modal de detalle */}

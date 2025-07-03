@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Table,
   ActionIcon,
@@ -29,9 +29,11 @@ import {
   IconX
 } from '@tabler/icons-react';
 import { formulaService, Formula } from '../../services/formulaService';
-import { FormulaForm } from '../forms/FormulaForm';
 import { FormulaPreview } from '../preview/FormulaPreview';
 import DataTable from '../base/DataTable';
+
+// Lazy load del formulario complejo de fórmulas
+const FormulaForm = lazy(() => import('../forms/FormulaForm').then(module => ({ default: module.FormulaForm })));
 
 interface FormulaHistorialTableProps {
   clienteId: string;
@@ -308,12 +310,14 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
         title={editingFormulaId ? 'Editar Fórmula' : 'Nueva Fórmula'}
         size="xl"
       >
-        <FormulaForm
-          clienteId={clienteId}
-          formulaId={editingFormulaId || undefined}
-          onSave={handleFormSave}
-          onCancel={handleFormCancel}
-        />
+        <Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Cargando formulario...</div>}>
+          <FormulaForm
+            clienteId={clienteId}
+            formulaId={editingFormulaId || undefined}
+            onSave={handleFormSave}
+            onCancel={handleFormCancel}
+          />
+        </Suspense>
       </Modal>
 
       {/* Modal de vista previa */}

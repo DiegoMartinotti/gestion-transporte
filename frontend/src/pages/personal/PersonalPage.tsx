@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
   Container,
   Title,
@@ -43,13 +43,15 @@ import type { Personal, PersonalFilters, Empresa } from '../../types';
 import { personalService } from '../../services/personalService';
 import { empresaService } from '../../services/empresaService';
 import { PersonalCard } from '../../components/cards/PersonalCard';
-import { PersonalForm } from '../../components/forms/PersonalForm';
 import { PersonalDetail } from '../../components/details/PersonalDetail';
 import { DocumentacionTable } from '../../components/tables/DocumentacionTable';
 import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import DataTable from '../../components/base/DataTable';
 import SearchInput from '../../components/base/SearchInput';
 import ConfirmModal from '../../components/base/ConfirmModal';
+
+// Lazy load del formulario complejo
+const PersonalForm = lazy(() => import('../../components/forms/PersonalForm').then(module => ({ default: module.PersonalForm })));
 
 const ITEMS_PER_PAGE = 20;
 
@@ -567,11 +569,13 @@ export const PersonalPage: React.FC = () => {
           title={selectedPersonal ? 'Editar Personal' : 'Nuevo Personal'}
           size="xl"
         >
-          <PersonalForm
-            personal={selectedPersonal || undefined}
-            onSubmit={handleFormSubmit}
-            onCancel={closeForm}
-          />
+          <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>}>
+            <PersonalForm
+              personal={selectedPersonal || undefined}
+              onSubmit={handleFormSubmit}
+              onCancel={closeForm}
+            />
+          </Suspense>
         </Modal>
 
         {/* Detail Modal */}
