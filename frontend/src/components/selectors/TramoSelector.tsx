@@ -1,4 +1,5 @@
 import { Select } from '@mantine/core';
+import { useMemo } from 'react';
 import { useTramos } from '../../hooks/useTramos';
 
 interface TramoSelectorProps {
@@ -24,10 +25,14 @@ export function TramoSelector({
 }: TramoSelectorProps) {
   const { tramos, loading } = useTramos();
 
-  const data = tramos.map(tramo => ({
-    value: tramo._id,
-    label: `${tramo.denominacion} (${tramo.distanciaKm} km)`
-  }));
+  // Memoize the data transformation to avoid recreating the array on every render
+  const data = useMemo(() => 
+    tramos.map(tramo => ({
+      value: tramo._id,
+      label: `${tramo.denominacion} (${tramo.distanciaKm} km)`
+    })),
+    [tramos] // Only recalculate when tramos array changes
+  );
 
   return (
     <Select

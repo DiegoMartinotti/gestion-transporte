@@ -12,7 +12,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Cliente } from '../../types';
 import { clienteService } from '../../services/clienteService';
 import { FieldWrapper } from '../base';
@@ -37,6 +37,48 @@ interface ClienteFormData {
 export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: ClienteFormProps) {
   const [loading, setLoading] = useState(false);
 
+  // Memoize validation rules to avoid recreating them on every render
+  const validationRules = useMemo(() => ({
+    nombre: (value: string) => {
+      if (!value.trim()) return 'El nombre es obligatorio';
+      if (value.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres';
+      if (value.trim().length > 100) return 'El nombre no puede tener más de 100 caracteres';
+      return null;
+    },
+    cuit: (value: string) => {
+      if (!value.trim()) return 'El CUIT es obligatorio';
+      const cuitRegex = /^(20|23|24|27|30|33|34)-\d{8}-\d$/;
+      if (!cuitRegex.test(value.trim())) {
+        return 'CUIT inválido. Formato: XX-XXXXXXXX-X';
+      }
+      return null;
+    },
+    email: (value: string) => {
+      if (value && !/^\S+@\S+\.\S+$/.test(value)) {
+        return 'Formato de email inválido';
+      }
+      return null;
+    },
+    telefono: (value: string) => {
+      if (value && value.trim().length > 20) {
+        return 'El teléfono no puede tener más de 20 caracteres';
+      }
+      return null;
+    },
+    direccion: (value: string) => {
+      if (value && value.trim().length > 200) {
+        return 'La dirección no puede tener más de 200 caracteres';
+      }
+      return null;
+    },
+    contacto: (value: string) => {
+      if (value && value.trim().length > 100) {
+        return 'El contacto no puede tener más de 100 caracteres';
+      }
+      return null;
+    }
+  }), []);
+
   const form = useForm<ClienteFormData>({
     initialValues: {
       nombre: cliente?.nombre || '',
@@ -47,49 +89,11 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
       contacto: cliente?.contacto || '',
       activo: cliente?.activo ?? true
     },
-    validate: {
-      nombre: (value) => {
-        if (!value.trim()) return 'El nombre es obligatorio';
-        if (value.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres';
-        if (value.trim().length > 100) return 'El nombre no puede tener más de 100 caracteres';
-        return null;
-      },
-      cuit: (value) => {
-        if (!value.trim()) return 'El CUIT es obligatorio';
-        const cuitRegex = /^(20|23|24|27|30|33|34)-\d{8}-\d$/;
-        if (!cuitRegex.test(value.trim())) {
-          return 'CUIT inválido. Formato: XX-XXXXXXXX-X';
-        }
-        return null;
-      },
-      email: (value) => {
-        if (value && !/^\S+@\S+\.\S+$/.test(value)) {
-          return 'Formato de email inválido';
-        }
-        return null;
-      },
-      telefono: (value) => {
-        if (value && value.trim().length > 20) {
-          return 'El teléfono no puede tener más de 20 caracteres';
-        }
-        return null;
-      },
-      direccion: (value) => {
-        if (value && value.trim().length > 200) {
-          return 'La dirección no puede tener más de 200 caracteres';
-        }
-        return null;
-      },
-      contacto: (value) => {
-        if (value && value.trim().length > 100) {
-          return 'El contacto no puede tener más de 100 caracteres';
-        }
-        return null;
-      }
-    }
+    validate: validationRules
   });
 
-  const handleSubmit = async (values: ClienteFormData) => {
+  // Memoize submit handler to avoid recreation
+  const handleSubmit = useCallback(async (values: ClienteFormData) => {
     try {
       setLoading(true);
       
@@ -140,10 +144,11 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
     } finally {
       setLoading(false);
     }
-  };
+  }, [mode, cliente?._id, onSuccess]);
 
-  const isEditing = mode === 'edit';
-  const title = isEditing ? 'Editar Cliente' : 'Nuevo Cliente';
+  // Memoize computed values
+  const isEditing = useMemo(() => mode === 'edit', [mode]);
+  const title = useMemo(() => isEditing ? 'Editar Cliente' : 'Nuevo Cliente', [isEditing]);
 
   return (
     <Paper p="lg" withBorder>

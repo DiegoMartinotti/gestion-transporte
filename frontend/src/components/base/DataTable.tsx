@@ -13,7 +13,7 @@ import {
   Skeleton
 } from '@mantine/core';
 import { IconSearch, IconSortAscending, IconSortDescending, IconSelector } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../../constants';
 import { BaseFilters } from '../../types';
 
@@ -65,9 +65,11 @@ function DataTable<T = any>({
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const totalPages = Math.ceil(totalItems / pageSize);
+  // Memoize calculated values
+  const totalPages = useMemo(() => Math.ceil(totalItems / pageSize), [totalItems, pageSize]);
 
-  const handleSearchChange = (value: string) => {
+  // Memoize event handlers to prevent unnecessary re-renders
+  const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
     if (onFiltersChange) {
       onFiltersChange({
@@ -77,9 +79,9 @@ function DataTable<T = any>({
         sortOrder
       });
     }
-  };
+  }, [onFiltersChange, sortBy, sortOrder]);
 
-  const handleSort = (columnKey: string) => {
+  const handleSort = useCallback((columnKey: string) => {
     const newSortOrder = sortBy === columnKey && sortOrder === 'asc' ? 'desc' : 'asc';
     setSortBy(columnKey);
     setSortOrder(newSortOrder);
@@ -92,16 +94,17 @@ function DataTable<T = any>({
         sortOrder: newSortOrder
       });
     }
-  };
+  }, [onFiltersChange, search, currentPage, sortBy, sortOrder]);
 
-  const getSortIcon = (columnKey: string) => {
+  // Memoize sort icon to avoid recreation
+  const getSortIcon = useCallback((columnKey: string) => {
     if (sortBy !== columnKey) {
       return <IconSelector size="0.9rem" />;
     }
     return sortOrder === 'asc' 
       ? <IconSortAscending size="0.9rem" />
       : <IconSortDescending size="0.9rem" />;
-  };
+  }, [sortBy, sortOrder]);
 
   const renderCell = (column: DataTableColumn<T>, record: T) => {
     const value = (record as any)[column.key];
@@ -125,19 +128,22 @@ function DataTable<T = any>({
     return value?.toString() || '-';
   };
 
-  const LoadingSkeleton = () => (
-    <>
-      {Array.from({ length: 5 }).map((_, index) => (
-        <Table.Tr key={index}>
-          {columns.map((column) => (
-            <Table.Td key={column.key}>
-              <Skeleton height={20} />
-            </Table.Td>
-          ))}
-        </Table.Tr>
-      ))}
-    </>
-  );
+  // Memoize loading skeleton component to avoid recreation
+  const LoadingSkeleton = useMemo(() => {
+    return () => (
+      <>
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Table.Tr key={index}>
+            {columns.map((column) => (
+              <Table.Td key={column.key}>
+                <Skeleton height={20} />
+              </Table.Td>
+            ))}
+          </Table.Tr>
+        ))}
+      </>
+    );
+  }, [columns]);
 
   return (
     <Stack gap="md">
@@ -157,10 +163,10 @@ function DataTable<T = any>({
               <Select
                 value={pageSize.toString()}
                 onChange={(value) => onPageSizeChange?.(parseInt(value || '10'))}
-                data={PAGE_SIZE_OPTIONS.map(size => ({ 
+                data={useMemo(() => PAGE_SIZE_OPTIONS.map(size => ({ 
                   value: size.toString(), 
                   label: size.toString() 
-                }))}
+                })), [])}
                 w={80}
               />
               <Text size="sm">por página</Text>

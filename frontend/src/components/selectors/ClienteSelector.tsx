@@ -1,4 +1,5 @@
 import { Select } from '@mantine/core';
+import { useMemo } from 'react';
 import { useClientes } from '../../hooks/useClientes';
 
 interface ClienteSelectorProps {
@@ -22,10 +23,14 @@ export function ClienteSelector({
 }: ClienteSelectorProps) {
   const { clientes, loading } = useClientes();
 
-  const data = clientes.map(cliente => ({
-    value: cliente._id,
-    label: cliente.nombre
-  }));
+  // Memoize the data transformation to avoid recreating the array on every render
+  const data = useMemo(() => 
+    clientes.map(cliente => ({
+      value: cliente._id,
+      label: cliente.nombre
+    })),
+    [clientes] // Only recalculate when clientes array changes
+  );
 
   return (
     <Select
