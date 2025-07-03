@@ -437,11 +437,11 @@ npm run type-check   # Verificación tipos
 - [x] **StatusTrackerBase**: Unificar ViajeTracker + PaymentTracker en componente base configurable <!-- COMPLETADO: /frontend/src/components/tracking/StatusTrackerBase.tsx - Componente base unificado para tracking de estados con timeline y eventos -->
 
 ### 13.2 Consolidaciones Funcionales
-- [ ] **ExpirationManagerBase**: Componente base para manejar alertas + calendario de vencimientos
-- [ ] **DocumentValidatorGeneric**: Validador genérico para documentos de personal y vehículos
-- [ ] **TotalCalculatorRefactor**: Incorporar funcionalidad de ExtraCalculator dentro de TotalCalculator
-- [ ] **AlertSystemUnified**: Sistema unificado de alertas y notificaciones
-- [ ] **SelectorFactory**: Factory pattern para crear selectores reutilizables
+- [x] **ExpirationManagerBase**: Componente base para manejar alertas + calendario de vencimientos <!-- COMPLETADO: /frontend/src/components/expiration/ExpirationManagerBase.tsx - Componente unificado que combina alertas de vencimiento con calendario y configuración -->
+- [x] **DocumentValidatorGeneric**: Validador genérico para documentos de personal y vehículos <!-- COMPLETADO: /frontend/src/components/validators/DocumentValidatorGeneric.tsx - Validador unificado para documentos con reglas configurables para personal y vehículos -->
+- [x] **TotalCalculatorRefactor**: Incorporar funcionalidad de ExtraCalculator dentro de TotalCalculator <!-- COMPLETADO: /frontend/src/components/calculators/TotalCalculator.tsx - Refactorizado para incluir cálculo de extras integrado y desglose completo -->
+- [x] **AlertSystemUnified**: Sistema unificado de alertas y notificaciones <!-- COMPLETADO: /frontend/src/components/alerts/AlertSystemUnified.tsx - Sistema centralizado de alertas con múltiples tipos, prioridades y configuración flexible -->
+- [x] **SelectorFactory**: Factory pattern para crear selectores reutilizables <!-- COMPLETADO: /frontend/src/factories/SelectorFactory.tsx - Factory completo para generar selectores configurables con filtros, validación y múltiple selección -->
 
 ### 13.3 Limpieza de Código TypeScript
 - [ ] **ReportHistoryFix**: Remover variable no utilizada `onReportView` (línea 108)
@@ -457,7 +457,7 @@ npm run type-check   # Verificación tipos
 - [ ] **VirtualScrollingUpgrade**: Mejorar tablas grandes con virtual scrolling
 - [ ] **CodeSplittingReview**: Revisar y optimizar code splitting por rutas
 
-**Checkpoint 12**: ✅ Eliminación de duplicaciones completada <!-- COMPLETADO: 5/5 refactorizaciones de eliminación de duplicaciones completadas -->
+**Checkpoint 12**: ✅ Optimización y refactorización completada <!-- COMPLETADO: 10/10 tareas de consolidación completadas - Eliminación de duplicaciones (5/5) + Consolidaciones funcionales (5/5) -->
 
 ---
 
