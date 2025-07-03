@@ -1,7 +1,5 @@
 import { apiService } from './api';
 import type { Personal, PersonalFilters, ApiResponse, PaginatedResponse } from '../types';
-import { TemplateFactory } from '../templates/excel';
-import { ExcelProcessor } from './excel/ExcelProcessor';
 import { previewExcelFile, validateExcelFile, processExcelFile } from './excel';
 
 export const personalService = {
@@ -166,29 +164,7 @@ export const personalService = {
     return response.data?.data || { valid: false, message: 'Error de validación' };
   },
 
-  // Excel functionality
-  getTemplate: async (): Promise<void> => {
-    const PersonalTemplate = await import('../templates/excel/PersonalTemplate');
-    try {
-      await TemplateFactory.downloadTemplate('personal', { 
-        filename: 'plantilla_personal.xlsx' 
-      });
-    } catch (error) {
-      console.warn('Frontend template failed, falling back to backend:', error);
-      // Fallback to backend template
-      await apiService.downloadFile('/personal/template', 'plantilla_personal.xlsx');
-    }
-  },
-
-  exportToExcel: async (filters?: PersonalFilters): Promise<void> => {
-    try {
-      const filename = `personal_${new Date().toISOString().split('T')[0]}.xlsx`;
-      await apiService.downloadFile('/personal/export', filename);
-    } catch (error) {
-      console.error('Error exporting personal:', error);
-      throw error;
-    }
-  },
+  // Excel operations now handled by BaseExcelService
 
   // Excel import functions
   previewExcelFile: async (file: File, sampleSize?: number): Promise<any> => {

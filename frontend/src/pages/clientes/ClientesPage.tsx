@@ -27,6 +27,8 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
+import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { clienteExcelService } from '../../services/BaseExcelService';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
 import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
 import { ExcelImportModal } from '../../components/modals';
@@ -112,41 +114,18 @@ export default function ClientesPage() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      await clienteService.exportToExcel();
-      notifications.show({
-        title: 'Exportación exitosa',
-        message: 'Los clientes han sido exportados a Excel',
-        color: 'green'
-      });
-    } catch (error) {
-      console.error('Error exporting clientes:', error);
-    }
-  };
-
-  const handleGetTemplate = async () => {
-    try {
-      await clienteService.getTemplate();
-      notifications.show({
-        title: 'Plantilla descargada',
-        message: 'La plantilla de importación ha sido descargada',
-        color: 'green'
-      });
-    } catch (error) {
-      console.error('Error downloading template:', error);
-    }
-  };
+  // Hook unificado para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'clientes',
+    entityName: 'clientes',
+    exportFunction: (filters) => clienteExcelService.exportToExcel(filters),
+    templateFunction: () => clienteExcelService.getTemplate(),
+    reloadFunction: loadClientes,
+  });
 
   const handleImportComplete = async (result: any) => {
     setImportModalOpened(false);
-    await loadClientes(); // Reload data after import
-    
-    notifications.show({
-      title: 'Importación completada',
-      message: `Se importaron ${result.summary?.insertedRows || 0} clientes correctamente`,
-      color: 'green'
-    });
+    excelOperations.handleImportComplete(result);
   };
 
   const columns: DataTableColumn<Cliente>[] = [
@@ -276,7 +255,8 @@ export default function ClientesPage() {
               <Button
                 variant="outline"
                 leftSection={<IconFileText size="1rem" />}
-                onClick={handleGetTemplate}
+                onClick={excelOperations.handleGetTemplate}
+                loading={excelOperations.isGettingTemplate}
               >
                 Plantilla
               </Button>
@@ -292,7 +272,8 @@ export default function ClientesPage() {
               <Button
                 variant="outline"
                 leftSection={<IconDownload size="1rem" />}
-                onClick={handleExport}
+                onClick={() => excelOperations.handleExport(filters)}
+                loading={excelOperations.isExporting}
               >
                 Exportar
               </Button>
@@ -360,7 +341,17 @@ export default function ClientesPage() {
         processExcelFile={clienteService.processExcelFile}
         validateExcelFile={clienteService.validateExcelFile}
         previewExcelFile={clienteService.previewExcelFile}
-        getTemplate={clienteService.getTemplate}
+        getTemplate={async () => {
+          const blob = await clienteExcelService.getTemplate();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'plantilla_clientes.xlsx';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }}
       />
     </Container>
   );

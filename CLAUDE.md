@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Transportation Management System (Sistema de Gestión de Transporte) - a comprehensive backend REST API for managing transportation logistics including clients, sites, routes, vehicles, trips, and billing. The system is currently undergoing active migration from JavaScript to TypeScript.
+This is a Transportation Management System (Sistema de Gestión de Transporte) - a comprehensive backend REST API for managing transportation logistics including clients, sites, routes, vehicles, trips, and billing. 
 
 ## Common Development Commands
 
@@ -24,22 +24,11 @@ npm run start-dev          # Set development environment and start
 npm run start-prod         # Set production environment and start
 ```
 
-## TypeScript Migration Status
-
-**IMPORTANT**: This codebase is in active TypeScript migration (Phase 4 of 5 complete):
-
-- ✅ **Complete**: 
-  - config/, middleware/, utils/, validators/
-  - **All models**: Cliente, Empresa, Extra, Personal, OrdenCompra, Site, Tramo, Usuario, Vehiculo, Viaje, ImportacionTemporal, FormulasPersonalizadasCliente
-  - **All main controllers**: authController, clienteController, empresaController, personalController, siteController, tramoController, vehiculoController, viajeController, proxyController, formulaClienteController
-- 🟡 **Pending**: services/, routes/, main application files
-- ⚠️ **Minor fixes needed**: Some type compatibility issues in controllers (mainly field naming inconsistencies)
+## TypeScript 
 
 When working on files:
-- Maintain existing JavaScript functionality during migration
 - Follow strict TypeScript configuration in tsconfig.json
 - Preserve complex business logic especially in pricing calculations
-- Update imports when migrating related files
 
 ## Code Architecture
 
@@ -47,11 +36,11 @@ When working on files:
 ```
 backend/
 ├── config/           # Database and app configuration (TypeScript)
-├── controllers/      # API route handlers (JavaScript - to migrate)
+├── controllers/      # API route handlers (TypeScript)
 ├── middleware/       # Express middleware (TypeScript)
-├── models/          # Mongoose models (mixed JS/TS)
-├── routes/          # API endpoints (JavaScript - to migrate)
-├── services/        # Business logic layer (JavaScript - to migrate)
+├── models/          # Mongoose models (TypeScript)
+├── routes/          # API endpoints (TypeScript)
+├── services/        # Business logic layer (TypeScript)
 ├── utils/           # Helper functions (TypeScript)
 └── validators/      # Input validation (TypeScript)
 ```
@@ -122,6 +111,32 @@ Using Mongoose ODM with:
 - **Formula Calculations**: Uses MathJS for dynamic pricing formulas
 
 When adding new features, follow the existing pattern of routes → controllers → services → models, and ensure proper TypeScript types are added during the ongoing migration.
+
+## Frontend Development Principles
+
+### Component Reusability
+**CRITICAL**: Always prioritize component reusability and avoid code duplication:
+
+1. **Common UI Components**: Use existing base components in `src/components/base/` (DataTable, LoadingOverlay, SearchInput, etc.)
+2. **Shared Hooks**: Leverage custom hooks for common functionality (useExcelOperations, useSearch, etc.)
+3. **Unified Services**: Use BaseExcelService for all Excel operations instead of duplicating code
+4. **Centralized Systems**: 
+   - Excel operations: useExcelOperations + BaseExcelService
+   - Import/Export: Unified modal and processing system
+   - Validation: Shared validation engines and components
+
+### Excel System Architecture
+The frontend has a unified Excel system that MUST be used for all import/export operations:
+- **Hook**: `useExcelOperations` - Centralizes export, template, and import handling
+- **Service**: `BaseExcelService` - Provides consistent API for all entities
+- **Components**: ExcelImportModal, ExcelUploadZone, ExcelTemplateGenerator, etc.
+- **Never duplicate** Excel functionality in individual pages or services
+
+### Before Creating New Components
+1. Check if a similar component already exists in the codebase
+2. Verify if existing components can be extended or configured for your needs
+3. Look for patterns in similar pages/features that can be abstracted
+4. Always run `npx tsc --noEmit` after changes to ensure type safety
 
 ## Git Workflow
 
