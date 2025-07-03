@@ -28,7 +28,7 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { ExcelUploadZone } from '../excel/ExcelUploadZone';
-import { ExcelDataPreview } from '../excel/ExcelDataPreview';
+import ExcelDataPreview from '../excel/ExcelDataPreview';
 import { ExcelValidationReport } from '../excel/ExcelValidationReport';
 import { ExcelImportProgress } from '../excel/ExcelImportProgress';
 

@@ -39,7 +39,7 @@ import { siteService } from '../../services/siteService';
 import TramoForm from '../../components/forms/TramoForm';
 import TramoDetail from '../../components/details/TramoDetail';
 import ConfirmModal from '../../components/base/ConfirmModal';
-import { TarifaCalculator } from '../../components/calculators/TarifaCalculator';
+import TarifaCalculator from '../../components/calculators/TarifaCalculator';
 import { TarifaVersioning } from '../../components/versioning/TarifaVersioning';
 import { TramosSelector } from '../../components/selectors/TramosSelector';
 import { Tramo, Cliente, Site } from '../../types/tramo';
@@ -507,7 +507,7 @@ const TramosPage: React.FC = () => {
                   <TarifaCalculator 
                     tramoId={selectedTramo._id}
                     tramo={selectedTramo}
-                    onCalculationChange={(result) => {
+                    onCalculationChange={(result: any) => {
                       // Manejar resultado del cálculo
                       console.log('Resultado cálculo:', result);
                     }}

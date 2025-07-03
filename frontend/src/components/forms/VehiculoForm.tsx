@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   TextInput,
@@ -28,7 +28,7 @@ interface VehiculoFormProps {
   onSuccess: () => void;
 }
 
-export default function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProps) {
+function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProps) {
   const [loading, setLoading] = useState(false);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>('basicos');
@@ -467,3 +467,14 @@ export default function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: V
     </Modal>
   );
 }
+
+// Comparador para React.memo
+const arePropsEqual = (prevProps: VehiculoFormProps, nextProps: VehiculoFormProps): boolean => {
+  return (
+    prevProps.opened === nextProps.opened &&
+    prevProps.vehiculo?._id === nextProps.vehiculo?._id &&
+    JSON.stringify(prevProps.vehiculo) === JSON.stringify(nextProps.vehiculo)
+  );
+};
+
+export default React.memo(VehiculoForm, arePropsEqual);
