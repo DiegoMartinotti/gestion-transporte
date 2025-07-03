@@ -1,7 +1,5 @@
 import { apiService as api } from './api';
 import { Empresa, EmpresaFilters, PaginatedResponse } from '../types';
-import { TemplateFactory } from '../templates/excel';
-import { ExcelProcessor } from './excel/ExcelProcessor';
 import { previewExcelFile, validateExcelFile, processExcelFile } from './excel';
 
 export const empresaService = {
@@ -85,29 +83,7 @@ export const empresaService = {
     await api.delete<any>(`/empresas/${id}`);
   },
 
-  // Excel functionality
-  async getTemplate(): Promise<void> {
-    const EmpresaTemplate = await import('../templates/excel/EmpresaTemplate');
-    try {
-      await TemplateFactory.downloadTemplate('empresa', { 
-        filename: 'plantilla_empresas.xlsx' 
-      });
-    } catch (error) {
-      console.warn('Frontend template failed, falling back to backend:', error);
-      // Fallback to backend template
-      await api.downloadFile('/empresas/template', 'plantilla_empresas.xlsx');
-    }
-  },
-
-  async exportToExcel(): Promise<void> {
-    try {
-      const filename = `empresas_${new Date().toISOString().split('T')[0]}.xlsx`;
-      await api.downloadFile('/empresas/export', filename);
-    } catch (error) {
-      console.error('Error exporting empresas:', error);
-      throw error;
-    }
-  },
+  // Excel operations now handled by BaseExcelService
 
   // Excel import functions
   async previewExcelFile(file: File, sampleSize?: number): Promise<any> {

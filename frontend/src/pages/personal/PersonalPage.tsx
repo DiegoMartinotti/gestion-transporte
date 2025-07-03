@@ -22,10 +22,10 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
+import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { personalExcelService } from '../../services/BaseExcelService';
 import {
   IconPlus,
-  IconSearch,
-  IconFilter,
   IconFileExport,
   IconFileImport,
   IconRefresh,
@@ -35,14 +35,11 @@ import {
   IconEye,
   IconEdit,
   IconTrash,
-  IconDownload,
-  IconUpload,
   IconFileText,
 } from '@tabler/icons-react';
 import type { Personal, PersonalFilters, Empresa } from '../../types';
 import { personalService } from '../../services/personalService';
 import { empresaService } from '../../services/empresaService';
-import { PersonalCard } from '../../components/cards/PersonalCard';
 import { PersonalDetail } from '../../components/details/PersonalDetail';
 import { DocumentacionTable } from '../../components/tables/DocumentacionTable';
 import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
@@ -159,23 +156,6 @@ export const PersonalPage: React.FC = () => {
     openDelete();
   };
 
-  const handleToggleActive = async (person: Personal) => {
-    try {
-      await personalService.toggleActive(person._id);
-      await loadPersonal();
-      notifications.show({
-        title: 'Éxito',
-        message: `Personal ${person.activo ? 'desactivado' : 'activado'} correctamente`,
-        color: 'green',
-      });
-    } catch (error: any) {
-      notifications.show({
-        title: 'Error',
-        message: error.message || 'Error al cambiar estado',
-        color: 'red',
-      });
-    }
-  };
 
   const confirmDelete = async () => {
     if (!personalToDelete) return;
@@ -199,49 +179,24 @@ export const PersonalPage: React.FC = () => {
     }
   };
 
-  const handleFormSubmit = async (personalData: Personal) => {
+  const handleFormSubmit = async () => {
     closeForm();
     await loadPersonal();
     setSelectedPersonal(null);
   };
 
-  const handleGetTemplate = async () => {
-    try {
-      await personalService.getTemplate();
-      notifications.show({
-        title: 'Plantilla descargada',
-        message: 'La plantilla de importación ha sido descargada',
-        color: 'green'
-      });
-    } catch (error: any) {
-      notifications.show({
-        title: 'Error',
-        message: error.message || 'Error al descargar plantilla',
-        color: 'red',
-      });
-    }
-  };
-
-  const handleExport = async () => {
-    try {
-      await personalService.exportToExcel(filters);
-      notifications.show({
-        title: 'Exportación exitosa',
-        message: 'El personal ha sido exportado a Excel',
-        color: 'green',
-      });
-    } catch (error: any) {
-      notifications.show({
-        title: 'Error',
-        message: error.message || 'Error al exportar datos',
-        color: 'red',
-      });
-    }
-  };
+  // Hook unificado para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'personal',
+    entityName: 'personal',
+    exportFunction: (filters) => personalExcelService.exportToExcel(filters),
+    templateFunction: () => personalExcelService.getTemplate(),
+    reloadFunction: loadPersonal,
+  });
 
   const handleImportComplete = async (result: any) => {
     setImportModalOpened(false);
-    await loadPersonal(); // Reload data after import
+    excelOperations.handleImportComplete(result);
   };
 
   // Get statistics
@@ -321,7 +276,7 @@ export const PersonalPage: React.FC = () => {
             <Text size="xs">{person.contacto.telefono}</Text>
           )}
           {person.contacto?.email && (
-            <Text size="xs" color="dimmed">{person.contacto.email}</Text>
+            <Text size="xs" c="dimmed">{person.contacto.email}</Text>
           )}
         </div>
       ),
@@ -346,12 +301,12 @@ export const PersonalPage: React.FC = () => {
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Editar">
-            <ActionIcon size="sm" color="blue" onClick={() => handleEditPersonal(person)}>
+            <ActionIcon size="sm" onClick={() => handleEditPersonal(person)}>
               <IconEdit size={14} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Eliminar">
-            <ActionIcon size="sm" color="red" onClick={() => handleDeletePersonal(person)}>
+            <ActionIcon size="sm" onClick={() => handleDeletePersonal(person)}>
               <IconTrash size={14} />
             </ActionIcon>
           </Tooltip>
@@ -375,7 +330,8 @@ export const PersonalPage: React.FC = () => {
             <Button
               leftSection={<IconFileText size={16} />}
               variant="outline"
-              onClick={handleGetTemplate}
+              onClick={excelOperations.handleGetTemplate}
+              loading={excelOperations.isGettingTemplate}
             >
               Plantilla
             </Button>
@@ -389,7 +345,8 @@ export const PersonalPage: React.FC = () => {
             <Button
               leftSection={<IconFileExport size={16} />}
               variant="outline"
-              onClick={handleExport}
+              onClick={() => excelOperations.handleExport(filters)}
+              loading={excelOperations.isExporting}
             >
               Exportar
             </Button>
@@ -409,7 +366,7 @@ export const PersonalPage: React.FC = () => {
               <Text size="xl" fw={700} c="blue">
                 {stats.activos}
               </Text>
-              <Text size="sm" color="dimmed">Activos</Text>
+              <Text size="sm" c="dimmed">Activos</Text>
             </Card>
           </Grid.Col>
           <Grid.Col span={3}>
@@ -417,7 +374,7 @@ export const PersonalPage: React.FC = () => {
               <Text size="xl" fw={700} c="gray">
                 {stats.inactivos}
               </Text>
-              <Text size="sm" color="dimmed">Inactivos</Text>
+              <Text size="sm" c="dimmed">Inactivos</Text>
             </Card>
           </Grid.Col>
           <Grid.Col span={3}>
@@ -425,7 +382,7 @@ export const PersonalPage: React.FC = () => {
               <Text size="xl" fw={700} c="green">
                 {stats.conductores}
               </Text>
-              <Text size="sm" color="dimmed">Conductores</Text>
+              <Text size="sm" c="dimmed">Conductores</Text>
             </Card>
           </Grid.Col>
           <Grid.Col span={3}>
@@ -433,7 +390,7 @@ export const PersonalPage: React.FC = () => {
               <Text size="xl" fw={700} c={stats.documentosVenciendo > 0 ? 'red' : 'green'}>
                 {stats.documentosVenciendo}
               </Text>
-              <Text size="sm" color="dimmed">Docs. por Vencer</Text>
+              <Text size="sm" c="dimmed">Docs. por Vencer</Text>
             </Card>
           </Grid.Col>
         </Grid>
@@ -618,7 +575,17 @@ export const PersonalPage: React.FC = () => {
           processExcelFile={personalService.processExcelFile.bind(personalService)}
           validateExcelFile={personalService.validateExcelFile.bind(personalService)}
           previewExcelFile={personalService.previewExcelFile.bind(personalService)}
-          getTemplate={personalService.getTemplate.bind(personalService)}
+          getTemplate={async () => {
+            const blob = await personalExcelService.getTemplate();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'plantilla_personal.xlsx';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          }}
         />
       </Stack>
     </Container>

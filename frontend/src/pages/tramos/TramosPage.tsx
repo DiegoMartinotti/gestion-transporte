@@ -27,10 +27,16 @@ import {
   IconEdit,
   IconTrash,
   IconHistory,
-  IconMap
+  IconMap,
+  IconDownload,
+  IconUpload,
+  IconFileText
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
+import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { tramoExcelService } from '../../services/BaseExcelService';
+import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import DataTable from '../../components/base/DataTable';
 import SearchInput from '../../components/base/SearchInput';
 import { tramoService } from '../../services/tramoService';
@@ -41,7 +47,7 @@ import ConfirmModal from '../../components/base/ConfirmModal';
 import TarifaCalculator from '../../components/calculators/TarifaCalculator';
 import { TarifaVersioning } from '../../components/versioning/TarifaVersioning';
 import { TramosSelector } from '../../components/selectors/TramosSelector';
-import { Tramo, Cliente, Site } from '../../types/tramo';
+import { Tramo, Cliente } from '../../types/tramo';
 
 // Lazy load del formulario complejo
 const TramoForm = lazy(() => import('../../components/forms/TramoForm'));
@@ -68,12 +74,9 @@ const TramosPage: React.FC = () => {
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure();
   const [detailOpened, { open: openDetail, close: closeDetail }] = useDisclosure();
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure();
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   // Cargar datos iniciales
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -103,6 +106,20 @@ const TramosPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Hook unificado para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'tramos',
+    entityName: 'tramos',
+    exportFunction: (filters) => tramoExcelService.exportToExcel(filters),
+    templateFunction: () => tramoExcelService.getTemplate(),
+    reloadFunction: loadData,
+  });
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // Filtrar tramos
   const filteredTramos = tramos.filter(tramo => {
@@ -200,6 +217,11 @@ const TramosPage: React.FC = () => {
         color: 'red'
       });
     }
+  };
+
+  const handleImportComplete = async (result: any) => {
+    setImportModalOpened(false);
+    excelOperations.handleImportComplete(result);
   };
 
   const clearFilters = () => {
@@ -410,6 +432,41 @@ const TramosPage: React.FC = () => {
           >
             Actualizar
           </Button>
+          
+          <Button
+            variant="outline"
+            leftSection={<IconFileText size={16} />}
+            onClick={excelOperations.handleGetTemplate}
+            loading={excelOperations.isGettingTemplate}
+          >
+            Plantilla
+          </Button>
+          
+          <Button
+            variant="outline"
+            leftSection={<IconUpload size={16} />}
+            onClick={() => setImportModalOpened(true)}
+          >
+            Importar
+          </Button>
+          
+          <Button
+            variant="outline"
+            leftSection={<IconDownload size={16} />}
+            onClick={() => {
+              const filters = {
+                search: searchTerm,
+                cliente: selectedCliente,
+                origen: selectedOrigen,
+                destino: selectedDestino,
+              };
+              excelOperations.handleExport(filters);
+            }}
+            loading={excelOperations.isExporting}
+          >
+            Exportar
+          </Button>
+          
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={() => {
@@ -588,6 +645,37 @@ const TramosPage: React.FC = () => {
       </Modal>
 
       {/* Modal de confirmación de eliminación */}
+      <ExcelImportModal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        title="Importar Tramos desde Excel"
+        entityType="cliente"
+        onImportComplete={handleImportComplete}
+        processExcelFile={async (file: File) => {
+          // Usar el sistema base de importación
+          return await tramoExcelService.importFromExcel(file);
+        }}
+        validateExcelFile={async () => {
+          // Validación básica de archivo
+          return { valid: true };
+        }}
+        previewExcelFile={async () => {
+          // Preview básico de archivo
+          return { preview: [], headers: [] };
+        }}
+        getTemplate={async () => {
+          const blob = await tramoExcelService.getTemplate();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'plantilla_tramos.xlsx';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }}
+      />
+
       <ConfirmModal
         opened={deleteOpened}
         onClose={closeDelete}

@@ -160,35 +160,7 @@ class TramoService {
     return response.data as any;
   }
 
-  // Exportar a Excel
-  async exportarExcel(filters?: TramoFilters): Promise<Blob> {
-    const params = new URLSearchParams();
-    
-    if (filters?.cliente) params.append('cliente', filters.cliente);
-    if (filters?.origen) params.append('origen', filters.origen);
-    if (filters?.destino) params.append('destino', filters.destino);
-    if (filters?.search) params.append('search', filters.search);
-
-    const response = await api.get(`${this.baseURL}/export/excel${params.toString() ? `?${params.toString()}` : ''}`, {
-      responseType: 'blob'
-    });
-    return response.data as any;
-  }
-
-  // Importar desde Excel
-  async importarExcel(file: File): Promise<{
-    success: number;
-    errors: Array<{
-      row: number;
-      message: string;
-    }>;
-  }> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await api.post(`${this.baseURL}/import/excel`, formData);
-    return response.data as any;
-  }
+  // Excel operations now handled by BaseExcelService
 
   // Validar conflictos de tarifas
   async validarConflictosTarifas(tramoData: {

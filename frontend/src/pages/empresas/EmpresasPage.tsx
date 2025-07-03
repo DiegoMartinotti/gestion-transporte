@@ -28,6 +28,8 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
+import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { empresaExcelService } from '../../services/BaseExcelService';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
 import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import { Empresa, EmpresaFilters } from '../../types';
@@ -97,35 +99,18 @@ export default function EmpresasPage() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      await empresaService.exportToExcel();
-      notifications.show({
-        title: 'Exportación exitosa',
-        message: 'Las empresas han sido exportadas a Excel',
-        color: 'green'
-      });
-    } catch (error) {
-      console.error('Error exporting empresas:', error);
-    }
-  };
-
-  const handleGetTemplate = async () => {
-    try {
-      await empresaService.getTemplate();
-      notifications.show({
-        title: 'Plantilla descargada',
-        message: 'La plantilla de importación ha sido descargada',
-        color: 'green'
-      });
-    } catch (error) {
-      console.error('Error downloading template:', error);
-    }
-  };
+  // Hook unificado para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'empresas',
+    entityName: 'empresas',
+    exportFunction: (filters) => empresaExcelService.exportToExcel(filters),
+    templateFunction: () => empresaExcelService.getTemplate(),
+    reloadFunction: loadEmpresas,
+  });
 
   const handleImportComplete = async (result: any) => {
     setImportModalOpened(false);
-    await loadEmpresas(); // Reload data after import
+    excelOperations.handleImportComplete(result);
   };
 
   const columns: DataTableColumn<Empresa>[] = [
@@ -271,7 +256,8 @@ export default function EmpresasPage() {
               <Button
                 variant="outline"
                 leftSection={<IconFileText size="1rem" />}
-                onClick={handleGetTemplate}
+                onClick={excelOperations.handleGetTemplate}
+                loading={excelOperations.isGettingTemplate}
               >
                 Plantilla
               </Button>
@@ -287,7 +273,8 @@ export default function EmpresasPage() {
               <Button
                 variant="outline"
                 leftSection={<IconDownload size="1rem" />}
-                onClick={handleExport}
+                onClick={() => excelOperations.handleExport(filters)}
+                loading={excelOperations.isExporting}
               >
                 Exportar
               </Button>
@@ -341,7 +328,17 @@ export default function EmpresasPage() {
         processExcelFile={empresaService.processExcelFile.bind(empresaService)}
         validateExcelFile={empresaService.validateExcelFile.bind(empresaService)}
         previewExcelFile={empresaService.previewExcelFile.bind(empresaService)}
-        getTemplate={empresaService.getTemplate.bind(empresaService)}
+        getTemplate={async () => {
+          const blob = await empresaExcelService.getTemplate();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'plantilla_empresas.xlsx';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }}
       />
     </Container>
   );
