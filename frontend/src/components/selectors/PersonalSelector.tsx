@@ -1,6 +1,6 @@
 import { Select, MultiSelect, Group, Text, Badge, Avatar, Box } from '@mantine/core';
 import { IconUser, IconTruck, IconLicense } from '@tabler/icons-react';
-import { useState, useEffect, forwardRef } from 'react';
+import { useState, forwardRef } from 'react';
 
 interface Personal {
   _id: string;
@@ -238,7 +238,7 @@ export function PersonalSelector({
       activo: true
     }
   ]);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   // Función para verificar si una licencia está vigente
   const isLicenseValid = (persona: Personal): boolean => {

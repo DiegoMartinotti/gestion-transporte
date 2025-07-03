@@ -15,7 +15,8 @@ import {
   SimpleGrid,
   ActionIcon,
   Collapse,
-  Box
+  Box,
+  Tabs
 } from '@mantine/core';
 import { 
   IconCalculator, 
@@ -25,19 +26,16 @@ import {
   IconPlus,
   IconMinus,
   IconTruck,
-  IconReceipt
+  IconReceipt,
+  IconList,
+  IconRefresh
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
+import { CalculatorBase } from './CalculatorBase';
+import { useCalculatorBase, type CalculationItem } from '../../hooks/useCalculatorBase';
+import { extraService, type Extra } from '../../services/extraService';
 
-interface Extra {
-  _id: string;
-  descripcion: string;
-  valor: number;
-  tipo: 'FIJO' | 'VARIABLE';
-  unidad?: string;
-  cantidad?: number;
-}
-
+// Tipos actualizados para usar el patrón CalculatorBase
 interface TarifaBase {
   tarifaBase: number;
   extrasTotal: number;
@@ -52,18 +50,20 @@ interface TarifaBase {
 
 interface TotalCalculatorProps {
   tarifaBase?: TarifaBase;
-  extrasDisponibles?: Extra[];
-  extrasSeleccionados?: { extra: Extra; cantidad: number }[];
+  clienteId?: string;
+  extrasIniciales?: { extraId: string; cantidad: number }[];
   onTotalChange?: (total: CalculationTotal) => void;
   readonly?: boolean;
-  showDetails?: boolean;
+  variant?: 'compact' | 'detailed';
+  showTarifaBase?: boolean;
+  showExtras?: boolean;
 }
 
 interface CalculationTotal {
   subtotalTarifa: number;
   subtotalExtras: number;
   total: number;
-  extrasAplicados: { extra: Extra; cantidad: number; subtotal: number }[];
+  extrasAplicados: CalculationItem[];
   desglose: {
     concepto: string;
     valor: number;
@@ -73,28 +73,75 @@ interface CalculationTotal {
 
 export const TotalCalculator: React.FC<TotalCalculatorProps> = ({
   tarifaBase,
-  extrasDisponibles = [],
-  extrasSeleccionados = [],
+  clienteId,
+  extrasIniciales = [],
   onTotalChange,
   readonly = false,
-  showDetails = true
+  variant = 'detailed',
+  showTarifaBase = true,
+  showExtras = true
 }) => {
-  const [extrasAplicados, setExtrasAplicados] = useState<{ extra: Extra; cantidad: number }[]>(
-    extrasSeleccionados
-  );
-  const [detailsOpened, { toggle: toggleDetails }] = useDisclosure(showDetails);
+  // Estados locales
+  const [selectedTab, setSelectedTab] = useState('resumen');
+  const [extrasDisponibles, setExtrasDisponibles] = useState<Extra[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  
+  // Usar el hook base para manejar los cálculos de extras
+  const [calculatorState, calculatorActions] = useCalculatorBase({
+    allowNegative: false,
+    autoCalculate: true,
+    precision: 2
+  });
+
+  // Cargar extras disponibles del cliente
+  useEffect(() => {
+    if (clienteId) {
+      loadExtrasDisponibles();
+    }
+  }, [clienteId]);
+
+  // Cargar extras iniciales
+  useEffect(() => {
+    if (extrasIniciales.length > 0) {
+      loadExtrasIniciales();
+    }
+  }, [extrasIniciales]);
+
+  const loadExtrasDisponibles = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const extras = await extraService.getExtras({ cliente: clienteId!, vigente: true });
+      setExtrasDisponibles(extras as Extra[]);
+    } catch (err) {
+      console.error('Error cargando extras:', err);
+      setError('Error cargando extras disponibles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadExtrasIniciales = async () => {
+    try {
+      for (const { extraId, cantidad } of extrasIniciales) {
+        const extra = await extraService.getExtraById(extraId) as Extra;
+        calculatorActions.addItem({
+          concepto: extra.tipo,
+          valor: extra.valor,
+          tipo: 'FIJO',
+          cantidad
+        });
+      }
+    } catch (err) {
+      console.error('Error cargando extras iniciales:', err);
+    }
+  };
 
   // Calcular totales de manera reactiva
   const calculationResult = useMemo<CalculationTotal>(() => {
     const subtotalTarifa = tarifaBase?.total || 0;
-    
-    let subtotalExtras = 0;
-    const extrasConSubtotal = extrasAplicados.map(({ extra, cantidad }) => {
-      const subtotal = extra.tipo === 'FIJO' ? extra.valor : extra.valor * cantidad;
-      subtotalExtras += subtotal;
-      return { extra, cantidad, subtotal };
-    });
-
+    const subtotalExtras = calculatorState.result.total;
     const total = subtotalTarifa + subtotalExtras;
 
     // Crear desglose detallado
@@ -104,9 +151,9 @@ export const TotalCalculator: React.FC<TotalCalculatorProps> = ({
         valor: item.valor,
         tipo: 'tarifa' as const
       })) || []),
-      ...extrasConSubtotal.map(({ extra, cantidad, subtotal }) => ({
-        concepto: `${extra.descripcion}${extra.tipo === 'VARIABLE' ? ` (x${cantidad})` : ''}`,
-        valor: subtotal,
+      ...calculatorState.items.map(item => ({
+        concepto: `${item.concepto}${item.tipo === 'VARIABLE' ? ` (x${item.cantidad || 1})` : ''}`,
+        valor: item.valor * (item.cantidad || 1),
         tipo: 'extra' as const
       }))
     ];
@@ -115,49 +162,31 @@ export const TotalCalculator: React.FC<TotalCalculatorProps> = ({
       subtotalTarifa,
       subtotalExtras,
       total,
-      extrasAplicados: extrasConSubtotal,
+      extrasAplicados: calculatorState.items,
       desglose
     };
-  }, [tarifaBase, extrasAplicados]);
+  }, [tarifaBase, calculatorState]);
 
   // Notificar cambios al componente padre
   useEffect(() => {
     onTotalChange?.(calculationResult);
   }, [calculationResult, onTotalChange]);
 
-  const handleExtraQuantityChange = (extraId: string, cantidad: number) => {
+  const handleAddExtra = (extra: Extra) => {
     if (readonly) return;
-
-    setExtrasAplicados(prev => {
-      if (cantidad <= 0) {
-        return prev.filter(item => item.extra._id !== extraId);
-      }
-
-      const existingIndex = prev.findIndex(item => item.extra._id === extraId);
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], cantidad };
-        return updated;
-      }
-
-      const extra = extrasDisponibles.find(e => e._id === extraId);
-      if (extra) {
-        return [...prev, { extra, cantidad }];
-      }
-
-      return prev;
+    
+    calculatorActions.addItem({
+      concepto: extra.tipo,
+      valor: extra.valor,
+      tipo: 'FIJO',
+      cantidad: 1
     });
   };
 
-  const handleAddExtra = (extra: Extra) => {
-    if (readonly) return;
-    const cantidad = extra.tipo === 'FIJO' ? 1 : 1;
-    handleExtraQuantityChange(extra._id, cantidad);
-  };
-
-  const handleRemoveExtra = (extraId: string) => {
-    if (readonly) return;
-    setExtrasAplicados(prev => prev.filter(item => item.extra._id !== extraId));
+  const handleRefreshExtras = () => {
+    if (clienteId) {
+      loadExtrasDisponibles();
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -167,16 +196,46 @@ export const TotalCalculator: React.FC<TotalCalculatorProps> = ({
     }).format(amount);
   };
 
-  const getExtraQuantity = (extraId: string) => {
-    return extrasAplicados.find(item => item.extra._id === extraId)?.cantidad || 0;
-  };
-
   const isExtraSelected = (extraId: string) => {
-    return extrasAplicados.some(item => item.extra._id === extraId);
+    return calculatorState.items.some(item => item.id === extraId);
   };
 
+  const getVigenciaStatus = (extra: Extra) => {
+    const now = new Date();
+    const desde = new Date(extra.vigenciaDesde);
+    const hasta = new Date(extra.vigenciaHasta);
+    
+    if (now < desde) return { color: 'blue', text: 'Pendiente' };
+    if (now > hasta) return { color: 'red', text: 'Vencido' };
+    return { color: 'green', text: 'Vigente' };
+  };
+
+  // Render vista compacta
+  if (variant === 'compact') {
+    return (
+      <Card withBorder p="sm">
+        <Group justify="space-between">
+          <Group gap="xs">
+            <IconReceipt size={18} />
+            <Box>
+              <Text fw={500} size="sm">Total Calculado</Text>
+              <Text size="xs" c="dimmed">
+                {calculatorState.items.length} extra{calculatorState.items.length !== 1 ? 's' : ''}
+              </Text>
+            </Box>
+          </Group>
+          
+          <Badge size="lg" color="green">
+            {formatCurrency(calculationResult.total)}
+          </Badge>
+        </Group>
+      </Card>
+    );
+  }
+
+  // Render vista detallada
   return (
-    <Paper p="md">
+    <Paper p="md" withBorder>
       <Group justify="space-between" mb="md">
         <Title order={4}>
           <Group gap="xs">
@@ -185,183 +244,178 @@ export const TotalCalculator: React.FC<TotalCalculatorProps> = ({
           </Group>
         </Title>
         <Group gap="sm">
-          <Badge size="lg" color="blue" variant="light">
+          <Badge size="lg" color="green" variant="light">
             Total: {formatCurrency(calculationResult.total)}
           </Badge>
-          {showDetails && (
+          {!readonly && (
             <ActionIcon
-              variant="subtle"
-              onClick={toggleDetails}
-              aria-label="Toggle details"
+              variant="light"
+              onClick={handleRefreshExtras}
+              loading={loading}
             >
-              {detailsOpened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+              <IconRefresh size={16} />
             </ActionIcon>
           )}
         </Group>
       </Group>
 
-      <Grid>
-        {/* Resumen de totales */}
-        <Grid.Col span={12}>
-          <Card withBorder>
-            <SimpleGrid cols={3}>
-              <Box ta="center">
-                <Text size="sm" c="dimmed">Tarifa Base</Text>
-                <Text size="lg" fw={600}>
-                  {formatCurrency(calculationResult.subtotalTarifa)}
-                </Text>
-              </Box>
-              
-              <Box ta="center">
-                <Text size="sm" c="dimmed">Extras</Text>
-                <Text size="lg" fw={600} c="orange">
-                  {formatCurrency(calculationResult.subtotalExtras)}
-                </Text>
-              </Box>
-              
-              <Box ta="center">
-                <Text size="sm" c="dimmed">Total Final</Text>
-                <Text size="xl" fw={700} c="green">
-                  {formatCurrency(calculationResult.total)}
-                </Text>
-              </Box>
-            </SimpleGrid>
-          </Card>
-        </Grid.Col>
+      {/* Error handling */}
+      {error && (
+        <Alert color="red" mb="md">
+          {error}
+        </Alert>
+      )}
 
-        {/* Extras disponibles */}
-        {!readonly && extrasDisponibles.length > 0 && (
-          <Grid.Col span={6}>
+      {/* Resumen de totales */}
+      <Card withBorder mb="md">
+        <SimpleGrid cols={showTarifaBase && showExtras ? 3 : 2}>
+          {showTarifaBase && (
+            <Box ta="center">
+              <Text size="sm" c="dimmed">Tarifa Base</Text>
+              <Text size="lg" fw={600}>
+                {formatCurrency(calculationResult.subtotalTarifa)}
+              </Text>
+            </Box>
+          )}
+          
+          {showExtras && (
+            <Box ta="center">
+              <Text size="sm" c="dimmed">Extras</Text>
+              <Text size="lg" fw={600} c="orange">
+                {formatCurrency(calculationResult.subtotalExtras)}
+              </Text>
+            </Box>
+          )}
+          
+          <Box ta="center">
+            <Text size="sm" c="dimmed">Total Final</Text>
+            <Text size="xl" fw={700} c="green">
+              {formatCurrency(calculationResult.total)}
+            </Text>
+          </Box>
+        </SimpleGrid>
+      </Card>
+
+      {/* Tabs para organizar el contenido */}
+      <Tabs value={selectedTab} onChange={(value) => setSelectedTab(value || 'resumen')}>
+        <Tabs.List>
+          <Tabs.Tab value="resumen" leftSection={<IconCalculator size={16} />}>
+            Resumen
+          </Tabs.Tab>
+          {showExtras && !readonly && (
+            <Tabs.Tab value="extras" leftSection={<IconPlus size={16} />}>
+              Extras Disponibles ({extrasDisponibles.length})
+            </Tabs.Tab>
+          )}
+          <Tabs.Tab value="desglose" leftSection={<IconList size={16} />}>
+            Desglose
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="resumen" pt="md">
+          <Grid>
+            {/* Extras aplicados usando CalculatorBase */}
+            <Grid.Col span={12}>
+              <CalculatorBase
+                title="Extras Aplicados"
+                initialItems={calculatorState.items}
+                readonly={readonly}
+                variant="compact"
+                allowAddItems={false}
+              />
+            </Grid.Col>
+          </Grid>
+        </Tabs.Panel>
+
+        {showExtras && !readonly && (
+          <Tabs.Panel value="extras" pt="md">
             <Card withBorder>
               <Title order={5} mb="md">Extras Disponibles</Title>
               
-              <Stack gap="xs">
-                {extrasDisponibles.map(extra => (
-                  <Group key={extra._id} justify="space-between" p="xs" style={{ border: '1px solid #e9ecef', borderRadius: 4 }}>
-                    <Box style={{ flex: 1 }}>
-                      <Text size="sm" fw={500}>{extra.descripcion}</Text>
-                      <Text size="xs" c="dimmed">
-                        {extra.tipo === 'FIJO' ? 'Valor fijo' : `Por ${extra.unidad || 'unidad'}`}: {formatCurrency(extra.valor)}
-                      </Text>
-                    </Box>
+              {extrasDisponibles.length > 0 ? (
+                <Stack gap="xs">
+                  {extrasDisponibles.map(extra => {
+                    const vigencia = getVigenciaStatus(extra);
                     
-                    <Group gap="xs">
-                      {isExtraSelected(extra._id) ? (
-                        <>
-                          <NumberInput
-                            size="xs"
-                            w={80}
-                            min={extra.tipo === 'FIJO' ? 1 : 0}
-                            value={getExtraQuantity(extra._id)}
-                            onChange={(value) => handleExtraQuantityChange(extra._id, Number(value) || 0)}
-                            hideControls
-                          />
-                          <ActionIcon
-                            size="sm"
-                            color="red"
-                            variant="light"
-                            onClick={() => handleRemoveExtra(extra._id)}
-                          >
-                            <IconMinus size={12} />
-                          </ActionIcon>
-                        </>
-                      ) : (
-                        <ActionIcon
-                          size="sm"
-                          color="blue"
-                          variant="light"
-                          onClick={() => handleAddExtra(extra)}
-                        >
-                          <IconPlus size={12} />
-                        </ActionIcon>
-                      )}
-                    </Group>
-                  </Group>
-                ))}
-              </Stack>
+                    return (
+                      <Group key={extra._id} justify="space-between" p="xs" style={{ border: '1px solid #e9ecef', borderRadius: 4 }}>
+                        <Box style={{ flex: 1 }}>
+                          <Group gap="xs">
+                            <Text size="sm" fw={500}>{extra.tipo}</Text>
+                            <Badge size="xs" color={vigencia.color} variant="outline">
+                              {vigencia.text}
+                            </Badge>
+                          </Group>
+                          {extra.descripcion && (
+                            <Text size="xs" c="dimmed">{extra.descripcion}</Text>
+                          )}
+                          <Text size="xs" c="dimmed">
+                            Valor: {formatCurrency(extra.valor)}
+                          </Text>
+                        </Box>
+                        
+                        <Group gap="xs">
+                          {!isExtraSelected(extra._id || '') && (
+                            <ActionIcon
+                              size="sm"
+                              color="blue"
+                              variant="light"
+                              onClick={() => handleAddExtra(extra)}
+                              disabled={vigencia.color === 'red'}
+                            >
+                              <IconPlus size={12} />
+                            </ActionIcon>
+                          )}
+                        </Group>
+                      </Group>
+                    );
+                  })}
+                </Stack>
+              ) : (
+                <Text size="sm" c="dimmed" ta="center" py="md">
+                  {loading ? 'Cargando extras...' : 'No hay extras disponibles'}
+                </Text>
+              )}
             </Card>
-          </Grid.Col>
+          </Tabs.Panel>
         )}
 
-        {/* Extras aplicados */}
-        <Grid.Col span={readonly ? 12 : 6}>
+        <Tabs.Panel value="desglose" pt="md">
           <Card withBorder>
-            <Title order={5} mb="md">Extras Aplicados</Title>
+            <Title order={5} mb="md">Desglose Detallado</Title>
             
-            {calculationResult.extrasAplicados.length > 0 ? (
-              <Stack gap="xs">
-                {calculationResult.extrasAplicados.map(({ extra, cantidad, subtotal }) => (
-                  <Group key={extra._id} justify="space-between" p="xs" bg="gray.0" style={{ borderRadius: 4 }}>
-                    <Box>
-                      <Text size="sm" fw={500}>{extra.descripcion}</Text>
-                      <Text size="xs" c="dimmed">
-                        {extra.tipo === 'FIJO' 
-                          ? 'Valor fijo' 
-                          : `${formatCurrency(extra.valor)} x ${cantidad}`
-                        }
-                      </Text>
-                    </Box>
-                    
-                    <Text size="sm" fw={600}>
-                      {formatCurrency(subtotal)}
-                    </Text>
+            <Stack gap="xs">
+              {calculationResult.desglose.map((item, index) => (
+                <Group key={index} justify="space-between">
+                  <Group gap="xs">
+                    {item.tipo === 'tarifa' ? (
+                      <IconTruck size={14} color="blue" />
+                    ) : (
+                      <IconPlus size={14} color="orange" />
+                    )}
+                    <Text size="sm">{item.concepto}</Text>
                   </Group>
-                ))}
-                
-                <Divider />
-                
-                <Group justify="space-between">
-                  <Text fw={600}>Subtotal Extras:</Text>
-                  <Text fw={600} c="orange">
-                    {formatCurrency(calculationResult.subtotalExtras)}
+                  <Text size="sm" fw={500}>
+                    {formatCurrency(item.valor)}
                   </Text>
                 </Group>
-              </Stack>
-            ) : (
-              <Alert color="gray" variant="light">
-                <Text size="sm">No hay extras aplicados</Text>
-              </Alert>
-            )}
-          </Card>
-        </Grid.Col>
-      </Grid>
-
-      {/* Desglose detallado */}
-      <Collapse in={detailsOpened} mt="md">
-        <Card withBorder>
-          <Title order={5} mb="md">Desglose Detallado</Title>
-          
-          <Stack gap="xs">
-            {calculationResult.desglose.map((item, index) => (
-              <Group key={index} justify="space-between">
-                <Group gap="xs">
-                  {item.tipo === 'tarifa' ? (
-                    <IconTruck size={14} color="blue" />
-                  ) : (
-                    <IconPlus size={14} color="orange" />
-                  )}
-                  <Text size="sm">{item.concepto}</Text>
-                </Group>
-                <Text size="sm" fw={500}>
-                  {formatCurrency(item.valor)}
+              ))}
+              
+              <Divider />
+              
+              <Group justify="space-between">
+                <Text fw={700} size="lg">TOTAL FINAL:</Text>
+                <Text fw={700} size="lg" c="green">
+                  {formatCurrency(calculationResult.total)}
                 </Text>
               </Group>
-            ))}
-            
-            <Divider />
-            
-            <Group justify="space-between">
-              <Text fw={700} size="lg">TOTAL FINAL:</Text>
-              <Text fw={700} size="lg" c="green">
-                {formatCurrency(calculationResult.total)}
-              </Text>
-            </Group>
-          </Stack>
-        </Card>
-      </Collapse>
+            </Stack>
+          </Card>
+        </Tabs.Panel>
+      </Tabs>
 
       {/* Error state */}
-      {!tarifaBase && (
+      {!tarifaBase && showTarifaBase && (
         <Alert color="yellow" mt="md">
           <Text>
             No hay una tarifa base calculada. Complete los datos del tramo para obtener el cálculo.

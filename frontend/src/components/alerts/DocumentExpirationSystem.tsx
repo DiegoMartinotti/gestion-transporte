@@ -7,18 +7,15 @@ import {
   Badge, 
   ActionIcon, 
   Card,
-  Timeline,
   Button,
   Modal,
   Divider,
   Box,
-  Progress,
   Tooltip,
   Paper,
   Title,
   Collapse,
-  ThemeIcon,
-  List
+  ThemeIcon
 } from '@mantine/core';
 import { 
   IconAlertTriangle, 
@@ -34,8 +31,7 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconRefresh,
-  IconFileText,
-  IconSettings
+  IconFileText
 } from '@tabler/icons-react';
 import { format, differenceInDays, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
