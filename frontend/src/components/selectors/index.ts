@@ -1,3 +1,6 @@
+// Imports
+import { createSimpleSelector, CommonMappers, CommonFilters, createFilterableSelector } from './SelectorFactory';
+
 // Factory Pattern para Selectores
 export {
   createEntitySelector,
@@ -22,7 +25,6 @@ export { ClienteSelector } from './ClienteSelector';
 export { PersonalSelector, ChoferSelector } from './PersonalSelector';
 
 // Utility para crear selectores rápidamente
-import { createSimpleSelector, CommonMappers, CommonFilters, createFilterableSelector } from './SelectorFactory';
 
 export function createQuickSelector<T extends { _id: string; nombre: string }>(
   useHook: () => { data: T[]; loading: boolean; error?: string },
