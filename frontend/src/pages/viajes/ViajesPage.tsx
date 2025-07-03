@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Card, Group, Button, Stack, Title, Badge, Select, TextInput, ActionIcon, Tabs, Text, Grid, Paper, Alert } from '@mantine/core';
 import { IconPlus, IconTruck, IconCalendar, IconMapPin, IconClock, IconAlertCircle, IconCheckupList, IconX, IconCheck } from '@tabler/icons-react';
 import DataTable from '../../components/base/DataTable';
+import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
 import { DateRangePicker } from '../../components/base/SimpleDateRangePicker';
 import SearchInput from '../../components/base/SearchInput';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import { useViajes } from '../../hooks/useViajes';
+import { useVirtualizedTable } from '../../hooks/useVirtualizedTable';
 import { ClienteSelector } from '../../components/selectors/ClienteSelector';
 import { VehiculoSelector } from '../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../components/selectors/PersonalSelector';
@@ -21,6 +23,21 @@ export function ViajesPage() {
   const [vehiculoFilter, setVehiculoFilter] = useState<string | null>(null);
   const [choferFilter, setChoferFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>('todos');
+  const [useVirtualScrolling, setUseVirtualScrolling] = useState(viajes.length > 100);
+
+  // Hook para tabla virtualizada
+  const {
+    processedData: virtualizedData,
+    filteredCount,
+    handleSearchChange: handleVirtualSearch,
+    handleSort: handleVirtualSort,
+    handlePageSizeChange: handleVirtualPageSize
+  } = useVirtualizedTable({
+    data: viajes,
+    initialPageSize: 500,
+    enableLocalFiltering: true,
+    enableLocalSorting: true
+  });
 
   const estadoOptions = [
     { value: 'PENDIENTE', label: 'Pendiente' },
@@ -341,12 +358,26 @@ export function ViajesPage() {
           </Tabs>
 
           <LoadingOverlay loading={loading}>
-            <DataTable
-              columns={columns}
-              data={filteredViajes}
-              emptyMessage="No se encontraron viajes con los filtros aplicados"
-              searchPlaceholder="Buscar viajes..."
-            />
+            {useVirtualScrolling && filteredViajes.length > 100 ? (
+              <VirtualizedDataTable
+                columns={columns}
+                data={filteredViajes}
+                loading={loading}
+                totalItems={filteredViajes.length}
+                emptyMessage="No se encontraron viajes con los filtros aplicados"
+                searchPlaceholder="Buscar viajes..."
+                height={500}
+                itemHeight={56}
+                showSearch={false} // Deshabilitamos búsqueda interna ya que tenemos filtros arriba
+              />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredViajes}
+                emptyMessage="No se encontraron viajes con los filtros aplicados"
+                searchPlaceholder="Buscar viajes..."
+              />
+            )}
           </LoadingOverlay>
         </Stack>
       </Card>
