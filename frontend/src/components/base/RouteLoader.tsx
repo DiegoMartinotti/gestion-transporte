@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Stack, Text, Paper, Group, Skeleton, ThemeIcon } from '@mantine/core';
 import { IconRoute } from '@tabler/icons-react';
 import LoadingOverlay from './LoadingOverlay';

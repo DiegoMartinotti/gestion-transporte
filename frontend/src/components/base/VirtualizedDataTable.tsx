@@ -10,13 +10,11 @@ import {
   Badge,
   Center,
   Skeleton,
-  ScrollArea,
   Box,
   UnstyledButton,
   rem
 } from '@mantine/core';
 import { IconSearch, IconSortAscending, IconSortDescending, IconSelector } from '@tabler/icons-react';
-import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../../constants';
 import { BaseFilters } from '../../types';
 import { DataTableColumn } from './DataTable';
 
@@ -29,7 +27,6 @@ interface VirtualizedDataTableProps<T = any> {
   searchPlaceholder?: string;
   showSearch?: boolean;
   emptyMessage?: string;
-  keyExtractor?: (record: T) => string;
   itemHeight?: number;
   height?: number;
   overscan?: number;
@@ -84,7 +81,7 @@ const VirtualizedRow = <T,>({ index, style, data }: {
           paddingRight: rem(12)
         }}
       >
-        {columns.map((column, colIndex) => (
+        {columns.map((column) => (
           <Box
             key={column.key}
             style={{
@@ -187,7 +184,6 @@ function VirtualizedDataTable<T = any>({
   searchPlaceholder = 'Buscar...',
   showSearch = true,
   emptyMessage = 'No hay datos para mostrar',
-  keyExtractor = (record: any) => record._id || record.id,
   itemHeight = 48,
   height = 400,
   overscan = 5
@@ -262,8 +258,8 @@ function VirtualizedDataTable<T = any>({
   const rowData: RowData<T> = useMemo(() => ({
     columns,
     data: processedData,
-    keyExtractor
-  }), [columns, processedData, keyExtractor]);
+    keyExtractor: (record: any) => record._id || record.id
+  }), [columns, processedData]);
 
   // Skeleton de carga
   const LoadingSkeleton = useMemo(() => (

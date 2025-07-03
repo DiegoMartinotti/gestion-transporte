@@ -50,12 +50,7 @@ export default function ClientesPage() {
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
 
   // Hook para tabla virtualizada
-  const {
-    processedData: virtualizedClientes,
-    filteredCount,
-    handleSearchChange: handleVirtualSearch,
-    handleSort: handleVirtualSort
-  } = useVirtualizedTable({
+  const {} = useVirtualizedTable({
     data: clientes,
     initialPageSize: 500,
     enableLocalFiltering: true,
