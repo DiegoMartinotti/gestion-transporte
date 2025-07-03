@@ -132,7 +132,6 @@ function SmartDataTable<T = any>({
           searchPlaceholder={searchPlaceholder}
           showSearch={showSearch}
           emptyMessage={emptyMessage}
-          keyExtractor={keyExtractor}
           height={virtualHeight}
           itemHeight={virtualItemHeight}
         />
@@ -152,7 +151,6 @@ function SmartDataTable<T = any>({
           showPagination={showPagination}
           showPageSize={showPageSize}
           emptyMessage={emptyMessage}
-          keyExtractor={keyExtractor}
         />
       )}
     </>

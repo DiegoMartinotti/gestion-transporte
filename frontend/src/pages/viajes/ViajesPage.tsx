@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Group, Button, Stack, Title, Badge, Select, TextInput, ActionIcon, Tabs, Text, Grid, Paper, Alert } from '@mantine/core';
+import { Card, Group, Button, Stack, Title, Badge, Select, Tabs, Text, Grid, Paper, Alert } from '@mantine/core';
 import { IconPlus, IconTruck, IconCalendar, IconMapPin, IconClock, IconAlertCircle, IconCheckupList, IconX, IconCheck } from '@tabler/icons-react';
 import DataTable from '../../components/base/DataTable';
 import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
@@ -12,10 +12,9 @@ import { ClienteSelector } from '../../components/selectors/ClienteSelector';
 import { VehiculoSelector } from '../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../components/selectors/PersonalSelector';
 import { Viaje } from '../../types/viaje';
-import { notifications } from '@mantine/notifications';
 
 export function ViajesPage() {
-  const { viajes, loading, error, fetchViajes } = useViajes();
+  const { viajes, loading, error } = useViajes();
   const [search, setSearch] = useState('');
   const [clienteFilter, setClienteFilter] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string | null>(null);
@@ -23,16 +22,10 @@ export function ViajesPage() {
   const [vehiculoFilter, setVehiculoFilter] = useState<string | null>(null);
   const [choferFilter, setChoferFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>('todos');
-  const [useVirtualScrolling, setUseVirtualScrolling] = useState(viajes.length > 100);
+  const [useVirtualScrolling] = useState(viajes.length > 100);
 
   // Hook para tabla virtualizada
-  const {
-    processedData: virtualizedData,
-    filteredCount,
-    handleSearchChange: handleVirtualSearch,
-    handleSort: handleVirtualSort,
-    handlePageSizeChange: handleVirtualPageSize
-  } = useVirtualizedTable({
+  const {} = useVirtualizedTable({
     data: viajes,
     initialPageSize: 500,
     enableLocalFiltering: true,
