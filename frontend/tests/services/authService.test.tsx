@@ -52,7 +52,7 @@ describe('AuthService', () => {
   describe('token validation', () => {
     it('should return true for valid token', () => {
       // Mock de un token JWT válido (no expirado)
-      const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTl9.Lhm_7VgDqA4LWj6_7R5SdwPJJHKNvfkKWNdqGgxpKzc';
+      const validToken = 'mock.valid.token';
       
       mockLocalStorage.getItem.mockReturnValue(validToken);
       
@@ -63,7 +63,7 @@ describe('AuthService', () => {
 
     it('should return false for expired token', () => {
       // Mock de un token JWT expirado
-      const expiredToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.invalid';
+      const expiredToken = 'mock.expired.token';
       
       mockLocalStorage.getItem.mockReturnValue(expiredToken);
       
@@ -91,7 +91,7 @@ describe('AuthService', () => {
 
   describe('user data', () => {
     it('should get user data from valid token', () => {
-      const tokenWithUser = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjk5OTk5OTk5OTl9.invalid';
+      const tokenWithUser = 'mock.user.token';
       
       mockLocalStorage.getItem.mockReturnValue(tokenWithUser);
       
