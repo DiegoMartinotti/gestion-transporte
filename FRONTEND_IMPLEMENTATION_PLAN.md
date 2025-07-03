@@ -444,11 +444,11 @@ npm run type-check   # Verificación tipos
 - [x] **SelectorFactory**: Factory pattern para crear selectores reutilizables <!-- COMPLETADO: /frontend/src/factories/SelectorFactory.tsx - Factory completo para generar selectores configurables con filtros, validación y múltiple selección -->
 
 ### 13.3 Limpieza de Código TypeScript
-- [ ] **ReportHistoryFix**: Remover variable no utilizada `onReportView` (línea 108)
-- [ ] **ReportViewerCleanup**: Remover variables no utilizadas `field`, `index`, `entry` (líneas 189, 217, 303)
-- [ ] **ReportsPageFix**: Remover variable no utilizada `blob` (línea 492)
-- [ ] **ESLintFix**: Ejecutar linter y corregir todos los warnings de variables no utilizadas
-- [ ] **TypeScriptValidation**: Verificar tipos y resolver inconsistencias
+- [x] **ReportHistoryFix**: Remover variable no utilizada `onReportView` (línea 108) <!-- COMPLETADO: Variables no utilizadas eliminadas -->
+- [x] **ReportViewerCleanup**: Remover variables no utilizadas `field`, `index`, `entry` (líneas 189, 217, 303) <!-- COMPLETADO: Variables no utilizadas eliminadas -->
+- [x] **ReportsPageFix**: Remover variable no utilizada `blob` (línea 492) <!-- COMPLETADO: Variable no utilizada eliminada -->
+- [x] **ESLintFix**: Ejecutar linter y corregir todos los warnings de variables no utilizadas <!-- COMPLETADO: Linter ejecutado y warnings corregidos -->
+- [x] **TypeScriptValidation**: Verificar tipos y resolver inconsistencias <!-- COMPLETADO: Tipos verificados y consistencias resueltas -->
 
 ### 13.4 Optimizaciones de Performance
 - [ ] **ComponentMemoization**: Aplicar React.memo a componentes pesados de renderizado
