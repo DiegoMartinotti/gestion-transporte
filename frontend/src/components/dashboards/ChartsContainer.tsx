@@ -1,6 +1,6 @@
 import { Paper, Stack, Title, Group, SegmentedControl, Text, SimpleGrid } from '@mantine/core';
 import { AreaChart, BarChart, LineChart, DonutChart } from '@mantine/charts';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 interface ChartsContainerProps {
   data?: {
@@ -16,8 +16,8 @@ export const ChartsContainer = ({ data, loading = false }: ChartsContainerProps)
   const [facturacionPeriod, setFacturacionPeriod] = useState('6m');
   const [viajesPeriod, setViajesPeriod] = useState('3m');
 
-  // Datos mock para desarrollo
-  const mockData = {
+  // Memoize mock data to avoid recreating it on every render
+  const mockData = useMemo(() => ({
     facturacion: [
       { mes: 'Ene', monto: 1850000, year: 2024 },
       { mes: 'Feb', monto: 2100000, year: 2024 },
@@ -48,9 +48,28 @@ export const ChartsContainer = ({ data, loading = false }: ChartsContainerProps)
       { mes: 'May', nuevos: 2, activos: 26 },
       { mes: 'Jun', nuevos: 1, activos: 25 }
     ]
-  };
+  }), []); // Empty dependency array since mock data is static
 
-  const chartData = data || mockData;
+  // Memoize chart data to avoid unnecessary recalculation
+  const chartData = useMemo(() => data || mockData, [data, mockData]);
+
+  // Memoize currency formatter to avoid recreating the function
+  const currencyFormatter = useCallback((value: number) => 
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0
+    }).format(value),
+    []
+  );
+
+  // Memoize calculated values
+  const clientStats = useMemo(() => {
+    const avgNewClients = Math.round(
+      chartData.clientes.reduce((acc, item) => acc + item.nuevos, 0) / chartData.clientes.length
+    );
+    return { avgNewClients };
+  }, [chartData.clientes]);
 
   if (loading) {
     return (
@@ -100,13 +119,7 @@ export const ChartsContainer = ({ data, loading = false }: ChartsContainerProps)
             withYAxis
             withTooltip
             tooltipAnimationDuration={200}
-            valueFormatter={(value) => 
-              new Intl.NumberFormat('es-AR', {
-                style: 'currency',
-                currency: 'ARS',
-                minimumFractionDigits: 0
-              }).format(value)
-            }
+            valueFormatter={currencyFormatter}
           />
         </Stack>
       </Paper>
@@ -196,7 +209,7 @@ export const ChartsContainer = ({ data, loading = false }: ChartsContainerProps)
           
           <Group justify="space-between" mt="sm">
             <Text size="sm" c="dimmed">
-              Promedio mensual: {Math.round(chartData.clientes.reduce((acc, item) => acc + item.nuevos, 0) / chartData.clientes.length)} nuevos clientes
+              Promedio mensual: {clientStats.avgNewClients} nuevos clientes
             </Text>
             <Text size="sm" c="dimmed">
               Retención: 94.2%

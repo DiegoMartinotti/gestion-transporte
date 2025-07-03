@@ -1,5 +1,5 @@
 import { Select, MultiSelect } from '@mantine/core';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface Vehiculo {
   _id: string;
@@ -63,10 +63,24 @@ export function VehiculoSelector({
   ]);
   const [loading, setLoading] = useState(false);
 
-  const data = vehiculos.map(vehiculo => ({
-    value: vehiculo._id,
-    label: `${vehiculo.patente} - ${vehiculo.marca} ${vehiculo.modelo} (${vehiculo.capacidadKg}kg)`
-  }));
+  // Memoize the data transformation to avoid recreating the array on every render
+  const data = useMemo(() => 
+    vehiculos
+      .filter(vehiculo => !excludeIds.includes(vehiculo._id)) // Filter out excluded vehicles
+      .map(vehiculo => ({
+        value: vehiculo._id,
+        label: `${vehiculo.patente} - ${vehiculo.marca} ${vehiculo.modelo} (${vehiculo.capacidadKg}kg)`
+      })),
+    [vehiculos, excludeIds] // Recalculate when vehiculos or excludeIds change
+  );
+
+  // Memoize value normalization for multiple select
+  const normalizedValue = useMemo(() => {
+    if (multiple) {
+      return Array.isArray(value) ? value : value ? [value] : [];
+    }
+    return Array.isArray(value) ? value[0] : value;
+  }, [value, multiple]);
 
   if (multiple) {
     return (
@@ -74,12 +88,12 @@ export function VehiculoSelector({
         label={label}
         placeholder={placeholder}
         data={data}
-        value={Array.isArray(value) ? value : value ? [value] : []}
+        value={normalizedValue as string[]}
         onChange={onChange}
         required={required}
         clearable={clearable}
         error={error}
-        disabled={loading}
+        disabled={loading || disabled}
         searchable
       />
     );
@@ -90,12 +104,12 @@ export function VehiculoSelector({
       label={label}
       placeholder={placeholder}
       data={data}
-      value={Array.isArray(value) ? value[0] : value}
+      value={normalizedValue as string | null}
       onChange={onChange}
       required={required}
       clearable={clearable}
       error={error}
-      disabled={loading}
+      disabled={loading || disabled}
       searchable
     />
   );

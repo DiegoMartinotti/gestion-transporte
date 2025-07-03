@@ -1,6 +1,6 @@
 import { Paper, Stack, Title, Group, Text, Avatar, Badge, Button, ScrollArea, ActionIcon, Divider } from '@mantine/core';
 import { IconRefresh, IconEye, IconTruck, IconUser, IconMapPin, IconFileInvoice, IconAlertTriangle } from '@tabler/icons-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
@@ -30,11 +30,8 @@ export const RecentActivity = ({ limit = 10, showHeader = true, height = 400 }: 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchActivities = async () => {
-    // Simulando datos - en producción sería una llamada real a la API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const mockActivities: ActivityItem[] = [
+  // Memoize mock activities to avoid recreating the array
+  const mockActivities = useMemo<ActivityItem[]>(() => [
       {
         id: '1',
         type: 'viaje',
@@ -123,17 +120,23 @@ export const RecentActivity = ({ limit = 10, showHeader = true, height = 400 }: 
         entityId: 'PER-0015',
         icon: IconAlertTriangle
       }
-    ];
+    ], []);
 
+  const fetchActivities = useCallback(async () => {
+    // Simulando datos - en producción sería una llamada real a la API
+    setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     setActivities(mockActivities.slice(0, limit));
     setLoading(false);
-  };
+  }, [mockActivities, limit]);
 
   useEffect(() => {
     fetchActivities();
   }, [limit]);
 
-  const getStatusColor = (status?: string) => {
+  // Memoize status color function to avoid recreation
+  const getStatusColor = useCallback((status?: string) => {
     switch (status) {
       case 'success':
         return 'green';
@@ -145,9 +148,10 @@ export const RecentActivity = ({ limit = 10, showHeader = true, height = 400 }: 
       default:
         return 'blue';
     }
-  };
+  }, []);
 
-  const getActivityIcon = (activity: ActivityItem) => {
+  // Memoize activity icon function to avoid recreation
+  const getActivityIcon = useCallback((activity: ActivityItem) => {
     if (activity.icon) {
       return <activity.icon size={16} />;
     }
@@ -166,7 +170,7 @@ export const RecentActivity = ({ limit = 10, showHeader = true, height = 400 }: 
       default:
         return <IconEye size={16} />;
     }
-  };
+  }, []);
 
   return (
     <Paper p="md" radius="md" withBorder>
