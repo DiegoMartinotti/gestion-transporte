@@ -1,4 +1,5 @@
 import { MantineProvider } from '@mantine/core';
+import { useEffect } from 'react';
 import { Notifications } from '@mantine/notifications';
 import { ModalsProvider } from '@mantine/modals';
 import { BrowserRouter } from 'react-router-dom';
@@ -25,6 +26,14 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  // Inicializar sistema de precarga de rutas
+  useEffect(() => {
+    // Lazy load del preloader para no impactar el bundle inicial
+    import('./utils/routePreloader').then(({ initializeRoutePreloader }) => {
+      initializeRoutePreloader();
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

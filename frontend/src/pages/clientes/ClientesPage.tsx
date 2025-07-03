@@ -28,10 +28,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
+import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
 import { ExcelImportModal } from '../../components/modals';
 import { Cliente, ClienteFilters } from '../../types';
 import { clienteService } from '../../services/clienteService';
 import { DEFAULT_PAGE_SIZE } from '../../constants';
+import { useVirtualizedTable } from '../../hooks/useVirtualizedTable';
 
 export default function ClientesPage() {
   const navigate = useNavigate();
@@ -45,6 +47,20 @@ export default function ClientesPage() {
   const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [importModalOpened, setImportModalOpened] = useState(false);
+  const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
+
+  // Hook para tabla virtualizada
+  const {
+    processedData: virtualizedClientes,
+    filteredCount,
+    handleSearchChange: handleVirtualSearch,
+    handleSort: handleVirtualSort
+  } = useVirtualizedTable({
+    data: clientes,
+    initialPageSize: 500,
+    enableLocalFiltering: true,
+    enableLocalSorting: true
+  });
 
   const loadClientes = useCallback(async () => {
     try {
@@ -67,6 +83,11 @@ export default function ClientesPage() {
   useEffect(() => {
     loadClientes();
   }, [loadClientes]);
+
+  // Detectar si usar virtual scrolling basado en cantidad de datos
+  useEffect(() => {
+    setUseVirtualScrolling(clientes.length > 100);
+  }, [clientes.length]);
 
   const handleFiltersChange = (newFilters: ClienteFilters) => {
     setFilters(newFilters);
@@ -291,19 +312,33 @@ export default function ClientesPage() {
           </Group>
 
           <Paper>
-            <DataTable
-              columns={columns}
-              data={clientes}
-              loading={loading}
-              totalItems={totalItems}
-              currentPage={currentPage}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
-              onFiltersChange={handleFiltersChange}
-              searchPlaceholder="Buscar clientes..."
-              emptyMessage="No se encontraron clientes"
-            />
+            {useVirtualScrolling ? (
+              <VirtualizedDataTable
+                columns={columns}
+                data={clientes}
+                loading={loading}
+                totalItems={totalItems}
+                searchPlaceholder="Buscar clientes..."
+                emptyMessage="No se encontraron clientes"
+                height={600}
+                itemHeight={60}
+                onFiltersChange={handleFiltersChange}
+              />
+            ) : (
+              <DataTable
+                columns={columns}
+                data={clientes}
+                loading={loading}
+                totalItems={totalItems}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                onFiltersChange={handleFiltersChange}
+                searchPlaceholder="Buscar clientes..."
+                emptyMessage="No se encontraron clientes"
+              />
+            )}
           </Paper>
         </Stack>
       </LoadingOverlay>
