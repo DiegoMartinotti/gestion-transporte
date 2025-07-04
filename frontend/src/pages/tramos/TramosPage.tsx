@@ -439,15 +439,6 @@ const TramosPage: React.FC = () => {
           
           <Button
             variant="outline"
-            leftSection={<IconFileText size={16} />}
-            onClick={excelOperations.handleGetTemplate}
-            loading={excelOperations.isGettingTemplate}
-          >
-            Plantilla
-          </Button>
-          
-          <Button
-            variant="outline"
             leftSection={<IconUpload size={16} />}
             onClick={() => setImportModalOpened(true)}
           >

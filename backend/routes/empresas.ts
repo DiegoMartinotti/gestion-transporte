@@ -7,13 +7,15 @@ import {
     updateEmpresa, 
     deleteEmpresa,
     getEmpresasByTipo,
-    getEmpresasActivas
+    getEmpresasActivas,
+    getEmpresaTemplate
 } from '../controllers/empresaController';
 import logger from '../utils/logger';
 
 // Rutas básicas CRUD
 router.get('/', getEmpresas);
 router.get('/activas', getEmpresasActivas);
+router.get('/template', getEmpresaTemplate);
 router.get('/tipo/:tipo', getEmpresasByTipo);
 router.get('/:id', getEmpresaById);
 router.post('/', createEmpresa);

@@ -99,55 +99,63 @@ export class BaseExcelService {
 export const clienteExcelService = new BaseExcelService({
   entityType: 'clientes',
   endpoints: {
-    export: '/api/clientes/export',
-    template: '/api/clientes/template',
+    export: '/clientes/export',
+    template: '/clientes/template',
   },
 });
 
 export const empresaExcelService = new BaseExcelService({
   entityType: 'empresas',
   endpoints: {
-    export: '/api/empresas/export',
-    template: '/api/empresas/template',
+    export: '/empresas/export',
+    template: '/empresas/template',
   },
 });
 
 export const personalExcelService = new BaseExcelService({
   entityType: 'personal',
   endpoints: {
-    export: '/api/personal/export',
-    template: '/api/personal/template',
+    export: '/personal/export',
+    template: '/personal/template',
   },
 });
 
 export const siteExcelService = new BaseExcelService({
   entityType: 'sites',
   endpoints: {
-    export: '/api/sites/export',
-    template: '/api/sites/template',
+    export: '/sites/export',
+    template: '/sites/template',
   },
 });
 
 export const tramoExcelService = new BaseExcelService({
   entityType: 'tramos',
   endpoints: {
-    export: '/api/tramos/export',
-    template: '/api/tramos/template',
+    export: '/tramos/export',
+    template: '/tramos/template',
   },
 });
 
 export const vehiculoExcelService = new BaseExcelService({
   entityType: 'vehiculos',
   endpoints: {
-    export: '/api/vehiculos/export',
-    template: '/api/vehiculos/template',
+    export: '/vehiculos/export',
+    template: '/vehiculos/template',
   },
 });
 
 export const viajeExcelService = new BaseExcelService({
   entityType: 'viajes',
   endpoints: {
-    export: '/api/viajes/export',
-    template: '/api/viajes/template',
+    export: '/viajes/export',
+    template: '/viajes/template',
+  },
+});
+
+export const extraExcelService = new BaseExcelService({
+  entityType: 'extras',
+  endpoints: {
+    export: '/extras/export',
+    template: '/extras/template',
   },
 });

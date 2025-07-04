@@ -5,13 +5,14 @@ import {
     getClienteById, 
     createCliente, 
     updateCliente, 
-    deleteCliente 
+    deleteCliente,
+    getClienteTemplate
 } from '../controllers/clienteController';
 import { authenticateToken } from '../middleware/authMiddleware';
-import logger from '../utils/logger';
 
 // Rutas
 router.get('/', authenticateToken, getClientes as any);
+router.get('/template', getClienteTemplate as any);
 router.get('/:id', authenticateToken, getClienteById as any);
 router.post('/', authenticateToken, createCliente as any);
 router.put('/:id', authenticateToken, updateCliente as any);

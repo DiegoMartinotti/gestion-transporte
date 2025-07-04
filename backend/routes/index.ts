@@ -17,6 +17,16 @@ import personalRoutes from './personal';
 import formulaClienteRoutes from './formulaClienteRoutes';
 import proxyRouter from './proxy';
 
+// Importar las funciones específicas de template para rutas públicas
+import { getClienteTemplate } from '../controllers/clienteController';
+import { getEmpresaTemplate } from '../controllers/empresaController';
+import { getPersonalTemplate } from '../controllers/personalController';
+import { getSiteTemplate } from '../controllers/siteController';
+import { getVehiculoTemplate } from '../controllers/vehiculoController';
+import { getTramoTemplate } from '../controllers/tramoController';
+import { getViajeTemplate } from '../controllers/viajeController';
+import { getExtraTemplate } from '../controllers/extraController';
+
 // Middleware
 import { authenticateToken } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
@@ -29,6 +39,16 @@ interface ProtectedRoute {
 // Rutas públicas (no requieren autenticación)
 router.use('/auth', authRoutes);
 router.use('/proxy', proxyRouter);
+
+// Rutas de templates públicas (no requieren autenticación) - IMPORTANTES: deben ir antes que las protegidas
+router.get('/clientes/template', getClienteTemplate);
+router.get('/empresas/template', getEmpresaTemplate);
+router.get('/personal/template', getPersonalTemplate);
+router.get('/sites/template', getSiteTemplate);
+router.get('/vehiculos/template', getVehiculoTemplate);
+router.get('/tramos/template', getTramoTemplate);
+router.get('/viajes/template', getViajeTemplate);
+router.get('/extras/template', getExtraTemplate);
 
 // Rutas protegidas (requieren autenticación)
 const protectedRoutes: ProtectedRoute[] = [

@@ -14,6 +14,7 @@ import ImportacionTemporal, { IImportacionTemporal } from '../models/Importacion
 import ExcelJS from 'exceljs';
 import fs from 'fs';
 import path from 'path';
+import { ExcelTemplateService } from '../services/excelTemplateService';
 
 // Importar controladores y servicios necesarios
 import * as siteController from './siteController';
@@ -314,5 +315,17 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
             500,
             error.message
         );
+    }
+};
+
+/**
+ * Descargar plantilla Excel para viajes
+ */
+export const getViajeTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await ExcelTemplateService.generateViajeTemplate(res);
+    } catch (error) {
+        logger.error('Error al generar plantilla de viajes:', error);
+        res.status(500).json({ success: false, message: 'Error al generar plantilla' });
     }
 };

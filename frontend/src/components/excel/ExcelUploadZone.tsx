@@ -30,7 +30,7 @@ import { notifications } from '@mantine/notifications';
 export interface ExcelUploadZoneProps extends Partial<DropzoneProps> {
   onFileAccepted?: (file: FileWithPath) => void;
   onFileRejected?: (files: FileRejection[]) => void;
-  templateDownloadUrl?: string;
+  onTemplateDownload?: () => Promise<void>;
   entityType?: string;
   maxFileSize?: number;
   supportedFormats?: string[];
@@ -44,7 +44,7 @@ export interface ExcelUploadZoneProps extends Partial<DropzoneProps> {
 export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
   onFileAccepted,
   onFileRejected,
-  templateDownloadUrl,
+  onTemplateDownload,
   entityType = 'datos',
   maxFileSize = 10 * 1024 * 1024, // 10MB
   supportedFormats = ['.xlsx', '.xls'],
@@ -100,9 +100,13 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
     setUploadStatus('idle');
   };
 
-  const handleDownloadTemplate = () => {
-    if (templateDownloadUrl) {
-      window.open(templateDownloadUrl, '_blank');
+  const handleDownloadTemplate = async () => {
+    if (onTemplateDownload) {
+      try {
+        await onTemplateDownload();
+      } catch (error) {
+        console.error('Error downloading template:', error);
+      }
     }
   };
 
@@ -140,7 +144,7 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
               variant="light"
               size="sm"
               onClick={handleDownloadTemplate}
-              disabled={!templateDownloadUrl}
+              disabled={!onTemplateDownload}
             >
               Descargar Plantilla
             </Button>

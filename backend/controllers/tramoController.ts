@@ -8,6 +8,7 @@ import { fechasSuperpuestas, generarTramoId, sonTramosIguales } from '../utils/t
 import { calcularTarifaPaletConFormula } from '../utils/formulaParser';
 import { calcularDistanciaRuta } from '../services/routingService';
 import logger from '../utils/logger';
+import { ExcelTemplateService } from '../services/excelTemplateService';
 import mongoose from 'mongoose';
 import * as tarifaService from '../services/tarifaService';
 import * as formulaClienteService from '../services/formulaClienteService';
@@ -1579,5 +1580,17 @@ export const calcularTarifa = async (req: Request<{}, ApiResponse<TarifaCalculat
             message: 'Error al calcular la tarifa',
             error: error.message
         });
+    }
+};
+
+/**
+ * Descargar plantilla Excel para tramos
+ */
+export const getTramoTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await ExcelTemplateService.generateTramoTemplate(res);
+    } catch (error) {
+        logger.error('Error al generar plantilla de tramos:', error);
+        res.status(500).json({ success: false, message: 'Error al generar plantilla' });
     }
 };

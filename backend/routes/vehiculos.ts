@@ -9,13 +9,15 @@ import {
   deleteVehiculo,
   getVehiculosConVencimientos,
   getVehiculosVencidos,
-  createVehiculosBulk
+  createVehiculosBulk,
+  getVehiculoTemplate
 } from '../controllers/vehiculoController';
 import logger from '../utils/logger';
 
 // Rutas básicas CRUD
 router.get('/', getVehiculos);
 router.get('/empresa/:empresaId', getVehiculosByEmpresa);
+router.get('/template', getVehiculoTemplate);
 router.get('/vencimientos/:dias', getVehiculosConVencimientos);
 router.get('/vencidos', getVehiculosVencidos);
 router.get('/:id', getVehiculoById);

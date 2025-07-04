@@ -328,14 +328,6 @@ export const PersonalPage: React.FC = () => {
           </div>
           <Group>
             <Button
-              leftSection={<IconFileText size={16} />}
-              variant="outline"
-              onClick={excelOperations.handleGetTemplate}
-              loading={excelOperations.isGettingTemplate}
-            >
-              Plantilla
-            </Button>
-            <Button
               leftSection={<IconFileImport size={16} />}
               variant="outline"
               onClick={() => setImportModalOpened(true)}

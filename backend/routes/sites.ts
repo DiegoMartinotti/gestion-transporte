@@ -6,13 +6,15 @@ import {
     updateSite, 
     deleteSite,
     bulkCreateSites,
-    searchNearby
+    searchNearby,
+    getSiteTemplate
 } from '../controllers/siteController';
 import logger from '../utils/logger';
 import Site from '../models/Site';
 
 // Rutas
 router.get('/', getSites);
+router.get('/template', getSiteTemplate);
 router.post('/', createSite);
 router.put('/:id', updateSite);
 router.delete('/:id', deleteSite);

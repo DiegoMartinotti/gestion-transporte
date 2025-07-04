@@ -3,6 +3,7 @@ import Site, { ISite } from '../models/Site';
 import { tryCatch } from '../utils/errorHandler';
 import { ValidationError } from '../utils/errors';
 import logger from '../utils/logger';
+import { ExcelTemplateService } from '../services/excelTemplateService';
 
 /**
  * Interface for authenticated user in request
@@ -257,5 +258,17 @@ export const searchNearby = async (req: AuthenticatedRequest, res: Response<ISit
     } catch (error) {
         logger.error('Error en búsqueda por proximidad:', error);
         res.status(500).json({ success: false, message: 'Error en la búsqueda' });
+    }
+};
+
+/**
+ * Descargar plantilla Excel para sites
+ */
+export const getSiteTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await ExcelTemplateService.generateSiteTemplate(res);
+    } catch (error) {
+        logger.error('Error al generar plantilla de sites:', error);
+        res.status(500).json({ success: false, message: 'Error al generar plantilla' });
     }
 };

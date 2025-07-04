@@ -254,15 +254,6 @@ export default function ClientesPage() {
             <Group gap="sm">
               <Button
                 variant="outline"
-                leftSection={<IconFileText size="1rem" />}
-                onClick={excelOperations.handleGetTemplate}
-                loading={excelOperations.isGettingTemplate}
-              >
-                Plantilla
-              </Button>
-              
-              <Button
-                variant="outline"
                 leftSection={<IconUpload size="1rem" />}
                 onClick={() => setImportModalOpened(true)}
               >

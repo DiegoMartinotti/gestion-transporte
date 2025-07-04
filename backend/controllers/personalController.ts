@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import Personal, { IPersonal } from '../models/Personal';
 import Empresa, { IEmpresa } from '../models/Empresa';
 import logger from '../utils/logger';
+import { ExcelTemplateService } from '../services/excelTemplateService';
 
 /**
  * Interface for authenticated user in request
@@ -504,4 +505,16 @@ export const createPersonalBulk = async (personalData: PersonalBulkData[], optio
         actualizados,
         errores
     };
+};
+
+/**
+ * Descargar plantilla Excel para personal
+ */
+export const getPersonalTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await ExcelTemplateService.generatePersonalTemplate(res);
+    } catch (error) {
+        logger.error('Error al generar plantilla de personal:', error);
+        res.status(500).json({ success: false, message: 'Error al generar plantilla' });
+    }
 };
