@@ -44,6 +44,16 @@ import { ExcelValidationReport } from '../excel/ExcelValidationReport';
 import { ImportProgress } from './ImportProgress';
 import { ErrorCorrection } from './ErrorCorrection';
 import { FileWithPath } from '@mantine/dropzone';
+import { 
+  clienteExcelService, 
+  empresaExcelService, 
+  personalExcelService, 
+  siteExcelService, 
+  tramoExcelService, 
+  vehiculoExcelService, 
+  viajeExcelService,
+  extraExcelService
+} from '../../services/BaseExcelService';
 
 interface ImportWizardProps {
   entityType?: string;
@@ -106,6 +116,57 @@ const ImportWizard: React.FC<ImportWizardProps> = ({
 
   const nextStep = () => setActive((current) => (current < 5 ? current + 1 : current));
   const prevStep = () => setActive((current) => (current > 0 ? current - 1 : current));
+
+  // Función para descargar plantilla basada en el tipo de entidad
+  const handleTemplateDownload = async () => {
+    if (!entityType) return;
+    
+    try {
+      let blob: Blob;
+      
+      switch (entityType) {
+        case 'clientes':
+          blob = await clienteExcelService.getTemplate();
+          break;
+        case 'empresas':
+          blob = await empresaExcelService.getTemplate();
+          break;
+        case 'personal':
+          blob = await personalExcelService.getTemplate();
+          break;
+        case 'sites':
+          blob = await siteExcelService.getTemplate();
+          break;
+        case 'tramos':
+          blob = await tramoExcelService.getTemplate();
+          break;
+        case 'vehiculos':
+          blob = await vehiculoExcelService.getTemplate();
+          break;
+        case 'viajes':
+          blob = await viajeExcelService.getTemplate();
+          break;
+        case 'extras':
+          blob = await extraExcelService.getTemplate();
+          break;
+        default:
+          throw new Error(`Tipo de entidad no soportado: ${entityType}`);
+      }
+      
+      // Crear URL para descarga
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `plantilla_${entityType}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error al descargar plantilla:', error);
+      throw error;
+    }
+  };
 
   const handleFileUpload = useCallback((file: FileWithPath) => {
     // Procesar archivo Excel localmente (simulación)
@@ -238,6 +299,9 @@ const ImportWizard: React.FC<ImportWizardProps> = ({
               onFileAccepted={handleFileUpload}
               maxFileSize={10 * 1024 * 1024} // 10MB
               supportedFormats={['.xlsx', '.xls']}
+              onTemplateDownload={entityType ? handleTemplateDownload : undefined}
+              entityType={entityType}
+              showTemplate={true}
             />
             
             <Card withBorder>

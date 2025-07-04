@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import Cliente, { ICliente } from '../models/Cliente';
 import logger from '../utils/logger';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
+import { ExcelTemplateService } from '../services/excelTemplateService';
 
 /**
  * Interface for authenticated user in request
@@ -222,5 +223,17 @@ export const deleteCliente = async (req: AuthenticatedRequest, res: Response<Api
             return;
         }
         res.status(500).json({ success: false, message: 'Error al eliminar cliente' });
+    }
+};
+
+/**
+ * Descargar plantilla Excel para clientes
+ */
+export const getClienteTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await ExcelTemplateService.generateClienteTemplate(res);
+    } catch (error) {
+        logger.error('Error al generar plantilla de clientes:', error);
+        res.status(500).json({ success: false, message: 'Error al generar plantilla' });
     }
 };

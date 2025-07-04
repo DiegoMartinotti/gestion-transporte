@@ -10,6 +10,7 @@ const upload = multer({ storage: storage });
 
 // --- Rutas CRUD estándar ---
 router.get('/', viajeController.getViajes);
+router.get('/template', viajeController.getViajeTemplate);
 router.get('/:id', viajeController.getViajeById);
 router.post('/', viajeController.createViaje);
 router.put('/:id', viajeController.updateViaje);

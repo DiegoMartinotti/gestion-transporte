@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Empresa, { IEmpresa } from '../models/Empresa';
 import logger from '../utils/logger';
 import { Error as MongooseError } from 'mongoose';
+import { ExcelTemplateService } from '../services/excelTemplateService';
 
 /**
  * Interface for API responses
@@ -169,5 +170,17 @@ export const getEmpresasActivas = async (req: Request, res: Response<IEmpresa[] 
     } catch (error) {
         logger.error('Error al obtener empresas activas:', error);
         res.status(500).json({ message: 'Error al obtener empresas activas' });
+    }
+};
+
+/**
+ * Descargar plantilla Excel para empresas
+ */
+export const getEmpresaTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await ExcelTemplateService.generateEmpresaTemplate(res);
+    } catch (error) {
+        logger.error('Error al generar plantilla de empresas:', error);
+        res.status(500).json({ success: false, message: 'Error al generar plantilla' });
     }
 };

@@ -4,6 +4,7 @@ import Vehiculo, { IVehiculo } from '../models/Vehiculo';
 import Empresa, { IEmpresa } from '../models/Empresa';
 import logger from '../utils/logger';
 import ApiResponseClass from '../utils/ApiResponse';
+import { ExcelTemplateService } from '../services/excelTemplateService';
 
 /**
  * Interface for authenticated user in request
@@ -449,5 +450,17 @@ export const createVehiculosBulk = async (req: Request<{}, BulkImportResult | Ap
             message: 'Error al procesar la carga masiva de vehículos', 
             error: error.message 
         });
+    }
+};
+
+/**
+ * Descargar plantilla Excel para vehículos
+ */
+export const getVehiculoTemplate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        await ExcelTemplateService.generateVehiculoTemplate(res);
+    } catch (error) {
+        logger.error('Error al generar plantilla de vehículos:', error);
+        res.status(500).json({ success: false, message: 'Error al generar plantilla' });
     }
 };

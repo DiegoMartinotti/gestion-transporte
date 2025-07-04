@@ -177,6 +177,7 @@ router.get('/:id', async (req: express.Request, res: express.Response) => {
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/', authenticateToken, tramoController.getAllTramos);
+router.get('/template', tramoController.getTramoTemplate);
 
 // Crear nuevo tramo
 /**

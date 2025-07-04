@@ -3,6 +3,7 @@ const router = express.Router();
 import Extra from '../models/Extra';
 import { authenticateToken } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
+import { getExtraTemplate } from '../controllers/extraController';
 
 // GET /api/extras - Obtener todos los extras o filtrar por cliente
 router.get('/', authenticateToken, async (req: express.Request, res: express.Response) => {
@@ -15,6 +16,9 @@ router.get('/', authenticateToken, async (req: express.Request, res: express.Res
         res.status(500).json({ error: 'Error al obtener extras' });
     }
 });
+
+// GET /api/extras/template - Descargar plantilla Excel
+router.get('/template', getExtraTemplate);
 
 // POST /api/extras - Crear un nuevo extra
 router.post('/', authenticateToken, async (req: express.Request, res: express.Response) => {

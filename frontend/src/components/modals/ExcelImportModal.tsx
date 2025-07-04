@@ -68,6 +68,16 @@ export function ExcelImportModal({
   
   const abortController = useRef<AbortController | null>(null);
 
+  // Función para descargar plantilla usando los servicios Excel
+  const handleTemplateDownload = async () => {
+    try {
+      await getTemplate();
+    } catch (error) {
+      console.error('Error al descargar plantilla:', error);
+      throw error;
+    }
+  };
+
   const resetState = () => {
     setCurrentStep(0);
     setFile(null);
@@ -205,17 +215,9 @@ export function ExcelImportModal({
               isProcessing={loading}
               maxFileSize={10 * 1024 * 1024} // 10MB
               entityType={entityType}
+              onTemplateDownload={handleTemplateDownload}
+              showTemplate={true}
             />
-
-            <Group justify="center">
-              <Button
-                variant="light"
-                leftSection={<IconDownload size="0.9rem" />}
-                onClick={handleDownloadTemplate}
-              >
-                Descargar Plantilla
-              </Button>
-            </Group>
           </Stack>
         );
 
