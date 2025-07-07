@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { Response } from 'express';
 import logger from '../utils/logger';
+import Empresa from '../models/Empresa';
 
 /**
  * Servicio para generar plantillas Excel para importación de datos
@@ -155,13 +156,15 @@ export class ExcelTemplateService {
             const worksheet = workbook.addWorksheet('Personal');
             
             worksheet.columns = [
-                { header: 'DNI', key: 'dni', width: 12 },
-                { header: 'Nombres', key: 'nombres', width: 25 },
-                { header: 'Apellidos', key: 'apellidos', width: 25 },
+                { header: 'DNI *', key: 'dni', width: 12 },
+                { header: 'Nombre *', key: 'nombre', width: 25 },
+                { header: 'Apellido *', key: 'apellido', width: 25 },
+                { header: 'CUIL', key: 'cuil', width: 15 },
+                { header: 'Tipo *', key: 'tipo', width: 20 },
+                { header: 'Fecha Nacimiento', key: 'fechaNacimiento', width: 18 },
+                { header: 'Empresa *', key: 'empresa', width: 30 },
                 { header: 'Email', key: 'email', width: 25 },
-                { header: 'Teléfono', key: 'telefono', width: 15 },
-                { header: 'Cargo', key: 'cargo', width: 20 },
-                { header: 'Empresa RUC', key: 'empresaRuc', width: 15 }
+                { header: 'Teléfono', key: 'telefono', width: 15 }
             ];
             
             worksheet.getRow(1).font = { bold: true };
@@ -173,28 +176,52 @@ export class ExcelTemplateService {
             
             worksheet.addRow({
                 dni: '12345678',
-                nombres: 'Juan Carlos',
-                apellidos: 'Pérez López',
+                nombre: 'Juan Carlos',
+                apellido: 'Pérez López',
+                cuil: '20-12345678-9',
+                tipo: 'Conductor',
+                fechaNacimiento: '15/03/1985',
+                empresa: 'Transportes Ejemplo S.R.L.',
                 email: 'juan.perez@empresa.com',
-                telefono: '987654321',
-                cargo: 'Conductor',
-                empresaRuc: '20123456789'
+                telefono: '987654321'
             });
             
             const instructionsSheet = workbook.addWorksheet('Instrucciones');
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR PERSONAL']);
             instructionsSheet.addRow(['']);
-            instructionsSheet.addRow(['1. Complete todos los campos obligatorios']);
-            instructionsSheet.addRow(['2. DNI: Debe tener 8 dígitos']);
-            instructionsSheet.addRow(['3. Nombres: Nombres completos']);
-            instructionsSheet.addRow(['4. Apellidos: Apellidos completos']);
-            instructionsSheet.addRow(['5. Email: Formato de email válido']);
-            instructionsSheet.addRow(['6. Teléfono: Formato válido (opcional)']);
-            instructionsSheet.addRow(['7. Cargo: Puesto de trabajo']);
-            instructionsSheet.addRow(['8. Empresa RUC: RUC de la empresa a la que pertenece']);
+            instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
+            instructionsSheet.addRow(['2. DNI *: Debe tener 7-8 dígitos']);
+            instructionsSheet.addRow(['3. Nombre *: Nombre completo']);
+            instructionsSheet.addRow(['4. Apellido *: Apellidos completos']);
+            instructionsSheet.addRow(['5. CUIL: Formato 11-11111111-1 (opcional)']);
+            instructionsSheet.addRow(['6. Tipo *: Conductor/Administrativo/Mecánico/Supervisor/Otro']);
+            instructionsSheet.addRow(['7. Fecha Nacimiento: Formato DD/MM/AAAA (opcional)']);
+            instructionsSheet.addRow(['8. Empresa *: Nombre de la empresa (debe existir en el sistema)']);
+            instructionsSheet.addRow(['9. Email: Formato de email válido (opcional)']);
+            instructionsSheet.addRow(['10. Teléfono: Formato válido (opcional)']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['IMPORTANTE: El número de legajo se genera automáticamente']);
+            instructionsSheet.addRow(['El campo "activo" se marca como true automáticamente']);
             
             instructionsSheet.getRow(1).font = { bold: true, size: 14 };
             instructionsSheet.getColumn(1).width = 60;
+            
+            // Agregar hoja con empresas disponibles
+            const empresas = await Empresa.find({ activa: true }, 'nombre tipo').sort({ nombre: 1 });
+            const empresasSheet = workbook.addWorksheet('Empresas Disponibles');
+            empresasSheet.addRow(['Nombre', 'Tipo']);
+            empresasSheet.getRow(1).font = { bold: true };
+            empresasSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            empresasSheet.getColumn(1).width = 30;
+            empresasSheet.getColumn(2).width = 20;
+            
+            empresas.forEach(empresa => {
+                empresasSheet.addRow([empresa.nombre, empresa.tipo]);
+            });
             
             res.setHeader(
                 'Content-Type',
