@@ -3,6 +3,7 @@ import { Response } from 'express';
 import logger from '../utils/logger';
 import Empresa from '../models/Empresa';
 import Cliente from '../models/Cliente';
+import Site from '../models/Site';
 
 /**
  * Servicio para generar plantillas Excel para importación de datos
@@ -440,13 +441,15 @@ export class ExcelTemplateService {
             const worksheet = workbook.addWorksheet('Tramos');
             
             worksheet.columns = [
-                { header: 'Nombre', key: 'nombre', width: 30 },
-                { header: 'Site Origen', key: 'siteOrigen', width: 30 },
-                { header: 'Site Destino', key: 'siteDestino', width: 30 },
-                { header: 'Cliente RUC', key: 'clienteRuc', width: 15 },
-                { header: 'Distancia KM', key: 'distanciaKm', width: 15 },
-                { header: 'Precio Base', key: 'precioBase', width: 15 },
-                { header: 'Activo', key: 'activo', width: 10 }
+                { header: 'Cliente *', key: 'cliente', width: 30 },
+                { header: 'Site Origen *', key: 'siteOrigen', width: 30 },
+                { header: 'Site Destino *', key: 'siteDestino', width: 30 },
+                { header: 'Valor', key: 'valor', width: 15 },
+                { header: 'Valor Peaje', key: 'valorPeaje', width: 15 },
+                { header: 'Vigencia Desde', key: 'vigenciaDesde', width: 18 },
+                { header: 'Vigencia Hasta', key: 'vigenciaHasta', width: 18 },
+                { header: 'Tipo', key: 'tipo', width: 15 },
+                { header: 'Método Cálculo', key: 'metodoCalculo', width: 20 }
             ];
             
             worksheet.getRow(1).font = { bold: true };
@@ -457,29 +460,82 @@ export class ExcelTemplateService {
             };
             
             worksheet.addRow({
-                nombre: 'Lima - Callao',
+                cliente: 'Empresa Ejemplo S.A.C.',
                 siteOrigen: 'Almacén Central',
                 siteDestino: 'Puerto Callao',
-                clienteRuc: '20123456789',
-                distanciaKm: 15.5,
-                precioBase: 150.00,
-                activo: 'SI'
+                valor: 150.00,
+                valorPeaje: 25.00,
+                vigenciaDesde: '01/01/2024',
+                vigenciaHasta: '31/12/2024',
+                tipo: 'TRMC',
+                metodoCalculo: 'Kilometro'
             });
             
             const instructionsSheet = workbook.addWorksheet('Instrucciones');
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR TRAMOS']);
             instructionsSheet.addRow(['']);
-            instructionsSheet.addRow(['1. Complete todos los campos obligatorios']);
-            instructionsSheet.addRow(['2. Nombre: Nombre descriptivo del tramo']);
-            instructionsSheet.addRow(['3. Site Origen: Nombre del site de origen']);
-            instructionsSheet.addRow(['4. Site Destino: Nombre del site de destino']);
-            instructionsSheet.addRow(['5. Cliente RUC: RUC del cliente propietario']);
-            instructionsSheet.addRow(['6. Distancia KM: Distancia en kilómetros']);
-            instructionsSheet.addRow(['7. Precio Base: Precio base del tramo']);
-            instructionsSheet.addRow(['8. Activo: SI o NO']);
+            instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
+            instructionsSheet.addRow(['2. Cliente *: Nombre del cliente (debe existir en el sistema)']);
+            instructionsSheet.addRow(['3. Site Origen *: Nombre del site de origen (debe existir)']);
+            instructionsSheet.addRow(['4. Site Destino *: Nombre del site de destino (debe existir)']);
+            instructionsSheet.addRow(['5. La distancia se calcula automáticamente entre los sites']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['CAMPOS DE TARIFA OPCIONALES (si completa uno, debe completar todos):']);
+            instructionsSheet.addRow(['6. Valor: Precio base del tramo (número)']);
+            instructionsSheet.addRow(['7. Valor Peaje: Costo de peaje (número, opcional)']);
+            instructionsSheet.addRow(['8. Vigencia Desde: Fecha inicio (DD/MM/AAAA)']);
+            instructionsSheet.addRow(['9. Vigencia Hasta: Fecha fin (DD/MM/AAAA)']);
+            instructionsSheet.addRow(['10. Tipo: TRMC o TRMI']);
+            instructionsSheet.addRow(['11. Método Cálculo: Kilometro, Palet o Fijo']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['IMPORTANTE: Si no completa los campos de tarifa, se creará el tramo sin tarifas']);
+            instructionsSheet.addRow(['Los campos de tarifa son interdependientes: todos o ninguno']);
             
             instructionsSheet.getRow(1).font = { bold: true, size: 14 };
-            instructionsSheet.getColumn(1).width = 60;
+            instructionsSheet.getColumn(1).width = 70;
+            
+            // Agregar hoja con clientes disponibles
+            const clientes = await Cliente.find({ activo: true }, 'nombre cuit').sort({ nombre: 1 });
+            const clientesSheet = workbook.addWorksheet('Clientes Disponibles');
+            clientesSheet.addRow(['Nombre', 'CUIT']);
+            clientesSheet.getRow(1).font = { bold: true };
+            clientesSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            clientesSheet.getColumn(1).width = 30;
+            clientesSheet.getColumn(2).width = 15;
+            
+            clientes.forEach(cliente => {
+                clientesSheet.addRow([cliente.nombre, cliente.cuit]);
+            });
+            
+            // Agregar hoja con sites disponibles
+            const sites = await Site.find({}, 'nombre cliente localidad provincia')
+                .populate('cliente', 'nombre')
+                .sort({ nombre: 1 });
+            const sitesSheet = workbook.addWorksheet('Sites Disponibles');
+            sitesSheet.addRow(['Nombre', 'Cliente', 'Localidad', 'Provincia']);
+            sitesSheet.getRow(1).font = { bold: true };
+            sitesSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            sitesSheet.getColumn(1).width = 30;
+            sitesSheet.getColumn(2).width = 30;
+            sitesSheet.getColumn(3).width = 25;
+            sitesSheet.getColumn(4).width = 20;
+            
+            sites.forEach(site => {
+                sitesSheet.addRow([
+                    site.nombre,
+                    (site.cliente as any)?.nombre || 'Sin cliente',
+                    site.localidad || '-',
+                    site.provincia || '-'
+                ]);
+            });
             
             res.setHeader(
                 'Content-Type',
