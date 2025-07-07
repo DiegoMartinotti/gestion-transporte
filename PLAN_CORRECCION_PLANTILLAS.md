@@ -165,17 +165,17 @@ Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
 - activo ✅ (boolean, default: true)
 
 ### Acciones Requeridas:
-- [ ] Cambiar `Placa` → `Dominio *`
-- [ ] Cambiar `Año` → `Año`
-- [ ] Cambiar `Empresa RUC` → `Empresa *` (nombre de empresa)
-- [ ] Cambiar `Estado` → `Activo` (SI/NO)
-- [ ] Agregar campo: `Tipo *` (enum: Camión/Acoplado/Semirremolque/Bitren/Furgón/Utilitario)
-- [ ] Agregar campo: `Número Chasis`
-- [ ] Agregar campo: `Número Motor`
-- [ ] Mantener: `Marca`, `Modelo`, `Capacidad Carga`
-- [ ] Actualizar validaciones para formato de patente argentina
+- [x] Cambiar `Placa` → `Dominio *`
+- [x] Cambiar `Año` → `Año`
+- [x] Cambiar `Empresa RUC` → `Empresa *` (nombre de empresa)
+- [x] Agregar campo: `Tipo *` (enum: Camión/Acoplado/Semirremolque/Bitren/Furgón/Utilitario)
+- [x] Agregar campo: `Número Chasis`
+- [x] Agregar campo: `Número Motor`
+- [x] Mantener: `Marca`, `Modelo`, `Capacidad Carga`
+- [x] Actualizar validaciones para formato de patente argentina
+- [x] Remover campo: `Activo` (se da de alta automáticamente como true)
 
-- [ ] La plantilla debe tener una hoja con las empresas disponibles en la BD
+- [x] La plantilla debe tener una hoja con las empresas disponibles en la BD
 
 ---
 

@@ -347,13 +347,15 @@ export class ExcelTemplateService {
             const worksheet = workbook.addWorksheet('Vehiculos');
             
             worksheet.columns = [
-                { header: 'Placa', key: 'placa', width: 12 },
+                { header: 'Dominio *', key: 'dominio', width: 12 },
+                { header: 'Tipo *', key: 'tipo', width: 20 },
                 { header: 'Marca', key: 'marca', width: 20 },
                 { header: 'Modelo', key: 'modelo', width: 20 },
-                { header: 'Año', key: 'anio', width: 10 },
+                { header: 'Año', key: 'año', width: 10 },
+                { header: 'Número Chasis', key: 'numeroChasis', width: 18 },
+                { header: 'Número Motor', key: 'numeroMotor', width: 18 },
                 { header: 'Capacidad Carga', key: 'capacidadCarga', width: 15 },
-                { header: 'Empresa RUC', key: 'empresaRuc', width: 15 },
-                { header: 'Estado', key: 'estado', width: 15 }
+                { header: 'Empresa *', key: 'empresa', width: 30 }
             ];
             
             worksheet.getRow(1).font = { bold: true };
@@ -364,29 +366,52 @@ export class ExcelTemplateService {
             };
             
             worksheet.addRow({
-                placa: 'ABC-123',
+                dominio: 'ABC123',
+                tipo: 'Camión',
                 marca: 'Volvo',
                 modelo: 'FH16',
-                anio: 2022,
+                año: 2022,
+                numeroChasis: 'VIN123456789',
+                numeroMotor: 'MOT987654321',
                 capacidadCarga: 25000,
-                empresaRuc: '20987654321',
-                estado: 'Activo'
+                empresa: 'Transportes Ejemplo S.R.L.'
             });
             
             const instructionsSheet = workbook.addWorksheet('Instrucciones');
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR VEHÍCULOS']);
             instructionsSheet.addRow(['']);
-            instructionsSheet.addRow(['1. Complete todos los campos obligatorios']);
-            instructionsSheet.addRow(['2. Placa: Formato peruano (XXX-123)']);
-            instructionsSheet.addRow(['3. Marca: Marca del vehículo']);
-            instructionsSheet.addRow(['4. Modelo: Modelo del vehículo']);
-            instructionsSheet.addRow(['5. Año: Año de fabricación']);
-            instructionsSheet.addRow(['6. Capacidad Carga: Capacidad en kilogramos']);
-            instructionsSheet.addRow(['7. Empresa RUC: RUC de la empresa propietaria']);
-            instructionsSheet.addRow(['8. Estado: Activo, Inactivo, Mantenimiento']);
+            instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
+            instructionsSheet.addRow(['2. Dominio *: Formato patente argentina (ABC123 o AB123CD)']);
+            instructionsSheet.addRow(['3. Tipo *: Camión/Acoplado/Semirremolque/Bitren/Furgón/Utilitario']);
+            instructionsSheet.addRow(['4. Marca: Marca del vehículo (opcional)']);
+            instructionsSheet.addRow(['5. Modelo: Modelo del vehículo (opcional)']);
+            instructionsSheet.addRow(['6. Año: Año de fabricación (1950-2025, opcional)']);
+            instructionsSheet.addRow(['7. Número Chasis: Número de chasis del vehículo (opcional)']);
+            instructionsSheet.addRow(['8. Número Motor: Número de motor del vehículo (opcional)']);
+            instructionsSheet.addRow(['9. Capacidad Carga: Capacidad en kilogramos (opcional)']);
+            instructionsSheet.addRow(['10. Empresa *: Nombre de la empresa propietaria (debe existir)']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['IMPORTANTE: El campo "activo" se marca como true automáticamente al dar de alta']);
             
             instructionsSheet.getRow(1).font = { bold: true, size: 14 };
             instructionsSheet.getColumn(1).width = 60;
+            
+            // Agregar hoja con empresas disponibles
+            const empresas = await Empresa.find({ activa: true }, 'nombre tipo').sort({ nombre: 1 });
+            const empresasSheet = workbook.addWorksheet('Empresas Disponibles');
+            empresasSheet.addRow(['Nombre', 'Tipo']);
+            empresasSheet.getRow(1).font = { bold: true };
+            empresasSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            empresasSheet.getColumn(1).width = 30;
+            empresasSheet.getColumn(2).width = 20;
+            
+            empresas.forEach(empresa => {
+                empresasSheet.addRow([empresa.nombre, empresa.tipo]);
+            });
             
             res.setHeader(
                 'Content-Type',
