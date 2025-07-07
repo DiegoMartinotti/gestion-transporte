@@ -198,15 +198,15 @@ Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
 - tarifasHistoricas ❌ (complejo, no para importación básica)
 
 ### Acciones Requeridas:
-- [ ] Remover campo: `Nombre`
-- [ ] Cambiar `Cliente RUC` → `Cliente *` (nombre de cliente)
-- [ ] Cambiar `Site Origen` → `Site Origen *` (nombre de site)
-- [ ] Cambiar `Site Destino` → `Site Destino *` (nombre de site)
-- [ ] Remover campos: `Distancia KM`, `Precio Base`, `Activo`
-- [ ] Actualizar instrucciones: la distancia se calcula automáticamente
-- [ ] El usuario puede subir las tarifas en este momento. Incluir campos valor, valorPeaje, vigenciaDesde, vigenciaHasta,tipo y metodoCalculo. No son obligatorios, pero si agrega un de ellos tiene que completarlos todos.
-- [ ] La plantilla debe tener una hoja con los clientes disponibles en la BD
-- [ ] La plantilla debe tener una hoja con los sites disponibles en la BD (en esta hoja, cada site debe indicar a que cliente pertenece en otra columna)
+- [x] Remover campo: `Nombre`
+- [x] Cambiar `Cliente RUC` → `Cliente *` (nombre de cliente)
+- [x] Cambiar `Site Origen` → `Site Origen *` (nombre de site)
+- [x] Cambiar `Site Destino` → `Site Destino *` (nombre de site)
+- [x] Remover campos: `Distancia KM`, `Precio Base`, `Activo`
+- [x] Actualizar instrucciones: la distancia se calcula automáticamente
+- [x] El usuario puede subir las tarifas en este momento. Incluir campos valor, valorPeaje, vigenciaDesde, vigenciaHasta,tipo y metodoCalculo. No son obligatorios, pero si agrega un de ellos tiene que completarlos todos.
+- [x] La plantilla debe tener una hoja con los clientes disponibles en la BD
+- [x] La plantilla debe tener una hoja con los sites disponibles en la BD (en esta hoja, cada site debe indicar a que cliente pertenece en otra columna)
 
 
 ---
