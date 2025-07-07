@@ -148,4 +148,19 @@ The frontend has a unified Excel system that MUST be used for all import/export 
 ## Git Workflow
 - Commit after completing logical units of work
 - Use descriptive commit messages explaining the "why"
-- Run `npx tsc --noEmit` before committing
+- Run `npx tsc --noEmit` before committing# Acceso MongoDB MCP
+
+Claude Code tiene acceso directo a la base de datos MongoDB Atlas del proyecto a través del servidor MCP de MongoDB configurado.
+
+## Capacidades disponibles:
+- **Conexión**: MongoDB Atlas Cluster0 
+- **Base de datos**: `test` (base principal)
+- **Colecciones**: clientes, sites, tramos, viajes, vehiculos, empresas, personals, etc.
+- **Operaciones**: Consultas, inserción, actualización, eliminación, agregaciones, índices
+
+## Estado: Conectado y operativo
+- Servidor configurado en .claude.json
+- Permisos habilitados en settings.local.json
+- Conexión verificada exitosamente
+
+Usar herramientas mcp__mongodb__* para interactuar directamente con la BD.
