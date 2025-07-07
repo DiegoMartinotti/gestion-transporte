@@ -95,18 +95,18 @@ Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
 - numeroLegajo ❌ (auto-generated por sistema)
 
 ### Acciones Requeridas:
-- [ ] Cambiar `Nombres` → `Nombre *`
-- [ ] Cambiar `Apellidos` → `Apellido *`
-- [ ] Cambiar `Cargo` → `Tipo *` (enum: Conductor/Administrativo/Mecánico/Supervisor/Otro)
-- [ ] Cambiar `Empresa RUC` → `Empresa *` (nombre de empresa, no RUC)
-- [ ] Agregar campo: `CUIL`
-- [ ] Agregar campo: `Fecha Nacimiento` (DD/MM/AAAA)
-- [ ] campo: `Activo` por defecto true al dar de alta
-- [ ] Mantener: `DNI *`, `Email`, `Teléfono`
-- [ ] NO incluir: `numeroLegajo` (auto-generated)
-- [ ] Actualizar validaciones para DNI y CUIL
+- [x] Cambiar `Nombres` → `Nombre *`
+- [x] Cambiar `Apellidos` → `Apellido *`
+- [x] Cambiar `Cargo` → `Tipo *` (enum: Conductor/Administrativo/Mecánico/Supervisor/Otro)
+- [x] Cambiar `Empresa RUC` → `Empresa *` (nombre de empresa, no RUC)
+- [x] Agregar campo: `CUIL`
+- [x] Agregar campo: `Fecha Nacimiento` (DD/MM/AAAA)
+- [x] campo: `Activo` por defecto true al dar de alta
+- [x] Mantener: `DNI *`, `Email`, `Teléfono`
+- [x] NO incluir: `numeroLegajo` (auto-generated)
+- [x] Actualizar validaciones para DNI y CUIL
 
-- [ ] La plantilla debe tener una hoja con las empresas disponibles en la BD
+- [x] La plantilla debe tener una hoja con las empresas disponibles en la BD
 
 ---
 
