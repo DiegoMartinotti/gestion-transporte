@@ -237,17 +237,17 @@ Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
 - observaciones ❌ (opcional)
 
 ### Acciones Requeridas:
-- [ ] Cambiar `Tramo` → separar en `Cliente *`, `Site Origen *`, `Site Destino *`
-- [ ] Cambiar `Vehículo Placa` → `Vehículo Principal *` (dominio)
-- [ ] Cambiar `Conductor DNI` → `Chofer *` (DNI o nombre)
-- [ ] Cambiar `Fecha Inicio` → `Fecha *` (DD/MM/AAAA)
-- [ ] Remover campo: `Fecha Fin`, `Carga KG`
-- [ ] Agregar campo: `Tipo Tramo *` (TRMC/TRMI)
-- [ ] Agregar campo: `Paletas` (número)
-- [ ] Agregar campo: `DT *` (código único)
-- [ ] Agregar campo: `Estado` (Pendiente/En Curso/Completado/Cancelado)
-- [ ] Mantener: `Observaciones`
-- [ ] Nota: `tipoUnidad` se calcula automáticamente del vehículo principal
+- [x] Cambiar `Tramo` → separar en `Cliente *`, `Site Origen *`, `Site Destino *`
+- [x] Cambiar `Vehículo Placa` → `Vehículo Principal *` (dominio)
+- [x] Cambiar `Conductor DNI` → `Chofer *` (DNI o nombre)
+- [x] Cambiar `Fecha Inicio` → `Fecha *` (DD/MM/AAAA)
+- [x] Remover campo: `Fecha Fin`, `Carga KG`
+- [x] Agregar campo: `Tipo Tramo *` (TRMC/TRMI)
+- [x] Agregar campo: `Paletas` (número)
+- [x] Agregar campo: `DT *` (código único)
+- [x] Agregar campo: `Estado` (Pendiente/En Curso/Completado/Cancelado)
+- [x] Mantener: `Observaciones`
+- [x] Nota: `tipoUnidad` se calcula automáticamente del vehículo principal
 
 ---
 
