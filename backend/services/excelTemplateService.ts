@@ -4,6 +4,8 @@ import logger from '../utils/logger';
 import Empresa from '../models/Empresa';
 import Cliente from '../models/Cliente';
 import Site from '../models/Site';
+import Personal from '../models/Personal';
+import Vehiculo from '../models/Vehiculo';
 
 /**
  * Servicio para generar plantillas Excel para importación de datos
@@ -564,12 +566,16 @@ export class ExcelTemplateService {
             const worksheet = workbook.addWorksheet('Viajes');
             
             worksheet.columns = [
-                { header: 'Tramo', key: 'tramo', width: 30 },
-                { header: 'Vehículo Placa', key: 'vehiculoPlaca', width: 15 },
-                { header: 'Conductor DNI', key: 'conductorDni', width: 15 },
-                { header: 'Fecha Inicio', key: 'fechaInicio', width: 20 },
-                { header: 'Fecha Fin', key: 'fechaFin', width: 20 },
-                { header: 'Carga KG', key: 'cargaKg', width: 15 },
+                { header: 'Cliente *', key: 'cliente', width: 30 },
+                { header: 'Site Origen *', key: 'origen', width: 30 },
+                { header: 'Site Destino *', key: 'destino', width: 30 },
+                { header: 'Tipo Tramo *', key: 'tipoTramo', width: 15 },
+                { header: 'Fecha *', key: 'fecha', width: 15 },
+                { header: 'Chofer *', key: 'chofer', width: 15 },
+                { header: 'Vehículo Principal *', key: 'vehiculoPrincipal', width: 20 },
+                { header: 'DT *', key: 'dt', width: 20 },
+                { header: 'Paletas', key: 'paletas', width: 10 },
+                { header: 'Estado', key: 'estado', width: 15 },
                 { header: 'Observaciones', key: 'observaciones', width: 40 }
             ];
             
@@ -581,29 +587,144 @@ export class ExcelTemplateService {
             };
             
             worksheet.addRow({
-                tramo: 'Lima - Callao',
-                vehiculoPlaca: 'ABC-123',
-                conductorDni: '12345678',
-                fechaInicio: '2024-01-15 08:00',
-                fechaFin: '2024-01-15 10:00',
-                cargaKg: 15000,
-                observaciones: 'Carga frágil'
+                cliente: 'Empresa Ejemplo S.A.',
+                origen: 'Depósito Central',
+                destino: 'Sucursal Norte',
+                tipoTramo: 'TRMC',
+                fecha: '15/01/2024',
+                chofer: '12345678',
+                vehiculoPrincipal: 'ABC123',
+                dt: 'DT001',
+                paletas: 10,
+                estado: 'Pendiente',
+                observaciones: 'Carga frágil - manejar con cuidado'
+            });
+            
+            // Agregar hoja con clientes disponibles
+            const clientes = await Cliente.find({ activo: true }, 'nombre cuit').sort({ nombre: 1 });
+            const clientesSheet = workbook.addWorksheet('Clientes Disponibles');
+            clientesSheet.addRow(['Nombre', 'CUIT']);
+            clientesSheet.getRow(1).font = { bold: true };
+            clientesSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            clientesSheet.getColumn(1).width = 30;
+            clientesSheet.getColumn(2).width = 15;
+            
+            clientes.forEach(cliente => {
+                clientesSheet.addRow([cliente.nombre, cliente.cuit]);
+            });
+            
+            // Agregar hoja con sites disponibles
+            const sites = await Site.find({}, 'nombre cliente localidad provincia')
+                .populate('cliente', 'nombre')
+                .sort({ nombre: 1 });
+            const sitesSheet = workbook.addWorksheet('Sites Disponibles');
+            sitesSheet.addRow(['Nombre', 'Cliente', 'Localidad', 'Provincia']);
+            sitesSheet.getRow(1).font = { bold: true };
+            sitesSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            sitesSheet.getColumn(1).width = 30;
+            sitesSheet.getColumn(2).width = 30;
+            sitesSheet.getColumn(3).width = 25;
+            sitesSheet.getColumn(4).width = 20;
+            
+            sites.forEach(site => {
+                sitesSheet.addRow([
+                    site.nombre,
+                    (site.cliente as any)?.nombre || 'Sin cliente',
+                    site.localidad || '-',
+                    site.provincia || '-'
+                ]);
+            });
+            
+            // Agregar hoja con choferes disponibles
+            const choferes = await Personal.find({ 
+                activo: true, 
+                tipo: 'Conductor' 
+            }, 'nombre apellido dni empresa')
+                .populate('empresa', 'nombre')
+                .sort({ apellido: 1, nombre: 1 });
+            const choferesSheet = workbook.addWorksheet('Choferes Disponibles');
+            choferesSheet.addRow(['Nombre Completo', 'DNI', 'Empresa']);
+            choferesSheet.getRow(1).font = { bold: true };
+            choferesSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            choferesSheet.getColumn(1).width = 35;
+            choferesSheet.getColumn(2).width = 15;
+            choferesSheet.getColumn(3).width = 30;
+            
+            choferes.forEach(chofer => {
+                choferesSheet.addRow([
+                    `${chofer.nombre} ${chofer.apellido}`,
+                    chofer.dni,
+                    (chofer.empresa as any)?.nombre || 'Sin empresa'
+                ]);
+            });
+            
+            // Agregar hoja con vehículos disponibles
+            const vehiculos = await Vehiculo.find({ activo: true }, 'dominio marca modelo tipo empresa')
+                .populate('empresa', 'nombre')
+                .sort({ dominio: 1 });
+            const vehiculosSheet = workbook.addWorksheet('Vehículos Disponibles');
+            vehiculosSheet.addRow(['Dominio', 'Marca', 'Modelo', 'Tipo', 'Empresa']);
+            vehiculosSheet.getRow(1).font = { bold: true };
+            vehiculosSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            vehiculosSheet.getColumn(1).width = 15;
+            vehiculosSheet.getColumn(2).width = 20;
+            vehiculosSheet.getColumn(3).width = 20;
+            vehiculosSheet.getColumn(4).width = 20;
+            vehiculosSheet.getColumn(5).width = 30;
+            
+            vehiculos.forEach(vehiculo => {
+                vehiculosSheet.addRow([
+                    vehiculo.dominio,
+                    vehiculo.marca || '-',
+                    vehiculo.modelo || '-',
+                    vehiculo.tipo,
+                    (vehiculo.empresa as any)?.nombre || 'Sin empresa'
+                ]);
             });
             
             const instructionsSheet = workbook.addWorksheet('Instrucciones');
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR VIAJES']);
             instructionsSheet.addRow(['']);
-            instructionsSheet.addRow(['1. Complete todos los campos obligatorios']);
-            instructionsSheet.addRow(['2. Tramo: Nombre del tramo existente']);
-            instructionsSheet.addRow(['3. Vehículo Placa: Placa del vehículo']);
-            instructionsSheet.addRow(['4. Conductor DNI: DNI del conductor']);
-            instructionsSheet.addRow(['5. Fecha Inicio: Formato YYYY-MM-DD HH:MM']);
-            instructionsSheet.addRow(['6. Fecha Fin: Formato YYYY-MM-DD HH:MM']);
-            instructionsSheet.addRow(['7. Carga KG: Peso de la carga en kilogramos']);
-            instructionsSheet.addRow(['8. Observaciones: Información adicional (opcional)']);
+            instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
+            instructionsSheet.addRow(['2. Cliente *: Nombre del cliente (debe existir en "Clientes Disponibles")']);
+            instructionsSheet.addRow(['3. Site Origen *: Nombre del site de origen (debe existir en "Sites Disponibles")']);
+            instructionsSheet.addRow(['4. Site Destino *: Nombre del site de destino (debe existir en "Sites Disponibles")']);
+            instructionsSheet.addRow(['5. Tipo Tramo *: Debe ser "TRMC" o "TRMI"']);
+            instructionsSheet.addRow(['6. Fecha *: Formato DD/MM/AAAA (ej: 15/01/2024)']);
+            instructionsSheet.addRow(['7. Chofer *: DNI del chofer (debe existir en "Choferes Disponibles")']);
+            instructionsSheet.addRow(['8. Vehículo Principal *: Dominio del vehículo (debe existir en "Vehículos Disponibles")']);
+            instructionsSheet.addRow(['9. DT *: Código único del viaje (debe ser único por cliente)']);
+            instructionsSheet.addRow(['10. Paletas: Número de paletas (opcional, por defecto 0)']);
+            instructionsSheet.addRow(['11. Estado: Pendiente/En Curso/Completado/Cancelado (por defecto Pendiente)']);
+            instructionsSheet.addRow(['12. Observaciones: Información adicional (opcional)']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['CAMPOS CALCULADOS AUTOMÁTICAMENTE:']);
+            instructionsSheet.addRow(['- Tipo Unidad: Se determina automáticamente según el vehículo principal']);
+            instructionsSheet.addRow(['- Tarifa: Se calcula según el tramo y tarifas vigentes']);
+            instructionsSheet.addRow(['- Peaje: Se obtiene de las tarifas vigentes del tramo']);
+            instructionsSheet.addRow(['- Total: Suma de tarifa + extras aplicados']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['IMPORTANTE: Use las hojas de referencia para consultar los valores válidos']);
             
             instructionsSheet.getRow(1).font = { bold: true, size: 14 };
-            instructionsSheet.getColumn(1).width = 60;
+            instructionsSheet.getRow(14).font = { bold: true };
+            instructionsSheet.getColumn(1).width = 80;
             
             res.setHeader(
                 'Content-Type',
