@@ -24,13 +24,18 @@ import {
   IconExternalLink,
   IconMap2,
   IconTable,
-  IconMap
+  IconMap,
+  IconDownload,
+  IconUpload
 } from '@tabler/icons-react';
 import { DataTable, ConfirmModal } from '../../components/base';
+import { ExcelImportModal } from '../../components/modals';
 import SiteMap from '../../components/maps/SiteMap';
 import { Site, SiteFilters, Cliente } from '../../types';
 import { siteService } from '../../services/siteService';
 import { clienteService } from '../../services/clienteService';
+import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { siteExcelService } from '../../services/BaseExcelService';
 
 const SitesPage: React.FC = () => {
   const [sites, setSites] = useState<Site[]>([]);
@@ -54,6 +59,7 @@ const SitesPage: React.FC = () => {
     isOpen: boolean;
     site: Site | null;
   }>({ isOpen: false, site: null });
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   const loadSites = useCallback(async () => {
     try {
@@ -88,6 +94,20 @@ const SitesPage: React.FC = () => {
   useEffect(() => {
     loadClientes();
   }, [loadClientes]);
+
+  // Hook unificado para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'sites',
+    entityName: 'sites',
+    exportFunction: (filters) => siteExcelService.exportToExcel(filters),
+    templateFunction: () => siteExcelService.getTemplate(),
+    reloadFunction: loadSites,
+  });
+
+  const handleImportComplete = async (result: any) => {
+    setImportModalOpened(false);
+    excelOperations.handleImportComplete(result);
+  };
 
 
   const handleFilterChange = (key: keyof SiteFilters, value: any) => {
@@ -284,6 +304,21 @@ const SitesPage: React.FC = () => {
                 }
               ]}
             />
+            <Button
+              variant="outline"
+              leftSection={<IconUpload size={16} />}
+              onClick={() => setImportModalOpened(true)}
+            >
+              Importar
+            </Button>
+            <Button
+              variant="outline"
+              leftSection={<IconDownload size={16} />}
+              onClick={() => excelOperations.handleExport(filters)}
+              loading={excelOperations.isExporting}
+            >
+              Exportar
+            </Button>
             <Button leftSection={<IconPlus size={16} />}>
               Nuevo Site
             </Button>
@@ -372,6 +407,28 @@ const SitesPage: React.FC = () => {
         title="Eliminar Site"
         message={`¿Está seguro que desea eliminar el site "${deleteModal.site?.nombre}"?`}
         type="delete"
+      />
+
+      <ExcelImportModal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        title="Importar Sites desde Excel"
+        entityType="sites"
+        onImportComplete={handleImportComplete}
+        processExcelFile={siteService.processExcelFile}
+        validateExcelFile={siteService.validateExcelFile}
+        previewExcelFile={siteService.previewExcelFile}
+        getTemplate={async () => {
+          const blob = await siteExcelService.getTemplate();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'plantilla_sites.xlsx';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }}
       />
     </Container>
   );

@@ -7,7 +7,8 @@ import {
     deleteSite,
     bulkCreateSites,
     searchNearby,
-    getSiteTemplate
+    getSiteTemplate,
+    exportSites
 } from '../controllers/siteController';
 import logger from '../utils/logger';
 import Site from '../models/Site';
@@ -15,6 +16,7 @@ import Site from '../models/Site';
 // Rutas
 router.get('/', getSites);
 router.get('/template', getSiteTemplate);
+router.get('/export', exportSites);
 router.post('/', createSite);
 router.put('/:id', updateSite);
 router.delete('/:id', deleteSite);

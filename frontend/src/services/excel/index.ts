@@ -54,7 +54,7 @@ export class ExcelService {
    */
   async processExcelFile(
     file: File,
-    entityType: 'cliente' | 'empresa' | 'personal',
+    entityType: 'cliente' | 'empresa' | 'personal' | 'sites',
     options: {
       autoCorrect?: boolean;
       skipInvalidRows?: boolean;
@@ -93,7 +93,8 @@ export class ExcelService {
       let bulkResult = null;
       if (finalData.length > 0) {
         const bulkEntityType = entityType === 'cliente' ? 'clientes' : 
-                              entityType === 'empresa' ? 'empresas' : 'personal';
+                              entityType === 'empresa' ? 'empresas' : 
+                              entityType === 'sites' ? 'sites' : 'personal';
         bulkResult = await this.bulkOps.bulkInsert(bulkEntityType as any, finalData);
       }
 
@@ -120,7 +121,7 @@ export class ExcelService {
    */
   async validateExcelFile(
     file: File,
-    entityType: 'cliente' | 'empresa' | 'personal'
+    entityType: 'cliente' | 'empresa' | 'personal' | 'sites'
   ) {
     try {
       const fileInfo = await this.processor.loadFromFile(file);
@@ -169,7 +170,7 @@ const excelService = new ExcelService();
 export const previewExcelFile = (file: File, sampleSize?: number) => 
   excelService.previewExcelFile(file, sampleSize);
 
-export const validateExcelFile = (file: File, entityType?: 'cliente' | 'empresa' | 'personal') => 
+export const validateExcelFile = (file: File, entityType?: 'cliente' | 'empresa' | 'personal' | 'sites') => 
   excelService.validateExcelFile(file, entityType || 'cliente');
 
 export const processExcelFile = (file: File, options: any) => 

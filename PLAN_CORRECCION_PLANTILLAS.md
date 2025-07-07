@@ -130,15 +130,15 @@ Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
 - provincia ❌ (opcional)
 
 ### Acciones Requeridas:
-- [ ] Cambiar `Cliente RUC` → `Cliente *` (nombre de cliente)
-- [ ] Cambiar `Latitud/Longitud` → `Coordenadas` (formato: "lng,lat")
-- [ ] Remover campo: `Descripción`
-- [ ] Agregar campo: `Código`
-- [ ] Agregar campo: `Localidad`
-- [ ] Agregar campo: `Provincia`
-- [ ] Mantener: `Nombre *`, `Dirección`
-- [ ] Actualizar instrucciones para formato de coordenadas
-- [ ] La plantilla debe tener una hoja con los clientes disponibles en la BD
+- [x] Cambiar `Cliente RUC` → `Cliente *` (nombre de cliente)
+- [x] Cambiar `Latitud/Longitud` → `Coordenadas` (formato: "lng,lat")
+- [x] Remover campo: `Descripción`
+- [x] Agregar campo: `Código`
+- [x] Agregar campo: `Localidad`
+- [x] Agregar campo: `Provincia`
+- [x] Mantener: `Nombre *`, `Dirección`
+- [x] Actualizar instrucciones para formato de coordenadas
+- [x] La plantilla debe tener una hoja con los clientes disponibles en la BD
 ---
 
 ## 5. Vehículo
