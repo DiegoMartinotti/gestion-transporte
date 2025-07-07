@@ -78,11 +78,15 @@ export class ExcelTemplateService {
             const worksheet = workbook.addWorksheet('Empresas');
             
             worksheet.columns = [
-                { header: 'RUC', key: 'ruc', width: 15 },
-                { header: 'Nombre', key: 'nombre', width: 30 },
-                { header: 'Email', key: 'email', width: 25 },
+                { header: 'Nombre *', key: 'nombre', width: 30 },
+                { header: 'Tipo *', key: 'tipo', width: 20 },
+                { header: 'CUIT', key: 'cuit', width: 15 },
+                { header: 'Razón Social', key: 'razonSocial', width: 35 },
+                { header: 'Dirección', key: 'direccion', width: 40 },
                 { header: 'Teléfono', key: 'telefono', width: 15 },
-                { header: 'Dirección', key: 'direccion', width: 40 }
+                { header: 'Mail', key: 'mail', width: 25 },
+                { header: 'Contacto Principal', key: 'contactoPrincipal', width: 25 },
+                { header: 'Observaciones', key: 'observaciones', width: 40 }
             ];
             
             worksheet.getRow(1).font = { bold: true };
@@ -93,22 +97,33 @@ export class ExcelTemplateService {
             };
             
             worksheet.addRow({
-                ruc: '20987654321',
                 nombre: 'Transportes Ejemplo S.R.L.',
-                email: 'info@transportes.com',
-                telefono: '01-9876543',
-                direccion: 'Jr. Transportes 456, Callao'
+                tipo: 'Subcontratada',
+                cuit: '30-70123456-7',
+                razonSocial: 'Transportes Ejemplo Sociedad de Responsabilidad Limitada',
+                direccion: 'Av. Corrientes 1234, Buenos Aires',
+                telefono: '011-4567-8900',
+                mail: 'info@transportesejemplo.com.ar',
+                contactoPrincipal: 'Juan Pérez',
+                observaciones: 'Especializada en transporte refrigerado'
             });
             
             const instructionsSheet = workbook.addWorksheet('Instrucciones');
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR EMPRESAS']);
             instructionsSheet.addRow(['']);
-            instructionsSheet.addRow(['1. Complete todos los campos obligatorios']);
-            instructionsSheet.addRow(['2. RUC: Debe tener 11 dígitos y ser válido']);
-            instructionsSheet.addRow(['3. Nombre: Mínimo 3 caracteres']);
-            instructionsSheet.addRow(['4. Email: Formato de email válido']);
-            instructionsSheet.addRow(['5. Teléfono: Formato válido (opcional)']);
+            instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
+            instructionsSheet.addRow(['2. Nombre *: Mínimo 3 caracteres, debe ser único']);
+            instructionsSheet.addRow(['3. Tipo *: Debe ser "Propia" o "Subcontratada"']);
+            instructionsSheet.addRow(['4. CUIT: Formato argentino (11 dígitos, ej: 30-70123456-7)']);
+            instructionsSheet.addRow(['5. Razón Social: Denominación completa de la empresa']);
             instructionsSheet.addRow(['6. Dirección: Dirección completa (opcional)']);
+            instructionsSheet.addRow(['7. Teléfono: Formato válido (opcional)']);
+            instructionsSheet.addRow(['8. Mail: Formato de email válido']);
+            instructionsSheet.addRow(['9. Contacto Principal: Nombre de la persona de contacto']);
+            instructionsSheet.addRow(['10. Observaciones: Información adicional sobre la empresa']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['IMPORTANTE: El campo "activa" se marca como true automáticamente']);
+            instructionsSheet.addRow(['Los campos "flota" y "personal" se gestionan automáticamente por el sistema']);
             
             instructionsSheet.getRow(1).font = { bold: true, size: 14 };
             instructionsSheet.getColumn(1).width = 60;
