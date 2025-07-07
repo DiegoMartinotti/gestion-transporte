@@ -1,7 +1,9 @@
 # Plan de Corrección: Plantillas Excel vs Modelos Backend
 
 ## Objetivo
-Sincronizar completamente las plantillas Excel en `ExcelTemplateService.ts` con los modelos reales del backend, eliminando adaptaciones arbitrarias y asegurando correspondencia exacta con la lógica de negocio.
+Sincronizar completamente las plantillas Excel en `ExcelTemplateService.ts` con los modelos reales del backend, eliminando adaptaciones arbitrarias y asegurando correspondencia exacta con la lógica de negocio. 
+
+Al completar cada punto marcar [] como completado.
 
 ---
 
@@ -20,11 +22,11 @@ Sincronizar completamente las plantillas Excel en `ExcelTemplateService.ts` con 
 - activo ✅ (boolean, default: true)
 
 ### Acciones Requeridas:
-- [ ] Cambiar `RUC` → `CUIT`
-- [ ] Remover campos: `Email`, `Teléfono`, `Dirección`
-- [ ] Al dar de alta, el campo activo es por default true
-- [ ] Actualizar validaciones en instrucciones para CUIT argentino
-- [ ] Marcar campos obligatorios con `*`
+- [x] Cambiar `RUC` → `CUIT`
+- [x] Remover campos: `Email`, `Teléfono`, `Dirección`
+- [x] Al dar de alta, el campo activo es por default true
+- [x] Actualizar validaciones en instrucciones para CUIT argentino
+- [x] Marcar campos obligatorios con `*`
 
 ### Observaciones:
 Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
