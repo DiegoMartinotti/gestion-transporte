@@ -12,10 +12,13 @@ import {
   Tabs,
   Alert,
   ActionIcon,
-  Grid
+  Grid,
+  Menu
 } from '@mantine/core';
-import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash, IconLayoutGrid, IconList, IconEye } from '@tabler/icons-react';
+import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash, IconLayoutGrid, IconList, IconEye, IconFileExport, IconFileImport, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { vehiculoExcelService } from '../../services/BaseExcelService';
 import DataTable from '../../components/base/DataTable';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import ConfirmModal from '../../components/base/ConfirmModal';
@@ -47,10 +50,6 @@ export default function VehiculosPage() {
 
   const tiposVehiculo: VehiculoTipo[] = ['Camión', 'Acoplado', 'Semirremolque', 'Bitren', 'Furgón', 'Utilitario'];
 
-  useEffect(() => {
-    loadData();
-  }, [filters, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -77,6 +76,19 @@ export default function VehiculosPage() {
       setLoading(false);
     }
   };
+
+  // Hook para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'vehiculos',
+    entityName: 'vehículos',
+    exportFunction: (filters) => vehiculoExcelService.exportToExcel(filters),
+    templateFunction: () => vehiculoExcelService.getTemplate(),
+    reloadFunction: loadData,
+  });
+
+  useEffect(() => {
+    loadData();
+  }, [filters, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!vehiculoToDelete) return;
@@ -251,12 +263,40 @@ export default function VehiculosPage() {
             Gestión de Vehículos
           </Group>
         </Title>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={openCreateModal}
-        >
-          Nuevo Vehículo
-        </Button>
+        <Group gap="sm">
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <Button
+                variant="light"
+                leftSection={<IconFileExport size={16} />}
+              >
+                Excel
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<IconDownload size={14} />}
+                onClick={() => excelOperations.handleGetTemplate()}
+                disabled={excelOperations.isGettingTemplate}
+              >
+                Descargar Plantilla
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<IconFileExport size={14} />}
+                onClick={() => excelOperations.handleExport(filters)}
+                disabled={excelOperations.isExporting}
+              >
+                Exportar Lista
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={openCreateModal}
+          >
+            Nuevo Vehículo
+          </Button>
+        </Group>
       </Group>
 
       <Tabs value={activeTab} onChange={setActiveTab} mb="md">
