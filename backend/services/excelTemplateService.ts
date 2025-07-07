@@ -300,6 +300,11 @@ export class ExcelTemplateService {
             
             // Agregar hoja con clientes disponibles
             const clientes = await Cliente.find({ activo: true }, 'nombre cuit').sort({ nombre: 1 });
+            logger.info(`Clientes encontrados para plantilla Sites: ${clientes.length}`);
+            clientes.forEach(cliente => {
+                logger.info(`Cliente: ${cliente.nombre}, CUIT: ${cliente.cuit}, Activo: ${cliente.activo}`);
+            });
+            
             const clientesSheet = workbook.addWorksheet('Clientes Disponibles');
             clientesSheet.addRow(['Nombre', 'CUIT']);
             clientesSheet.getRow(1).font = { bold: true };
@@ -312,7 +317,7 @@ export class ExcelTemplateService {
             clientesSheet.getColumn(2).width = 15;
             
             clientes.forEach(cliente => {
-                clientesSheet.addRow([cliente.nombre, cliente.cuit]);
+                clientesSheet.addRow([cliente.nombre || 'Sin nombre', cliente.cuit || 'Sin CUIT']);
             });
             
             res.setHeader(
