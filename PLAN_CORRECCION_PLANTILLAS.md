@@ -57,16 +57,16 @@ Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
 - personal ❌ (auto-managed por sistema)
 
 ### Acciones Requeridas:
-- [ ] Cambiar `RUC` → `CUIT` (opcional)
-- [ ] Cambiar `Email` → `Mail`
-- [ ] Agregar campo: `Tipo *` (dropdown: Propia/Subcontratada)
-- [ ] Agregar campo: `Razón Social`
-- [ ] Agregar campo: `Contacto Principal`
-- [ ] campo: `Activa` por defecto true al dar de alta
-- [ ] Agregar campo: `Observaciones`
-- [ ] Mantener: `Nombre *`, `Dirección`, `Teléfono`, `Mail`
-- [ ] Actualizar validaciones para CUIT y email
-- [ ] NO incluir campos auto-managed: `flota`, `personal`
+- [x] Cambiar `RUC` → `CUIT` (opcional)
+- [x] Cambiar `Email` → `Mail`
+- [x] Agregar campo: `Tipo *` (dropdown: Propia/Subcontratada)
+- [x] Agregar campo: `Razón Social`
+- [x] Agregar campo: `Contacto Principal`
+- [x] campo: `Activa` por defecto true al dar de alta
+- [x] Agregar campo: `Observaciones`
+- [x] Mantener: `Nombre *`, `Dirección`, `Teléfono`, `Mail`
+- [x] Actualizar validaciones para CUIT y email
+- [x] NO incluir campos auto-managed: `flota`, `personal`
 
 ---
 
