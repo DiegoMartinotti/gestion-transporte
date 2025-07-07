@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import { Response } from 'express';
 import logger from '../utils/logger';
 import Empresa from '../models/Empresa';
+import Cliente from '../models/Cliente';
 
 /**
  * Servicio para generar plantillas Excel para importación de datos
@@ -250,12 +251,14 @@ export class ExcelTemplateService {
             const worksheet = workbook.addWorksheet('Sites');
             
             worksheet.columns = [
-                { header: 'Nombre', key: 'nombre', width: 30 },
+                { header: 'Nombre *', key: 'nombre', width: 30 },
+                { header: 'Cliente *', key: 'cliente', width: 30 },
+                { header: 'Código', key: 'codigo', width: 15 },
                 { header: 'Dirección', key: 'direccion', width: 40 },
-                { header: 'Latitud', key: 'latitud', width: 15 },
+                { header: 'Localidad', key: 'localidad', width: 25 },
+                { header: 'Provincia', key: 'provincia', width: 20 },
                 { header: 'Longitud', key: 'longitud', width: 15 },
-                { header: 'Cliente RUC', key: 'clienteRuc', width: 15 },
-                { header: 'Descripción', key: 'descripcion', width: 40 }
+                { header: 'Latitud', key: 'latitud', width: 15 }
             ];
             
             worksheet.getRow(1).font = { bold: true };
@@ -267,25 +270,50 @@ export class ExcelTemplateService {
             
             worksheet.addRow({
                 nombre: 'Almacén Central',
-                direccion: 'Av. Industrial 123, Lima',
-                latitud: -12.0464,
-                longitud: -77.0428,
-                clienteRuc: '20123456789',
-                descripcion: 'Almacén principal de distribución'
+                cliente: 'Empresa Ejemplo S.A.C.',
+                codigo: 'ALM001',
+                direccion: 'Av. Industrial 123, Buenos Aires',
+                localidad: 'Capital Federal',
+                provincia: 'Buenos Aires',
+                longitud: -58.3816,
+                latitud: -34.6037
             });
             
             const instructionsSheet = workbook.addWorksheet('Instrucciones');
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR SITES']);
             instructionsSheet.addRow(['']);
-            instructionsSheet.addRow(['1. Complete todos los campos obligatorios']);
-            instructionsSheet.addRow(['2. Nombre: Nombre del sitio']);
-            instructionsSheet.addRow(['3. Dirección: Dirección completa']);
-            instructionsSheet.addRow(['4. Latitud/Longitud: Coordenadas GPS (opcional)']);
-            instructionsSheet.addRow(['5. Cliente RUC: RUC del cliente propietario']);
-            instructionsSheet.addRow(['6. Descripción: Información adicional (opcional)']);
+            instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
+            instructionsSheet.addRow(['2. Nombre *: Nombre del sitio (debe ser único para cada cliente)']);
+            instructionsSheet.addRow(['3. Cliente *: Nombre del cliente (debe existir en el sistema)']);
+            instructionsSheet.addRow(['4. Código: Código identificador único por cliente (opcional)']);
+            instructionsSheet.addRow(['5. Dirección: Dirección completa (opcional)']);
+            instructionsSheet.addRow(['6. Localidad: Ciudad o localidad (opcional)']);
+            instructionsSheet.addRow(['7. Provincia: Provincia o estado (opcional)']);
+            instructionsSheet.addRow(['8. Longitud: Coordenada GPS (-180 a 180) (opcional)']);
+            instructionsSheet.addRow(['9. Latitud: Coordenada GPS (-90 a 90) (opcional)']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['IMPORTANTE: Si proporciona coordenadas, debe incluir AMBAS (longitud y latitud)']);
+            instructionsSheet.addRow(['Las coordenadas se almacenan en formato GeoJSON automáticamente']);
             
             instructionsSheet.getRow(1).font = { bold: true, size: 14 };
             instructionsSheet.getColumn(1).width = 60;
+            
+            // Agregar hoja con clientes disponibles
+            const clientes = await Cliente.find({ activo: true }, 'nombre cuit').sort({ nombre: 1 });
+            const clientesSheet = workbook.addWorksheet('Clientes Disponibles');
+            clientesSheet.addRow(['Nombre', 'CUIT']);
+            clientesSheet.getRow(1).font = { bold: true };
+            clientesSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            clientesSheet.getColumn(1).width = 30;
+            clientesSheet.getColumn(2).width = 15;
+            
+            clientes.forEach(cliente => {
+                clientesSheet.addRow([cliente.nombre, cliente.cuit]);
+            });
             
             res.setHeader(
                 'Content-Type',

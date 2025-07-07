@@ -254,7 +254,7 @@ export class ValidationEngine {
   /**
    * Valida datos usando las plantillas correspondientes
    */
-  async validateWithTemplate(entityType: 'cliente' | 'empresa' | 'personal', data: any[]): Promise<ValidationResult> {
+  async validateWithTemplate(entityType: 'cliente' | 'empresa' | 'personal' | 'sites', data: any[]): Promise<ValidationResult> {
     // Cargar datos de referencia si no están cargados
     if (this.context.existingData.size === 0) {
       await this.loadReferenceData();
@@ -274,6 +274,15 @@ export class ValidationEngine {
         const empresas = Array.from(this.context.crossReferences.get('empresas')?.values() || [])
           .map((e: any) => ({ id: e._id, nombre: e.nombre }));
         templateResult = PersonalTemplate.validateData(data, empresas);
+        break;
+      case 'sites':
+        // Para sites, usar validación básica por ahora
+        templateResult = {
+          isValid: true,
+          errors: [],
+          validRows: data,
+          invalidRows: []
+        };
         break;
       default:
         throw new Error(`Tipo de entidad no soportado: ${entityType}`);

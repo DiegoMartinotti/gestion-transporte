@@ -1,5 +1,6 @@
 import { apiService } from './api';
 import { Site, SiteFilters, PaginatedResponse } from '../types';
+import { ExcelService } from './excel';
 
 export interface CreateSiteData {
   nombre: string;
@@ -79,6 +80,29 @@ class SiteService {
   async getByCliente(clienteId: string): Promise<Site[]> {
     const response = await apiService.get<Site[]>(`/sites/cliente/${clienteId}`);
     return response.data!;
+  }
+
+  // Excel operations for sites
+  async processExcelFile(
+    file: File, 
+    options: {
+      autoCorrect?: boolean;
+      skipInvalidRows?: boolean;
+      progressCallback?: (progress: any) => void;
+    } = {}
+  ): Promise<any> {
+    const excelService = new ExcelService();
+    return await excelService.processExcelFile(file, 'sites', options);
+  }
+
+  async validateExcelFile(file: File): Promise<any> {
+    const excelService = new ExcelService();
+    return await excelService.validateExcelFile(file, 'sites');
+  }
+
+  async previewExcelFile(file: File, sampleSize: number = 5): Promise<any> {
+    const excelService = new ExcelService();
+    return await excelService.previewExcelFile(file, sampleSize);
   }
 }
 
