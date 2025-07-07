@@ -16,11 +16,8 @@ export class ExcelTemplateService {
             
             // Configurar columnas
             worksheet.columns = [
-                { header: 'RUC', key: 'ruc', width: 15 },
-                { header: 'Nombre', key: 'nombre', width: 30 },
-                { header: 'Email', key: 'email', width: 25 },
-                { header: 'Teléfono', key: 'telefono', width: 15 },
-                { header: 'Dirección', key: 'direccion', width: 40 }
+                { header: 'CUIT *', key: 'cuit', width: 15 },
+                { header: 'Nombre *', key: 'nombre', width: 30 }
             ];
             
             // Estilo para el header
@@ -33,11 +30,8 @@ export class ExcelTemplateService {
             
             // Agregar datos de ejemplo
             worksheet.addRow({
-                ruc: '20123456789',
-                nombre: 'Empresa Ejemplo S.A.C.',
-                email: 'contacto@ejemplo.com',
-                telefono: '01-2345678',
-                direccion: 'Av. Ejemplo 123, Lima'
+                cuit: '20123456789',
+                nombre: 'Empresa Ejemplo S.A.C.'
             });
             
             // Agregar hoja de instrucciones
@@ -45,11 +39,10 @@ export class ExcelTemplateService {
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR CLIENTES']);
             instructionsSheet.addRow(['']);
             instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
-            instructionsSheet.addRow(['2. RUC: Debe tener 11 dígitos y ser válido']);
-            instructionsSheet.addRow(['3. Nombre: Mínimo 3 caracteres']);
-            instructionsSheet.addRow(['4. Email: Formato de email válido']);
-            instructionsSheet.addRow(['5. Teléfono: Formato válido (opcional)']);
-            instructionsSheet.addRow(['6. Dirección: Dirección completa (opcional)']);
+            instructionsSheet.addRow(['2. CUIT: Debe tener 11 dígitos y ser válido (formato argentino)']);
+            instructionsSheet.addRow(['3. Nombre: Mínimo 3 caracteres, debe ser único']);
+            instructionsSheet.addRow(['4. Los campos createdAt y updatedAt se generan automáticamente']);
+            instructionsSheet.addRow(['5. El campo activo se marca como true automáticamente']);
             instructionsSheet.addRow(['']);
             instructionsSheet.addRow(['IMPORTANTE: No elimine ni modifique los encabezados de las columnas']);
             
