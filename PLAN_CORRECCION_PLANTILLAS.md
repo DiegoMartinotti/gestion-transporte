@@ -269,14 +269,14 @@ Los campos `createdAt` y `updatedAt` se generan automáticamente por Mongoose.
 - valor ✅ (number, required, min: 0)
 
 ### Acciones Requeridas:
-- [ ] Cambiar `Nombre` → `Tipo *`
-- [ ] Cambiar `Precio` → `Valor *`
-- [ ] Remover campo: `Tipo`, `Activo`
-- [ ] Agregar campo: `Cliente *` (nombre de cliente)
-- [ ] Agregar campo: `Vigencia Desde *` (DD/MM/AAAA)
-- [ ] Agregar campo: `Vigencia Hasta *` (DD/MM/AAAA)
-- [ ] Mantener: `Descripción`
-- [ ] Actualizar validaciones para fechas y valores
+- [x] Cambiar `Nombre` → `Tipo *`
+- [x] Cambiar `Precio` → `Valor *`
+- [x] Remover campo: `Tipo`, `Activo`
+- [x] Agregar campo: `Cliente *` (nombre de cliente)
+- [x] Agregar campo: `Vigencia Desde *` (DD/MM/AAAA)
+- [x] Agregar campo: `Vigencia Hasta *` (DD/MM/AAAA)
+- [x] Mantener: `Descripción`
+- [x] Actualizar validaciones para fechas y valores
 
 ---
 
