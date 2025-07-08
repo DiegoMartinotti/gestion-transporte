@@ -753,11 +753,12 @@ export class ExcelTemplateService {
             const worksheet = workbook.addWorksheet('Extras');
             
             worksheet.columns = [
-                { header: 'Nombre', key: 'nombre', width: 30 },
+                { header: 'Tipo *', key: 'tipo', width: 30 },
+                { header: 'Cliente *', key: 'cliente', width: 30 },
                 { header: 'Descripción', key: 'descripcion', width: 40 },
-                { header: 'Precio', key: 'precio', width: 15 },
-                { header: 'Tipo', key: 'tipo', width: 20 },
-                { header: 'Activo', key: 'activo', width: 10 }
+                { header: 'Vigencia Desde *', key: 'vigenciaDesde', width: 18 },
+                { header: 'Vigencia Hasta *', key: 'vigenciaHasta', width: 18 },
+                { header: 'Valor *', key: 'valor', width: 15 }
             ];
             
             worksheet.getRow(1).font = { bold: true };
@@ -768,25 +769,54 @@ export class ExcelTemplateService {
             };
             
             worksheet.addRow({
-                nombre: 'Seguro de Carga',
+                tipo: 'SEGURO_CARGA',
+                cliente: 'Empresa Ejemplo S.A.',
                 descripcion: 'Seguro adicional para carga valiosa',
-                precio: 50.00,
-                tipo: 'Servicio',
-                activo: 'SI'
+                vigenciaDesde: '01/01/2024',
+                vigenciaHasta: '31/12/2024',
+                valor: 50.00
+            });
+            
+            // Agregar hoja con clientes disponibles
+            const clientes = await Cliente.find({ activo: true }, 'nombre cuit').sort({ nombre: 1 });
+            const clientesSheet = workbook.addWorksheet('Clientes Disponibles');
+            clientesSheet.addRow(['Nombre', 'CUIT']);
+            clientesSheet.getRow(1).font = { bold: true };
+            clientesSheet.getRow(1).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            clientesSheet.getColumn(1).width = 30;
+            clientesSheet.getColumn(2).width = 15;
+            
+            clientes.forEach(cliente => {
+                clientesSheet.addRow([cliente.nombre, cliente.cuit]);
             });
             
             const instructionsSheet = workbook.addWorksheet('Instrucciones');
             instructionsSheet.addRow(['INSTRUCCIONES PARA IMPORTAR EXTRAS']);
             instructionsSheet.addRow(['']);
-            instructionsSheet.addRow(['1. Complete todos los campos obligatorios']);
-            instructionsSheet.addRow(['2. Nombre: Nombre del extra']);
-            instructionsSheet.addRow(['3. Descripción: Descripción detallada']);
-            instructionsSheet.addRow(['4. Precio: Precio del extra']);
-            instructionsSheet.addRow(['5. Tipo: Tipo de extra (Servicio, Producto, etc.)']);
-            instructionsSheet.addRow(['6. Activo: SI o NO']);
+            instructionsSheet.addRow(['1. Complete todos los campos obligatorios marcados con *']);
+            instructionsSheet.addRow(['2. Tipo *: Identificador del extra (se convierte automáticamente a MAYÚSCULAS)']);
+            instructionsSheet.addRow(['3. Cliente *: Nombre del cliente (debe existir en "Clientes Disponibles")']);
+            instructionsSheet.addRow(['4. Descripción: Descripción detallada del extra (opcional)']);
+            instructionsSheet.addRow(['5. Vigencia Desde *: Fecha de inicio de vigencia (DD/MM/AAAA)']);
+            instructionsSheet.addRow(['6. Vigencia Hasta *: Fecha de fin de vigencia (DD/MM/AAAA)']);
+            instructionsSheet.addRow(['7. Valor *: Valor del extra (número, mínimo 0)']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['VALIDACIONES IMPORTANTES:']);
+            instructionsSheet.addRow(['- La fecha de fin debe ser mayor o igual a la fecha de inicio']);
+            instructionsSheet.addRow(['- No pueden existir extras del mismo tipo y cliente con fechas superpuestas']);
+            instructionsSheet.addRow(['- El tipo se almacena en MAYÚSCULAS automáticamente']);
+            instructionsSheet.addRow(['- El valor debe ser un número mayor o igual a 0']);
+            instructionsSheet.addRow(['']);
+            instructionsSheet.addRow(['EJEMPLOS DE TIPOS: SEGURO_CARGA, COMBUSTIBLE_EXTRA, PEAJE_ADICIONAL']);
+            instructionsSheet.addRow(['IMPORTANTE: Use la hoja "Clientes Disponibles" para consultar los clientes válidos']);
             
             instructionsSheet.getRow(1).font = { bold: true, size: 14 };
-            instructionsSheet.getColumn(1).width = 60;
+            instructionsSheet.getRow(9).font = { bold: true };
+            instructionsSheet.getColumn(1).width = 80;
             
             res.setHeader(
                 'Content-Type',
