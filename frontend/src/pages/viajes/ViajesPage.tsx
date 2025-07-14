@@ -38,6 +38,9 @@ export function ViajesPage() {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [viajeToDelete, setViajeToDelete] = useState<Viaje | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [selectedViajeIds, setSelectedViajeIds] = useState<string[]>([]);
+  const [bulkDeleteModalOpened, setBulkDeleteModalOpened] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
   // Hook para tabla virtualizada
   const {} = useVirtualizedTable({
@@ -310,6 +313,45 @@ export function ViajesPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedViajeIds.length === 0) return;
+
+    try {
+      setBulkDeleteLoading(true);
+      await ViajeService.deleteMany(selectedViajeIds);
+      setSelectedViajeIds([]);
+      setBulkDeleteModalOpened(false);
+      // Refrescar la lista
+      window.location.reload();
+    } catch (error) {
+      console.error('Error bulk deleting viajes:', error);
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  };
+
+  const handleBulkExport = async () => {
+    if (selectedViajeIds.length === 0) return;
+
+    try {
+      const blob = await ViajeService.exportSelected(selectedViajeIds);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `viajes_seleccionados_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting selected viajes:', error);
+    }
+  };
+
+  const handleSelectionChange = (selectedIds: string[]) => {
+    setSelectedViajeIds(selectedIds);
+  };
+
   // Calcular datos paginados del lado del cliente
   const paginatedViajes = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -336,6 +378,27 @@ export function ViajesPage() {
         <Title order={2}>Gestión de Viajes</Title>
         
         <Group gap="sm">
+          {selectedViajeIds.length > 0 && (
+            <>
+              <Button
+                variant="outline"
+                color="red"
+                leftSection={<IconTrash size="1rem" />}
+                onClick={() => setBulkDeleteModalOpened(true)}
+              >
+                Eliminar Seleccionados ({selectedViajeIds.length})
+              </Button>
+              
+              <Button
+                variant="outline"
+                leftSection={<IconDownload size="1rem" />}
+                onClick={handleBulkExport}
+              >
+                Exportar Seleccionados
+              </Button>
+            </>
+          )}
+          
           <Button
             variant="outline"
             leftSection={<IconUpload size="1rem" />}
@@ -350,7 +413,7 @@ export function ViajesPage() {
             onClick={() => excelOperations.handleExport({})}
             loading={excelOperations.isExporting}
           >
-            Exportar
+            Exportar Todo
           </Button>
           
           <Button 
@@ -511,6 +574,9 @@ export function ViajesPage() {
                 onPageSizeChange={setPageSize}
                 emptyMessage="No se encontraron viajes con los filtros aplicados"
                 searchPlaceholder="Buscar viajes..."
+                multiSelect={true}
+                selectedIds={selectedViajeIds}
+                onSelectionChange={handleSelectionChange}
               />
             )}
           </LoadingOverlay>
@@ -550,6 +616,18 @@ export function ViajesPage() {
         message={`¿Estás seguro de que deseas eliminar el viaje ${viajeToDelete?.dt ? `DT ${viajeToDelete.dt}` : 'seleccionado'}? Esta acción no se puede deshacer.`}
         type="delete"
         loading={deleteLoading}
+      />
+
+      <ConfirmModal
+        opened={bulkDeleteModalOpened}
+        onClose={() => {
+          setBulkDeleteModalOpened(false);
+        }}
+        onConfirm={handleBulkDelete}
+        title="Eliminar Viajes Seleccionados"
+        message={`¿Estás seguro de que deseas eliminar ${selectedViajeIds.length} viaje${selectedViajeIds.length !== 1 ? 's' : ''} seleccionado${selectedViajeIds.length !== 1 ? 's' : ''}? Esta acción no se puede deshacer.`}
+        type="delete"
+        loading={bulkDeleteLoading}
       />
     </Stack>
   );

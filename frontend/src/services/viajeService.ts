@@ -56,6 +56,35 @@ export class ViajeService {
     await api.delete(`${this.baseUrl}/${id}`);
   }
 
+  static async deleteMany(ids: string[]): Promise<void> {
+    // Para bulk delete, usamos múltiples llamadas individuales
+    // ya que el backend no tiene un endpoint específico para bulk delete
+    await Promise.all(ids.map(id => this.delete(id)));
+  }
+
+  static async exportSelected(ids: string[], filters?: any): Promise<Blob> {
+    // Exportar solo los viajes seleccionados
+    const params = new URLSearchParams();
+    
+    // Agregar los IDs como filtro
+    params.append('ids', ids.join(','));
+    
+    // Agregar filtros adicionales si los hay
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await api.get(`${this.baseUrl}/export?${params.toString()}`, {
+      responseType: 'blob'
+    });
+    
+    return response.data as Blob;
+  }
+
   // Métodos para Excel
   static async processExcelFile(file: File): Promise<any> {
     const response = await api.uploadFile(`${this.baseUrl}/import`, file);
