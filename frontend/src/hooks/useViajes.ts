@@ -52,6 +52,19 @@ export function useViajes() {
     }
   };
 
+  const deleteViaje = async (id: string) => {
+    setLoading(true);
+    try {
+      await ViajeService.delete(id);
+      setViajes(prev => prev.filter(v => v._id !== id));
+    } catch (err: any) {
+      setError(err.message || 'Error al eliminar el viaje');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchViajes();
   }, []);
@@ -62,6 +75,7 @@ export function useViajes() {
     error,
     fetchViajes,
     createViaje,
-    updateViaje
+    updateViaje,
+    deleteViaje
   };
 }

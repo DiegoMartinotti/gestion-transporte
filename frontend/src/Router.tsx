@@ -26,6 +26,8 @@ const SitesPage = lazy(() => import('./pages/sites').then(module => ({ default: 
 const TramosPage = lazy(() => import('./pages/tramos/TramosPage'));
 const VehiculosPage = lazy(() => import('./pages/vehiculos/VehiculosPage'));
 const ViajesPage = lazy(() => import('./pages/viajes/ViajesPage').then(module => ({ default: module.ViajesPage })));
+const ViajeFormPage = lazy(() => import('./pages/viajes/ViajeFormPage'));
+const ViajeDetailPage = lazy(() => import('./pages/viajes/ViajeDetailPage'));
 const ExtrasPage = lazy(() => import('./pages/extras/ExtrasPage').then(module => ({ default: module.ExtrasPage })));
 const OrdenesCompraPage = lazy(() => import('./pages/ordenes-compra/OrdenesCompraPage').then(module => ({ default: module.OrdenesCompraPage })));
 
@@ -125,10 +127,25 @@ export default function AppRoutes() {
           </SuspenseRoute>
         } />
         
-        {/* Operaciones críticas */}
+        {/* Operaciones críticas - Viajes */}
         <Route path="/viajes" element={
           <SuspenseRoute fallback={<RouteLoader message="Cargando viajes..." />}>
             <ViajesPage />
+          </SuspenseRoute>
+        } />
+        <Route path="/viajes/new" element={
+          <SuspenseRoute fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}>
+            <ViajeFormPage />
+          </SuspenseRoute>
+        } />
+        <Route path="/viajes/:id" element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando detalles del viaje..." />}>
+            <ViajeDetailPage />
+          </SuspenseRoute>
+        } />
+        <Route path="/viajes/:id/edit" element={
+          <SuspenseRoute fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}>
+            <ViajeFormPage />
           </SuspenseRoute>
         } />
         <Route path="/ordenes-compra" element={
