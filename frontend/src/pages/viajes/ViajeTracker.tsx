@@ -48,15 +48,15 @@ export function ViajeTracker({ viaje, onUpdateEstado }: ViajeTrackerProps) {
     {
       id: '1',
       fecha: new Date(viaje.fecha),
-      estado: 'PENDIENTE',
+      estado: 'Pendiente',
       descripcion: 'Viaje creado y programado',
       usuario: 'Sistema',
       observaciones: 'Viaje registrado en el sistema'
     },
-    ...(viaje.estado !== 'PENDIENTE' ? [{
+    ...(viaje.estado !== 'Pendiente' ? [{
       id: '2',
       fecha: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      estado: 'EN_PROGRESO',
+      estado: 'En Progreso',
       descripcion: 'Viaje iniciado',
       usuario: 'Juan Pérez',
       ubicacion: {
@@ -66,10 +66,10 @@ export function ViajeTracker({ viaje, onUpdateEstado }: ViajeTrackerProps) {
       },
       observaciones: 'Carga verificada y documentación completa'
     }] : []),
-    ...(viaje.estado === 'COMPLETADO' || viaje.estado === 'FACTURADO' ? [{
+    ...(viaje.estado === 'Completado' || viaje.estado === 'Facturado' ? [{
       id: '3',
       fecha: new Date(Date.now() - 30 * 60 * 1000),
-      estado: 'COMPLETADO',
+      estado: 'Completado',
       descripcion: 'Viaje completado',
       usuario: 'Juan Pérez',
       ubicacion: {
@@ -79,10 +79,10 @@ export function ViajeTracker({ viaje, onUpdateEstado }: ViajeTrackerProps) {
       },
       observaciones: 'Entrega realizada sin inconvenientes'
     }] : []),
-    ...(viaje.estado === 'FACTURADO' ? [{
+    ...(viaje.estado === 'Facturado' ? [{
       id: '4',
       fecha: new Date(),
-      estado: 'FACTURADO',
+      estado: 'Facturado',
       descripcion: 'Viaje facturado',
       usuario: 'Sistema',
       observaciones: 'Factura generada automáticamente'
@@ -353,7 +353,7 @@ export function ViajeTracker({ viaje, onUpdateEstado }: ViajeTrackerProps) {
               </Stack>
             </Card>
 
-            {viaje.estado === 'CANCELADO' && (
+            {viaje.estado === 'Cancelado' && (
               <Alert icon={<IconAlertCircle size={16} />} color="red">
                 <Text size="sm" fw={500}>Viaje Cancelado</Text>
                 <Text size="xs">

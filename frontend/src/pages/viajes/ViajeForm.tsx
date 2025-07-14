@@ -44,10 +44,10 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
   const form = useForm<ViajeFormData>({
     initialValues: {
       fecha: viaje?.fecha ? new Date(viaje.fecha) : new Date(),
-      cliente: viaje?.cliente?._id || '',
+      cliente: typeof viaje?.cliente === 'string' ? viaje.cliente : viaje?.cliente?._id || '',
       tramo: viaje?.tramo?._id || '',
       numeroViaje: parseInt(viaje?.numeroViaje || '0'),
-      vehiculos: viaje?.vehiculos?.map(v => v._id) || [],
+      vehiculos: viaje?.vehiculos?.map(v => v.vehiculo) || [],
       choferes: viaje?.choferes?.map(c => c._id) || [],
       ayudantes: viaje?.ayudantes?.map(a => a._id) || [],
       carga: {

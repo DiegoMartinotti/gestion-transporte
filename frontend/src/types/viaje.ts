@@ -1,11 +1,47 @@
 export interface Viaje {
   _id: string;
-  numeroViaje: string;
+  dt?: string;
+  numeroViaje?: string;
   fecha: string;
-  cliente?: {
+  cliente?: string | {
     _id: string;
-    nombre: string;
+    nombre?: string;
+    Cliente?: string;
   };
+  origen?: string | {
+    _id: string;
+    denominacion?: string;
+    nombre?: string;
+    Site?: string;
+  };
+  destino?: string | {
+    _id: string;
+    denominacion?: string;
+    nombre?: string;
+    Site?: string;
+  };
+  tipoTramo?: string;
+  chofer?: string;
+  vehiculos?: Array<{
+    vehiculo: string;
+    posicion: number;
+    _id: string;
+  }>;
+  tipoUnidad?: string;
+  paletas?: number;
+  tarifa?: number;
+  peaje?: number;
+  cobros?: Array<any>;
+  total: number;
+  estado: 'Pendiente' | 'En Progreso' | 'Completado' | 'Cancelado' | 'Facturado';
+  estadoPartida?: 'Abierta' | 'Cerrada' | 'Pagada';
+  extras?: Array<{
+    id: string;
+    concepto: string;
+    monto: number;
+    descripcion: string;
+  }>;
+  // Propiedades adicionales para compatibilidad
   tramo?: {
     _id: string;
     denominacion: string;
@@ -22,14 +58,6 @@ export interface Viaje {
     distanciaKm?: number;
     tiempoEstimadoHoras?: number;
   };
-  vehiculos?: Array<{
-    _id: string;
-    patente: string;
-    marca: string;
-    modelo: string;
-    tipo: string;
-    capacidadKg: number;
-  }>;
   choferes?: Array<{
     _id: string;
     nombre: string;
@@ -48,25 +76,13 @@ export interface Viaje {
     peligrosa: boolean;
     refrigerada: boolean;
   };
-  distanciaKm: number;
-  tiempoEstimadoHoras: number;
+  distanciaKm?: number;
+  tiempoEstimadoHoras?: number;
   ordenCompra?: string;
   observaciones?: string;
-  extras: Array<{
-    id: string;
-    concepto: string;
-    monto: number;
-    descripcion: string;
-  }>;
-  estado: 'PENDIENTE' | 'EN_PROGRESO' | 'COMPLETADO' | 'CANCELADO' | 'FACTURADO';
   montoBase?: number;
   montoExtras?: number;
   montoTotal?: number;
-  // Propiedades adicionales para OrdenCompra
-  total: number;
-  origen?: string;
-  destino?: string;
-  estadoPartida?: import('./ordenCompra').EstadoPartida;
   totalCobrado?: number;
   documentos?: Array<{
     id: string;
@@ -76,6 +92,7 @@ export interface Viaje {
   }>;
   createdAt: string;
   updatedAt: string;
+  __v?: number;
 }
 
 export interface ViajeFormData {

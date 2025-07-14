@@ -17,6 +17,7 @@ import { ViajeTracker } from './ViajeTracker';
 import { useViaje } from '../../hooks/useViaje';
 import { Viaje } from '../../types/viaje';
 import { notifications } from '@mantine/notifications';
+import { getClienteText, getClienteId } from '../../utils/viajeHelpers';
 
 interface ViajeDetailProps {
   viajeId: string;
@@ -185,7 +186,7 @@ export function ViajeDetail({ viajeId, onEdit, onClose }: ViajeDetailProps) {
                           <IconUser size={16} />
                           <Text size="sm" fw={600} c="dimmed">CLIENTE</Text>
                         </Group>
-                        <Text size="lg">{viaje.cliente?.nombre}</Text>
+                        <Text size="lg">{getClienteText(viaje)}</Text>
                       </Paper>
                     </Grid.Col>
                   </Grid>
@@ -249,14 +250,14 @@ export function ViajeDetail({ viajeId, onEdit, onClose }: ViajeDetailProps) {
                             <Group>
                               <IconTruck size={16} />
                               <div>
-                                <Text fw={500}>{vehiculo.patente}</Text>
+                                <Text fw={500}>{vehiculo.vehiculo}</Text>
                                 <Text size="xs" c="dimmed">
-                                  {vehiculo.marca} {vehiculo.modelo} - {vehiculo.tipo}
+                                  Posición {vehiculo.posicion}
                                 </Text>
                               </div>
                             </Group>
                             <Badge variant="light">
-                              Cap: {vehiculo.capacidadKg}kg
+                              Vehículo {vehiculo.posicion}
                             </Badge>
                           </Group>
                         ))}
@@ -464,8 +465,8 @@ export function ViajeDetail({ viajeId, onEdit, onClose }: ViajeDetailProps) {
                   fullWidth
                   variant="light"
                   color="blue"
-                  disabled={viaje.estado !== 'PENDIENTE'}
-                  onClick={() => handleChangeEstado('EN_PROGRESO')}
+                  disabled={viaje.estado !== 'Pendiente'}
+                  onClick={() => handleChangeEstado('En Progreso')}
                 >
                   Iniciar Viaje
                 </Button>
@@ -473,8 +474,8 @@ export function ViajeDetail({ viajeId, onEdit, onClose }: ViajeDetailProps) {
                   fullWidth
                   variant="light"
                   c="green"
-                  disabled={viaje.estado !== 'EN_PROGRESO'}
-                  onClick={() => handleChangeEstado('COMPLETADO')}
+                  disabled={viaje.estado !== 'En Progreso'}
+                  onClick={() => handleChangeEstado('Completado')}
                 >
                   Completar Viaje
                 </Button>
@@ -482,8 +483,8 @@ export function ViajeDetail({ viajeId, onEdit, onClose }: ViajeDetailProps) {
                   fullWidth
                   variant="light"
                   color="violet"
-                  disabled={viaje.estado !== 'COMPLETADO'}
-                  onClick={() => handleChangeEstado('FACTURADO')}
+                  disabled={viaje.estado !== 'Completado'}
+                  onClick={() => handleChangeEstado('Facturado')}
                 >
                   Marcar Facturado
                 </Button>
@@ -491,8 +492,8 @@ export function ViajeDetail({ viajeId, onEdit, onClose }: ViajeDetailProps) {
                   fullWidth
                   variant="light"
                   color="red"
-                  disabled={viaje.estado === 'FACTURADO'}
-                  onClick={() => handleChangeEstado('CANCELADO')}
+                  disabled={viaje.estado === 'Facturado'}
+                  onClick={() => handleChangeEstado('Cancelado')}
                 >
                   Cancelar Viaje
                 </Button>

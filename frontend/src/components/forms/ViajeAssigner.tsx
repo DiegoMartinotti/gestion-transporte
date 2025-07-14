@@ -27,6 +27,7 @@ import { notifications } from '@mantine/notifications';
 import { EstadoPartidaIndicator } from '../indicators/EstadoPartidaIndicator';
 import type { Viaje } from '../../types/viaje';
 import type { ViajeItem } from '../../types/ordenCompra';
+import { getOrigenText, getDestinoText, normalizeEstadoPartida } from '../../utils/viajeHelpers';
 
 interface ViajeAssignerProps {
   opened: boolean;
@@ -59,8 +60,9 @@ export function ViajeAssigner({
       const searchLower = searchTerm.toLowerCase();
       return (
         viaje.numeroViaje?.toString().toLowerCase().includes(searchLower) ||
-        (viaje.tramo?.origen?.denominacion || viaje.origen)?.toLowerCase().includes(searchLower) ||
-        (viaje.tramo?.destino?.denominacion || viaje.destino)?.toLowerCase().includes(searchLower)
+        viaje.dt?.toString().toLowerCase().includes(searchLower) ||
+        getOrigenText(viaje).toLowerCase().includes(searchLower) ||
+        getDestinoText(viaje).toLowerCase().includes(searchLower)
       );
     });
     
@@ -224,7 +226,7 @@ export function ViajeAssigner({
                         <Group gap={4} align="center">
                           <IconMapPin size={12} />
                           <Text size="sm">
-                            {viaje.tramo?.origen?.denominacion || viaje.origen || 'N/A'} → {viaje.tramo?.destino?.denominacion || viaje.destino || 'N/A'}
+                            {getOrigenText(viaje)} → {getDestinoText(viaje)}
                           </Text>
                         </Group>
                       </Table.Td>
@@ -257,7 +259,7 @@ export function ViajeAssigner({
                       
                       <Table.Td>
                         <EstadoPartidaIndicator
-                          estado={viaje.estadoPartida || 'abierta'}
+                          estado={normalizeEstadoPartida(viaje.estadoPartida)}
                           totalViaje={viaje.total}
                           totalCobrado={viaje.totalCobrado || 0}
                           size="xs"
