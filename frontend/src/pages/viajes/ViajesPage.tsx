@@ -145,7 +145,7 @@ export function ViajesPage() {
       render: (viaje: Viaje) => (
         <Text size="sm">
           {typeof viaje.cliente === 'object' 
-            ? viaje.cliente?.Cliente || viaje.cliente?.nombre || '-'
+            ? viaje.cliente?.nombre || '-'
             : viaje.cliente || '-'}
         </Text>
       )
@@ -200,7 +200,7 @@ export function ViajesPage() {
       label: 'Total',
       sortable: true,
       render: (viaje: Viaje) => (
-        <Text size="sm" fw={600} c={viaje.total ? 'dark' : 'dimmed'}>
+        <Text size="sm" fw={600} c={viaje.total ? undefined : 'dimmed'}>
           {viaje.total ? formatCurrency(viaje.total) : 'Sin calcular'}
         </Text>
       )
