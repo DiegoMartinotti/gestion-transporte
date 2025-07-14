@@ -10,7 +10,8 @@ import {
   Pagination, 
   Badge,
   Center,
-  Skeleton
+  Skeleton,
+  Checkbox
 } from '@mantine/core';
 import { IconSearch, IconSortAscending, IconSortDescending, IconSelector } from '@tabler/icons-react';
 import { useState, useCallback, useMemo } from 'react';
@@ -42,6 +43,9 @@ interface DataTableProps<T = any> {
   showPageSize?: boolean;
   emptyMessage?: string;
   keyExtractor?: (record: T) => string;
+  multiSelect?: boolean;
+  selectedIds?: string[];
+  onSelectionChange?: (selectedIds: string[]) => void;
 }
 
 function DataTable<T = any>({
@@ -59,7 +63,10 @@ function DataTable<T = any>({
   showPagination = true,
   showPageSize = true,
   emptyMessage = 'No hay datos para mostrar',
-  keyExtractor = (record: any) => record._id || record.id
+  keyExtractor = (record: any) => record._id || record.id,
+  multiSelect = false,
+  selectedIds = [],
+  onSelectionChange
 }: DataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<string>('');
@@ -112,6 +119,39 @@ function DataTable<T = any>({
       : <IconSortDescending size="0.9rem" />;
   }, [sortBy, sortOrder]);
 
+  // Multi-select handlers
+  const handleRowSelect = useCallback((recordId: string) => {
+    if (!onSelectionChange) return;
+    
+    const newSelectedIds = selectedIds.includes(recordId)
+      ? selectedIds.filter(id => id !== recordId)
+      : [...selectedIds, recordId];
+    
+    onSelectionChange(newSelectedIds);
+  }, [selectedIds, onSelectionChange]);
+
+  const handleSelectAll = useCallback(() => {
+    if (!onSelectionChange) return;
+    
+    const currentPageIds = data.map(record => keyExtractor(record));
+    const isAllSelected = currentPageIds.every(id => selectedIds.includes(id));
+    
+    if (isAllSelected) {
+      // Deselect all current page items
+      const newSelectedIds = selectedIds.filter(id => !currentPageIds.includes(id));
+      onSelectionChange(newSelectedIds);
+    } else {
+      // Select all current page items
+      const newSelectedIds = Array.from(new Set([...selectedIds, ...currentPageIds]));
+      onSelectionChange(newSelectedIds);
+    }
+  }, [data, selectedIds, onSelectionChange, keyExtractor]);
+
+  // Check if all current page items are selected
+  const currentPageIds = useMemo(() => data.map(record => keyExtractor(record)), [data, keyExtractor]);
+  const isAllCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.includes(id));
+  const isSomeSelected = currentPageIds.some(id => selectedIds.includes(id));
+
   const renderCell = (column: DataTableColumn<T>, record: T) => {
     const value = (record as any)[column.key];
     
@@ -140,6 +180,11 @@ function DataTable<T = any>({
       <>
         {Array.from({ length: 5 }).map((_, index) => (
           <Table.Tr key={index}>
+            {multiSelect && (
+              <Table.Td>
+                <Skeleton height={20} width={20} />
+              </Table.Td>
+            )}
             {columns.map((column) => (
               <Table.Td key={column.key}>
                 <Skeleton height={20} />
@@ -149,19 +194,27 @@ function DataTable<T = any>({
         ))}
       </>
     );
-  }, [columns]);
+  }, [columns, multiSelect]);
 
   return (
     <Stack gap="md">
       {showSearch && (
         <Group justify="space-between">
-          <TextInput
-            placeholder={searchPlaceholder}
-            leftSection={<IconSearch size="1rem" />}
-            value={search}
-            onChange={(e) => handleSearchChange(e.currentTarget.value)}
-            style={{ minWidth: 300 }}
-          />
+          <Group gap="md">
+            <TextInput
+              placeholder={searchPlaceholder}
+              leftSection={<IconSearch size="1rem" />}
+              value={search}
+              onChange={(e) => handleSearchChange(e.currentTarget.value)}
+              style={{ minWidth: 300 }}
+            />
+            
+            {multiSelect && selectedIds.length > 0 && (
+              <Badge variant="light" color="blue">
+                {selectedIds.length} seleccionado{selectedIds.length !== 1 ? 's' : ''}
+              </Badge>
+            )}
+          </Group>
           
           {showPageSize && (
             <Group gap="xs">
@@ -182,6 +235,15 @@ function DataTable<T = any>({
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
+              {multiSelect && (
+                <Table.Th style={{ width: 50 }}>
+                  <Checkbox
+                    checked={isAllCurrentPageSelected}
+                    indeterminate={isSomeSelected && !isAllCurrentPageSelected}
+                    onChange={handleSelectAll}
+                  />
+                </Table.Th>
+              )}
               {columns.map((column) => (
                 <Table.Th 
                   key={column.key}
@@ -220,7 +282,7 @@ function DataTable<T = any>({
               <LoadingSkeleton />
             ) : data.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={columns.length}>
+                <Table.Td colSpan={columns.length + (multiSelect ? 1 : 0)}>
                   <Center py="xl">
                     <Text c="dimmed" size="sm">
                       {emptyMessage}
@@ -229,20 +291,36 @@ function DataTable<T = any>({
                 </Table.Td>
               </Table.Tr>
             ) : (
-              data.map((record) => (
-                <Table.Tr key={keyExtractor(record)}>
-                  {columns.map((column) => (
-                    <Table.Td 
-                      key={column.key}
-                      style={{ 
-                        textAlign: column.align || 'left'
-                      }}
-                    >
-                      {renderCell(column, record)}
-                    </Table.Td>
-                  ))}
-                </Table.Tr>
-              ))
+              data.map((record) => {
+                const recordId = keyExtractor(record);
+                const isSelected = selectedIds.includes(recordId);
+                
+                return (
+                  <Table.Tr 
+                    key={recordId}
+                    bg={isSelected ? 'var(--mantine-color-blue-light)' : undefined}
+                  >
+                    {multiSelect && (
+                      <Table.Td>
+                        <Checkbox
+                          checked={isSelected}
+                          onChange={() => handleRowSelect(recordId)}
+                        />
+                      </Table.Td>
+                    )}
+                    {columns.map((column) => (
+                      <Table.Td 
+                        key={column.key}
+                        style={{ 
+                          textAlign: column.align || 'left'
+                        }}
+                      >
+                        {renderCell(column, record)}
+                      </Table.Td>
+                    ))}
+                  </Table.Tr>
+                );
+              })
             )}
           </Table.Tbody>
         </Table>
@@ -279,9 +357,23 @@ const arePropsEqual = <T,>(prevProps: DataTableProps<T>, nextProps: DataTablePro
     prevProps.showSearch !== nextProps.showSearch ||
     prevProps.showPagination !== nextProps.showPagination ||
     prevProps.showPageSize !== nextProps.showPageSize ||
-    prevProps.emptyMessage !== nextProps.emptyMessage
+    prevProps.emptyMessage !== nextProps.emptyMessage ||
+    prevProps.multiSelect !== nextProps.multiSelect
   ) {
     return false;
+  }
+
+  // Comparar arrays de selectedIds
+  if (prevProps.selectedIds?.length !== nextProps.selectedIds?.length) {
+    return false;
+  }
+  
+  if (prevProps.selectedIds && nextProps.selectedIds) {
+    for (let i = 0; i < prevProps.selectedIds.length; i++) {
+      if (prevProps.selectedIds[i] !== nextProps.selectedIds[i]) {
+        return false;
+      }
+    }
   }
 
   // Comparar arrays de datos (comparación superficial para performance)
