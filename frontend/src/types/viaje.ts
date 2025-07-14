@@ -23,7 +23,10 @@ export interface Viaje {
   tipoTramo?: string;
   chofer?: string;
   vehiculos?: Array<{
-    vehiculo: string;
+    vehiculo: string | {
+      _id: string;
+      dominio?: string;
+    };
     posicion: number;
     _id: string;
   }>;

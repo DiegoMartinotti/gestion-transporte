@@ -176,7 +176,9 @@ export function ViajesPage() {
         <Group gap={4}>
           <IconTruck size={16} />
           <Text size="sm">
-            {viaje.vehiculos?.length || 0} {viaje.vehiculos?.length === 1 ? 'vehículo' : 'vehículos'}
+            {viaje.vehiculos?.map(v => 
+              typeof v.vehiculo === 'object' ? v.vehiculo?.dominio : v.vehiculo
+            ).filter(Boolean).join(', ') || '-'}
           </Text>
         </Group>
       )

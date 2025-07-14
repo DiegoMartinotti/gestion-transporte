@@ -250,7 +250,11 @@ export function ViajeDetail({ viajeId, onEdit, onClose }: ViajeDetailProps) {
                             <Group>
                               <IconTruck size={16} />
                               <div>
-                                <Text fw={500}>{vehiculo.vehiculo}</Text>
+                                <Text fw={500}>
+                                  {typeof vehiculo.vehiculo === 'object' 
+                                    ? vehiculo.vehiculo?.dominio || vehiculo.vehiculo?._id
+                                    : vehiculo.vehiculo}
+                                </Text>
                                 <Text size="xs" c="dimmed">
                                   Posición {vehiculo.posicion}
                                 </Text>

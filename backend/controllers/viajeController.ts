@@ -103,6 +103,7 @@ export const getViajes = async (req: Request<{}, ApiResponse<IViaje[]>, {}, Pagi
                                .populate({ path: 'cliente', select: 'nombre' })
                                .populate({ path: 'origen', select: 'Site nombre' })
                                .populate({ path: 'destino', select: 'Site nombre' })
+                               .populate({ path: 'vehiculos.vehiculo', select: 'dominio' })
                                .sort({ fecha: -1 })
                                .skip(skip)
                                .limit(limit)
