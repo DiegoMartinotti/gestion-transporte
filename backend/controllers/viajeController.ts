@@ -100,7 +100,7 @@ export const getViajes = async (req: Request<{}, ApiResponse<IViaje[]>, {}, Pagi
         
         // Obtener viajes con paginación, filtro y poblar datos relacionados
         const viajes = await Viaje.find(filter)
-                               .populate({ path: 'cliente', select: 'Cliente' })
+                               .populate({ path: 'cliente', select: 'nombre' })
                                .populate({ path: 'origen', select: 'Site nombre' })
                                .populate({ path: 'destino', select: 'Site nombre' })
                                .sort({ fecha: -1 })
