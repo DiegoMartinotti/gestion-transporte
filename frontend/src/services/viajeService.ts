@@ -55,4 +55,20 @@ export class ViajeService {
   static async delete(id: string): Promise<void> {
     await api.delete(`${this.baseUrl}/${id}`);
   }
+
+  // Métodos para Excel
+  static async processExcelFile(file: File): Promise<any> {
+    const response = await api.uploadFile(`${this.baseUrl}/import`, file);
+    return response.data;
+  }
+
+  static async validateExcelFile(file: File): Promise<any> {
+    const response = await api.uploadFile(`${this.baseUrl}/validate`, file);
+    return response.data;
+  }
+
+  static async previewExcelFile(file: File): Promise<any> {
+    const response = await api.uploadFile(`${this.baseUrl}/preview`, file);
+    return response.data;
+  }
 }
