@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Card, Group, Button, Stack, Title, Badge, Select, Tabs, Text, Grid, Paper, Alert } from '@mantine/core';
-import { IconPlus, IconTruck, IconCalendar, IconMapPin, IconClock, IconAlertCircle, IconCheckupList, IconX, IconCheck, IconUpload, IconDownload } from '@tabler/icons-react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Group, Button, Stack, Title, Badge, Select, Tabs, Text, Grid, Paper, Alert, ActionIcon, Menu } from '@mantine/core';
+import { IconPlus, IconTruck, IconCalendar, IconMapPin, IconClock, IconAlertCircle, IconCheckupList, IconX, IconCheck, IconUpload, IconDownload, IconEdit, IconTrash, IconEye, IconDots } from '@tabler/icons-react';
 import DataTable from '../../components/base/DataTable';
 import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
 import { DateRangePicker } from '../../components/base/SimpleDateRangePicker';
@@ -13,12 +14,16 @@ import { ClienteSelector } from '../../components/selectors/ClienteSelector';
 import { VehiculoSelector } from '../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../components/selectors/PersonalSelector';
 import { ExcelImportModal } from '../../components/modals';
+import ConfirmModal from '../../components/base/ConfirmModal';
 import { viajeExcelService } from '../../services/BaseExcelService';
 import { ViajeService } from '../../services/viajeService';
 import { Viaje } from '../../types/viaje';
 
+const DEFAULT_PAGE_SIZE = 10;
+
 export function ViajesPage() {
-  const { viajes, loading, error } = useViajes();
+  const navigate = useNavigate();
+  const { viajes, loading, error, deleteViaje } = useViajes();
   const [search, setSearch] = useState('');
   const [clienteFilter, setClienteFilter] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string | null>(null);
@@ -26,8 +31,13 @@ export function ViajesPage() {
   const [vehiculoFilter, setVehiculoFilter] = useState<string | null>(null);
   const [choferFilter, setChoferFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>('todos');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [useVirtualScrolling] = useState(viajes.length > 100);
   const [importModalOpened, setImportModalOpened] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+  const [viajeToDelete, setViajeToDelete] = useState<Viaje | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Hook para tabla virtualizada
   const {} = useVirtualizedTable({
@@ -220,6 +230,45 @@ export function ViajesPage() {
       render: (viaje: Viaje) => (
         <Text size="sm">{viaje.tipoUnidad || '-'}</Text>
       )
+    },
+    {
+      key: 'actions',
+      label: 'Acciones',
+      align: 'center' as const,
+      width: 100,
+      render: (viaje: Viaje) => (
+        <Menu shadow="md" width={200}>
+          <Menu.Target>
+            <ActionIcon variant="subtle" color="gray">
+              <IconDots size="1rem" />
+            </ActionIcon>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item 
+              leftSection={<IconEye size="0.9rem" />}
+              onClick={() => navigate(`/viajes/${viaje._id}`)}
+            >
+              Ver detalles
+            </Menu.Item>
+            
+            <Menu.Item 
+              leftSection={<IconEdit size="0.9rem" />}
+              onClick={() => navigate(`/viajes/${viaje._id}/edit`)}
+            >
+              Editar
+            </Menu.Item>
+            <Menu.Divider />
+            
+            <Menu.Item 
+              leftSection={<IconTrash size="0.9rem" />}
+              color="red"
+              onClick={() => handleDeleteClick(viaje)}
+            >
+              Eliminar
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      )
     }
   ];
 
@@ -230,6 +279,7 @@ export function ViajesPage() {
     setDateRange([null, null]);
     setVehiculoFilter(null);
     setChoferFilter(null);
+    setCurrentPage(1); // Reset página cuando se limpian filtros
   };
 
   const hasActiveFilters = search || clienteFilter || estadoFilter || 
@@ -239,6 +289,38 @@ export function ViajesPage() {
     setImportModalOpened(false);
     excelOperations.handleImportComplete(result);
   };
+
+  const handleDeleteClick = (viaje: Viaje) => {
+    setViajeToDelete(viaje);
+    setDeleteModalOpened(true);
+  };
+
+  const handleDelete = async () => {
+    if (!viajeToDelete) return;
+
+    try {
+      setDeleteLoading(true);
+      await deleteViaje(viajeToDelete._id);
+      setDeleteModalOpened(false);
+      setViajeToDelete(null);
+    } catch (error) {
+      console.error('Error deleting viaje:', error);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Calcular datos paginados del lado del cliente
+  const paginatedViajes = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredViajes.slice(startIndex, endIndex);
+  }, [filteredViajes, currentPage, pageSize]);
+
+  // Reset página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, clienteFilter, estadoFilter, dateRange, vehiculoFilter, choferFilter, activeTab]);
 
   if (error) {
     return (
@@ -271,7 +353,10 @@ export function ViajesPage() {
             Exportar
           </Button>
           
-          <Button leftSection={<IconPlus />}>
+          <Button 
+            leftSection={<IconPlus />}
+            onClick={() => navigate('/viajes/new')}
+          >
             Nuevo Viaje
           </Button>
         </Group>
@@ -417,7 +502,13 @@ export function ViajesPage() {
             ) : (
               <DataTable
                 columns={columns}
-                data={filteredViajes}
+                data={paginatedViajes}
+                loading={loading}
+                totalItems={filteredViajes.length}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
                 emptyMessage="No se encontraron viajes con los filtros aplicados"
                 searchPlaceholder="Buscar viajes..."
               />
@@ -446,6 +537,19 @@ export function ViajesPage() {
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
         }}
+      />
+
+      <ConfirmModal
+        opened={deleteModalOpened}
+        onClose={() => {
+          setDeleteModalOpened(false);
+          setViajeToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Eliminar Viaje"
+        message={`¿Estás seguro de que deseas eliminar el viaje ${viajeToDelete?.dt ? `DT ${viajeToDelete.dt}` : 'seleccionado'}? Esta acción no se puede deshacer.`}
+        type="delete"
+        loading={deleteLoading}
       />
     </Stack>
   );
