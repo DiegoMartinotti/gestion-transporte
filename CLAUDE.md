@@ -145,10 +145,8 @@ The frontend has a unified Excel system that MUST be used for all import/export 
 3. Look for patterns in similar pages/features that can be abstracted
 4. Always run `npx tsc --noEmit` after changes to ensure type safety
 
-## Git Workflow
-- Commit after completing logical units of work
-- Use descriptive commit messages explaining the "why"
-- Run `npx tsc --noEmit` before committing# Acceso MongoDB MCP
+
+## Acceso MongoDB MCP
 
 Claude Code tiene acceso directo a la base de datos MongoDB Atlas del proyecto a través del servidor MCP de MongoDB configurado.
 

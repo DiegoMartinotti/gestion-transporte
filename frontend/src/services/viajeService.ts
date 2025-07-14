@@ -3,13 +3,16 @@ import type { Viaje } from '../types/viaje';
 
 export interface ViajesResponse {
   data: Viaje[];
-  total: number;
-  page: number;
-  totalPages: number;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    limit: number;
+  };
 }
 
 export class ViajeService {
-  private static baseUrl = '/api/viajes';
+  private static baseUrl = '/viajes';
 
   static async getAll(filters?: any, page = 1, limit = 10): Promise<ViajesResponse> {
     const params = new URLSearchParams();
@@ -26,7 +29,7 @@ export class ViajeService {
     params.append('limit', limit.toString());
 
     const response = await api.get(`${this.baseUrl}?${params.toString()}`);
-    return response.data as ViajesResponse;
+    return response as unknown as ViajesResponse;
   }
 
   static async getById(id: string): Promise<Viaje> {

@@ -34,12 +34,9 @@ export function useViaje(viajeId: string) {
       },
       vehiculos: [
         {
-          _id: 'vehiculo1',
-          patente: 'ABC123',
-          marca: 'Mercedes-Benz',
-          modelo: 'Axor',
-          tipo: 'Camión',
-          capacidadKg: 15000
+          vehiculo: 'vehiculo1',
+          posicion: 1,
+          _id: 'vehiculo1'
         }
       ],
       choferes: [
@@ -70,14 +67,14 @@ export function useViaje(viajeId: string) {
           descripcion: 'Por desvío en ruta'
         }
       ],
-      estado: 'PENDIENTE',
+      estado: 'Pendiente',
       montoBase: 85000,
       montoExtras: 5000,
       montoTotal: 90000,
       total: 90000,
       origen: 'Puerto Buenos Aires',
       destino: 'Rosario Centro',
-      estadoPartida: 'abierta',
+      estadoPartida: 'Abierta',
       totalCobrado: 0,
       documentos: [
         {

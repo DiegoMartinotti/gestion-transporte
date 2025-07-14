@@ -11,6 +11,7 @@ import {
 } from '@tabler/icons-react';
 import { Viaje } from '../../types/viaje';
 import { notifications } from '@mantine/notifications';
+import { getClienteText } from '../../utils/viajeHelpers';
 
 interface ViajeCardProps {
   viaje: Viaje;
@@ -123,7 +124,7 @@ export function ViajeCard({
           <Text size="sm" c="dimmed">{formatDate(viaje.fecha)}</Text>
         </Group>
         
-        <Text size="sm" mt="xs">{viaje.cliente?.nombre}</Text>
+        <Text size="sm" mt="xs">{getClienteText(viaje)}</Text>
         <Text size="xs" c="dimmed" truncate>
           {viaje.tramo?.origen?.denominacion} → {viaje.tramo?.destino?.denominacion}
         </Text>
@@ -183,7 +184,7 @@ export function ViajeCard({
                     </Menu.Item>
                   )}
                   <Menu.Divider />
-                  {onDelete && viaje.estado === 'PENDIENTE' && (
+                  {onDelete && viaje.estado === 'Pendiente' && (
                     <Menu.Item 
                       leftSection={<IconTrash size={14} />}
                       color="red"
@@ -204,7 +205,7 @@ export function ViajeCard({
 
           <Group gap="xs">
             <IconUser size={14} color="gray" />
-            <Text size="sm" fw={500}>{viaje.cliente?.nombre}</Text>
+            <Text size="sm" fw={500}>{getClienteText(viaje)}</Text>
           </Group>
 
           <Stack gap={4}>

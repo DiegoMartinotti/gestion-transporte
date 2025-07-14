@@ -33,20 +33,20 @@ export function ViajesPage() {
   });
 
   const estadoOptions = [
-    { value: 'PENDIENTE', label: 'Pendiente' },
-    { value: 'EN_PROGRESO', label: 'En Progreso' },
-    { value: 'COMPLETADO', label: 'Completado' },
-    { value: 'CANCELADO', label: 'Cancelado' },
-    { value: 'FACTURADO', label: 'Facturado' }
+    { value: 'Pendiente', label: 'Pendiente' },
+    { value: 'En Progreso', label: 'En Progreso' },
+    { value: 'Completado', label: 'Completado' },
+    { value: 'Cancelado', label: 'Cancelado' },
+    { value: 'Facturado', label: 'Facturado' }
   ];
 
   const getEstadoBadgeColor = (estado: string) => {
     switch (estado) {
-      case 'PENDIENTE': return 'blue';
-      case 'EN_PROGRESO': return 'yellow';
-      case 'COMPLETADO': return 'green';
-      case 'CANCELADO': return 'red';
-      case 'FACTURADO': return 'violet';
+      case 'Pendiente': return 'blue';
+      case 'En Progreso': return 'yellow';
+      case 'Completado': return 'green';
+      case 'Cancelado': return 'red';
+      case 'Facturado': return 'violet';
       default: return 'gray';
     }
   };
@@ -68,23 +68,24 @@ export function ViajesPage() {
 
   const filteredViajes = viajes.filter(viaje => {
     const matchesSearch = !search || 
-      viaje.numeroViaje.toString().includes(search) ||
-      viaje.tramo?.denominacion?.toLowerCase().includes(search.toLowerCase()) ||
-      viaje.cliente?.nombre?.toLowerCase().includes(search.toLowerCase());
+      viaje.dt?.toString().includes(search) ||
+      viaje.tipoTramo?.toLowerCase().includes(search.toLowerCase()) ||
+      (typeof viaje.cliente === 'object' && viaje.cliente?.Cliente?.toLowerCase().includes(search.toLowerCase()));
     
-    const matchesCliente = !clienteFilter || viaje.cliente?._id === clienteFilter;
+    const matchesCliente = !clienteFilter || 
+      (typeof viaje.cliente === 'string' ? viaje.cliente === clienteFilter : viaje.cliente?._id === clienteFilter);
     const matchesEstado = !estadoFilter || viaje.estado === estadoFilter;
-    const matchesVehiculo = !vehiculoFilter || viaje.vehiculos?.some(v => v._id === vehiculoFilter);
-    const matchesChofer = !choferFilter || viaje.choferes?.some(c => c._id === choferFilter);
+    const matchesVehiculo = !vehiculoFilter || viaje.vehiculos?.some(v => v.vehiculo === vehiculoFilter);
+    const matchesChofer = !choferFilter || viaje.chofer === choferFilter;
     
     const matchesDateRange = !dateRange[0] || !dateRange[1] || 
       (new Date(viaje.fecha) >= dateRange[0] && new Date(viaje.fecha) <= dateRange[1]);
 
     const matchesTab = activeTab === 'todos' || 
-      (activeTab === 'pendientes' && viaje.estado === 'PENDIENTE') ||
-      (activeTab === 'enProgreso' && viaje.estado === 'EN_PROGRESO') ||
-      (activeTab === 'completados' && viaje.estado === 'COMPLETADO') ||
-      (activeTab === 'facturados' && viaje.estado === 'FACTURADO');
+      (activeTab === 'pendientes' && viaje.estado === 'Pendiente') ||
+      (activeTab === 'enProgreso' && viaje.estado === 'En Progreso') ||
+      (activeTab === 'completados' && viaje.estado === 'Completado') ||
+      (activeTab === 'facturados' && viaje.estado === 'Facturado');
 
     return matchesSearch && matchesCliente && matchesEstado && matchesDateRange && 
            matchesVehiculo && matchesChofer && matchesTab;
@@ -92,23 +93,23 @@ export function ViajesPage() {
 
   const viajesStats = {
     total: viajes.length,
-    pendientes: viajes.filter(v => v.estado === 'PENDIENTE').length,
-    enProgreso: viajes.filter(v => v.estado === 'EN_PROGRESO').length,
-    completados: viajes.filter(v => v.estado === 'COMPLETADO').length,
-    facturados: viajes.filter(v => v.estado === 'FACTURADO').length,
+    pendientes: viajes.filter(v => v.estado === 'Pendiente').length,
+    enProgreso: viajes.filter(v => v.estado === 'En Progreso').length,
+    completados: viajes.filter(v => v.estado === 'Completado').length,
+    facturados: viajes.filter(v => v.estado === 'Facturado').length,
     totalFacturado: viajes
-      .filter(v => v.estado === 'FACTURADO')
-      .reduce((sum, v) => sum + (v.montoTotal || 0), 0)
+      .filter(v => v.estado === 'Facturado')
+      .reduce((sum, v) => sum + (v.total || 0), 0)
   };
 
   const columns = [
     {
-      key: 'numeroViaje',
-      label: 'N° Viaje',
+      key: 'dt',
+      label: 'DT',
       sortable: true,
       render: (viaje: Viaje) => (
         <Text fw={600} size="sm">
-          #{viaje.numeroViaje}
+          {viaje.dt}
         </Text>
       )
     },
@@ -128,7 +129,11 @@ export function ViajesPage() {
       label: 'Cliente',
       sortable: true,
       render: (viaje: Viaje) => (
-        <Text size="sm">{viaje.cliente?.nombre || '-'}</Text>
+        <Text size="sm">
+          {typeof viaje.cliente === 'object' 
+            ? viaje.cliente?.Cliente || viaje.cliente?.nombre || '-'
+            : viaje.cliente || '-'}
+        </Text>
       )
     },
     {
@@ -136,11 +141,15 @@ export function ViajesPage() {
       label: 'Ruta',
       render: (viaje: Viaje) => (
         <Stack gap={0}>
-          <Text size="sm" fw={500}>{viaje.tramo?.denominacion || '-'}</Text>
+          <Text size="sm" fw={500}>{viaje.tipoTramo || '-'}</Text>
           <Group gap={4}>
             <IconMapPin size={14} color="gray" />
             <Text size="xs" c="dimmed">
-              {viaje.tramo?.origen?.denominacion} → {viaje.tramo?.destino?.denominacion}
+              {typeof viaje.origen === 'object' 
+                ? viaje.origen?.Site || viaje.origen?.nombre || viaje.origen?.denominacion || '-'
+                : viaje.origen || '-'} → {typeof viaje.destino === 'object' 
+                ? viaje.destino?.Site || viaje.destino?.nombre || viaje.destino?.denominacion || '-'
+                : viaje.destino || '-'}
             </Text>
           </Group>
         </Stack>
@@ -173,26 +182,27 @@ export function ViajesPage() {
       )
     },
     {
-      key: 'montoTotal',
-      label: 'Monto Total',
+      key: 'total',
+      label: 'Total',
       sortable: true,
       render: (viaje: Viaje) => (
-        <Text size="sm" fw={600} c={viaje.montoTotal ? 'dark' : 'dimmed'}>
-          {viaje.montoTotal ? formatCurrency(viaje.montoTotal) : 'Sin calcular'}
+        <Text size="sm" fw={600} c={viaje.total ? 'dark' : 'dimmed'}>
+          {viaje.total ? formatCurrency(viaje.total) : 'Sin calcular'}
         </Text>
       )
     },
     {
-      key: 'ordenCompra',
-      label: 'OC',
+      key: 'paletas',
+      label: 'Paletas',
       render: (viaje: Viaje) => (
-        viaje.ordenCompra ? (
-          <Badge color="indigo" variant="light" size="sm">
-            OC-{viaje.ordenCompra}
-          </Badge>
-        ) : (
-          <Text size="xs" c="dimmed">Sin OC</Text>
-        )
+        <Text size="sm">{viaje.paletas || '-'}</Text>
+      )
+    },
+    {
+      key: 'tipoUnidad',
+      label: 'Tipo Unidad',
+      render: (viaje: Viaje) => (
+        <Text size="sm">{viaje.tipoUnidad || '-'}</Text>
       )
     }
   ];

@@ -44,6 +44,7 @@ import { ClienteService } from '../../services/clienteService';
 import type { OrdenCompra } from '../../types/ordenCompra';
 import type { Viaje } from '../../types/viaje';
 import type { Cliente } from '../../types/cliente';
+import { getOrigenText, getDestinoText, normalizeEstadoPartida } from '../../utils/viajeHelpers';
 
 interface OrdenCompraDetailProps {
   ordenId: string;
@@ -362,7 +363,7 @@ export function OrdenCompraDetail({
                     <Group gap={4}>
                       <IconMapPin size={12} />
                       <Text size="sm">
-                        {viaje?.tramo?.origen?.denominacion || viaje?.origen || 'N/A'} → {viaje?.tramo?.destino?.denominacion || viaje?.destino || 'N/A'}
+                        {viaje ? getOrigenText(viaje) : 'N/A'} → {viaje ? getDestinoText(viaje) : 'N/A'}
                       </Text>
                     </Group>
                   </Table.Td>
@@ -397,7 +398,7 @@ export function OrdenCompraDetail({
                   
                   <Table.Td>
                     <EstadoPartidaIndicator
-                      estado={viaje?.estadoPartida || 'abierta'}
+                      estado={normalizeEstadoPartida(viaje?.estadoPartida)}
                       totalViaje={viaje?.total || 0}
                       totalCobrado={viaje?.totalCobrado || 0}
                       size="sm"

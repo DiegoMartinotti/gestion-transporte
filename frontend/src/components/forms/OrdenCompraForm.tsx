@@ -33,6 +33,7 @@ import { OrdenCompraService } from '../../services/ordenCompraService';
 import { ViajeService } from '../../services/viajeService';
 import type { OrdenCompraFormData, ViajeItem } from '../../types/ordenCompra';
 import type { Viaje } from '../../types/viaje';
+import { getOrigenText, getDestinoText, normalizeEstadoPartida } from '../../utils/viajeHelpers';
 
 const ESTADOS = [
   { value: 'Pendiente', label: 'Pendiente' },
@@ -253,7 +254,7 @@ export function OrdenCompraForm({
                         </Table.Td>
                         <Table.Td>
                           <Text size="sm">
-                            {viaje?.tramo?.origen?.denominacion || viaje?.origen || 'N/A'} → {viaje?.tramo?.destino?.denominacion || viaje?.destino || 'N/A'}
+                            {viaje ? getOrigenText(viaje) : 'N/A'} → {viaje ? getDestinoText(viaje) : 'N/A'}
                           </Text>
                         </Table.Td>
                         <Table.Td>
@@ -275,7 +276,7 @@ export function OrdenCompraForm({
                         </Table.Td>
                         <Table.Td>
                           <Badge
-                            color={viaje?.estadoPartida === 'pagada' ? 'green' : 'yellow'}
+                            color={normalizeEstadoPartida(viaje?.estadoPartida) === 'pagada' ? 'green' : 'yellow'}
                             size="sm"
                           >
                             {viaje?.estadoPartida || 'N/A'}
