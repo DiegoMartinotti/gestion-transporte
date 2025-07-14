@@ -36,7 +36,7 @@ interface ExcelImportModalProps {
   opened: boolean;
   onClose: () => void;
   title: string;
-  entityType: 'cliente' | 'empresa' | 'personal' | 'sites';
+  entityType: 'cliente' | 'empresa' | 'personal' | 'sites' | 'viajes';
   onImportComplete?: (result: any) => void;
   processExcelFile: (file: File, options: any) => Promise<any>;
   validateExcelFile: (file: File) => Promise<any>;

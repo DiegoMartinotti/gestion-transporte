@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, Group, Button, Stack, Title, Badge, Select, Tabs, Text, Grid, Paper, Alert } from '@mantine/core';
-import { IconPlus, IconTruck, IconCalendar, IconMapPin, IconClock, IconAlertCircle, IconCheckupList, IconX, IconCheck } from '@tabler/icons-react';
+import { IconPlus, IconTruck, IconCalendar, IconMapPin, IconClock, IconAlertCircle, IconCheckupList, IconX, IconCheck, IconUpload, IconDownload } from '@tabler/icons-react';
 import DataTable from '../../components/base/DataTable';
 import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
 import { DateRangePicker } from '../../components/base/SimpleDateRangePicker';
@@ -8,9 +8,13 @@ import SearchInput from '../../components/base/SearchInput';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import { useViajes } from '../../hooks/useViajes';
 import { useVirtualizedTable } from '../../hooks/useVirtualizedTable';
+import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { ClienteSelector } from '../../components/selectors/ClienteSelector';
 import { VehiculoSelector } from '../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../components/selectors/PersonalSelector';
+import { ExcelImportModal } from '../../components/modals';
+import { viajeExcelService } from '../../services/BaseExcelService';
+import { ViajeService } from '../../services/viajeService';
 import { Viaje } from '../../types/viaje';
 
 export function ViajesPage() {
@@ -23,6 +27,7 @@ export function ViajesPage() {
   const [choferFilter, setChoferFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>('todos');
   const [useVirtualScrolling] = useState(viajes.length > 100);
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   // Hook para tabla virtualizada
   const {} = useVirtualizedTable({
@@ -30,6 +35,15 @@ export function ViajesPage() {
     initialPageSize: 500,
     enableLocalFiltering: true,
     enableLocalSorting: true
+  });
+
+  // Hook unificado para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'viajes',
+    entityName: 'viajes',
+    exportFunction: (filters) => viajeExcelService.exportToExcel(filters),
+    templateFunction: () => viajeExcelService.getTemplate(),
+    reloadFunction: () => {}, // Se puede implementar reload si es necesario
   });
 
   const estadoOptions = [
@@ -219,6 +233,11 @@ export function ViajesPage() {
   const hasActiveFilters = search || clienteFilter || estadoFilter || 
                           dateRange[0] || vehiculoFilter || choferFilter;
 
+  const handleImportComplete = async (result: any) => {
+    setImportModalOpened(false);
+    excelOperations.handleImportComplete(result);
+  };
+
   if (error) {
     return (
       <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
@@ -231,9 +250,29 @@ export function ViajesPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={2}>Gestión de Viajes</Title>
-        <Button leftSection={<IconPlus />}>
-          Nuevo Viaje
-        </Button>
+        
+        <Group gap="sm">
+          <Button
+            variant="outline"
+            leftSection={<IconUpload size="1rem" />}
+            onClick={() => setImportModalOpened(true)}
+          >
+            Importar
+          </Button>
+          
+          <Button
+            variant="outline"
+            leftSection={<IconDownload size="1rem" />}
+            onClick={() => excelOperations.handleExport({})}
+            loading={excelOperations.isExporting}
+          >
+            Exportar
+          </Button>
+          
+          <Button leftSection={<IconPlus />}>
+            Nuevo Viaje
+          </Button>
+        </Group>
       </Group>
 
       <Grid gutter="sm">
@@ -384,6 +423,28 @@ export function ViajesPage() {
           </LoadingOverlay>
         </Stack>
       </Card>
+
+      <ExcelImportModal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        title="Importar Viajes desde Excel"
+        entityType="viajes"
+        onImportComplete={handleImportComplete}
+        processExcelFile={ViajeService.processExcelFile}
+        validateExcelFile={ViajeService.validateExcelFile}
+        previewExcelFile={ViajeService.previewExcelFile}
+        getTemplate={async () => {
+          const blob = await viajeExcelService.getTemplate();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'plantilla_viajes.xlsx';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }}
+      />
     </Stack>
   );
 }
