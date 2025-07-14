@@ -47,7 +47,9 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
       cliente: typeof viaje?.cliente === 'string' ? viaje.cliente : viaje?.cliente?._id || '',
       tramo: viaje?.tramo?._id || '',
       numeroViaje: parseInt(viaje?.numeroViaje || '0'),
-      vehiculos: viaje?.vehiculos?.map(v => v.vehiculo) || [],
+      vehiculos: viaje?.vehiculos?.map(v => 
+        typeof v.vehiculo === 'object' ? v.vehiculo._id : v.vehiculo
+      ) || [],
       choferes: viaje?.choferes?.map(c => c._id) || [],
       ayudantes: viaje?.ayudantes?.map(a => a._id) || [],
       carga: {
