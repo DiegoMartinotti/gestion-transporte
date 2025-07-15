@@ -143,7 +143,32 @@ export const getViajeById = async (req: AuthenticatedRequest, res: Response<IVia
 
 export const createViaje = async (req: AuthenticatedRequest, res: Response<IViaje | ApiResponse>): Promise<void> => {
     try {
-        const nuevoViaje = new Viaje(req.body);
+        const viajeData = req.body;
+        
+        // Si no se especifica tipoTramo, buscar el tipo con tarifa más alta
+        if (!viajeData.tipoTramo && viajeData.origen && viajeData.destino && viajeData.cliente) {
+            logger.debug('tipoTramo no especificado, buscando el tipo con tarifa más alta...');
+            
+            const tipoTramoOptimo = await tramoService.getTipoTramoConTarifaMasAlta(
+                viajeData.origen,
+                viajeData.destino,
+                viajeData.cliente,
+                viajeData.fecha ? new Date(viajeData.fecha) : new Date()
+            );
+            
+            viajeData.tipoTramo = tipoTramoOptimo;
+            logger.info(`Asignado tipoTramo automáticamente: ${tipoTramoOptimo}`);
+        }
+        
+        // Asegurar que peaje y tarifa están presentes (serán calculados en pre('save'))
+        if (typeof viajeData.peaje === 'undefined') {
+            viajeData.peaje = 0; // Valor temporal, será calculado en pre('save')
+        }
+        if (typeof viajeData.tarifa === 'undefined') {
+            viajeData.tarifa = 0; // Valor temporal, será calculado en pre('save')
+        }
+        
+        const nuevoViaje = new Viaje(viajeData);
         await nuevoViaje.save();
         res.status(201).json(nuevoViaje);
     } catch (error) {
@@ -262,15 +287,107 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
         logger.info(`Iniciando importación masiva de viajes para cliente: ${clienteDoc.nombre} (${clienteId})`);
         logger.info(`Total de viajes a procesar: ${viajes.length}`);
 
-        // Aquí continuaría la lógica de procesamiento de viajes...
-        // Por simplicidad, solo actualizamos el estado a completado
+        // Procesamiento de viajes
+        let successCount = 0;
+        let failCount = 0;
+        const viajesCreados: any[] = [];
+        const erroresDetallados: any[] = [];
+
+        for (let i = 0; i < viajes.length; i++) {
+            const viajeData = viajes[i];
+            
+            try {
+                // Validar datos básicos
+                if (!viajeData.fecha || !viajeData.origen || !viajeData.destino || !viajeData.dt) {
+                    throw new Error('Faltan campos obligatorios: fecha, origen, destino o dt');
+                }
+
+                // Asignar cliente si no viene en los datos
+                viajeData.cliente = viajeData.cliente || clienteId;
+
+                // Si no se especifica tipoTramo, buscar el tipo con tarifa más alta
+                if (!viajeData.tipoTramo) {
+                    logger.debug(`Viaje DT ${viajeData.dt}: tipoTramo no especificado, buscando el tipo con tarifa más alta...`);
+                    
+                    const tipoTramoOptimo = await tramoService.getTipoTramoConTarifaMasAlta(
+                        viajeData.origen,
+                        viajeData.destino,
+                        viajeData.cliente,
+                        viajeData.fecha ? new Date(viajeData.fecha) : new Date()
+                    );
+                    
+                    viajeData.tipoTramo = tipoTramoOptimo;
+                    logger.info(`Viaje DT ${viajeData.dt}: Asignado tipoTramo automáticamente: ${tipoTramoOptimo}`);
+                }
+                
+                // Asegurar que peaje y tarifa están presentes (serán calculados en pre('save'))
+                if (typeof viajeData.peaje === 'undefined') {
+                    viajeData.peaje = 0; // Valor temporal, será calculado en pre('save')
+                }
+                if (typeof viajeData.tarifa === 'undefined') {
+                    viajeData.tarifa = 0; // Valor temporal, será calculado en pre('save')
+                }
+
+                // Crear el viaje
+                const nuevoViaje = new Viaje(viajeData);
+                await nuevoViaje.save({ session });
+                
+                viajesCreados.push(nuevoViaje);
+                successCount++;
+                
+            } catch (error: any) {
+                failCount++;
+                const errorMsg = error.message || 'Error desconocido';
+                logger.error(`Error procesando viaje ${i + 1} (DT: ${viajeData.dt || 'sin DT'}):`, errorMsg);
+                
+                erroresDetallados.push({
+                    indice: i + 1,
+                    dt: viajeData.dt || 'sin DT',
+                    error: errorMsg
+                });
+
+                // Actualizar categorías de error en ImportacionTemporal
+                if (importacionId) {
+                    const updateData: any = {};
+                    
+                    if (errorMsg.includes('tramo')) {
+                        updateData['$inc'] = { 'failureDetails.missingTramos.count': 1 };
+                        updateData['$push'] = { 'failureDetails.missingTramos.details': viajeData.dt || `Viaje ${i + 1}` };
+                    } else if (errorMsg.includes('chofer') || errorMsg.includes('personal')) {
+                        updateData['$inc'] = { 'failureDetails.missingPersonal.count': 1 };
+                        updateData['$push'] = { 'failureDetails.missingPersonal.details': viajeData.dt || `Viaje ${i + 1}` };
+                    } else if (errorMsg.includes('vehiculo')) {
+                        updateData['$inc'] = { 'failureDetails.missingVehiculos.count': 1 };
+                        updateData['$push'] = { 'failureDetails.missingVehiculos.details': viajeData.dt || `Viaje ${i + 1}` };
+                    } else if (errorMsg.includes('duplicate') || errorMsg.includes('dt')) {
+                        updateData['$inc'] = { 'failureDetails.duplicateDt.count': 1 };
+                        updateData['$push'] = { 'failureDetails.duplicateDt.details': viajeData.dt || `Viaje ${i + 1}` };
+                    } else {
+                        updateData['$inc'] = { 'failureDetails.invalidData.count': 1 };
+                        updateData['$push'] = { 'failureDetails.invalidData.details': viajeData.dt || `Viaje ${i + 1}` };
+                    }
+                    
+                    if (Object.keys(updateData).length > 0) {
+                        await ImportacionTemporal.findByIdAndUpdate(
+                            importacionId,
+                            updateData,
+                            { session }
+                        );
+                    }
+                }
+            }
+        }
+
+        // Actualizar el estado final de la importación
         if (importacionId) {
             await ImportacionTemporal.findByIdAndUpdate(
                 importacionId,
                 { 
                     status: 'completed',
-                    successCountInitial: viajes.length,
-                    message: 'Importación completada (versión simplificada)'
+                    successCountInitial: successCount,
+                    failCountInitial: failCount,
+                    message: `Importación completada: ${successCount} viajes creados, ${failCount} errores`,
+                    failedTrips: erroresDetallados
                 },
                 { session }
             );
@@ -281,11 +398,15 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
 
         res.json({
             success: true,
-            message: `Importación iniciada para ${viajes.length} viajes`,
+            message: `Importación completada: ${successCount} viajes creados, ${failCount} errores`,
             data: {
                 importacionId,
                 clienteId,
-                totalViajes: viajes.length
+                totalViajes: viajes.length,
+                successCount,
+                failCount,
+                viajesCreados: viajesCreados.map(v => v._id),
+                erroresDetallados
             }
         });
 

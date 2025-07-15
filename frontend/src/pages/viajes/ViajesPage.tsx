@@ -589,9 +589,9 @@ export function ViajesPage() {
         title="Importar Viajes desde Excel"
         entityType="viajes"
         onImportComplete={handleImportComplete}
-        processExcelFile={ViajeService.processExcelFile}
-        validateExcelFile={ViajeService.validateExcelFile}
-        previewExcelFile={ViajeService.previewExcelFile}
+        processExcelFile={ViajeService.processExcelFile.bind(ViajeService)}
+        validateExcelFile={ViajeService.validateExcelFile.bind(ViajeService)}
+        previewExcelFile={ViajeService.previewExcelFile.bind(ViajeService)}
         getTemplate={async () => {
           const blob = await viajeExcelService.getTemplate();
           const url = window.URL.createObjectURL(blob);
