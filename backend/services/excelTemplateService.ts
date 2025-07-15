@@ -569,7 +569,7 @@ export class ExcelTemplateService {
                 { header: 'Cliente *', key: 'cliente', width: 30 },
                 { header: 'Site Origen *', key: 'origen', width: 30 },
                 { header: 'Site Destino *', key: 'destino', width: 30 },
-                { header: 'Tipo Tramo *', key: 'tipoTramo', width: 15 },
+                { header: 'Tipo Tramo', key: 'tipoTramo', width: 15 },
                 { header: 'Fecha *', key: 'fecha', width: 15 },
                 { header: 'Chofer *', key: 'chofer', width: 15 },
                 { header: 'Vehículo Principal *', key: 'vehiculoPrincipal', width: 20 },
@@ -705,7 +705,7 @@ export class ExcelTemplateService {
             instructionsSheet.addRow(['2. Cliente *: Nombre del cliente (debe existir en "Clientes Disponibles")']);
             instructionsSheet.addRow(['3. Site Origen *: Nombre del site de origen (debe existir en "Sites Disponibles")']);
             instructionsSheet.addRow(['4. Site Destino *: Nombre del site de destino (debe existir en "Sites Disponibles")']);
-            instructionsSheet.addRow(['5. Tipo Tramo *: Debe ser "TRMC" o "TRMI"']);
+            instructionsSheet.addRow(['5. Tipo Tramo: "TRMC" o "TRMI" (opcional - si no se especifica, el sistema seleccionará automáticamente el tipo con tarifa más alta)']);
             instructionsSheet.addRow(['6. Fecha *: Formato DD/MM/AAAA (ej: 15/01/2024)']);
             instructionsSheet.addRow(['7. Chofer *: DNI del chofer (debe existir en "Choferes Disponibles")']);
             instructionsSheet.addRow(['8. Vehículo Principal *: Dominio del vehículo (debe existir en "Vehículos Disponibles")']);
@@ -715,6 +715,7 @@ export class ExcelTemplateService {
             instructionsSheet.addRow(['12. Observaciones: Información adicional (opcional)']);
             instructionsSheet.addRow(['']);
             instructionsSheet.addRow(['CAMPOS CALCULADOS AUTOMÁTICAMENTE:']);
+            instructionsSheet.addRow(['- Tipo Tramo: Si no se especifica, se selecciona el tipo con la tarifa más alta vigente para la fecha']);
             instructionsSheet.addRow(['- Tipo Unidad: Se determina automáticamente según el vehículo principal']);
             instructionsSheet.addRow(['- Tarifa: Se calcula según el tramo y tarifas vigentes']);
             instructionsSheet.addRow(['- Peaje: Se obtiene de las tarifas vigentes del tramo']);

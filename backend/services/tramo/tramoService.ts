@@ -958,10 +958,100 @@ const createTramosBulk = async (tramosData: TramosBulkData[], options: { session
     };
 };
 
+/**
+ * Obtiene el tipo de tramo con la tarifa más alta para una combinación origen-destino-cliente en una fecha específica.
+ * Si no hay tarifas vigentes, busca la más reciente.
+ * Si no existe el tramo, retorna 'TRMC' por defecto.
+ * 
+ * @param origenId - ID del sitio origen
+ * @param destinoId - ID del sitio destino
+ * @param clienteId - ID del cliente
+ * @param fecha - Fecha para buscar tarifas vigentes
+ * @returns Tipo de tramo con tarifa más alta ('TRMC' o 'TRMI')
+ */
+async function getTipoTramoConTarifaMasAlta(
+    origenId: string,
+    destinoId: string,
+    clienteId: string,
+    fecha: Date = new Date()
+): Promise<'TRMC' | 'TRMI'> {
+    try {
+        logger.debug(`Buscando tipo de tramo con tarifa más alta para origen: ${origenId}, destino: ${destinoId}, cliente: ${clienteId}, fecha: ${fecha.toISOString()}`);
+        
+        // Buscar el tramo
+        const tramo = await Tramo.findOne({
+            origen: origenId,
+            destino: destinoId,
+            cliente: clienteId
+        }).lean();
+        
+        if (!tramo) {
+            logger.debug(`No se encontró tramo para la combinación especificada. Retornando 'TRMC' por defecto`);
+            return 'TRMC';
+        }
+        
+        if (!tramo.tarifasHistoricas || tramo.tarifasHistoricas.length === 0) {
+            logger.debug(`Tramo sin tarifas históricas. Retornando 'TRMC' por defecto`);
+            return 'TRMC';
+        }
+        
+        // Buscar tarifas vigentes para la fecha
+        const tarifasVigentes = tramo.tarifasHistoricas.filter((tarifa: any) => 
+            new Date(tarifa.vigenciaDesde) <= fecha && 
+            new Date(tarifa.vigenciaHasta) >= fecha
+        );
+        
+        if (tarifasVigentes.length > 0) {
+            // Encontrar la tarifa con mayor valor
+            const tarifaMasAlta = tarifasVigentes.reduce((maxTarifa, tarifa) => {
+                return tarifa.valor > maxTarifa.valor ? tarifa : maxTarifa;
+            });
+            
+            logger.debug(`Tarifa vigente más alta encontrada: tipo=${tarifaMasAlta.tipo}, valor=${tarifaMasAlta.valor}`);
+            return tarifaMasAlta.tipo as 'TRMC' | 'TRMI';
+        }
+        
+        // No hay tarifas vigentes, buscar la más reciente
+        logger.debug(`No hay tarifas vigentes para la fecha ${fecha.toISOString()}. Buscando la más reciente...`);
+        
+        // Ordenar por vigenciaHasta descendente y tomar la más reciente
+        const tarifaMasReciente = tramo.tarifasHistoricas
+            .sort((a: any, b: any) => new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime())[0];
+        
+        if (tarifaMasReciente) {
+            logger.debug(`Usando tarifa más reciente: tipo=${tarifaMasReciente.tipo}, vigenciaHasta=${tarifaMasReciente.vigenciaHasta}`);
+            
+            // Entre las tarifas con la misma fecha de vigencia, buscar la de mayor valor
+            const mismaFechaVigencia = tramo.tarifasHistoricas.filter((t: any) => 
+                new Date(t.vigenciaHasta).getTime() === new Date(tarifaMasReciente.vigenciaHasta).getTime()
+            );
+            
+            if (mismaFechaVigencia.length > 1) {
+                const tarifaMasAltaMismaFecha = mismaFechaVigencia.reduce((maxTarifa, tarifa) => {
+                    return tarifa.valor > maxTarifa.valor ? tarifa : maxTarifa;
+                });
+                logger.debug(`Entre tarifas con misma fecha, la más alta es: tipo=${tarifaMasAltaMismaFecha.tipo}, valor=${tarifaMasAltaMismaFecha.valor}`);
+                return tarifaMasAltaMismaFecha.tipo as 'TRMC' | 'TRMI';
+            }
+            
+            return tarifaMasReciente.tipo as 'TRMC' | 'TRMI';
+        }
+        
+        // No debería llegar aquí si hay tarifas históricas, pero por seguridad
+        logger.warn(`No se pudo determinar el tipo de tramo. Retornando 'TRMC' por defecto`);
+        return 'TRMC';
+        
+    } catch (error) {
+        logger.error(`Error al obtener tipo de tramo con tarifa más alta: ${error}`);
+        return 'TRMC'; // Valor por defecto en caso de error
+    }
+}
+
 // Exportar las funciones públicas
 export {
     bulkImportTramos,
     getTramosByCliente,
     getDistanciasCalculadas,
-    createTramosBulk
+    createTramosBulk,
+    getTipoTramoConTarifaMasAlta
 };
