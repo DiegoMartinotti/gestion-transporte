@@ -24,13 +24,16 @@ import {
   IconX,
   IconEye,
   IconRefresh,
-  IconDownload
+  IconDownload,
+  IconUpload
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { ExcelUploadZone } from '../excel/ExcelUploadZone';
 import ExcelDataPreview from '../excel/ExcelDataPreview';
 import { ExcelValidationReport } from '../excel/ExcelValidationReport';
 import { ExcelImportProgress } from '../excel/ExcelImportProgress';
+import { ViajeService } from '../../services/viajeService';
+import CorrectionUploadModal from './CorrectionUploadModal';
 
 interface ExcelImportModalProps {
   opened: boolean;
@@ -65,6 +68,7 @@ export function ExcelImportModal({
   const [autoCorrect, setAutoCorrect] = useState(true);
   const [skipInvalidRows, setSkipInvalidRows] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [correctionUploadModalOpen, setCorrectionUploadModalOpen] = useState(false);
   
   const abortController = useRef<AbortController | null>(null);
 
@@ -156,11 +160,20 @@ export function ExcelImportModal({
       setImportResult(result);
       setCurrentStep(3);
 
-      notifications.show({
-        title: 'Importación completada',
-        message: `Se importaron ${result.summary?.insertedRows || 0} registros correctamente`,
-        color: 'green'
-      });
+      // Mostrar notificación apropiada según el resultado
+      if (result.hasMissingData && result.summary?.errorRows > 0) {
+        notifications.show({
+          title: 'Importación parcial',
+          message: `Se importaron ${result.summary?.insertedRows || 0} registros. ${result.summary?.errorRows || 0} registros requieren datos adicionales.`,
+          color: 'orange'
+        });
+      } else {
+        notifications.show({
+          title: 'Importación completada',
+          message: `Se importaron ${result.summary?.insertedRows || 0} registros correctamente`,
+          color: 'green'
+        });
+      }
 
       if (onImportComplete) {
         onImportComplete(result);
@@ -191,6 +204,138 @@ export function ExcelImportModal({
         message: 'No se pudo descargar la plantilla',
         color: 'red'
       });
+    }
+  };
+
+  const handleDownloadMissingDataTemplates = async () => {
+    if (!importResult?.importId) {
+      console.error('No hay importId disponible:', importResult);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Descargando plantillas para importId:', importResult.importId);
+      
+      const blob = await ViajeService.downloadMissingDataTemplates(importResult.importId);
+      
+      // Crear URL para descarga
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `datos_faltantes_${importResult.importId}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      notifications.show({
+        title: 'Plantillas descargadas',
+        message: 'Se han descargado las plantillas con los datos faltantes',
+        color: 'green'
+      });
+    } catch (err: any) {
+      console.error('Error descargando plantillas:', err);
+      console.error('Error response:', err.response);
+      notifications.show({
+        title: 'Error',
+        message: `No se pudieron descargar las plantillas de corrección: ${err.message}`,
+        color: 'red'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCorrectionUploadSuccess = (reintentoResult?: any) => {
+    setCorrectionUploadModalOpen(false);
+    
+    if (reintentoResult && reintentoResult.success) {
+      // Actualizar el resultado de importación con los nuevos datos
+      const updatedResult = {
+        ...importResult,
+        summary: {
+          ...importResult.summary,
+          insertedRows: (importResult.summary?.insertedRows || 0) + (reintentoResult.successCount || 0),
+          errorRows: Math.max(0, (importResult.summary?.errorRows || 0) - (reintentoResult.successCount || 0))
+        },
+        hasMissingData: reintentoResult.failCount > 0
+      };
+      
+      setImportResult(updatedResult);
+      
+      notifications.show({
+        title: 'Datos importados y viajes reintentados',
+        message: `Se importaron los datos de corrección y se procesaron ${reintentoResult.successCount || 0} viajes adicionales exitosamente.`,
+        color: 'green'
+      });
+      
+      // Notificar al componente padre del éxito
+      if (onImportComplete) {
+        onImportComplete(updatedResult);
+      }
+    } else {
+      notifications.show({
+        title: 'Datos importados correctamente',
+        message: 'Los datos de corrección han sido importados. Ahora puedes reintentar la importación completa para procesar todos los viajes.',
+        color: 'green'
+      });
+    }
+  };
+
+  const handleRetryImport = async () => {
+    if (!file) {
+      notifications.show({
+        title: 'Error',
+        message: 'No hay archivo para reintentar la importación',
+        color: 'red'
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setCurrentStep(2); // Ir al paso de importación
+      setImportProgress(0);
+      
+      const options = {
+        autoCorrect,
+        skipInvalidRows,
+        progressCallback: (progress: any) => {
+          setImportProgress(progress.percentage || 0);
+        }
+      };
+
+      const result = await processExcelFile(file, options);
+      setImportResult(result);
+      setCurrentStep(3); // Ir al paso de resultados
+
+      if (result.hasMissingData && result.summary?.errorRows > 0) {
+        notifications.show({
+          title: 'Importación parcial',
+          message: `Se importaron ${result.summary?.insertedRows || 0} registros. ${result.summary?.errorRows || 0} registros aún requieren datos adicionales.`,
+          color: 'orange'
+        });
+      } else {
+        notifications.show({
+          title: 'Importación completada',
+          message: `Se importaron ${result.summary?.insertedRows || 0} registros correctamente`,
+          color: 'green'
+        });
+      }
+
+      if (onImportComplete) {
+        onImportComplete(result);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error durante la importación');
+      notifications.show({
+        title: 'Error en importación',
+        message: err.message || 'Error durante la importación',
+        color: 'red'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -353,14 +498,28 @@ export function ExcelImportModal({
       case 3:
         return (
           <Stack gap="md" align="center">
-            <ActionIcon size="xl" color="green" variant="light" radius="xl">
-              <IconCheck size="2rem" />
+            <ActionIcon 
+              size="xl" 
+              color={importResult?.hasMissingData ? "orange" : "green"} 
+              variant="light" 
+              radius="xl"
+            >
+              {importResult?.hasMissingData ? (
+                <IconAlertTriangle size="2rem" />
+              ) : (
+                <IconCheck size="2rem" />
+              )}
             </ActionIcon>
 
             <Stack gap="xs" align="center">
-              <Title order={4} c="green">¡Importación Completada!</Title>
+              <Title order={4} c={importResult?.hasMissingData ? "orange" : "green"}>
+                {importResult?.hasMissingData ? "¡Importación Parcial!" : "¡Importación Completada!"}
+              </Title>
               <Text size="sm" c="dimmed" ta="center">
-                Los datos se han importado correctamente al sistema.
+                {importResult?.hasMissingData 
+                  ? "Algunos registros se importaron correctamente, pero otros requieren datos adicionales."
+                  : "Los datos se han importado correctamente al sistema."
+                }
               </Text>
             </Stack>
 
@@ -387,22 +546,85 @@ export function ExcelImportModal({
                     </Badge>
                   </Group>
                 </Stack>
+
+                {/* Mostrar botones de descarga y carga si hay datos faltantes */}
+                {importResult.hasMissingData && importResult.summary?.errorRows > 0 && (
+                  <Stack gap="sm" mt="md">
+                    <Alert icon={<IconAlertTriangle size="1rem" />} color="orange">
+                      <Text size="sm">
+                        Algunos viajes no se pudieron importar por datos faltantes en el sistema.
+                        Descargue las plantillas pre-rellenadas para completar los datos necesarios.
+                      </Text>
+                    </Alert>
+                    
+                    <Group grow>
+                      <Button
+                        variant="outline"
+                        leftSection={<IconDownload size="1rem" />}
+                        onClick={handleDownloadMissingDataTemplates}
+                        loading={loading}
+                        disabled={loading}
+                        color="orange"
+                      >
+                        Descargar Plantillas
+                      </Button>
+                      
+                      <Button
+                        variant="filled"
+                        leftSection={<IconUpload size="1rem" />}
+                        onClick={() => setCorrectionUploadModalOpen(true)}
+                        disabled={loading}
+                        color="blue"
+                      >
+                        Cargar Plantillas
+                      </Button>
+                    </Group>
+                    
+                    <Text size="xs" c="dimmed" ta="center">
+                      1. Descargue las plantillas con los datos faltantes
+                      <br />
+                      2. Complete los datos requeridos en cada hoja
+                      <br />
+                      3. Cargue el archivo completado para procesarlo automáticamente
+                    </Text>
+                    
+                    <Button
+                      variant="light"
+                      leftSection={<IconRefresh size="1rem" />}
+                      onClick={handleRetryImport}
+                      disabled={loading}
+                      color="green"
+                      fullWidth
+                      mt="sm"
+                    >
+                      Reintentar Importación Completa
+                    </Button>
+                    
+                    <Text size="xs" c="dimmed" ta="center" mt="xs">
+                      Con los datos completados, ahora se deberían procesar más viajes exitosamente
+                    </Text>
+                  </Stack>
+                )}
               </Box>
             )}
 
-            <Group mt="md">
+            <Group mt="md" justify="space-between">
               <Button variant="subtle" onClick={handleClose}>
                 Cerrar
               </Button>
-              <Button onClick={() => {
-                setCurrentStep(0);
-                setFile(null);
-                setPreviewData(null);
-                setValidationResult(null);
-                setImportResult(null);
-              }}>
-                Importar Otro Archivo
-              </Button>
+              <Group>
+                {!importResult?.hasMissingData && (
+                  <Button onClick={() => {
+                    setCurrentStep(0);
+                    setFile(null);
+                    setPreviewData(null);
+                    setValidationResult(null);
+                    setImportResult(null);
+                  }}>
+                    Importar Otro Archivo
+                  </Button>
+                )}
+              </Group>
             </Group>
           </Stack>
         );
@@ -454,6 +676,14 @@ export function ExcelImportModal({
 
         {renderStepContent()}
       </Stack>
+      
+      {/* Modal de carga de corrección */}
+      <CorrectionUploadModal
+        opened={correctionUploadModalOpen}
+        onClose={() => setCorrectionUploadModalOpen(false)}
+        importId={importResult?.importId || ''}
+        onUploadSuccess={handleCorrectionUploadSuccess}
+      />
     </Modal>
   );
 }

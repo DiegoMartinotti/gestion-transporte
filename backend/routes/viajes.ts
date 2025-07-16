@@ -47,32 +47,17 @@ router.post('/bulk/iniciar',
     viajeController.iniciarBulkImportViajes // Controlador principal
 );
 
-// TODO: Implementar estos endpoints cuando se completen los controladores correspondientes
-/*
 // Descargar plantillas pre-rellenadas para corrección
 router.get(
-    '/bulk/template/:importId/:templateType',
+    '/bulk/template/:importId',
     viajeController.descargarPlantillaCorreccion
 );
 
-// Procesar una plantilla de corrección subida (Site, Personal, Vehiculo, Tramo)
+// Procesar plantilla de corrección completada
 router.post(
-    '/bulk/process-template/:importId/:templateType',
-    upload.single('templateFile'), // Middleware para manejar el archivo subido
-    viajeController.procesarPlantillaCorreccion // Controlador (Asegúrate que esté implementado)
+    '/bulk/process-correction/:importId',
+    upload.single('correctionFile'),
+    viajeController.procesarPlantillaCorreccion
 );
-
-// Etapa 2: Reintentar la importación de viajes fallidos después de procesar correcciones
-router.post(
-    '/bulk/retry/:importId',
-    viajeController.reintentarImportacionViajes // Controlador (Asegúrate que esté implementado)
-);
-
-// Descargar archivo Excel/CSV con los viajes que fallaron definitivamente
-router.get(
-    '/bulk/fallback/:importId',
-    viajeController.descargarFallbackViajes // Controlador (Asegúrate que esté implementado)
-);
-*/
 
 export default router;
