@@ -59,6 +59,9 @@ interface ApiResponse<T = any> {
 interface BulkImportRequest {
     cliente: string;
     viajes: any[];
+    erroresMapeo?: any[];
+    sitesNoEncontrados?: string[];
+    totalFilasConErrores?: number;
 }
 
 /**
@@ -229,11 +232,13 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
             return;
         }
 
-        const { cliente: clienteId, viajes } = req.body;
+        const { cliente: clienteId, viajes, erroresMapeo, sitesNoEncontrados } = req.body;
         
         logger.debug('Datos recibidos para bulk import:', {
             clienteId,
-            cantidadViajes: viajes?.length || 0
+            cantidadViajes: viajes?.length || 0,
+            erroresMapeo: erroresMapeo?.length || 0,
+            sitesNoEncontrados: sitesNoEncontrados?.length || 0
         });
 
         if (!Types.ObjectId.isValid(clienteId)) {
@@ -250,21 +255,34 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
             return;
         }
 
+        // Registrar datos faltantes detectados en el frontend
+        const missingSitesCount = sitesNoEncontrados?.length || 0;
+        const failCountFromFrontend = erroresMapeo?.length || 0;
+
         // Crear registro de importación temporal
         const importacion = new ImportacionTemporal({
             cliente: clienteId,
             status: 'processing',
-            failCountInitial: 0,
+            failCountInitial: failCountFromFrontend,
             successCountInitial: 0,
             failureDetails: {
-                missingSites: { count: 0, details: [] },
+                missingSites: { 
+                    count: missingSitesCount, 
+                    details: sitesNoEncontrados || [] 
+                },
                 missingPersonal: { count: 0, details: [] },
                 missingVehiculos: { count: 0, details: [] },
                 missingTramos: { count: 0, details: [] },
                 duplicateDt: { count: 0, details: [] },
                 invalidData: { count: 0, details: [] },
             },
-            failedTrips: [],
+            failedTrips: erroresMapeo?.map((error: any, index: number) => ({
+                originalIndex: error.fila,
+                dt: String(`Viaje ${error.fila}`),
+                reason: 'MISSING_SITE',
+                message: error.error,
+                data: {}
+            })) || [],
         });
         await importacion.save({ session });
         importacionId = importacion._id?.toString() || null;
@@ -328,6 +346,20 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
                     viajeData.tarifa = 0; // Valor temporal, será calculado en pre('save')
                 }
 
+                // Validar datos antes de crear el viaje
+                logger.debug(`Validando datos del viaje ${i + 1}:`, {
+                    chofer: viajeData.chofer,
+                    choferType: typeof viajeData.chofer,
+                    dt: viajeData.dt,
+                    origen: viajeData.origen,
+                    destino: viajeData.destino
+                });
+                
+                // Verificar que el chofer sea un ObjectId válido
+                if (typeof viajeData.chofer === 'number') {
+                    throw new Error(`Chofer inválido: recibido número ${viajeData.chofer}, se esperaba ObjectId`);
+                }
+                
                 // Crear el viaje
                 const nuevoViaje = new Viaje(viajeData);
                 await nuevoViaje.save({ session });
@@ -343,28 +375,39 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
                 erroresDetallados.push({
                     indice: i + 1,
                     dt: viajeData.dt || 'sin DT',
-                    error: errorMsg
+                    error: errorMsg,
+                    data: viajeData // Guardar los datos completos del viaje que falló
                 });
 
                 // Actualizar categorías de error en ImportacionTemporal
                 if (importacionId) {
                     const updateData: any = {};
                     
-                    if (errorMsg.includes('tramo')) {
+                    if (errorMsg.includes('tramo') || errorMsg.includes('tarifa')) {
+                        // Obtener nombres reales de los sites desde la BD
+                        const origenSite = await Site.findById(viajeData.origen).select('nombre');
+                        const destinoSite = await Site.findById(viajeData.destino).select('nombre');
+                        
                         updateData['$inc'] = { 'failureDetails.missingTramos.count': 1 };
-                        updateData['$push'] = { 'failureDetails.missingTramos.details': viajeData.dt || `Viaje ${i + 1}` };
+                        updateData['$push'] = { 
+                            'failureDetails.missingTramos.details': {
+                                origen: origenSite?.nombre || `ID: ${viajeData.origen}`,
+                                destino: destinoSite?.nombre || `ID: ${viajeData.destino}`,
+                                fecha: viajeData.fecha ? new Date(viajeData.fecha).toISOString().split('T')[0] : 'Fecha desconocida'
+                            }
+                        };
                     } else if (errorMsg.includes('chofer') || errorMsg.includes('personal')) {
                         updateData['$inc'] = { 'failureDetails.missingPersonal.count': 1 };
-                        updateData['$push'] = { 'failureDetails.missingPersonal.details': viajeData.dt || `Viaje ${i + 1}` };
+                        updateData['$push'] = { 'failureDetails.missingPersonal.details': String(viajeData.dt || `Viaje ${i + 1}`) };
                     } else if (errorMsg.includes('vehiculo')) {
                         updateData['$inc'] = { 'failureDetails.missingVehiculos.count': 1 };
-                        updateData['$push'] = { 'failureDetails.missingVehiculos.details': viajeData.dt || `Viaje ${i + 1}` };
+                        updateData['$push'] = { 'failureDetails.missingVehiculos.details': String(viajeData.dt || `Viaje ${i + 1}`) };
                     } else if (errorMsg.includes('duplicate') || errorMsg.includes('dt')) {
                         updateData['$inc'] = { 'failureDetails.duplicateDt.count': 1 };
-                        updateData['$push'] = { 'failureDetails.duplicateDt.details': viajeData.dt || `Viaje ${i + 1}` };
+                        updateData['$push'] = { 'failureDetails.duplicateDt.details': String(viajeData.dt || `Viaje ${i + 1}`) };
                     } else {
                         updateData['$inc'] = { 'failureDetails.invalidData.count': 1 };
-                        updateData['$push'] = { 'failureDetails.invalidData.details': viajeData.dt || `Viaje ${i + 1}` };
+                        updateData['$push'] = { 'failureDetails.invalidData.details': String(viajeData.dt || `Viaje ${i + 1}`) };
                     }
                     
                     if (Object.keys(updateData).length > 0) {
@@ -379,15 +422,31 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
         }
 
         // Actualizar el estado final de la importación
+        const totalFailCountFinal = failCount + failCountFromFrontend;
         if (importacionId) {
             await ImportacionTemporal.findByIdAndUpdate(
                 importacionId,
                 { 
                     status: 'completed',
                     successCountInitial: successCount,
-                    failCountInitial: failCount,
-                    message: `Importación completada: ${successCount} viajes creados, ${failCount} errores`,
-                    failedTrips: erroresDetallados
+                    failCountInitial: totalFailCountFinal,
+                    message: `Importación completada: ${successCount} viajes creados, ${totalFailCountFinal} errores`,
+                    failedTrips: [
+                        ...(erroresMapeo?.map((error: any, index: number) => ({
+                            originalIndex: error.fila,
+                            dt: String(`Viaje ${error.fila}`),
+                            reason: 'MISSING_SITE',
+                            message: error.error,
+                            data: {} // Los errores de mapeo no tienen datos completos
+                        })) || []),
+                        ...erroresDetallados.map(error => ({
+                            originalIndex: error.indice,
+                            dt: String(error.dt),
+                            reason: 'PROCESSING_ERROR',
+                            message: error.error,
+                            data: error.data // Incluir los datos completos del viaje
+                        }))
+                    ]
                 },
                 { session }
             );
@@ -398,15 +457,19 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
 
         res.json({
             success: true,
-            message: `Importación completada: ${successCount} viajes creados, ${failCount} errores`,
+            message: `Importación completada: ${successCount} viajes creados, ${totalFailCountFinal} errores`,
             data: {
                 importacionId,
                 clienteId,
-                totalViajes: viajes.length,
+                totalViajes: viajes.length + failCountFromFrontend,
                 successCount,
-                failCount,
+                failCount: totalFailCountFinal,
                 viajesCreados: viajesCreados.map(v => v._id),
-                erroresDetallados
+                erroresDetallados: [
+                    ...(erroresMapeo || []),
+                    ...erroresDetallados
+                ],
+                sitesNoEncontrados: sitesNoEncontrados || []
             }
         });
 
@@ -449,5 +512,133 @@ export const getViajeTemplate = async (req: Request, res: Response): Promise<voi
     } catch (error) {
         logger.error('Error al generar plantilla de viajes:', error);
         res.status(500).json({ success: false, message: 'Error al generar plantilla' });
+    }
+};
+
+/**
+ * Descargar plantillas pre-rellenadas para corrección de datos faltantes
+ */
+export const descargarPlantillaCorreccion = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { importId } = req.params;
+        
+        logger.info(`Solicitud de descarga de plantillas para importId: ${importId}`);
+        
+        if (!importId || !Types.ObjectId.isValid(importId)) {
+            logger.error(`ID de importación inválido: ${importId}`);
+            res.status(400).json({ 
+                success: false, 
+                message: 'ID de importación inválido' 
+            });
+            return;
+        }
+
+        // Buscar la importación temporal
+        const importacion = await ImportacionTemporal.findById(importId).lean();
+        logger.info(`Importación encontrada: ${!!importacion}`);
+        
+        if (!importacion) {
+            logger.error(`Importación no encontrada para ID: ${importId}`);
+            res.status(404).json({ 
+                success: false, 
+                message: 'Importación no encontrada o expirada' 
+            });
+            return;
+        }
+        
+        logger.info(`Datos de la importación:`, {
+            cliente: importacion.cliente,
+            status: importacion.status,
+            failureDetails: importacion.failureDetails
+        });
+
+        // Verificar que la importación tenga datos faltantes
+        const hasFailures = importacion.failureDetails && (
+            importacion.failureDetails.missingSites.count > 0 ||
+            importacion.failureDetails.missingPersonal.count > 0 ||
+            importacion.failureDetails.missingVehiculos.count > 0 ||
+            importacion.failureDetails.missingTramos.count > 0
+        );
+
+        logger.info(`Tiene datos faltantes: ${hasFailures}`);
+        logger.info(`Sites faltantes: ${importacion.failureDetails?.missingSites.count || 0}`);
+
+        if (!hasFailures) {
+            logger.error('No hay datos faltantes para esta importación');
+            res.status(400).json({ 
+                success: false, 
+                message: 'No hay datos faltantes para esta importación' 
+            });
+            return;
+        }
+
+        // Generar las plantillas con datos faltantes
+        await ExcelTemplateService.generateMissingDataTemplates(res, importacion);
+        logger.info(`Plantillas de corrección generadas para importación ${importId}`);
+
+    } catch (error: any) {
+        logger.error('Error al generar plantillas de corrección:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error al generar plantillas de corrección' 
+        });
+    }
+};
+
+/**
+ * Procesar plantilla de corrección completada por el usuario
+ */
+export const procesarPlantillaCorreccion = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { importId } = req.params;
+        const file = req.file;
+
+        logger.info(`Procesando plantilla de corrección para importId: ${importId}`);
+
+        if (!importId || !Types.ObjectId.isValid(importId)) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'ID de importación inválido' 
+            });
+            return;
+        }
+
+        if (!file) {
+            res.status(400).json({ 
+                success: false, 
+                message: 'No se recibió archivo Excel' 
+            });
+            return;
+        }
+
+        // Buscar la importación temporal
+        const importacion = await ImportacionTemporal.findById(importId).lean();
+        if (!importacion) {
+            res.status(404).json({ 
+                success: false, 
+                message: 'Importación no encontrada o expirada' 
+            });
+            return;
+        }
+
+        logger.info(`Procesando archivo: ${file.originalname}, tamaño: ${file.size}`);
+
+        // Procesar el archivo Excel con plantillas completadas
+        const resultado = await ExcelTemplateService.processCorrectionTemplate(file.buffer, importacion);
+
+        logger.info(`Plantilla de corrección procesada exitosamente para importación ${importId}`);
+
+        res.json({
+            success: true,
+            message: 'Plantilla de corrección procesada exitosamente',
+            data: resultado
+        });
+
+    } catch (error: any) {
+        logger.error('Error al procesar plantilla de corrección:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || 'Error al procesar plantilla de corrección' 
+        });
     }
 };

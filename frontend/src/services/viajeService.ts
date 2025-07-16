@@ -99,7 +99,12 @@ export class ViajeService {
           apellido: p.apellido
         });
       }
-      personalMap.set(p.dni, p._id);
+      // Convertir DNI a string para consistencia
+      const dniStr = String(p.dni);
+      personalMap.set(dniStr, p._id);
+      if (index < 3) { // Solo log de los primeros 3
+        console.log(`Mapeando DNI: "${dniStr}" -> ID: "${p._id}"`);
+      }
     });
     
     console.log('resolvePersonalIds - Mapa final size:', personalMap.size);
@@ -347,6 +352,16 @@ export class ViajeService {
                 throw new Error(`Vehículo con dominio "${vehiculoDominio}" no encontrado`);
               }
               
+              // Validar que choferId es un ObjectId válido (no un número)
+              if (typeof choferId !== 'string' || choferId.length !== 24) {
+                throw new Error(`ID de chofer inválido: "${choferId}" (DNI: ${choferDniStr})`);
+              }
+              
+              // Validar que vehiculoId es un ObjectId válido (no un número)
+              if (typeof vehiculoId !== 'string' || vehiculoId.length !== 24) {
+                throw new Error(`ID de vehículo inválido: "${vehiculoId}" (dominio: ${vehiculoDominio})`);
+              }
+              
               // Crear el viaje mapeado
               const viajeData = {
                 cliente: cliente._id,
@@ -377,20 +392,48 @@ export class ViajeService {
           console.log('Viajes mapeados:', viajesMapeados);
           console.log('Errores de mapeo:', erroresMapeo);
           
-          // Si hay errores de mapeo, rechazar la promesa
-          if (erroresMapeo.length > 0) {
-            throw new Error(`Errores de mapeo en ${erroresMapeo.length} filas: ${erroresMapeo.map(e => `Fila ${e.fila}: ${e.error}`).join(', ')}`);
+          // Verificar que todos los viajes tengan datos válidos
+          for (let i = 0; i < viajesMapeados.length; i++) {
+            const viaje = viajesMapeados[i];
+            console.log(`Verificando viaje ${i + 1}:`, {
+              chofer: viaje.chofer,
+              choferType: typeof viaje.chofer,
+              vehiculos: viaje.vehiculos,
+              cliente: viaje.cliente,
+              origen: viaje.origen,
+              destino: viaje.destino
+            });
+            
+            // Validar que el chofer sea un ObjectId válido
+            if (typeof viaje.chofer !== 'string' || viaje.chofer.length !== 24) {
+              throw new Error(`Viaje ${i + 1} tiene chofer inválido: ${viaje.chofer} (tipo: ${typeof viaje.chofer})`);
+            }
           }
+          
+          // Si hay errores de mapeo, aún así enviar al backend para registrar los datos faltantes
+          console.log('Enviando datos al backend incluso con errores de mapeo para registrar faltantes');
           
           // Preparar los datos para el bulk import
           const bulkData = {
             cliente: cliente._id,
-            viajes: viajesMapeados
+            viajes: viajesMapeados,
+            // Incluir información sobre los errores para que el backend pueda registrarlos
+            erroresMapeo: erroresMapeo,
+            sitesNoEncontrados: Array.from(new Set(erroresMapeo
+              .filter(e => e.error.includes('origen') || e.error.includes('destino'))
+              .map(e => {
+                const match = e.error.match(/Site (?:origen|destino) "([^"]+)" no encontrado/);
+                return match ? match[1] : null;
+              })
+              .filter(Boolean))),
+            totalFilasConErrores: erroresMapeo.length
           };
           
-          // Llamar al endpoint bulk
+          // Llamar al endpoint bulk con timeout extendido
           console.log('Enviando datos al endpoint bulk:', bulkData);
-          const response = await api.post(`${this.baseUrl}/bulk/iniciar`, bulkData);
+          const response = await api.post(`${this.baseUrl}/bulk/iniciar`, bulkData, {
+            timeout: 60000 // 60 segundos para importaciones masivas
+          });
           console.log('Respuesta del servidor:', response.data);
           
           // Debug: mostrar errores detallados si hay fallos
@@ -403,17 +446,36 @@ export class ViajeService {
           
           // Transformar la respuesta al formato esperado por el modal
           const responseData = response.data as any;
+          const totalRows = jsonData.length;
+          const insertedRows = responseData.successCount || 0;
+          const errorRowsMapeo = erroresMapeo.length;
+          const errorRowsBackend = responseData.failCount || 0;
+          const totalErrorRows = errorRowsMapeo + errorRowsBackend;
+          
+          // Combinar errores de mapeo y errores del backend para detectar tipos de datos faltantes
+          const todosLosErrores = [
+            ...erroresMapeo,
+            ...(responseData.erroresDetallados || [])
+          ];
+          
           const transformedResponse = {
             success: true,
             importId: responseData.importacionId,
             summary: {
-              totalRows: responseData.totalViajes || viajesMapeados.length,
-              insertedRows: responseData.successCount || 0,
-              errorRows: responseData.failCount || 0,
-              successRate: responseData.totalViajes > 0 ? 
-                Math.round((responseData.successCount / responseData.totalViajes) * 100) : 0
+              totalRows: totalRows,
+              insertedRows: insertedRows,
+              errorRows: totalErrorRows,
+              successRate: totalRows > 0 ? Math.round((insertedRows / totalRows) * 100) : 0
             },
-            data: responseData
+            data: responseData,
+            // Información sobre datos faltantes para mostrar el botón de descarga
+            hasMissingData: totalErrorRows > 0,
+            missingDataTypes: {
+              sites: todosLosErrores.some((e: any) => e.error?.includes('origen') || e.error?.includes('destino')),
+              personal: todosLosErrores.some((e: any) => e.error?.includes('chofer') || e.error?.includes('personal')),
+              vehiculos: todosLosErrores.some((e: any) => e.error?.includes('vehiculo')),
+              tramos: todosLosErrores.some((e: any) => e.error?.includes('tramo') || e.error?.includes('tarifa'))
+            }
           };
           
           console.log('Respuesta transformada:', transformedResponse);
@@ -561,5 +623,93 @@ export class ViajeService {
       };
       fileReader.readAsArrayBuffer(file);
     });
+  }
+
+  // Método para descargar plantillas de corrección con datos faltantes
+  static async downloadMissingDataTemplates(importId: string): Promise<Blob> {
+    console.log('Llamando API para descargar plantillas:', `${this.baseUrl}/bulk/template/${importId}`);
+    
+    try {
+      console.log('Usando servicio API con autenticación por cookies...');
+      
+      // Usar fetch con las mismas opciones que el servicio API
+      const response = await fetch(`http://localhost:3001/api${this.baseUrl}/bulk/template/${importId}`, {
+        method: 'GET',
+        credentials: 'include', // Incluir cookies para autenticación
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Respuesta del fetch:', response);
+      console.log('Status:', response.status);
+      console.log('Content-Type:', response.headers.get('content-type'));
+
+      if (!response.ok) {
+        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+      }
+
+      // Crear blob directamente desde la respuesta
+      const blob = await response.blob();
+      
+      console.log('Blob creado:', blob);
+      console.log('Tamaño del blob:', blob.size);
+      console.log('Tipo del blob:', blob.type);
+      
+      // Validar que el blob tiene contenido
+      if (blob.size === 0) {
+        throw new Error('El archivo descargado está vacío');
+      }
+      
+      return blob;
+      
+    } catch (error: any) {
+      console.error('Error en downloadMissingDataTemplates:', error);
+      
+      if (error.response?.status === 401) {
+        throw new Error('Token de autenticación inválido o expirado');
+      }
+      
+      throw new Error(`Error al descargar plantillas: ${error.message}`);
+    }
+  }
+
+  // Método para cargar plantillas de corrección completadas
+  static async uploadCorrectionTemplate(importId: string, file: File): Promise<any> {
+    console.log('Cargando plantilla de corrección:', `${this.baseUrl}/bulk/process-correction/${importId}`);
+    
+    try {
+      const formData = new FormData();
+      formData.append('correctionFile', file);
+
+      const response = await fetch(`http://localhost:3001/api${this.baseUrl}/bulk/process-correction/${importId}`, {
+        method: 'POST',
+        credentials: 'include', // Incluir cookies para autenticación
+        body: formData
+      });
+
+      console.log('Respuesta del upload:', response);
+      console.log('Status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al procesar la plantilla de corrección');
+      }
+
+      const result = await response.json();
+      console.log('Resultado del procesamiento:', result);
+      
+      return result.data;
+      
+    } catch (error: any) {
+      console.error('Error en uploadCorrectionTemplate:', error);
+      
+      if (error.response?.status === 401) {
+        throw new Error('Token de autenticación inválido o expirado');
+      }
+      
+      throw new Error(`Error al cargar plantilla: ${error.message}`);
+    }
   }
 }

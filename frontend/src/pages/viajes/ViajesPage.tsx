@@ -23,7 +23,7 @@ const DEFAULT_PAGE_SIZE = 10;
 
 export function ViajesPage() {
   const navigate = useNavigate();
-  const { viajes, loading, error, deleteViaje } = useViajes();
+  const { viajes, loading, error, deleteViaje, fetchViajes } = useViajes();
   const [search, setSearch] = useState('');
   const [clienteFilter, setClienteFilter] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function ViajesPage() {
     entityName: 'viajes',
     exportFunction: (filters) => viajeExcelService.exportToExcel(filters),
     templateFunction: () => viajeExcelService.getTemplate(),
-    reloadFunction: () => {}, // Se puede implementar reload si es necesario
+    reloadFunction: fetchViajes, // Refrescar lista después de importación
   });
 
   const estadoOptions = [
@@ -289,7 +289,24 @@ export function ViajesPage() {
                           dateRange[0] || vehiculoFilter || choferFilter;
 
   const handleImportComplete = async (result: any) => {
-    setImportModalOpened(false);
+    console.log('handleImportComplete called with result:', result);
+    console.log('hasMissingData:', result.hasMissingData);
+    console.log('errorRows:', result.summary?.errorRows);
+    
+    // Refrescar la lista de viajes si hubo algún viaje importado exitosamente
+    if (result.summary?.insertedRows > 0) {
+      console.log('Refrescando lista de viajes después de importación exitosa');
+      await fetchViajes();
+    }
+    
+    // No cerrar el modal automáticamente si hay datos faltantes
+    // El usuario debe ver la opción de descarga de plantillas
+    if (!result.hasMissingData || result.summary?.errorRows === 0) {
+      console.log('Cerrando modal porque no hay datos faltantes');
+      setImportModalOpened(false);
+    } else {
+      console.log('Manteniendo modal abierto para mostrar opción de descarga');
+    }
     excelOperations.handleImportComplete(result);
   };
 
