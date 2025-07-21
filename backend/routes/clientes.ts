@@ -18,4 +18,4 @@ router.post('/', authenticateToken, createCliente as any);
 router.put('/:id', authenticateToken, updateCliente as any);
 router.delete('/:id', authenticateToken, deleteCliente as any);
 
-export default router;
+export default router;// Test comment
