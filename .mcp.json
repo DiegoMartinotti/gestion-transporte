@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "gestion-transporte-memory": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/home/diego/Claude-code-memory/mcp-qdrant-memory/dist/index.js"
+      ],
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "QDRANT_COLLECTION_NAME": "gestion-transporte",
+        "VOYAGE_API_KEY": "pa-A-3QXbJQGLk93p6Y1Krx4IRwVdSeEDRlk9mZbMXJnEH",
+        "OPENAI_API_KEY": "dummy-key-not-used",
+        "EMBEDDING_PROVIDER": "voyage",
+        "EMBEDDING_MODEL": "voyage-3-lite"
+      }
+    }
+  }
+}
