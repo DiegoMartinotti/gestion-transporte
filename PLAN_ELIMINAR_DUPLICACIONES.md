@@ -6,16 +6,36 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 ## 1. Backend - Controladores Duplicados
 
 ### 1.1 Consolidar Controladores de Vehículos
-- [ ] Verificar que `backend/controllers/vehiculo/` tiene todas las funcionalidades de `vehiculoController.ts`
-- [ ] Actualizar todas las importaciones en `backend/routes/vehiculos.ts` para usar los controladores modulares
-- [ ] Eliminar `backend/controllers/vehiculoController.ts`
-- [ ] Ejecutar tests para verificar que todo funciona correctamente
-- [ ] Commit: "refactor: consolidar controladores de vehículos y eliminar duplicación"
+- [x] Verificar que `backend/controllers/vehiculo/` tiene todas las funcionalidades de `vehiculoController.ts`
+- [x] Actualizar todas las importaciones en `backend/routes/vehiculos.ts` para usar los controladores modulares
+- [x] Eliminar `backend/controllers/vehiculoController.ts`
+- [x] Ejecutar tests para verificar que todo funciona correctamente
+- [x] Commit: "refactor: consolidar controladores de vehículos y eliminar duplicación"
 
 ### 1.2 Revisar Otros Controladores
-- [ ] Buscar si hay más controladores con el mismo patrón (archivo único vs carpeta modular)
+- [x] Buscar si hay más controladores con el mismo patrón (archivo único vs carpeta modular)
 - [ ] Documentar la estrategia a seguir (modular vs archivo único)
 - [ ] Aplicar la misma consolidación si se encuentran más casos
+
+#### Controladores Duplicados Encontrados:
+- **Site**: `siteController.ts` (357 líneas) vs `site/` (carpeta modular parcial)
+- **Tramo**: `tramoController.ts` (1595 líneas) vs `tramo/` (carpeta modular parcial)
+
+### 1.1.2 Consolidar Controladores de Sites
+- [x] Verificar funcionalidades faltantes en `backend/controllers/site/`
+- [x] Migrar funciones faltantes desde `siteController.ts`
+- [x] Actualizar importaciones en rutas
+- [x] Eliminar `siteController.ts`
+- [x] Ejecutar tests de verificación
+- [x] Commit: "refactor: consolidar controladores de sites y eliminar duplicación"
+
+### 1.1.3 Consolidar Controladores de Tramos  
+- [ ] Verificar funcionalidades faltantes en `backend/controllers/tramo/`
+- [ ] Migrar funciones faltantes desde `tramoController.ts`
+- [ ] Actualizar importaciones en rutas
+- [ ] Eliminar `tramoController.ts`
+- [ ] Ejecutar tests de verificación
+- [ ] Commit: "refactor: consolidar controladores de tramos y eliminar duplicación"
 
 ## 2. Frontend - Hooks Reutilizables
 

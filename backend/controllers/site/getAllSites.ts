@@ -61,6 +61,7 @@ const getAllSites = tryCatch(async (req: Request<{}, ApiResponse, {}, GetSitesQu
     }
 
     const sites = await Site.find(query)
+        .populate('cliente', 'nombre')
         .lean()
         .exec();
 

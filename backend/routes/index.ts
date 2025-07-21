@@ -21,7 +21,7 @@ import proxyRouter from './proxy';
 import { getClienteTemplate } from '../controllers/clienteController';
 import { getEmpresaTemplate } from '../controllers/empresaController';
 import { getPersonalTemplate } from '../controllers/personalController';
-import { getSiteTemplate } from '../controllers/siteController';
+import { getSiteTemplate } from '../controllers/site';
 import { getVehiculoTemplate } from '../controllers/vehiculo';
 import { getTramoTemplate } from '../controllers/tramoController';
 import { getViajeTemplate } from '../controllers/viajeController';

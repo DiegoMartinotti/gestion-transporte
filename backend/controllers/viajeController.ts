@@ -17,7 +17,7 @@ import path from 'path';
 import { ExcelTemplateService } from '../services/excelTemplateService';
 
 // Importar controladores y servicios necesarios
-import * as siteController from './siteController';
+import * as siteController from './site';
 import * as personalController from './personalController';
 import * as vehiculoService from '../services/vehiculo/vehiculoService';
 import * as tramoService from '../services/tramo/tramoService';

@@ -6,6 +6,8 @@ import bulkCreateSites from './bulkCreateSites';
 import bulkDeleteSites from './bulkDeleteSites';
 import searchNearby from './searchNearby';
 import getSitesByCliente from './getSitesByCliente';
+import { getSiteTemplate } from './getSiteTemplate';
+import { exportSites } from './exportSites';
 
 export {
     getAllSites,
@@ -15,5 +17,7 @@ export {
     bulkCreateSites,
     bulkDeleteSites,
     searchNearby,
-    getSitesByCliente
+    getSitesByCliente,
+    getSiteTemplate,
+    exportSites
 };
