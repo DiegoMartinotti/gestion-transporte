@@ -1,0 +1,23 @@
+[2025-07-21 15:29:47.235] HOOK CALLED:
+{
+  "session_id": "b0d909a4-2d4f-4c18-9f7a-1711ac836e48",
+  "transcript_path": "/home/diego/.claude/projects/-home-diego-proyectos-gestion-transporte/b0d909a4-2d4f-4c18-9f7a-1711ac836e48.jsonl",
+  "cwd": "/home/diego/proyectos/gestion-transporte",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/home/diego/Claude-code-memory/utils/memory_guard.py",
+    "old_string": "                timeout=60,",
+    "new_string": "                timeout=120,  # Increased timeout from 60 to 120 seconds"
+  }
+}
+
+PROJECT INFO:
+- Root: /home/diego/proyectos/gestion-transporte
+- Name: gestion-transporte
+- MCP Collection: mcp__gestion-transporte-memory__
+
+
+============================================================
+OPERATION SKIPPED:
+- Reason: Outside gestion-transporte project - no duplicate checking
