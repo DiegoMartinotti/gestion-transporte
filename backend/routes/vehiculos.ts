@@ -11,7 +11,7 @@ import {
   getVehiculosVencidos,
   createVehiculosBulk,
   getVehiculoTemplate
-} from '../controllers/vehiculoController';
+} from '../controllers/vehiculo';
 import logger from '../utils/logger';
 
 // Rutas básicas CRUD

@@ -7,6 +7,7 @@ import deleteVehiculo from './deleteVehiculo';
 import getVehiculosConVencimientos from './getVehiculosConVencimientos';
 import getVehiculosVencidos from './getVehiculosVencidos';
 import createVehiculosBulk from './createVehiculosBulk';
+import getVehiculoTemplate from './getVehiculoTemplate';
 
 export {
   getVehiculos,
@@ -17,5 +18,6 @@ export {
   deleteVehiculo,
   getVehiculosConVencimientos,
   getVehiculosVencidos,
-  createVehiculosBulk
+  createVehiculosBulk,
+  getVehiculoTemplate
 };
