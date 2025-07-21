@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Memory Usage Instructions
+You have access to a complete memory of this codebase. Before writing ANY code:
+1. ALWAYS search for existing implementations first
+2. Use established patterns found in memory
+3. Check for duplicate functionality before creating new functions
+4. When debugging, search for similar errors that were fixed before
+
 ## MANDATORY: MCP Context7 Consultation
 
 **CRITICAL**: Before writing any code (using Edit, Write, MultiEdit tools), ALWAYS consult MCP Context7 first to get current documentation for the libraries, frameworks, or APIs being used. This ensures code follows latest best practices and correct usage patterns.
