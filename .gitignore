@@ -56,4 +56,7 @@ cookies.txt
 
 
 frontend/tsconfig.tsbuildinfo
-.claude-indexer/gestion-transporte.json
+
+# Claude Code Memory
+.claude-indexer/
+memory_guard_debug_*.txt
