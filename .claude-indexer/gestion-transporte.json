@@ -370,9 +370,9 @@
     "mtime": 1751331659.9936955
   },
   "memory_guard_debug_1.txt": {
-    "hash": "b7603e9d6ff720dde9992dead445a202bcaaa3422f67a9155ac0c97ceb77f3f7",
-    "size": 1109,
-    "mtime": 1753110810.3921022
+    "hash": "ca8be39768fd185efa9fd06497e38af066fa5119ad19745336a5bd687aa72435",
+    "size": 8930,
+    "mtime": 1753111861.9040167
   },
   "frontend/src/utils/dateUtils.ts": {
     "hash": "3966f33e1f22396b96fde7258234cd7f47e3f6cf71a06b71640a08a1d30c92c0",
@@ -640,9 +640,9 @@
     "mtime": 1750262809.9456205
   },
   "memory_guard_debug_3.txt": {
-    "hash": "9ff7e001c7f842317bb35e8efa2e6e728c44c121bbd6c4270cea2de69a10fe37",
-    "size": 1236,
-    "mtime": 1753110638.556092
+    "hash": "75cdde41d455f00b3139c4ef583e11c2ca5bc845e49a30af70607492d06121d6",
+    "size": 877,
+    "mtime": 1753111787.2320495
   },
   "frontend/src/services/api.ts": {
     "hash": "7216d7cc08a1b80c118f408221b164df36a6c7a7913476806183252fa7835dd6",
@@ -1685,9 +1685,9 @@
     "mtime": 1750262810.017479
   },
   "memory_guard_debug_2.txt": {
-    "hash": "2c14106f1e47513b965ec0ea11e4c445e4ddc30897e4f9d166d23ff7b7fbe214",
-    "size": 983,
-    "mtime": 1753110962.7441037
+    "hash": "5855d8b64fb469f7e80b89772294e53f53bd22039efc0325686622c667faee60",
+    "size": 10220,
+    "mtime": 1753111608.1400337
   },
   "backend/scripts/createTestData.ts": {
     "hash": "4052e02dcc7a2e1f69e3dab434f0650b8acd9a52e6387cdd1449ccc63200fbf2",
@@ -1990,6 +1990,6 @@
     "mtime": 1751423884.6665921
   },
   "_cleanup": {
-    "last_cleanup_timestamp": 1753111053.38247
+    "last_cleanup_timestamp": 1753112815.8220205
   }
 }
