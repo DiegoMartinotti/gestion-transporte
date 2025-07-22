@@ -23,7 +23,7 @@ import { getEmpresaTemplate } from '../controllers/empresaController';
 import { getPersonalTemplate } from '../controllers/personalController';
 import { getSiteTemplate } from '../controllers/site';
 import { getVehiculoTemplate } from '../controllers/vehiculo';
-import { getTramoTemplate } from '../controllers/tramoController';
+import { getTramoTemplate } from '../controllers/tramo';
 import { getViajeTemplate } from '../controllers/viajeController';
 import { getExtraTemplate } from '../controllers/extraController';
 

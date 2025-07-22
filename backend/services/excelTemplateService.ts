@@ -1540,7 +1540,7 @@ export class ExcelTemplateService {
         }
 
         try {
-            const tramoController = require('../controllers/tramoController');
+            const tramoController = require('../controllers/tramo');
             const mockReq = { 
                 body: { 
                     cliente: clienteId,
