@@ -14,6 +14,17 @@ import {
 } from '../controllers/vehiculo';
 import logger from '../utils/logger';
 
+/**
+ * @desc    Rutas para gestión de vehículos
+ * @base    /api/vehiculos
+ */
+
+// Middleware para registro de solicitudes (opcional)
+router.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.info(`Solicitud a ruta de vehículos: ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Rutas básicas CRUD
 router.get('/', getVehiculos);
 router.get('/empresa/:empresaId', getVehiculosByEmpresa);
