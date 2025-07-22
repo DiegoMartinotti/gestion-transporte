@@ -4,7 +4,6 @@ const router = express.Router();
 // Importar todas las rutas
 import authRoutes from './auth';
 import clientesRoutes from './clientes';
-import sitesRoutes from './sites';
 import siteRoutes from './site.routes';
 import tramosRoutes from './tramos';
 import viajesRoutes from './viajes';
@@ -51,8 +50,7 @@ router.get('/extras/template', getExtraTemplate);
 // Rutas protegidas (requieren autenticación)
 const protectedRoutes: ProtectedRoute[] = [
   { path: '/clientes', router: clientesRoutes },
-  { path: '/sites', router: sitesRoutes },
-  { path: '/site', router: siteRoutes },
+  { path: '/sites', router: siteRoutes },
   { path: '/tramos', router: tramosRoutes },
   { path: '/viajes', router: viajesRoutes },
   { path: '/extras', router: extrasRoutes },

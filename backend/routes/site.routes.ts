@@ -6,6 +6,12 @@
 import express from 'express';
 const router = express.Router();
 import * as siteController from '../controllers/site/site.controller';
+import { 
+    bulkCreateSites,
+    searchNearby,
+    getSiteTemplate,
+    exportSites
+} from '../controllers/site';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { validateSite } from '../middleware/validationMiddleware';
 import logger from '../utils/logger';
@@ -44,6 +50,36 @@ import logger from '../utils/logger';
  *         description: Error del servidor
  */
 router.get('/', authenticateToken, siteController.getAllSites);
+
+/**
+ * @swagger
+ * /api/site/template:
+ *   get:
+ *     summary: Obtiene plantilla Excel para sitios
+ *     description: Descarga un archivo Excel con la plantilla para importar sitios
+ *     tags: [Sites]
+ *     responses:
+ *       200:
+ *         description: Plantilla generada correctamente
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/template', getSiteTemplate);
+
+/**
+ * @swagger
+ * /api/site/export:
+ *   get:
+ *     summary: Exporta sitios a Excel
+ *     description: Descarga todos los sitios en formato Excel
+ *     tags: [Sites]
+ *     responses:
+ *       200:
+ *         description: Archivo exportado correctamente
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/export', authenticateToken, exportSites);
 
 /**
  * @swagger
@@ -95,6 +131,42 @@ router.get('/cliente/:clienteId', authenticateToken, siteController.getSitesByCl
 
 /**
  * @swagger
+ * /api/site/nearby:
+ *   get:
+ *     summary: Buscar sitios cercanos
+ *     description: Busca sitios cercanos a una coordenada específica
+ *     tags: [Sites]
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Latitud del punto de referencia
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Longitud del punto de referencia
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: number
+ *           default: 10
+ *         description: Radio de búsqueda en kilómetros
+ *     responses:
+ *       200:
+ *         description: Sitios cercanos encontrados
+ *       400:
+ *         description: Parámetros inválidos
+ *       500:
+ *         description: Error del servidor
+ */
+router.get('/nearby', authenticateToken, searchNearby);
+
+/**
+ * @swagger
  * /api/site:
  *   post:
  *     summary: Crea un nuevo sitio
@@ -132,6 +204,48 @@ router.get('/cliente/:clienteId', authenticateToken, siteController.getSitesByCl
  *         description: Error del servidor
  */
 router.post('/', authenticateToken, validateSite, siteController.createSite);
+
+/**
+ * @swagger
+ * /api/site/bulk:
+ *   post:
+ *     summary: Creación masiva de sitios
+ *     description: Crea múltiples sitios a partir de un array de datos
+ *     tags: [Sites]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               type: object
+ *               required:
+ *                 - nombre
+ *                 - cliente
+ *               properties:
+ *                 nombre:
+ *                   type: string
+ *                 direccion:
+ *                   type: string
+ *                 cliente:
+ *                   type: string
+ *                 coordenadas:
+ *                   type: object
+ *                   properties:
+ *                     lat:
+ *                       type: number
+ *                     lng:
+ *                       type: number
+ *     responses:
+ *       201:
+ *         description: Sitios creados correctamente
+ *       400:
+ *         description: Datos inválidos
+ *       500:
+ *         description: Error del servidor
+ */
+router.post('/bulk', authenticateToken, bulkCreateSites);
 
 /**
  * @swagger
