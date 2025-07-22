@@ -6,7 +6,7 @@
 import express from 'express';
 const router = express.Router();
 import * as tramoController from '../controllers/tramo';
-import * as tramoControllerTS from '../controllers/tramoController';
+// TODO: Migrar función calcularTarifa a carpeta modular
 import logger from '../utils/logger';
 
 // Middleware para debugging de solicitudes grandes
@@ -40,8 +40,8 @@ router.use('/bulk', (req: express.Request, res: express.Response, next: express.
 router.get('/cliente/:cliente', tramoController.getTramosByCliente);
 router.get('/distancias', tramoController.getDistanciasCalculadas);
 
-// Ruta para calcular tarifa
-router.post('/:id/calculate-tarifa', tramoControllerTS.calcularTarifa);
+// TODO: Ruta para calcular tarifa - función pendiente de migrar
+// router.post('/:id/calculate-tarifa', tramoController.calcularTarifa);
 
 // Rutas para tarifas históricas (por implementar)
 // router.get('/:id/tarifas', tramoControllerTS.getTarifaVersions);

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import * as tramoController from '../controllers/tramoController';
+import * as tramoController from '../controllers/tramo';
 import logger from '../utils/logger';
 import Tramo from '../models/Tramo';
 import { generarTramoId } from '../utils/tramoValidator';
@@ -18,10 +18,11 @@ router.get('/cliente/:cliente', tramoController.getTramosByCliente);
 router.get('/vigentes/:fecha', tramoController.getVigentesByFecha);
 router.post('/bulk', tramoController.bulkCreateTramos);
 router.post('/verificar-duplicados', tramoController.verificarPosiblesDuplicados);
-router.post('/normalizar-tipos', tramoController.normalizarTramos);
+// TODO: Migrar funciones complejas a carpeta modular
+// router.post('/normalizar-tipos', tramoController.normalizarTramos);
 
 // Ruta de prueba para la funcionalidad de tipos
-router.post('/test-tipos', tramoController.testImportacionTipos);
+// router.post('/test-tipos', tramoController.testImportacionTipos);
 
 // Diagnóstico específico para el problema de tipos
 router.post('/diagnose-tipos', async (req: Request, res: Response): Promise<void> => {
@@ -84,11 +85,11 @@ router.post('/diagnose-tipos', async (req: Request, res: Response): Promise<void
     }
 });
 
-// Ruta para actualización masiva de vigencias
-router.post('/updateVigenciaMasiva', tramoController.updateVigenciaMasiva);
+// TODO: Ruta para actualización masiva de vigencias - función pendiente de migrar
+// router.post('/updateVigenciaMasiva', tramoController.updateVigenciaMasiva);
 
-// Ruta para calcular tarifa
-router.post('/:id/calculate-tarifa', tramoController.calcularTarifa);
+// TODO: Ruta para calcular tarifa - función pendiente de migrar
+// router.post('/:id/calculate-tarifa', tramoController.calcularTarifa);
 
 // Ruta para obtener distancias calculadas
 router.get('/distancias', tramoController.getDistanciasCalculadas);
