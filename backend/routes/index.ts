@@ -10,7 +10,6 @@ import viajesRoutes from './viajes';
 import extrasRoutes from './extras';
 import empresasRoutes from './empresas';
 import vehiculosRoutes from './vehiculos';
-import vehiculoRoutes from './vehiculo.routes';
 import personalRoutes from './personal';
 import formulaClienteRoutes from './formulaClienteRoutes';
 import proxyRouter from './proxy';
@@ -56,7 +55,6 @@ const protectedRoutes: ProtectedRoute[] = [
   { path: '/extras', router: extrasRoutes },
   { path: '/empresas', router: empresasRoutes },
   { path: '/vehiculos', router: vehiculosRoutes },
-  { path: '/vehiculo', router: vehiculoRoutes },
   { path: '/personal', router: personalRoutes },
   { path: '/formulas', router: formulaClienteRoutes }
 ];
