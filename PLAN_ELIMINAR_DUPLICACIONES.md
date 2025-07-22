@@ -54,26 +54,28 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 - [x] Commit: "refactor: consolidar rutas de tramos y eliminar duplicación"
 
 ### 1.4.2 Consolidar Rutas de Sites
-- [ ] Verificar funcionalidades en `site.routes.ts` vs `sites.ts`
-- [ ] Identificar el archivo principal
-- [ ] Migrar funciones faltantes al archivo principal
-- [ ] Actualizar importaciones en `backend/routes/index.ts`
-- [ ] Eliminar archivo duplicado
-- [ ] Verificar que todas las rutas funcionan correctamente
-- [ ] Commit: "refactor: consolidar rutas de sites y eliminar duplicación"
+- [x] Verificar funcionalidades en `site.routes.ts` vs `sites.ts`
+- [x] Identificar el archivo principal
+- [x] Migrar funciones faltantes al archivo principal
+- [x] Actualizar importaciones en `backend/routes/index.ts`
+- [x] Eliminar archivo duplicado
+- [x] Verificar que todas las rutas funcionan correctamente
+- [x] Commit: "refactor: consolidar rutas de sites y eliminar duplicación"
 
 ### 1.4.3 Consolidar Rutas de Vehículos
-- [ ] Verificar funcionalidades en `vehiculo.routes.ts` vs `vehiculos.ts`
-- [ ] Identificar el archivo principal
-- [ ] Migrar funciones faltantes al archivo principal
-- [ ] Actualizar importaciones en `backend/routes/index.ts`
-- [ ] Eliminar archivo duplicado
-- [ ] Verificar que todas las rutas funcionan correctamente
-- [ ] Commit: "refactor: consolidar rutas de vehículos y eliminar duplicación"
+- [x] Verificar funcionalidades en `vehiculo.routes.ts` vs `vehiculos.ts`
+- [x] Identificar el archivo principal
+- [x] Migrar funciones faltantes al archivo principal
+- [x] Actualizar importaciones en `backend/routes/index.ts`
+- [x] Eliminar archivo duplicado
+- [x] Verificar que todas las rutas funcionan correctamente
+- [x] Commit: "refactor: consolidar rutas de vehículos y eliminar duplicación"
 
 ### 1.5 Limpiar Referencias Obsoletas
-- [ ] Verificar que no queden referencias a `vehiculoController.ts` en el código
-- [ ] Actualizar `backend/services/excelTemplateService.ts` línea 1447-1510 para usar controladores modulares
+- [x] Verificar que no queden referencias a `vehiculoController.ts` en el código
+- [x] Actualizar `backend/services/excelTemplateService.ts` línea 1447-1510 para usar controladores modulares
+- [x] Actualizar referencia a `siteController` (línea 1339) para usar controlador modular
+- [ ] Actualizar referencia a `personalController` (línea 1407) cuando se migre a estructura modular
 - [ ] Buscar y eliminar otras referencias a controladores eliminados
 - [ ] Commit: "refactor: limpiar referencias a controladores eliminados"
 

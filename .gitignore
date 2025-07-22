@@ -60,3 +60,5 @@ frontend/tsconfig.tsbuildinfo
 # Claude Code Memory
 .claude-indexer/
 memory_guard_debug_*.txt
+storage/
+.qdrant-initialized

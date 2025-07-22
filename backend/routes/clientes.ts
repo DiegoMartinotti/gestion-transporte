@@ -7,7 +7,7 @@ import {
     updateCliente, 
     deleteCliente,
     getClienteTemplate
-} from '../controllers/clienteController';
+} from '../controllers/cliente';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 // Rutas

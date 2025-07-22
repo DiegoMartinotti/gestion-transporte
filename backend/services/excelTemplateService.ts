@@ -1335,8 +1335,8 @@ export class ExcelTemplateService {
         }
 
         try {
-            // Usar el controlador existente de sites para bulk import
-            const siteController = require('../controllers/siteController');
+            // Usar el controlador modular de sites para bulk import
+            const siteController = require('../controllers/site');
             const mockReq = { body: { sites } };
             
             let responseData: any;
