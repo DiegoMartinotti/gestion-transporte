@@ -21,6 +21,11 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 - **Site**: `siteController.ts` (357 líneas) vs `site/` (carpeta modular parcial)
 - **Tramo**: `tramoController.ts` (1595 líneas) vs `tramo/` (carpeta modular parcial)
 
+#### Archivos de Rutas Duplicados Encontrados:
+- **Tramos**: `tramoRoutes.ts` (3768 bytes) vs `tramo.routes.ts` (2234 bytes) vs `tramos.ts` (19271 bytes)
+- **Sites**: `site.routes.ts` vs `sites.ts`
+- **Vehículos**: `vehiculo.routes.ts` vs `vehiculos.ts`
+
 ### 1.1.2 Consolidar Controladores de Sites
 - [x] Verificar funcionalidades faltantes en `backend/controllers/site/`
 - [x] Migrar funciones faltantes desde `siteController.ts`
@@ -30,12 +35,47 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 - [x] Commit: "refactor: consolidar controladores de sites y eliminar duplicación"
 
 ### 1.1.3 Consolidar Controladores de Tramos  
-- [ ] Verificar funcionalidades faltantes en `backend/controllers/tramo/`
-- [ ] Migrar funciones faltantes desde `tramoController.ts`
-- [ ] Actualizar importaciones en rutas
-- [ ] Eliminar `tramoController.ts`
-- [ ] Ejecutar tests de verificación
-- [ ] Commit: "refactor: consolidar controladores de tramos y eliminar duplicación"
+- [x] Verificar funcionalidades faltantes en `backend/controllers/tramo/`
+- [x] Migrar funciones faltantes desde `tramoController.ts`
+- [x] Actualizar importaciones en rutas
+- [x] Eliminar `tramoController.ts`
+- [x] Ejecutar tests de verificación
+- [x] Commit: "refactor: consolidar controladores de tramos y eliminar duplicación"
+
+### 1.4 Consolidar Archivos de Rutas Duplicados
+
+### 1.4.1 Consolidar Rutas de Tramos
+- [x] Verificar funcionalidades en los 3 archivos: `tramoRoutes.ts`, `tramo.routes.ts`, `tramos.ts`
+- [x] Identificar el archivo principal (probablemente `tramos.ts` por su tamaño)
+- [x] Migrar funciones faltantes al archivo principal
+- [x] Actualizar importaciones en `backend/routes/index.ts`
+- [x] Eliminar archivos duplicados: `tramoRoutes.ts` y `tramo.routes.ts`
+- [x] Verificar que todas las rutas funcionan correctamente
+- [x] Commit: "refactor: consolidar rutas de tramos y eliminar duplicación"
+
+### 1.4.2 Consolidar Rutas de Sites
+- [ ] Verificar funcionalidades en `site.routes.ts` vs `sites.ts`
+- [ ] Identificar el archivo principal
+- [ ] Migrar funciones faltantes al archivo principal
+- [ ] Actualizar importaciones en `backend/routes/index.ts`
+- [ ] Eliminar archivo duplicado
+- [ ] Verificar que todas las rutas funcionan correctamente
+- [ ] Commit: "refactor: consolidar rutas de sites y eliminar duplicación"
+
+### 1.4.3 Consolidar Rutas de Vehículos
+- [ ] Verificar funcionalidades en `vehiculo.routes.ts` vs `vehiculos.ts`
+- [ ] Identificar el archivo principal
+- [ ] Migrar funciones faltantes al archivo principal
+- [ ] Actualizar importaciones en `backend/routes/index.ts`
+- [ ] Eliminar archivo duplicado
+- [ ] Verificar que todas las rutas funcionan correctamente
+- [ ] Commit: "refactor: consolidar rutas de vehículos y eliminar duplicación"
+
+### 1.5 Limpiar Referencias Obsoletas
+- [ ] Verificar que no queden referencias a `vehiculoController.ts` en el código
+- [ ] Actualizar `backend/services/excelTemplateService.ts` línea 1447-1510 para usar controladores modulares
+- [ ] Buscar y eliminar otras referencias a controladores eliminados
+- [ ] Commit: "refactor: limpiar referencias a controladores eliminados"
 
 ## 2. Frontend - Hooks Reutilizables
 
@@ -140,8 +180,10 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 ## Priorización
 
 ### Alta Prioridad (Hacer primero)
-1. Consolidar controladores de vehículos (impacto inmediato, bajo riesgo)
-2. Crear y migrar a useModal (alta duplicación, mejora significativa)
+1. ~~Consolidar controladores de vehículos~~ ✅ Completado
+2. Consolidar archivos de rutas duplicados (impacto inmediato, bajo riesgo)
+3. Limpiar referencias obsoletas (crítico para estabilidad)
+4. Crear y migrar a useModal (alta duplicación, mejora significativa)
 
 ### Media Prioridad
 3. Crear useDataLoader

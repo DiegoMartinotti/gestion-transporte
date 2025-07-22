@@ -7,7 +7,6 @@ import clientesRoutes from './clientes';
 import sitesRoutes from './sites';
 import siteRoutes from './site.routes';
 import tramosRoutes from './tramos';
-import tramoRoutes from './tramo.routes';
 import viajesRoutes from './viajes';
 import extrasRoutes from './extras';
 import empresasRoutes from './empresas';
@@ -29,7 +28,6 @@ import { getExtraTemplate } from '../controllers/extraController';
 
 // Middleware
 import { authenticateToken } from '../middleware/authMiddleware';
-import logger from '../utils/logger';
 
 interface ProtectedRoute {
   path: string;
@@ -56,7 +54,6 @@ const protectedRoutes: ProtectedRoute[] = [
   { path: '/sites', router: sitesRoutes },
   { path: '/site', router: siteRoutes },
   { path: '/tramos', router: tramosRoutes },
-  { path: '/tramo', router: tramoRoutes },
   { path: '/viajes', router: viajesRoutes },
   { path: '/extras', router: extrasRoutes },
   { path: '/empresas', router: empresasRoutes },
@@ -72,7 +69,7 @@ protectedRoutes.forEach(route => {
 });
 
 // Ruta para verificar que el router está funcionando
-router.get('/status', (req: express.Request, res: express.Response) => {
+router.get('/status', (_req: express.Request, res: express.Response) => {
     res.json({ status: 'ok', message: 'API Router funcionando correctamente' });
 });
 
