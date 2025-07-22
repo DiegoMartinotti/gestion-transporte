@@ -1472,7 +1472,7 @@ export class ExcelTemplateService {
         }
 
         try {
-            const vehiculoController = require('../controllers/vehiculoController');
+            const { createVehiculosBulk } = require('../controllers/vehiculo');
             const mockReq = { body: { vehiculos } };
             
             let responseData: any;
@@ -1489,7 +1489,7 @@ export class ExcelTemplateService {
                 })
             };
 
-            await vehiculoController.createVehiculosBulk(mockReq, mockRes);
+            await createVehiculosBulk(mockReq, mockRes);
             
             // Extraer los resultados de la respuesta
             const resultados = responseData?.resultados || responseData || { exitosos: 0, errores: [] };
