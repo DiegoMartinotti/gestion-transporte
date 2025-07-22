@@ -4,7 +4,7 @@ const router = express.Router();
 // Importar todas las rutas
 import authRoutes from './auth';
 import clientesRoutes from './clientes';
-import siteRoutes from './site.routes';
+import siteRoutes from './sites';
 import tramosRoutes from './tramos';
 import viajesRoutes from './viajes';
 import extrasRoutes from './extras';
