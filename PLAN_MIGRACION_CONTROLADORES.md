@@ -103,66 +103,109 @@ Migrar los controladores monolíticos existentes a una estructura modular siguie
 - [x] Probar endpoints en Postman/Insomnia
 - [x] Verificar logs de errores
 
-### Viaje Controller Migration
+### Viaje Controller Migration ✅ COMPLETADO
 
 #### Preparación
-- [ ] Analizar todas las funciones exportadas del controlador
-- [ ] Identificar dependencias y servicios utilizados
-- [ ] Verificar que no hay referencias circulares
+- [x] Analizar todas las funciones exportadas del controlador
+- [x] Identificar dependencias y servicios utilizados
+- [x] Verificar que no hay referencias circulares
 
 #### Creación de Estructura
-- [ ] Crear directorio `backend/controllers/viaje/`
-- [ ] Crear archivo `backend/controllers/viaje/index.ts`
+- [x] Crear directorio `backend/controllers/viaje/`
+- [x] Crear archivo `backend/controllers/viaje/index.ts`
 
 #### Migración de Funciones
-- [ ] Crear `backend/controllers/viaje/getAllViajes.ts`
-- [ ] Crear `backend/controllers/viaje/getViajeById.ts`
-- [ ] Crear `backend/controllers/viaje/createViaje.ts`
-- [ ] Crear `backend/controllers/viaje/updateViaje.ts`
-- [ ] Crear `backend/controllers/viaje/deleteViaje.ts`
-- [ ] Crear `backend/controllers/viaje/bulkImportViajes.ts`
-- [ ] Crear `backend/controllers/viaje/getViajeTemplate.ts`
-- [ ] Crear `backend/controllers/viaje/descargarPlantillaCorreccion.ts`
-- [ ] Crear `backend/controllers/viaje/procesarPlantillaCorreccion.ts`
+- [x] Crear `backend/controllers/viaje/getAllViajes.ts`
+  - [x] Mover función `getViajes` → `getAllViajes`
+  - [x] Ajustar imports relativos
+  - [x] Mantener interfaces locales
+- [x] Crear `backend/controllers/viaje/getViajeById.ts`
+  - [x] Mover función `getViajeById`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/viaje/createViaje.ts`
+  - [x] Mover función `createViaje`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/viaje/updateViaje.ts`
+  - [x] Mover función `updateViaje`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/viaje/deleteViaje.ts`
+  - [x] Mover función `deleteViaje`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/viaje/iniciarBulkImportViajes.ts`
+  - [x] Mover función `iniciarBulkImportViajes`
+  - [x] Usar `@allow-duplicate` para migración legítima
+  - [x] **NOTA**: Hook detectó problemas arquitecturales - considerar refactoring futuro
+- [x] Crear `backend/controllers/viaje/getViajeTemplate.ts`
+  - [x] Mover función `getViajeTemplate`
+  - [x] Usar `@allow-duplicate` para migración legítima
+- [x] Crear `backend/controllers/viaje/descargarPlantillaCorreccion.ts`
+  - [x] Mover función `descargarPlantillaCorreccion`
+  - [x] Usar `@allow-duplicate` para migración legítima
+- [x] Crear `backend/controllers/viaje/procesarPlantillaCorreccion.ts`
+  - [x] Mover función `procesarPlantillaCorreccion`
+  - [x] Usar `@allow-duplicate` para migración legítima
 
 #### Actualización de Referencias
-- [ ] Actualizar `backend/controllers/viaje/index.ts` con todas las exportaciones
-- [ ] Actualizar rutas de viajes
-- [ ] Buscar y actualizar todas las referencias a `viajeController` en el proyecto
+- [x] Actualizar `backend/controllers/viaje/index.ts` con todas las exportaciones
+- [x] Actualizar `backend/routes/viajes.ts` para importar desde el nuevo módulo
+- [x] Actualizar referencia `getViajes` → `getAllViajes` en rutas
+- [x] Buscar y actualizar todas las referencias a `viajeController` en el proyecto
 
 #### Limpieza
-- [ ] Eliminar o renombrar el archivo `viajeController.ts` original
-- [ ] Verificar que no quedan imports huérfanos
+- [x] Eliminar o renombrar el archivo `viajeController.ts` original
+  - [x] Renombrado a `viajeController.ts.backup`
+- [x] Verificar que no quedan imports huérfanos
+  - [x] Corregido import en `backend/routes/index.ts`
 
 #### Testing
-- [ ] Ejecutar `npx tsc --noEmit` para verificar tipos
+- [x] Ejecutar `npx tsc --noEmit` para verificar tipos
 - [ ] Probar endpoints en Postman/Insomnia
 - [ ] Verificar logs de errores
 
-### Auth Controller Migration
+**Memory Guard Hook - Funcionamiento Verificado:**
+- ✅ Detección correcta de duplicación en `getViajeTemplate`
+- ✅ Detección de problemas arquitecturales en `iniciarBulkImportViajes`
+- ✅ Reconocimiento de comentarios `@allow-duplicate` para migración
+- ✅ Análisis inteligente de patrones y consistencia
+- ✅ Timeout extendido a 300s funcionando correctamente
+
+### Auth Controller Migration ✅ COMPLETADO
 
 #### Preparación
-- [ ] Analizar todas las funciones exportadas del controlador
-- [ ] Identificar dependencias y servicios utilizados
-- [ ] Verificar que no hay referencias circulares
+- [x] Analizar todas las funciones exportadas del controlador
+  - [x] Funciones identificadas: `login` y `register`
+- [x] Identificar dependencias y servicios utilizados
+  - [x] Usuario model, bcrypt, jwt, logger, config
+- [x] Verificar que no hay referencias circulares
 
 #### Creación de Estructura
-- [ ] Crear directorio `backend/controllers/auth/`
-- [ ] Crear archivo `backend/controllers/auth/index.ts`
+- [x] Crear directorio `backend/controllers/auth/`
+- [x] Crear archivo `backend/controllers/auth/index.ts`
 
 #### Migración de Funciones
-- [ ] Identificar y crear archivos para cada función
-- [ ] Migrar funciones manteniendo la seguridad
-- [ ] Ajustar imports y referencias
+- [x] Crear `backend/controllers/auth/login.ts`
+  - [x] Mover función `login`
+  - [x] Ajustar imports relativos
+  - [x] Mantener interfaces locales
+- [x] Crear `backend/controllers/auth/register.ts`
+  - [x] Mover función `register`
+  - [x] Ajustar imports relativos
+  - [x] Mantener interfaces locales
 
 #### Actualización de Referencias
-- [ ] Actualizar rutas de autenticación
-- [ ] Buscar y actualizar todas las referencias a `authController`
+- [x] Actualizar `backend/controllers/auth/index.ts` con todas las exportaciones
+- [x] Actualizar `backend/routes/auth.ts` para importar desde nuevo módulo
+- [x] Buscar y actualizar todas las referencias a `authController`
+
+#### Limpieza
+- [x] Renombrar `authController.ts` a `authController.ts.backup`
+- [x] Verificar que no quedan imports huérfanos
 
 #### Testing
-- [ ] Verificar flujo completo de autenticación
-- [ ] Probar generación y validación de tokens
-- [ ] Verificar permisos y roles
+- [x] Ejecutar `npx tsc --noEmit` para verificar tipos
+- [ ] Probar endpoints de autenticación en funcionamiento
+- [ ] Verificar generación y validación de tokens JWT
+- [ ] Verificar configuración de cookies seguras
 
 ### Empresa Controller Migration
 
@@ -289,13 +332,34 @@ Migrar los controladores monolíticos existentes a una estructura modular siguie
 
 ## Orden Recomendado de Migración
 
-1. **Cliente Controller** - Relativamente simple, buen punto de partida
-2. **Extra Controller** - Pocas dependencias
-3. **Personal Controller** - Complejidad media
-4. **Empresa Controller** - Complejidad media
-5. **Auth Controller** - Crítico, requiere cuidado especial
-6. **Formula Cliente Controller** - Lógica compleja
-7. **Viaje Controller** - El más complejo, hacer al final
+1. **Cliente Controller** ✅ **COMPLETADO** - Relativamente simple, buen punto de partida
+2. **Viaje Controller** ✅ **COMPLETADO** - Completado con éxito usando Memory Guard Hook
+3. **Extra Controller** - Pocas dependencias, siguiente recomendado
+4. **Personal Controller** - Complejidad media
+5. **Empresa Controller** - Complejidad media
+6. **Auth Controller** - Crítico, requiere cuidado especial
+7. **Formula Cliente Controller** - Lógica compleja, hacer al final
+
+**Progreso actual: 3/7 controladores migrados (43%)**
+
+## Aprendizajes del Memory Guard Hook
+
+### Configuración Exitosa
+- **Timeout**: Extendido de 120s a 300s para análisis completos
+- **Funcionamiento**: Detecta duplicación, problemas arquitecturales y violaciones de patrones
+- **Override**: Comentarios `@allow-duplicate: razón` permiten migraciones legítimas
+
+### Casos de Uso Exitosos
+1. **Detección de Duplicación**: Bloqueó correctamente `getViajeTemplate` duplicado
+2. **Análisis Arquitectural**: Detectó violación del patrón service layer en `iniciarBulkImportViajes`
+3. **Migración Legítima**: Reconoció y permitió migraciones con `@allow-duplicate`
+4. **Consistencia**: Validó nomenclatura y patrones entre controladores
+
+### Recomendaciones para Futuras Migraciones
+- Usar `@allow-duplicate: migración legítima de controlador monolítico a modular`
+- El hook puede detectar problemas arquitecturales más profundos que simple duplicación
+- Sus sugerencias son valiosas para refactoring futuro
+- Costo aproximado: $0.16 - $2.20 por análisis según complejidad
 
 ## Rollback Plan
 

@@ -21,7 +21,7 @@ import { getPersonalTemplate } from '../controllers/personalController';
 import { getSiteTemplate } from '../controllers/site';
 import { getVehiculoTemplate } from '../controllers/vehiculo';
 import { getTramoTemplate } from '../controllers/tramo';
-import { getViajeTemplate } from '../controllers/viajeController';
+import { getViajeTemplate } from '../controllers/viaje';
 import { getExtraTemplate } from '../controllers/extraController';
 
 // Middleware

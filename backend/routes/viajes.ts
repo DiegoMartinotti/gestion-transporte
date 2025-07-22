@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import * as viajeController from '../controllers/viajeController'; // Importar todo el controlador
+import * as viajeController from '../controllers/viaje'; // Importar controlador modular
 import logger from '../utils/logger';
 
 // Añadir configuración de multer
@@ -9,7 +9,7 @@ const storage = multer.memoryStorage(); // Usar almacenamiento en memoria
 const upload = multer({ storage: storage });
 
 // --- Rutas CRUD estándar ---
-router.get('/', viajeController.getViajes);
+router.get('/', viajeController.getAllViajes);
 router.get('/template', viajeController.getViajeTemplate);
 router.get('/:id', viajeController.getViajeById);
 router.post('/', viajeController.createViaje);
