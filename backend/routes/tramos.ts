@@ -3,7 +3,7 @@ const router = express.Router();
 import Tramo from '../models/Tramo';
 import Site from '../models/Site';
 import Cliente from '../models/Cliente';
-import * as tramoController from '../controllers/tramo';
+import * as tramoController from '../controllers/tramo/index';
 import { authenticateToken } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
 

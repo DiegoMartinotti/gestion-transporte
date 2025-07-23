@@ -5,13 +5,13 @@
 
 import express from 'express';
 const router = express.Router();
-import * as siteController from '../controllers/site/site.controller';
+import * as siteController from '../controllers/site/index';
 import { 
     bulkCreateSites,
     searchNearby,
     getSiteTemplate,
     exportSites
-} from '../controllers/site';
+} from '../controllers/site/index';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { validateSite } from '../middleware/validationMiddleware';
 import logger from '../utils/logger';

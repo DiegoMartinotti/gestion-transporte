@@ -8,6 +8,9 @@ import searchNearby from './searchNearby';
 import getSitesByCliente from './getSitesByCliente';
 import { getSiteTemplate } from './getSiteTemplate';
 import { exportSites } from './exportSites';
+import getSiteById from './getSiteById';
+import geocodeDireccion from './geocodeDireccion';
+import reprocessAddressesByCliente from './reprocessAddressesByCliente';
 
 export {
     getAllSites,
@@ -19,5 +22,8 @@ export {
     searchNearby,
     getSitesByCliente,
     getSiteTemplate,
-    exportSites
+    exportSites,
+    getSiteById,
+    geocodeDireccion,
+    reprocessAddressesByCliente
 };

@@ -1336,7 +1336,7 @@ export class ExcelTemplateService {
 
         try {
             // Usar el controlador modular de sites para bulk import
-            const siteController = require('../controllers/site');
+            const siteController = require('../controllers/site/index');
             const mockReq = { body: { sites } };
             
             let responseData: any;
@@ -1404,7 +1404,7 @@ export class ExcelTemplateService {
         }
 
         try {
-            const personalController = require('../controllers/personal');
+            const personalController = require('../controllers/personal/index');
             const mockReq = { body: { personal } };
             
             let responseData: any;
@@ -1472,7 +1472,7 @@ export class ExcelTemplateService {
         }
 
         try {
-            const { createVehiculosBulk } = require('../controllers/vehiculo');
+            const { createVehiculosBulk } = require('../controllers/vehiculo/index');
             const mockReq = { body: { vehiculos } };
             
             let responseData: any;
@@ -1540,7 +1540,7 @@ export class ExcelTemplateService {
         }
 
         try {
-            const tramoController = require('../controllers/tramo');
+            const tramoController = require('../controllers/tramo/index');
             const mockReq = { 
                 body: { 
                     cliente: clienteId,

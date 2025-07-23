@@ -17,10 +17,10 @@ import proxyRouter from './proxy';
 // Importar las funciones específicas de template para rutas públicas
 import { getClienteTemplate } from '../controllers/cliente';
 import { getEmpresaTemplate } from '../controllers/empresa';
-import { getPersonalTemplate } from '../controllers/personal';
-import { getSiteTemplate } from '../controllers/site';
-import { getVehiculoTemplate } from '../controllers/vehiculo';
-import { getTramoTemplate } from '../controllers/tramo';
+import { getPersonalTemplate } from '../controllers/personal/index';
+import { getSiteTemplate } from '../controllers/site/index';
+import { getVehiculoTemplate } from '../controllers/vehiculo/index';
+import { getTramoTemplate } from '../controllers/tramo/index';
 import { getViajeTemplate } from '../controllers/viaje';
 import { getExtraTemplate } from '../controllers/extra';
 

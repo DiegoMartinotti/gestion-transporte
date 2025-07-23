@@ -11,7 +11,7 @@ import {
   getVehiculosVencidos,
   createVehiculosBulk,
   getVehiculoTemplate
-} from '../controllers/vehiculo';
+} from '../controllers/vehiculo/index';
 import logger from '../utils/logger';
 
 /**
