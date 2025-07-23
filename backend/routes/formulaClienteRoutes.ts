@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import * as formulaClienteController from '../controllers/formulaClienteController';
+import * as formulaClienteController from '../controllers/formulaCliente';
 // import authMiddleware from '../middleware/authMiddleware'; // Descomentar si se usa autenticación
 
 // Aplicar middleware de autenticación si es necesario
