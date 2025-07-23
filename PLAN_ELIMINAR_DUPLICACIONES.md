@@ -75,9 +75,11 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 - [x] Verificar que no queden referencias a `vehiculoController.ts` en el código
 - [x] Actualizar `backend/services/excelTemplateService.ts` línea 1447-1510 para usar controladores modulares
 - [x] Actualizar referencia a `siteController` (línea 1339) para usar controlador modular
-- [ ] Actualizar referencia a `personalController` (línea 1407) cuando se migre a estructura modular
-- [ ] Buscar y eliminar otras referencias a controladores eliminados
-- [ ] Commit: "refactor: limpiar referencias a controladores eliminados"
+- [x] Actualizar referencia a `personalController` (línea 1407) para usar estructura modular
+- [x] Buscar y eliminar otras referencias a controladores eliminados
+- [x] Migrar funciones faltantes de site.controller.ts (getSiteById, geocodeDireccion, reprocessAddressesByCliente)
+- [x] Eliminar archivo monolítico site.controller.ts después de migración completa
+- [x] Commit: "refactor: limpiar referencias a controladores eliminados"
 
 ## 2. Frontend - Hooks Reutilizables
 

@@ -1,6 +1,6 @@
 import express from 'express';
 const router = express.Router();
-import * as personalController from '../controllers/personal';
+import * as personalController from '../controllers/personal/index';
 
 // Rutas para personal
 router.get('/', personalController.getAllPersonal);
