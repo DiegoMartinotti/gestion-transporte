@@ -370,28 +370,54 @@ Migrar los controladores monolíticos existentes a una estructura modular siguie
 - [ ] Probar endpoints en Postman/Insomnia
 - [ ] Verificar logs de errores
 
-### Formula Cliente Controller Migration
+### Formula Cliente Controller Migration ✅ COMPLETADO
 
 #### Preparación
-- [ ] Analizar todas las funciones exportadas del controlador
-- [ ] Identificar dependencias y servicios utilizados
+- [x] Analizar todas las funciones exportadas del controlador
+  - [x] Funciones identificadas: `createFormula`, `getFormulasByCliente`, `updateFormula`, `deleteFormula`
+  - [x] Helper function: `checkOverlap` para validación de solapamiento
+- [x] Identificar dependencias y servicios utilizados
+  - [x] FormulasPersonalizadasCliente model, Cliente model, logger, mongoose Types
 
 #### Creación de Estructura
-- [ ] Crear directorio `backend/controllers/formulaCliente/`
-- [ ] Crear archivo `backend/controllers/formulaCliente/index.ts`
+- [x] Crear directorio `backend/controllers/formulaCliente/`
+- [x] Crear archivo `backend/controllers/formulaCliente/index.ts`
+- [x] Crear directorio `backend/controllers/formulaCliente/utils/`
+- [x] Crear archivo `backend/controllers/formulaCliente/types.ts`
 
 #### Migración de Funciones
-- [ ] Crear archivos individuales
-- [ ] Migrar lógica de fórmulas
-- [ ] Ajustar imports
+- [x] Crear `backend/controllers/formulaCliente/createFormula.ts`
+  - [x] Mover función `createFormula`
+  - [x] Ajustar imports relativos
+  - [x] Mantener validación de solapamiento y fechas
+- [x] Crear `backend/controllers/formulaCliente/getFormulasByCliente.ts`
+  - [x] Mover función `getFormulasByCliente`
+  - [x] Mantener filtros por tipoUnidad y fecha
+- [x] Crear `backend/controllers/formulaCliente/updateFormula.ts`
+  - [x] Mover función `updateFormula`
+  - [x] Mantener validación de solapamiento excluyendo documento actual
+- [x] Crear `backend/controllers/formulaCliente/deleteFormula.ts`
+  - [x] Mover función `deleteFormula`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/formulaCliente/utils/checkOverlap.ts`
+  - [x] Mover helper function `checkOverlap`
+  - [x] Mantener lógica compleja de validación de solapamiento
 
 #### Actualización de Referencias
-- [ ] Actualizar rutas
-- [ ] Actualizar referencias
+- [x] Actualizar `backend/controllers/formulaCliente/index.ts` con todas las exportaciones
+- [x] Actualizar `backend/routes/formulaClienteRoutes.ts` para importar desde el nuevo módulo
+- [x] Buscar y actualizar todas las referencias a `formulaClienteController`
+
+#### Limpieza
+- [x] Renombrar el archivo `formulaClienteController.ts` original a `.backup`
+- [x] Verificar que no quedan imports huérfanos
 
 #### Testing
+- [x] Ejecutar `npx tsc --noEmit` para verificar tipos
+- [ ] Probar endpoints en Postman/Insomnia
+- [ ] Verificar validación de solapamiento de períodos
 - [ ] Verificar cálculos de fórmulas
-- [ ] Probar casos edge
+- [ ] Probar casos edge con fechas nulas
 
 ## Consideraciones Importantes
 
@@ -433,9 +459,9 @@ Migrar los controladores monolíticos existentes a una estructura modular siguie
 4. **Empresa Controller** ✅ **COMPLETADO** - Complejidad media, migrado exitosamente
 5. **Personal Controller** ✅ **COMPLETADO** - Migrado exitosamente con Memory Guard Hook
 6. **Extra Controller** ✅ **COMPLETADO** - Migrado con éxito + limpieza de lógica duplicada
-7. **Formula Cliente Controller** - Lógica compleja, último pendiente
+7. **Formula Cliente Controller** ✅ **COMPLETADO** - Migrado exitosamente con validación de solapamiento
 
-**Progreso actual: 6/7 controladores migrados (86%)**
+**Progreso actual: 7/7 controladores migrados (100%)**
 
 ## Aprendizajes del Memory Guard Hook
 
