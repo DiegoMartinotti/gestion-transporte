@@ -263,50 +263,112 @@ Migrar los controladores monolíticos existentes a una estructura modular siguie
 - [ ] Probar endpoints en Postman/Insomnia
 - [ ] Verificar logs de errores
 
-### Personal Controller Migration
+### Personal Controller Migration ✅ COMPLETADO
 
 #### Preparación
-- [ ] Analizar todas las funciones exportadas del controlador
-- [ ] Identificar dependencias y servicios utilizados
+- [x] Analizar todas las funciones exportadas del controlador
+  - [x] Funciones identificadas: `getAllPersonal`, `getPersonalById`, `createPersonal`, `updatePersonal`, `deletePersonal`, `bulkImportPersonal`, `createPersonalBulk`, `getPersonalTemplate`
+- [x] Identificar dependencias y servicios utilizados
+  - [x] Personal model, Empresa model, ExcelTemplateService, logger, Types from mongoose
+- [x] Verificar que no hay referencias circulares
 
 #### Creación de Estructura
-- [ ] Crear directorio `backend/controllers/personal/`
-- [ ] Crear archivo `backend/controllers/personal/index.ts`
+- [x] Crear directorio `backend/controllers/personal/`
+- [x] Crear archivo `backend/controllers/personal/index.ts`
 
 #### Migración de Funciones
-- [ ] Crear archivos individuales para cada función
-- [ ] Migrar código
-- [ ] Ajustar imports
+- [x] Crear `backend/controllers/personal/getAllPersonal.ts`
+  - [x] Mover función `getAllPersonal`
+  - [x] Ajustar imports relativos
+  - [x] Mantener interfaces locales
+- [x] Crear `backend/controllers/personal/getPersonalById.ts`
+  - [x] Mover función `getPersonalById`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/personal/createPersonal.ts`
+  - [x] Mover función `createPersonal`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/personal/updatePersonal.ts`
+  - [x] Mover función `updatePersonal`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/personal/deletePersonal.ts`
+  - [x] Mover función `deletePersonal`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/personal/bulkImportPersonal.ts`
+  - [x] Mover función `bulkImportPersonal`
+  - [x] Usar `@allow-duplicate` para migración legítima
+- [x] Crear `backend/controllers/personal/createPersonalBulk.ts`
+  - [x] Mover función `createPersonalBulk`
+  - [x] Usar `@allow-duplicate` para migración legítima
+- [x] Crear `backend/controllers/personal/getPersonalTemplate.ts`
+  - [x] Mover función `getPersonalTemplate`
+  - [x] Usar `@allow-duplicate` para migración legítima
 
 #### Actualización de Referencias
-- [ ] Actualizar rutas
-- [ ] Actualizar referencias
+- [x] Actualizar `backend/controllers/personal/index.ts` con todas las exportaciones
+- [x] Actualizar `backend/routes/personal.ts` para importar desde el nuevo módulo
+- [x] Buscar y actualizar todas las referencias a `personalController` en el proyecto
+  - [x] Corregir import en `backend/routes/index.ts`
+  - [x] Corregir import en `backend/services/excelTemplateService.ts`
+
+#### Limpieza
+- [x] Renombrar el archivo `personalController.ts` original a `.backup`
+- [x] Verificar que no quedan imports huérfanos
 
 #### Testing
-- [ ] Verificar tipos
-- [ ] Probar endpoints
+- [x] Ejecutar `npx tsc --noEmit` para verificar tipos
+- [ ] Probar endpoints en Postman/Insomnia
+- [ ] Verificar logs de errores
 
-### Extra Controller Migration
+### Extra Controller Migration ✅ COMPLETADO
 
 #### Preparación
-- [ ] Analizar todas las funciones exportadas del controlador
-- [ ] Identificar dependencias y servicios utilizados
+- [x] Analizar todas las funciones exportadas del controlador
+  - [x] Funciones identificadas: `getExtras` → `getAllExtras`, `getExtraById`, `createExtra`, `updateExtra`, `deleteExtra`, `getExtraTemplate`
+- [x] Identificar dependencias y servicios utilizadas
+  - [x] Extra model, ExcelTemplateService, logger
+- [x] Verificar que no hay referencias circulares
 
 #### Creación de Estructura
-- [ ] Crear directorio `backend/controllers/extra/`
-- [ ] Crear archivo `backend/controllers/extra/index.ts`
+- [x] Crear directorio `backend/controllers/extra/`
+- [x] Crear archivo `backend/controllers/extra/index.ts`
 
 #### Migración de Funciones
-- [ ] Crear archivos individuales
-- [ ] Migrar funciones
-- [ ] Ajustar imports
+- [x] Crear `backend/controllers/extra/getAllExtras.ts`
+  - [x] Mover función `getExtras` → `getAllExtras` (incluye lógica de filtrado por cliente)
+  - [x] Ajustar imports relativos
+  - [x] Mantener interfaces locales
+- [x] Crear `backend/controllers/extra/getExtraById.ts`
+  - [x] Mover función `getExtraById`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/extra/createExtra.ts`
+  - [x] Mover función `createExtra`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/extra/updateExtra.ts`
+  - [x] Mover función `updateExtra`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/extra/deleteExtra.ts`
+  - [x] Mover función `deleteExtra`
+  - [x] Ajustar imports
+- [x] Crear `backend/controllers/extra/getExtraTemplate.ts`
+  - [x] Mover función `getExtraTemplate`
+  - [x] Usar `@allow-duplicate` para migración legítima
 
 #### Actualización de Referencias
-- [ ] Actualizar rutas
-- [ ] Actualizar referencias
+- [x] Actualizar `backend/controllers/extra/index.ts` con todas las exportaciones
+- [x] Actualizar `backend/routes/extras.ts` para importar desde el nuevo módulo
+  - [x] **BONUS**: Eliminada lógica duplicada en rutas, ahora usa controlador modular
+  - [x] Referencia `getExtras` → `getAllExtras` actualizada
+- [x] Buscar y actualizar todas las referencias a `extraController` en el proyecto
+  - [x] Corregir import en `backend/routes/index.ts`
+
+#### Limpieza
+- [x] Renombrar el archivo `extraController.ts` original a `.backup`
+- [x] Verificar que no quedan imports huérfanos
 
 #### Testing
-- [ ] Verificar funcionamiento
+- [x] Ejecutar `npx tsc --noEmit` para verificar tipos
+- [ ] Probar endpoints en Postman/Insomnia
+- [ ] Verificar logs de errores
 
 ### Formula Cliente Controller Migration
 
@@ -369,11 +431,11 @@ Migrar los controladores monolíticos existentes a una estructura modular siguie
 2. **Viaje Controller** ✅ **COMPLETADO** - Completado con éxito usando Memory Guard Hook
 3. **Auth Controller** ✅ **COMPLETADO** - Crítico, migrado con éxito
 4. **Empresa Controller** ✅ **COMPLETADO** - Complejidad media, migrado exitosamente
-5. **Extra Controller** - Pocas dependencias, siguiente recomendado
-6. **Personal Controller** - Complejidad media
-7. **Formula Cliente Controller** - Lógica compleja, hacer al final
+5. **Personal Controller** ✅ **COMPLETADO** - Migrado exitosamente con Memory Guard Hook
+6. **Extra Controller** ✅ **COMPLETADO** - Migrado con éxito + limpieza de lógica duplicada
+7. **Formula Cliente Controller** - Lógica compleja, último pendiente
 
-**Progreso actual: 4/7 controladores migrados (57%)**
+**Progreso actual: 6/7 controladores migrados (86%)**
 
 ## Aprendizajes del Memory Guard Hook
 
