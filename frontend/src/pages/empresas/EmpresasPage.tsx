@@ -29,6 +29,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { useModal } from '../../hooks/useModal';
 import { empresaExcelService } from '../../services/BaseExcelService';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
 import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
@@ -44,10 +45,9 @@ export default function EmpresasPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState<EmpresaFilters>({});
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [empresaToDelete, setEmpresaToDelete] = useState<Empresa | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [importModalOpened, setImportModalOpened] = useState(false);
+  const deleteModal = useModal<Empresa>();
+  const importModal = useModal();
 
   const loadEmpresas = useCallback(async () => {
     try {
@@ -77,20 +77,19 @@ export default function EmpresasPage() {
   };
 
   const handleDelete = async () => {
-    if (!empresaToDelete) return;
+    if (!deleteModal.selectedItem) return;
     
     try {
       setDeleteLoading(true);
-      await empresaService.delete(empresaToDelete._id);
+      await empresaService.delete(deleteModal.selectedItem._id);
       
       notifications.show({
         title: 'Empresa eliminada',
-        message: `La empresa "${empresaToDelete.nombre}" ha sido eliminada correctamente`,
+        message: `La empresa "${deleteModal.selectedItem.nombre}" ha sido eliminada correctamente`,
         color: 'green'
       });
       
-      setDeleteModalOpened(false);
-      setEmpresaToDelete(null);
+      deleteModal.close();
       await loadEmpresas();
     } catch (error) {
       console.error('Error deleting empresa:', error);
@@ -109,7 +108,7 @@ export default function EmpresasPage() {
   });
 
   const handleImportComplete = async (result: any) => {
-    setImportModalOpened(false);
+    importModal.close();
     excelOperations.handleImportComplete(result);
   };
 
@@ -232,10 +231,7 @@ export default function EmpresasPage() {
             <Menu.Item 
               leftSection={<IconTrash size="0.9rem" />}
               color="red"
-              onClick={() => {
-                setEmpresaToDelete(record);
-                setDeleteModalOpened(true);
-              }}
+              onClick={() => deleteModal.openDelete(record)}
             >
               Eliminar
             </Menu.Item>
@@ -256,7 +252,7 @@ export default function EmpresasPage() {
               <Button
                 variant="outline"
                 leftSection={<IconUpload size="1rem" />}
-                onClick={() => setImportModalOpened(true)}
+                onClick={importModal.openCreate}
               >
                 Importar
               </Button>
@@ -298,21 +294,18 @@ export default function EmpresasPage() {
       </LoadingOverlay>
 
       <ConfirmModal
-        opened={deleteModalOpened}
-        onClose={() => {
-          setDeleteModalOpened(false);
-          setEmpresaToDelete(null);
-        }}
+        opened={deleteModal.isOpen}
+        onClose={deleteModal.close}
         onConfirm={handleDelete}
         title="Eliminar Empresa"
-        message={`¿Estás seguro de que deseas eliminar la empresa "${empresaToDelete?.nombre}"? Esta acción no se puede deshacer.`}
+        message={`¿Estás seguro de que deseas eliminar la empresa "${deleteModal.selectedItem?.nombre}"? Esta acción no se puede deshacer.`}
         type="delete"
         loading={deleteLoading}
       />
 
       <ExcelImportModal
-        opened={importModalOpened}
-        onClose={() => setImportModalOpened(false)}
+        opened={importModal.isOpen}
+        onClose={importModal.close}
         title="Importar Empresas desde Excel"
         entityType="empresa"
         onImportComplete={handleImportComplete}

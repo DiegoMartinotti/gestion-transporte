@@ -76,8 +76,9 @@
     ]
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
     "@playwright/test": "^1.40.0",
+    "@testing-library/dom": "^10.4.0",
+    "@types/jest": "^30.0.0",
     "eslint": "^8.36.0",
     "react-scripts": "^5.0.1"
   },

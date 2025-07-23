@@ -23,6 +23,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { useModal } from '../../hooks/useModal';
 import { personalExcelService } from '../../services/BaseExcelService';
 import {
   IconPlus,
@@ -57,8 +58,6 @@ export const PersonalPage: React.FC = () => {
   const [personal, setPersonal] = useState<Personal[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPersonal, setSelectedPersonal] = useState<Personal | null>(null);
-  const [personalToDelete, setPersonalToDelete] = useState<Personal | null>(null);
   const [activeTab, setActiveTab] = useState<string>('list');
   
   // Pagination
@@ -77,10 +76,12 @@ export const PersonalPage: React.FC = () => {
   });
 
   // Modals
-  const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
-  const [detailOpened, { open: openDetail, close: closeDetail }] = useDisclosure(false);
-  const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
-  const [importModalOpened, setImportModalOpened] = useState(false);
+  const formModal = useModal<Personal>({
+    onSuccess: () => loadPersonal()
+  });
+  const detailModal = useModal<Personal>();
+  const deleteModal = useModal<Personal>();
+  const importModal = useModal();
 
   // Load data
   useEffect(() => {
@@ -137,34 +138,29 @@ export const PersonalPage: React.FC = () => {
   };
 
   const handleCreatePersonal = () => {
-    setSelectedPersonal(null);
-    openForm();
+    formModal.openCreate();
   };
 
   const handleEditPersonal = (person: Personal) => {
-    setSelectedPersonal(person);
-    openForm();
+    formModal.openEdit(person);
   };
 
   const handleViewPersonal = (person: Personal) => {
-    setSelectedPersonal(person);
-    openDetail();
+    detailModal.openView(person);
   };
 
   const handleDeletePersonal = (person: Personal) => {
-    setPersonalToDelete(person);
-    openDelete();
+    deleteModal.openDelete(person);
   };
 
 
   const confirmDelete = async () => {
-    if (!personalToDelete) return;
+    if (!deleteModal.selectedItem) return;
 
     try {
-      await personalService.delete(personalToDelete._id);
+      await personalService.delete(deleteModal.selectedItem._id);
       await loadPersonal();
-      closeDelete();
-      setPersonalToDelete(null);
+      deleteModal.close();
       notifications.show({
         title: 'Éxito',
         message: 'Personal eliminado correctamente',
@@ -180,9 +176,8 @@ export const PersonalPage: React.FC = () => {
   };
 
   const handleFormSubmit = async () => {
-    closeForm();
+    formModal.close();
     await loadPersonal();
-    setSelectedPersonal(null);
   };
 
   // Hook unificado para operaciones Excel
@@ -195,7 +190,7 @@ export const PersonalPage: React.FC = () => {
   });
 
   const handleImportComplete = async (result: any) => {
-    setImportModalOpened(false);
+    importModal.close();
     excelOperations.handleImportComplete(result);
   };
 
@@ -330,7 +325,7 @@ export const PersonalPage: React.FC = () => {
             <Button
               leftSection={<IconFileImport size={16} />}
               variant="outline"
-              onClick={() => setImportModalOpened(true)}
+              onClick={importModal.openCreate}
             >
               Importar
             </Button>
@@ -513,30 +508,30 @@ export const PersonalPage: React.FC = () => {
 
         {/* Form Modal */}
         <Modal
-          opened={formOpened}
-          onClose={closeForm}
-          title={selectedPersonal ? 'Editar Personal' : 'Nuevo Personal'}
+          opened={formModal.isOpen}
+          onClose={formModal.close}
+          title={formModal.selectedItem ? 'Editar Personal' : 'Nuevo Personal'}
           size="xl"
         >
           <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>}>
             <PersonalForm
-              personal={selectedPersonal || undefined}
+              personal={formModal.selectedItem || undefined}
               onSubmit={handleFormSubmit}
-              onCancel={closeForm}
+              onCancel={formModal.close}
             />
           </Suspense>
         </Modal>
 
         {/* Detail Modal */}
         <Modal
-          opened={detailOpened}
-          onClose={closeDetail}
+          opened={detailModal.isOpen}
+          onClose={detailModal.close}
           title="Detalles del Personal"
           size="xl"
         >
-          {selectedPersonal && (
+          {detailModal.selectedItem && (
             <PersonalDetail
-              personal={selectedPersonal}
+              personal={detailModal.selectedItem}
               onEdit={handleEditPersonal}
             />
           )}
@@ -544,13 +539,13 @@ export const PersonalPage: React.FC = () => {
 
         {/* Delete Confirmation Modal */}
         <ConfirmModal
-          opened={deleteOpened}
-          onClose={closeDelete}
+          opened={deleteModal.isOpen}
+          onClose={deleteModal.close}
           onConfirm={confirmDelete}
           title="Eliminar Personal"
           message={
-            personalToDelete
-              ? `¿Está seguro que desea eliminar a ${personalToDelete.nombre} ${personalToDelete.apellido}? Esta acción no se puede deshacer.`
+            deleteModal.selectedItem
+              ? `¿Está seguro que desea eliminar a ${deleteModal.selectedItem.nombre} ${deleteModal.selectedItem.apellido}? Esta acción no se puede deshacer.`
               : ''
           }
           confirmLabel="Eliminar"
@@ -559,8 +554,8 @@ export const PersonalPage: React.FC = () => {
 
         {/* Excel Import Modal */}
         <ExcelImportModal
-          opened={importModalOpened}
-          onClose={() => setImportModalOpened(false)}
+          opened={importModal.isOpen}
+          onClose={importModal.close}
           title="Importar Personal desde Excel"
           entityType="personal"
           onImportComplete={handleImportComplete}

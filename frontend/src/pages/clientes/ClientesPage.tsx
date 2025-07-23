@@ -28,6 +28,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { useModal } from '../../hooks/useModal';
 import { clienteExcelService } from '../../services/BaseExcelService';
 import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../components/base';
 import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
@@ -45,10 +46,9 @@ export default function ClientesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState<ClienteFilters>({});
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [importModalOpened, setImportModalOpened] = useState(false);
+  const deleteModal = useModal<Cliente>();
+  const importModal = useModal();
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
 
   // Hook para tabla virtualizada
@@ -92,20 +92,19 @@ export default function ClientesPage() {
   };
 
   const handleDelete = async () => {
-    if (!clienteToDelete) return;
+    if (!deleteModal.selectedItem) return;
     
     try {
       setDeleteLoading(true);
-      await clienteService.delete(clienteToDelete._id);
+      await clienteService.delete(deleteModal.selectedItem._id);
       
       notifications.show({
         title: 'Cliente eliminado',
-        message: `El cliente "${clienteToDelete.nombre}" ha sido eliminado correctamente`,
+        message: `El cliente "${deleteModal.selectedItem.nombre}" ha sido eliminado correctamente`,
         color: 'green'
       });
       
-      setDeleteModalOpened(false);
-      setClienteToDelete(null);
+      deleteModal.close();
       await loadClientes();
     } catch (error) {
       console.error('Error deleting cliente:', error);
@@ -124,7 +123,7 @@ export default function ClientesPage() {
   });
 
   const handleImportComplete = async (result: any) => {
-    setImportModalOpened(false);
+    importModal.close();
     excelOperations.handleImportComplete(result);
   };
 
@@ -231,10 +230,7 @@ export default function ClientesPage() {
             <Menu.Item 
               leftSection={<IconTrash size="0.9rem" />}
               color="red"
-              onClick={() => {
-                setClienteToDelete(record);
-                setDeleteModalOpened(true);
-              }}
+              onClick={() => deleteModal.openDelete(record)}
             >
               Eliminar
             </Menu.Item>
@@ -255,7 +251,7 @@ export default function ClientesPage() {
               <Button
                 variant="outline"
                 leftSection={<IconUpload size="1rem" />}
-                onClick={() => setImportModalOpened(true)}
+                onClick={importModal.openCreate}
               >
                 Importar
               </Button>
@@ -311,21 +307,18 @@ export default function ClientesPage() {
       </LoadingOverlay>
 
       <ConfirmModal
-        opened={deleteModalOpened}
-        onClose={() => {
-          setDeleteModalOpened(false);
-          setClienteToDelete(null);
-        }}
+        opened={deleteModal.isOpen}
+        onClose={deleteModal.close}
         onConfirm={handleDelete}
         title="Eliminar Cliente"
-        message={`¿Estás seguro de que deseas eliminar el cliente "${clienteToDelete?.nombre}"? Esta acción no se puede deshacer.`}
+        message={`¿Estás seguro de que deseas eliminar el cliente "${deleteModal.selectedItem?.nombre}"? Esta acción no se puede deshacer.`}
         type="delete"
         loading={deleteLoading}
       />
 
       <ExcelImportModal
-        opened={importModalOpened}
-        onClose={() => setImportModalOpened(false)}
+        opened={importModal.isOpen}
+        onClose={importModal.close}
         title="Importar Clientes desde Excel"
         entityType="cliente"
         onImportComplete={handleImportComplete}
