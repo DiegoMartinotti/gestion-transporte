@@ -1,7 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import { 
-    getEmpresas, 
+    getAllEmpresas, 
     getEmpresaById, 
     createEmpresa, 
     updateEmpresa, 
@@ -9,11 +9,11 @@ import {
     getEmpresasByTipo,
     getEmpresasActivas,
     getEmpresaTemplate
-} from '../controllers/empresaController';
+} from '../controllers/empresa';
 import logger from '../utils/logger';
 
 // Rutas básicas CRUD
-router.get('/', getEmpresas);
+router.get('/', getAllEmpresas);
 router.get('/activas', getEmpresasActivas);
 router.get('/template', getEmpresaTemplate);
 router.get('/tipo/:tipo', getEmpresasByTipo);

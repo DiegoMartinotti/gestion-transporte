@@ -16,7 +16,7 @@ import proxyRouter from './proxy';
 
 // Importar las funciones específicas de template para rutas públicas
 import { getClienteTemplate } from '../controllers/cliente';
-import { getEmpresaTemplate } from '../controllers/empresaController';
+import { getEmpresaTemplate } from '../controllers/empresa';
 import { getPersonalTemplate } from '../controllers/personalController';
 import { getSiteTemplate } from '../controllers/site';
 import { getVehiculoTemplate } from '../controllers/vehiculo';
