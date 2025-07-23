@@ -35,6 +35,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { useModal } from '../../hooks/useModal';
 import { tramoExcelService } from '../../services/BaseExcelService';
 import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import DataTable from '../../components/base/DataTable';
@@ -67,14 +68,15 @@ const TramosPage: React.FC = () => {
   const [selectedCliente, setSelectedCliente] = useState<string>('');
   const [selectedOrigen, setSelectedOrigen] = useState<string>('');
   const [selectedDestino, setSelectedDestino] = useState<string>('');
-  const [selectedTramo, setSelectedTramo] = useState<Tramo | null>(null);
   const [activeTab, setActiveTab] = useState('todos');
   const [viewMode] = useState<'list' | 'cards'>('list');
 
-  const [formOpened, { open: openForm, close: closeForm }] = useDisclosure();
-  const [detailOpened, { open: openDetail, close: closeDetail }] = useDisclosure();
-  const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure();
-  const [importModalOpened, setImportModalOpened] = useState(false);
+  const formModal = useModal<Tramo>({
+    onSuccess: () => loadData()
+  });
+  const detailModal = useModal<Tramo>();
+  const deleteModal = useModal<Tramo>();
+  const importModal = useModal();
 
   // Cargar datos iniciales
   const loadData = async () => {
@@ -156,32 +158,29 @@ const TramosPage: React.FC = () => {
   );
 
   const handleEdit = (tramo: Tramo) => {
-    setSelectedTramo(tramo);
-    openForm();
+    formModal.openEdit(tramo);
   };
 
   const handleView = (tramo: Tramo) => {
-    setSelectedTramo(tramo);
-    openDetail();
+    detailModal.openView(tramo);
   };
 
   const handleDelete = (tramo: Tramo) => {
-    setSelectedTramo(tramo);
-    openDelete();
+    deleteModal.openDelete(tramo);
   };
 
   const confirmDelete = async () => {
-    if (!selectedTramo) return;
+    if (!deleteModal.selectedItem) return;
     
     try {
-      await tramoService.delete(selectedTramo._id);
+      await tramoService.delete(deleteModal.selectedItem._id);
       notifications.show({
         title: 'Éxito',
         message: 'Tramo eliminado correctamente',
         color: 'green'
       });
       loadData();
-      closeDelete();
+      deleteModal.close();
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -193,8 +192,8 @@ const TramosPage: React.FC = () => {
 
   const handleFormSubmit = async (data: any) => {
     try {
-      if (selectedTramo) {
-        await tramoService.update(selectedTramo._id, data);
+      if (formModal.selectedItem) {
+        await tramoService.update(formModal.selectedItem._id, data);
         notifications.show({
           title: 'Éxito',
           message: 'Tramo actualizado correctamente',
@@ -209,7 +208,7 @@ const TramosPage: React.FC = () => {
         });
       }
       loadData();
-      closeForm();
+      formModal.close();
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -220,7 +219,7 @@ const TramosPage: React.FC = () => {
   };
 
   const handleImportComplete = async (result: any) => {
-    setImportModalOpened(false);
+    importModal.close();
     excelOperations.handleImportComplete(result);
   };
 
@@ -440,7 +439,7 @@ const TramosPage: React.FC = () => {
           <Button
             variant="outline"
             leftSection={<IconUpload size={16} />}
-            onClick={() => setImportModalOpened(true)}
+            onClick={importModal.openCreate}
           >
             Importar
           </Button>
@@ -464,10 +463,7 @@ const TramosPage: React.FC = () => {
           
           <Button
             leftSection={<IconPlus size={16} />}
-            onClick={() => {
-              setSelectedTramo(null);
-              openForm();
-            }}
+            onClick={formModal.openCreate}
           >
             Nuevo Tramo
           </Button>
@@ -552,15 +548,15 @@ const TramosPage: React.FC = () => {
           {activeTab === 'calculadora' ? (
             <Stack gap="md">
               <TramosSelector
-                onTramoSelect={(tramo) => setSelectedTramo(tramo)}
-                selectedTramo={selectedTramo}
+                onTramoSelect={(tramo) => tramo && formModal.openEdit(tramo)}
+                selectedTramo={formModal.selectedItem}
               />
               
-              {selectedTramo && (
+              {formModal.selectedItem && (
                 <>
                   <TarifaCalculator 
-                    tramoId={selectedTramo._id}
-                    tramo={selectedTramo}
+                    tramoId={formModal.selectedItem._id}
+                    tramo={formModal.selectedItem}
                     onCalculationChange={(result: any) => {
                       // Manejar resultado del cálculo
                       console.log('Resultado cálculo:', result);
@@ -568,7 +564,7 @@ const TramosPage: React.FC = () => {
                   />
                   
                   <TarifaVersioning
-                    tramoId={selectedTramo._id}
+                    tramoId={formModal.selectedItem._id}
                     onVersionSelect={(version) => {
                       // Manejar selección de versión
                       console.log('Versión seleccionada:', version);
@@ -604,45 +600,45 @@ const TramosPage: React.FC = () => {
 
       {/* Modal de formulario */}
       <Modal
-        opened={formOpened}
-        onClose={closeForm}
-        title={selectedTramo ? 'Editar Tramo' : 'Nuevo Tramo'}
+        opened={formModal.isOpen}
+        onClose={formModal.close}
+        title={formModal.selectedItem ? 'Editar Tramo' : 'Nuevo Tramo'}
         size="xl"
       >
         <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>}>
           <TramoForm
-            tramo={selectedTramo as any}
+            tramo={formModal.selectedItem as any}
             clientes={clientes}
             sites={sites as any}
             onSubmit={handleFormSubmit}
-            onCancel={closeForm}
+            onCancel={formModal.close}
           />
         </Suspense>
       </Modal>
 
       {/* Modal de detalle */}
       <Modal
-        opened={detailOpened}
-        onClose={closeDetail}
+        opened={detailModal.isOpen}
+        onClose={detailModal.close}
         title="Detalle del Tramo"
         size="xl"
       >
-        {selectedTramo && (
+        {detailModal.selectedItem && (
           <TramoDetail
-            tramo={selectedTramo as any}
+            tramo={detailModal.selectedItem as any}
             onEdit={() => {
-              closeDetail();
-              openForm();
+              detailModal.close();
+              formModal.openEdit(detailModal.selectedItem!);
             }}
-            onClose={closeDetail}
+            onClose={detailModal.close}
           />
         )}
       </Modal>
 
-      {/* Modal de confirmación de eliminación */}
+      {/* Modal de importación Excel */}
       <ExcelImportModal
-        opened={importModalOpened}
-        onClose={() => setImportModalOpened(false)}
+        opened={importModal.isOpen}
+        onClose={importModal.close}
         title="Importar Tramos desde Excel"
         entityType="cliente"
         onImportComplete={handleImportComplete}
@@ -672,13 +668,13 @@ const TramosPage: React.FC = () => {
       />
 
       <ConfirmModal
-        opened={deleteOpened}
-        onClose={closeDelete}
+        opened={deleteModal.isOpen}
+        onClose={deleteModal.close}
         onConfirm={confirmDelete}
         title="Eliminar Tramo"
         message={
-          selectedTramo 
-            ? `¿Estás seguro de que deseas eliminar el tramo ${selectedTramo.origen.nombre} → ${selectedTramo.destino.nombre}?`
+          deleteModal.selectedItem 
+            ? `¿Estás seguro de que deseas eliminar el tramo ${deleteModal.selectedItem.origen.nombre} → ${deleteModal.selectedItem.destino.nombre}?`
             : ''
         }
         confirmLabel="Eliminar"

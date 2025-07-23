@@ -35,6 +35,7 @@ import { Site, SiteFilters, Cliente } from '../../types';
 import { siteService } from '../../services/siteService';
 import { clienteService } from '../../services/clienteService';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { useModal } from '../../hooks/useModal';
 import { siteExcelService } from '../../services/BaseExcelService';
 
 const SitesPage: React.FC = () => {
@@ -55,11 +56,8 @@ const SitesPage: React.FC = () => {
     totalItems: 0,
     itemsPerPage: 10
   });
-  const [deleteModal, setDeleteModal] = useState<{
-    isOpen: boolean;
-    site: Site | null;
-  }>({ isOpen: false, site: null });
-  const [importModalOpened, setImportModalOpened] = useState(false);
+  const deleteModal = useModal<Site>();
+  const importModal = useModal();
 
   const loadSites = useCallback(async () => {
     try {
@@ -105,7 +103,7 @@ const SitesPage: React.FC = () => {
   });
 
   const handleImportComplete = async (result: any) => {
-    setImportModalOpened(false);
+    importModal.close();
     excelOperations.handleImportComplete(result);
   };
 
@@ -128,7 +126,7 @@ const SitesPage: React.FC = () => {
         color: 'green'
       });
       loadSites();
-      setDeleteModal({ isOpen: false, site: null });
+      deleteModal.close();
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -264,7 +262,7 @@ const SitesPage: React.FC = () => {
               size="sm" 
               variant="subtle" 
               color="red"
-              onClick={() => site && setDeleteModal({ isOpen: true, site })}
+              onClick={() => site && deleteModal.openDelete(site)}
             >
               <IconTrash size={16} />
             </ActionIcon>
@@ -307,7 +305,7 @@ const SitesPage: React.FC = () => {
             <Button
               variant="outline"
               leftSection={<IconUpload size={16} />}
-              onClick={() => setImportModalOpened(true)}
+              onClick={importModal.openCreate}
             >
               Importar
             </Button>
@@ -402,16 +400,16 @@ const SitesPage: React.FC = () => {
 
       <ConfirmModal
         opened={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, site: null })}
-        onConfirm={() => deleteModal.site && handleDelete(deleteModal.site)}
+        onClose={deleteModal.close}
+        onConfirm={() => deleteModal.selectedItem && handleDelete(deleteModal.selectedItem)}
         title="Eliminar Site"
-        message={`¿Está seguro que desea eliminar el site "${deleteModal.site?.nombre}"?`}
+        message={`¿Está seguro que desea eliminar el site "${deleteModal.selectedItem?.nombre}"?`}
         type="delete"
       />
 
       <ExcelImportModal
-        opened={importModalOpened}
-        onClose={() => setImportModalOpened(false)}
+        opened={importModal.isOpen}
+        onClose={importModal.close}
         title="Importar Sites desde Excel"
         entityType="sites"
         onImportComplete={handleImportComplete}

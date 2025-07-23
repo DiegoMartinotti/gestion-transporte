@@ -18,6 +18,7 @@ import {
 import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash, IconLayoutGrid, IconList, IconEye, IconFileExport, IconFileImport, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
+import { useModal } from '../../hooks/useModal';
 import { vehiculoExcelService } from '../../services/BaseExcelService';
 import DataTable from '../../components/base/DataTable';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
@@ -38,15 +39,16 @@ export default function VehiculosPage() {
   const [vehiculosVencimientos, setVehiculosVencimientos] = useState<VehiculoConVencimientos[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [vehiculoToDelete, setVehiculoToDelete] = useState<string | null>(null);
   const [filters, setFilters] = useState<VehiculoFilter>({});
   const [activeTab, setActiveTab] = useState<string | null>('todos');
-  const [formModalOpen, setFormModalOpen] = useState(false);
-  const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [vehiculoForDetail, setVehiculoForDetail] = useState<Vehiculo | null>(null);
+
+  // Modales usando el hook useModal
+  const formModal = useModal<Vehiculo>({
+    onSuccess: () => loadData()
+  });
+  const deleteModal = useModal<{ id: string; dominio?: string }>();
+  const detailModal = useModal<Vehiculo>();
 
   const tiposVehiculo: VehiculoTipo[] = ['Camión', 'Acoplado', 'Semirremolque', 'Bitren', 'Furgón', 'Utilitario'];
 
@@ -91,10 +93,10 @@ export default function VehiculosPage() {
   }, [filters, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
-    if (!vehiculoToDelete) return;
+    if (!deleteModal.selectedItem?.id) return;
 
     try {
-      await vehiculoService.deleteVehiculo(vehiculoToDelete);
+      await vehiculoService.deleteVehiculo(deleteModal.selectedItem.id);
       notifications.show({
         title: 'Éxito',
         message: 'Vehículo eliminado correctamente',
@@ -108,44 +110,12 @@ export default function VehiculosPage() {
         color: 'red'
       });
     } finally {
-      setDeleteModalOpen(false);
-      setVehiculoToDelete(null);
+      deleteModal.close();
     }
   };
 
-  const openDeleteModal = (id: string) => {
-    setVehiculoToDelete(id);
-    setDeleteModalOpen(true);
-  };
-
-  const openCreateModal = () => {
-    setSelectedVehiculo(null);
-    setFormModalOpen(true);
-  };
-
-  const openEditModal = (vehiculo: Vehiculo) => {
-    setSelectedVehiculo(vehiculo);
-    setFormModalOpen(true);
-  };
-
-  const closeFormModal = () => {
-    setFormModalOpen(false);
-    setSelectedVehiculo(null);
-  };
-
-  const openDetailModal = (vehiculo: Vehiculo) => {
-    setVehiculoForDetail(vehiculo);
-    setDetailModalOpen(true);
-  };
-
-  const closeDetailModal = () => {
-    setDetailModalOpen(false);
-    setVehiculoForDetail(null);
-  };
-
-  const handleFormSuccess = () => {
-    loadData();
-    closeFormModal();
+  const openDeleteModal = (id: string, dominio?: string) => {
+    deleteModal.openDelete({ id, dominio });
   };
 
   const getEmpresaNombre = (empresaId: string) => {
@@ -219,7 +189,7 @@ export default function VehiculosPage() {
             size="sm"
             variant="subtle"
             color="green"
-            onClick={() => openDetailModal(vehiculo)}
+            onClick={() => detailModal.openView(vehiculo)}
           >
             <IconEye size={16} />
           </ActionIcon>
@@ -227,7 +197,7 @@ export default function VehiculosPage() {
             size="sm"
             variant="subtle"
             color="blue"
-            onClick={() => openEditModal(vehiculo)}
+            onClick={() => formModal.openEdit(vehiculo)}
           >
             <IconEdit size={16} />
           </ActionIcon>
@@ -235,7 +205,7 @@ export default function VehiculosPage() {
             size="sm"
             variant="subtle"
             color="red"
-            onClick={() => openDeleteModal(vehiculo._id!)}
+            onClick={() => openDeleteModal(vehiculo._id!, vehiculo.dominio)}
           >
             <IconTrash size={16} />
           </ActionIcon>
@@ -292,7 +262,7 @@ export default function VehiculosPage() {
           </Menu>
           <Button
             leftSection={<IconPlus size={16} />}
-            onClick={openCreateModal}
+            onClick={formModal.openCreate}
           >
             Nuevo Vehículo
           </Button>
@@ -388,9 +358,9 @@ export default function VehiculosPage() {
                 <Grid.Col key={vehiculo._id} span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
                   <VehiculoCard
                     vehiculo={vehiculo}
-                    onEdit={openEditModal}
+                    onEdit={formModal.openEdit}
                     onDelete={openDeleteModal}
-                    onView={openDetailModal}
+                    onView={detailModal.openView}
                   />
                 </Grid.Col>
               ))}
@@ -415,7 +385,7 @@ export default function VehiculosPage() {
             mostrarVigentes={false}
             onEditVehiculo={(vehiculoId) => {
               const vehiculo = vehiculos.find(v => v._id === vehiculoId);
-              if (vehiculo) openEditModal(vehiculo);
+              if (vehiculo) formModal.openEdit(vehiculo);
             }}
           />
 
@@ -443,29 +413,29 @@ export default function VehiculosPage() {
       </Tabs>
 
       <ConfirmModal
-        opened={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
+        opened={deleteModal.isOpen}
+        onClose={deleteModal.close}
         onConfirm={handleDelete}
         title="Eliminar Vehículo"
-        message="¿Está seguro que desea eliminar este vehículo? Esta acción no se puede deshacer."
+        message={`¿Está seguro que desea eliminar el vehículo ${deleteModal.selectedItem?.dominio || ''}? Esta acción no se puede deshacer.`}
       />
 
       <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>}>
         <VehiculoForm
-          opened={formModalOpen}
-          onClose={closeFormModal}
-          vehiculo={selectedVehiculo}
-          onSuccess={handleFormSuccess}
+          opened={formModal.isOpen}
+          onClose={formModal.close}
+          vehiculo={formModal.selectedItem}
+          onSuccess={formModal.onSuccess}
         />
       </Suspense>
 
       <VehiculoDetail
-        vehiculo={vehiculoForDetail}
-        opened={detailModalOpen}
-        onClose={closeDetailModal}
+        vehiculo={detailModal.selectedItem}
+        opened={detailModal.isOpen}
+        onClose={detailModal.close}
         onEdit={(vehiculo) => {
-          closeDetailModal();
-          openEditModal(vehiculo);
+          detailModal.close();
+          formModal.openEdit(vehiculo);
         }}
       />
 
