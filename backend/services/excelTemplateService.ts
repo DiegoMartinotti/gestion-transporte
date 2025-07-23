@@ -1404,7 +1404,7 @@ export class ExcelTemplateService {
         }
 
         try {
-            const personalController = require('../controllers/personalController');
+            const personalController = require('../controllers/personal');
             const mockReq = { body: { personal } };
             
             let responseData: any;
