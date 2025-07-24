@@ -13,7 +13,7 @@ import {
 import { IconRoute, IconMapPin } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { tramoService } from '../../services/tramoService';
-import { Tramo, Site } from '../../types/tramo';
+import { Tramo, TramoSite } from '../../types';
 
 interface TramosSelectorProps {
   onTramoSelect: (tramo: Tramo | null) => void;
@@ -39,7 +39,7 @@ export const TramosSelector: React.FC<TramosSelectorProps> = ({
 
   // Obtener lista única de orígenes
   const origenes = useMemo(() => {
-    const uniqueOrigenes = new Map<string, Site>();
+    const uniqueOrigenes = new Map<string, TramoSite>();
     tramos.forEach((tramo: Tramo) => {
       if (tramo.origen) {
         uniqueOrigenes.set(tramo.origen._id, tramo.origen);
@@ -52,7 +52,7 @@ export const TramosSelector: React.FC<TramosSelectorProps> = ({
   const destinosDisponibles = useMemo(() => {
     if (!selectedOrigen) return [];
     
-    const uniqueDestinos = new Map<string, Site>();
+    const uniqueDestinos = new Map<string, TramoSite>();
     tramos
       .filter((tramo: Tramo) => tramo.origen?._id === selectedOrigen)
       .forEach((tramo: Tramo) => {

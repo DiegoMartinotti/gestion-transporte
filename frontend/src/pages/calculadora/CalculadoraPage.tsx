@@ -26,7 +26,7 @@ import { TarifaConflictDetector } from '../../components/detectors/TarifaConflic
 import { TipoCalculoSelector } from '../../components/selectors/TipoCalculoSelector';
 import { TarifaPreview } from '../../components/preview/TarifaPreview';
 import { TramosSelector } from '../../components/selectors/TramosSelector';
-import { Tramo } from '../../types/tramo';
+import { Tramo } from '../../types';
 
 
 const CalculadoraPage: React.FC = () => {

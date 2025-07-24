@@ -124,12 +124,12 @@ async function getAllTramos(req: AuthenticatedRequest, res: Response<ApiResponse
             const clienteB = b.cliente?.nombre || '';
             if (clienteA !== clienteB) return clienteA.localeCompare(clienteB);
             
-            const origenA = a.origen?.Site || '';
-            const origenB = b.origen?.Site || '';
+            const origenA = a.origen?.nombre || '';
+            const origenB = b.origen?.nombre || '';
             if (origenA !== origenB) return origenA.localeCompare(origenB);
             
-            const destinoA = a.destino?.Site || '';
-            const destinoB = b.destino?.Site || '';
+            const destinoA = a.destino?.nombre || '';
+            const destinoB = b.destino?.nombre || '';
             if (destinoA !== destinoB) return destinoA.localeCompare(destinoB);
             
             return (a.tipo || '').localeCompare(b.tipo || '');

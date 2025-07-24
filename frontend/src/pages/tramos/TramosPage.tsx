@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useCallback } from 'react';
 import {
   Paper,
   Title,
@@ -49,7 +49,7 @@ import ConfirmModal from '../../components/base/ConfirmModal';
 import TarifaCalculator from '../../components/calculators/TarifaCalculator';
 import { TarifaVersioning } from '../../components/versioning/TarifaVersioning';
 import { TramosSelector } from '../../components/selectors/TramosSelector';
-import { Tramo, Cliente } from '../../types/tramo';
+import { Tramo, Cliente } from '../../types';
 
 // Lazy load del formulario complejo
 const TramoForm = lazy(() => import('../../components/forms/TramoForm'));
@@ -70,32 +70,32 @@ const TramosPage: React.FC = () => {
 
   // Hooks centralizados para carga de datos
   const tramosLoader = useDataLoader<Tramo>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const response = await tramoService.getAll();
       const tramosData = Array.isArray(response) ? response : (response as any)?.data || [];
       return {
         data: tramosData,
         pagination: { currentPage: 1, totalPages: 1, totalItems: tramosData.length, itemsPerPage: tramosData.length }
       };
-    },
+    }, []),
     errorMessage: 'Error al cargar tramos',
-    onSuccess: (data) => console.log('Datos de tramos recibidos:', data.length, 'tramos')
+    onSuccess: useCallback((data: Tramo[]) => console.log('Datos de tramos recibidos:', data.length, 'tramos'), [])
   });
 
   const clientesLoader = useDataLoader<Cliente>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const response = await clienteService.getAll();
       const clientesData = Array.isArray(response) ? response : response.data;
       return {
         data: clientesData,
         pagination: { currentPage: 1, totalPages: 1, totalItems: clientesData.length, itemsPerPage: clientesData.length }
       };
-    },
+    }, []),
     errorMessage: 'Error al cargar clientes'
   });
 
   const sitesLoader = useDataLoader<LocalSite>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const response = await siteService.getAll();
       const sitesData = Array.isArray(response) ? response : response.data;
       return {
@@ -106,7 +106,7 @@ const TramosPage: React.FC = () => {
         })),
         pagination: { currentPage: 1, totalPages: 1, totalItems: sitesData.length, itemsPerPage: sitesData.length }
       };
-    },
+    }, []),
     errorMessage: 'Error al cargar sites'
   });
 
@@ -114,7 +114,11 @@ const TramosPage: React.FC = () => {
   const tramos = tramosLoader.data;
   const clientes = clientesLoader.data;
   const sites = sitesLoader.data;
-  const loading = tramosLoader.loading || clientesLoader.loading || sitesLoader.loading;
+  // Solo mostrar loading si realmente no hay datos cargados aún
+  const loading = (tramosLoader.loading && tramos.length === 0) || 
+                  (clientesLoader.loading && clientes.length === 0) || 
+                  (sitesLoader.loading && sites.length === 0);
+  
 
   // Función de recarga para todos los datos
   const loadData = async () => {
@@ -145,7 +149,6 @@ const TramosPage: React.FC = () => {
   const filteredTramos = tramos.filter(tramo => {
     // Validar que el tramo tenga las propiedades necesarias
     if (!tramo || !tramo.origen || !tramo.destino || !tramo.cliente) {
-      console.log('Tramo filtrado por datos incompletos:', tramo);
       return false;
     }
     
@@ -168,7 +171,6 @@ const TramosPage: React.FC = () => {
     return matchesSearch && matchesCliente && matchesOrigen && matchesDestino && matchesTab;
   });
   
-  console.log('Tramos filtrados:', filteredTramos.length, 'de', tramos.length);
 
   // Sites filtrados por cliente seleccionado
   const sitesFiltered = sites.filter(site => 
@@ -596,12 +598,14 @@ const TramosPage: React.FC = () => {
               <LoadingOverlay visible={loading} />
               
               {viewMode === 'list' ? (
-                <DataTable
-                  data={filteredTramos}
-                  columns={columns}
-                  loading={loading}
-                  emptyMessage="No se encontraron tramos"
-                />
+                <>
+                  <DataTable
+                    data={filteredTramos}
+                    columns={columns}
+                    loading={loading}
+                    emptyMessage="No se encontraron tramos"
+                  />
+                </>
               ) : (
                 <Grid>
                   {filteredTramos.map(tramo => (

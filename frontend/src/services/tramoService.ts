@@ -1,44 +1,5 @@
 import api from './api';
-
-export interface Tramo {
-  _id: string;
-  origen: {
-    _id: string;
-    nombre: string;
-    direccion: string;
-    location?: {
-      coordinates: [number, number];
-    };
-  };
-  destino: {
-    _id: string;
-    nombre: string;
-    direccion: string;
-    location?: {
-      coordinates: [number, number];
-    };
-  };
-  cliente: {
-    _id: string;
-    nombre: string;
-  };
-  distancia: number;
-  tarifasHistoricas: TarifaHistorica[];
-  tarifaVigente?: TarifaHistorica;
-  tarifasVigentes?: TarifaHistorica[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TarifaHistorica {
-  _id: string;
-  tipo: 'TRMC' | 'TRMI';
-  metodoCalculo: 'Kilometro' | 'Palet' | 'Fijo';
-  valor: number;
-  valorPeaje: number;
-  vigenciaDesde: string;
-  vigenciaHasta: string;
-}
+import { Tramo, TarifaHistorica, TramoFilters } from '../types';
 
 export interface CreateTramoRequest {
   origen: string;
@@ -49,15 +10,6 @@ export interface CreateTramoRequest {
 }
 
 export interface UpdateTramoRequest extends Partial<CreateTramoRequest> {}
-
-export interface TramoFilters {
-  cliente?: string;
-  origen?: string;
-  destino?: string;
-  search?: string;
-  conTarifa?: boolean;
-  sinTarifa?: boolean;
-}
 
 class TramoService {
   private baseURL = '/tramos';

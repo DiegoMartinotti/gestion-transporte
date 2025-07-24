@@ -66,13 +66,13 @@ const SitesPage: React.FC = () => {
 
   // Hook para cargar clientes
   const clientesLoader = useDataLoader<Cliente>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const response = await clienteService.getAll({ limit: 1000 });
       return {
         data: response.data,
         pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
       };
-    },
+    }, []),
     errorMessage: 'Error cargando clientes'
   });
 

@@ -73,7 +73,7 @@ export function ExtrasPage() {
 
   // Hook para cargar clientes (solo una vez)
   const clientesLoader = useDataLoader<Cliente>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const response = await clienteService.getAll();
       // La API de clientes puede devolver data dentro de response
       const data = response.data || response;
@@ -81,7 +81,7 @@ export function ExtrasPage() {
         data: Array.isArray(data) ? data : [],
         pagination: { currentPage: 1, totalPages: 1, totalItems: Array.isArray(data) ? data.length : 0, itemsPerPage: Array.isArray(data) ? data.length : 0 }
       };
-    },
+    }, []),
     errorMessage: 'Error cargando clientes'
   });
 
