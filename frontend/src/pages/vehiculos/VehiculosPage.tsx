@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import {
   Container,
   Title,
@@ -17,6 +17,7 @@ import {
 } from '@mantine/core';
 import { IconPlus, IconTruck, IconAlertTriangle, IconSearch, IconFilter, IconEdit, IconTrash, IconLayoutGrid, IconList, IconEye, IconFileExport, IconFileImport, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { useModal } from '../../hooks/useModal';
 import { vehiculoExcelService } from '../../services/BaseExcelService';
@@ -35,13 +36,77 @@ import { Empresa } from '../../types';
 const VehiculoForm = lazy(() => import('../../components/forms/VehiculoForm'));
 
 export default function VehiculosPage() {
-  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
-  const [vehiculosVencimientos, setVehiculosVencimientos] = useState<VehiculoConVencimientos[]>([]);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<VehiculoFilter>({});
   const [activeTab, setActiveTab] = useState<string | null>('todos');
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
+
+  const tiposVehiculo: VehiculoTipo[] = ['Camión', 'Acoplado', 'Semirremolque', 'Bitren', 'Furgón', 'Utilitario'];
+
+  // Hook para cargar empresas (siempre necesarias)
+  const empresasLoader = useDataLoader<Empresa>({
+    fetchFunction: async () => {
+      const response = await empresaService.getAll();
+      return {
+        data: response.data,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
+      };
+    },
+    errorMessage: 'Error al cargar empresas'
+  });
+
+  // Hook para cargar vehículos regulares
+  const vehiculosLoader = useDataLoader<Vehiculo>({
+    fetchFunction: async () => {
+      const vehiculosData = await vehiculoService.getVehiculos(filters);
+      return {
+        data: vehiculosData as Vehiculo[],
+        pagination: { currentPage: 1, totalPages: 1, totalItems: vehiculosData.length, itemsPerPage: vehiculosData.length }
+      };
+    },
+    dependencies: [filters],
+    initialLoading: activeTab !== 'vencimientos',
+    errorMessage: 'Error al cargar vehículos'
+  });
+
+  // Hook para cargar vehículos con vencimientos
+  const vencimientosLoader = useDataLoader<VehiculoConVencimientos>({
+    fetchFunction: async () => {
+      const vencimientosData = await vehiculoService.getVehiculosConVencimientos(30);
+      return {
+        data: vencimientosData,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: vencimientosData.length, itemsPerPage: vencimientosData.length }
+      };
+    },
+    initialLoading: activeTab === 'vencimientos',
+    errorMessage: 'Error al cargar vencimientos'
+  });
+
+  // Datos y estado de carga basado en el tab activo
+  const vehiculos = vehiculosLoader.data;
+  const vehiculosVencimientos = vencimientosLoader.data;
+  const empresas = empresasLoader.data;
+  const loading = empresasLoader.loading || 
+    (activeTab === 'vencimientos' ? vencimientosLoader.loading : vehiculosLoader.loading);
+
+  // Función de recarga centralizada
+  const loadData = async () => {
+    await empresasLoader.refresh();
+    if (activeTab === 'vencimientos') {
+      await vencimientosLoader.refresh();
+    } else {
+      await vehiculosLoader.refresh();
+    }
+  };
+
+  // Manejar cambio de tab
+  const handleTabChange = (tab: string | null) => {
+    setActiveTab(tab);
+    if (tab === 'vencimientos' && vencimientosLoader.data.length === 0) {
+      vencimientosLoader.refresh();
+    } else if (tab !== 'vencimientos' && vehiculosLoader.data.length === 0) {
+      vehiculosLoader.refresh();
+    }
+  };
 
   // Modales usando el hook useModal
   const formModal = useModal<Vehiculo>({
@@ -49,35 +114,6 @@ export default function VehiculosPage() {
   });
   const deleteModal = useModal<{ id: string; dominio?: string }>();
   const detailModal = useModal<Vehiculo>();
-
-  const tiposVehiculo: VehiculoTipo[] = ['Camión', 'Acoplado', 'Semirremolque', 'Bitren', 'Furgón', 'Utilitario'];
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Cargar empresas siempre
-      const empresasResponse = await empresaService.getAll();
-      const empresasData = empresasResponse.data;
-      setEmpresas(empresasData);
-
-      if (activeTab === 'vencimientos') {
-        const vencimientosData = await vehiculoService.getVehiculosConVencimientos(30);
-        setVehiculosVencimientos(vencimientosData);
-      } else {
-        const vehiculosData = await vehiculoService.getVehiculos(filters);
-        setVehiculos(vehiculosData as Vehiculo[]);
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al cargar los vehículos',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Hook para operaciones Excel
   const excelOperations = useExcelOperations({
@@ -87,10 +123,6 @@ export default function VehiculosPage() {
     templateFunction: () => vehiculoExcelService.getTemplate(),
     reloadFunction: loadData,
   });
-
-  useEffect(() => {
-    loadData();
-  }, [filters, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async () => {
     if (!deleteModal.selectedItem?.id) return;
@@ -269,7 +301,7 @@ export default function VehiculosPage() {
         </Group>
       </Group>
 
-      <Tabs value={activeTab} onChange={setActiveTab} mb="md">
+      <Tabs value={activeTab} onChange={handleTabChange} mb="md">
         <Tabs.List>
           <Tabs.Tab value="todos">
             Todos los Vehículos ({vehiculos?.length || 0})

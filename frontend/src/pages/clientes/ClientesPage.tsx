@@ -24,9 +24,10 @@ import {
   IconRoute,
   IconEye
 } from '@tabler/icons-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { useModal } from '../../hooks/useModal';
 import { clienteExcelService } from '../../services/BaseExcelService';
@@ -40,16 +41,31 @@ import { useVirtualizedTable } from '../../hooks/useVirtualizedTable';
 
 export default function ClientesPage() {
   const navigate = useNavigate();
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalItems, setTotalItems] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState<ClienteFilters>({});
   const [deleteLoading, setDeleteLoading] = useState(false);
   const deleteModal = useModal<Cliente>();
   const importModal = useModal();
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
+
+  // Hook centralizado para carga de datos
+  const {
+    data: clientes,
+    loading,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage: pageSize,
+    setItemsPerPage,
+    refresh: loadClientes
+  } = useDataLoader({
+    fetchFunction: useCallback((params) => clienteService.getAll({
+      ...filters,
+      ...(params || {})
+    }), [filters]),
+    dependencies: [filters],
+    enablePagination: true,
+    errorMessage: 'Error al cargar clientes'
+  });
 
   // Hook para tabla virtualizada
   const {} = useVirtualizedTable({
@@ -58,28 +74,6 @@ export default function ClientesPage() {
     enableLocalFiltering: true,
     enableLocalSorting: true
   });
-
-  const loadClientes = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await clienteService.getAll({
-        ...filters,
-        page: currentPage,
-        limit: pageSize
-      });
-      
-      setClientes(response.data);
-      setTotalItems(response.pagination.totalItems);
-    } catch (error) {
-      console.error('Error loading clientes:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, currentPage, pageSize]);
-
-  useEffect(() => {
-    loadClientes();
-  }, [loadClientes]);
 
   // Detectar si usar virtual scrolling basado en cantidad de datos
   useEffect(() => {
@@ -90,6 +84,7 @@ export default function ClientesPage() {
     setFilters(newFilters);
     setCurrentPage(1);
   };
+
 
   const handleDelete = async () => {
     if (!deleteModal.selectedItem) return;
@@ -296,7 +291,7 @@ export default function ClientesPage() {
                 currentPage={currentPage}
                 pageSize={pageSize}
                 onPageChange={setCurrentPage}
-                onPageSizeChange={setPageSize}
+                onPageSizeChange={setItemsPerPage}
                 onFiltersChange={handleFiltersChange}
                 searchPlaceholder="Buscar clientes..."
                 emptyMessage="No se encontraron clientes"

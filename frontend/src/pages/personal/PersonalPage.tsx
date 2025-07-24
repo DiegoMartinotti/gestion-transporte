@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import {
   Container,
   Title,
@@ -22,6 +22,7 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { useModal } from '../../hooks/useModal';
 import { personalExcelService } from '../../services/BaseExcelService';
@@ -54,28 +55,53 @@ const PersonalForm = lazy(() => import('../../components/forms/PersonalForm').th
 const ITEMS_PER_PAGE = 20;
 
 export const PersonalPage: React.FC = () => {
-  // State management
-  const [personal, setPersonal] = useState<Personal[]>([]);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('list');
   
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-
-  // Filters
-  const [filters, setFilters] = useState<PersonalFilters>({
+  // Filters (sin page y limit que los maneja useDataLoader)
+  const [filters, setFilters] = useState<Omit<PersonalFilters, 'page' | 'limit'>>({
     search: '',
     tipo: undefined,
     empresa: undefined,
     activo: undefined,
-    page: 1,
-    limit: ITEMS_PER_PAGE,
   });
 
-  // Modals
+  // Hook para cargar personal con paginación
+  const personalLoader = useDataLoader<Personal>({
+    fetchFunction: (params) => personalService.getAll({
+      ...filters,
+      ...params
+    }),
+    dependencies: [filters],
+    enablePagination: true,
+    errorMessage: 'Error al cargar personal'
+  });
+
+  // Hook para cargar empresas
+  const empresasLoader = useDataLoader<Empresa>({
+    fetchFunction: async () => {
+      const response = await empresaService.getAll({ activa: true });
+      return {
+        data: response.data,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
+      };
+    },
+    errorMessage: 'Error al cargar empresas'
+  });
+
+  // Datos y estados
+  const personal = personalLoader.data;
+  const empresas = empresasLoader.data;
+  const loading = personalLoader.loading || empresasLoader.loading;
+  const currentPage = personalLoader.currentPage;
+  const totalPages = personalLoader.totalPages;
+  const totalItems = personalLoader.totalItems;
+
+  // Función de recarga
+  const loadPersonal = async () => {
+    await personalLoader.refresh();
+  };
+
+  // Modales
   const formModal = useModal<Personal>({
     onSuccess: () => loadPersonal()
   });
@@ -83,54 +109,17 @@ export const PersonalPage: React.FC = () => {
   const deleteModal = useModal<Personal>();
   const importModal = useModal();
 
-  // Load data
-  useEffect(() => {
-    loadPersonal();
-  }, [filters]);
-
-  useEffect(() => {
-    loadEmpresas();
-  }, []);
-
-  const loadPersonal = async () => {
-    setLoading(true);
-    try {
-      const response = await personalService.getAll(filters);
-      setPersonal(response.data);
-      setTotalPages(response.pagination.totalPages);
-      setTotalItems(response.pagination.totalItems);
-      setCurrentPage(response.pagination.currentPage);
-    } catch (error: any) {
-      notifications.show({
-        title: 'Error',
-        message: error.message || 'Error al cargar personal',
-        color: 'red',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadEmpresas = async () => {
-    try {
-      const response = await empresaService.getAll({ activa: true });
-      setEmpresas(response.data);
-    } catch (error) {
-      console.error('Error loading empresas:', error);
-    }
-  };
-
   // Event handlers
-  const handleFilterChange = (key: keyof PersonalFilters, value: any) => {
+  const handleFilterChange = (key: keyof Omit<PersonalFilters, 'page' | 'limit'>, value: any) => {
     setFilters(prev => ({
       ...prev,
-      [key]: value,
-      page: 1, // Reset to first page when filtering
+      [key]: value
     }));
+    personalLoader.setCurrentPage(1); // Reset to first page when filtering
   };
 
   const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }));
+    personalLoader.setCurrentPage(page);
   };
 
   const handleSearch = (search: string) => {
