@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Group, Button, Stack, Title, Badge, Select, Tabs, Text, Grid, Paper, Alert, ActionIcon, Menu } from '@mantine/core';
 import { IconPlus, IconTruck, IconCalendar, IconMapPin, IconClock, IconAlertCircle, IconCheckupList, IconX, IconCheck, IconUpload, IconDownload, IconEdit, IconTrash, IconEye, IconDots } from '@tabler/icons-react';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import DataTable from '../../components/base/DataTable';
 import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
 import { DateRangePicker } from '../../components/base/SimpleDateRangePicker';
 import SearchInput from '../../components/base/SearchInput';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
-import { useViajes } from '../../hooks/useViajes';
 import { useVirtualizedTable } from '../../hooks/useVirtualizedTable';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { ClienteSelector } from '../../components/selectors/ClienteSelector';
@@ -23,7 +23,35 @@ const DEFAULT_PAGE_SIZE = 10;
 
 export function ViajesPage() {
   const navigate = useNavigate();
-  const { viajes, loading, error, deleteViaje, fetchViajes } = useViajes();
+  
+  // Hook centralizado para carga de viajes
+  const viajesLoader = useDataLoader<Viaje>({
+    fetchFunction: useCallback(async () => {
+      const response = await ViajeService.getAll({}, 1, 1000); // Obtener todos los viajes
+      return {
+        data: response.data || [],
+        pagination: { currentPage: 1, totalPages: 1, totalItems: (response.data || []).length, itemsPerPage: (response.data || []).length }
+      };
+    }, []),
+    errorMessage: 'Error al cargar los viajes'
+  });
+
+  // Estados y funciones derivadas  
+  const viajes = viajesLoader.data;
+  const loading = viajesLoader.loading;
+  const error = viajesLoader.error;
+  const fetchViajes = viajesLoader.refresh;
+
+  // Función de eliminación usando ViajeService directamente
+  const deleteViaje = async (id: string) => {
+    try {
+      await ViajeService.delete(id);
+      await fetchViajes(); // Refrescar la lista después de eliminar
+    } catch (err: any) {
+      console.error('Error al eliminar viaje:', err);
+      throw err;
+    }
+  };
   const [search, setSearch] = useState('');
   const [clienteFilter, setClienteFilter] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string | null>(null);

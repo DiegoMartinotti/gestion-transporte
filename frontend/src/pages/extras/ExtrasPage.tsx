@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Stack,
   Group,
@@ -25,6 +25,7 @@ import {
   IconCalendar,
   IconExclamationCircle
 } from '@tabler/icons-react';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import DataTable from '../../components/base/DataTable';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import SearchInput from '../../components/base/SearchInput';
@@ -45,45 +46,50 @@ const TIPOS_EXTRA = [
 ];
 
 export function ExtrasPage() {
-  const [extras, setExtras] = useState<Extra[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCliente, setSelectedCliente] = useState<string>('');
   const [selectedTipo, setSelectedTipo] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('vigentes');
 
-  useEffect(() => {
-    loadData();
-  }, [selectedCliente, selectedTipo, activeTab]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Cargar clientes para el selector
-      const clientesData = await clienteService.getAll();
-      setClientes(clientesData.data || clientesData);
-
-      // Preparar filtros para extras
+  // Hook para cargar extras con filtros dinámicos
+  const extrasLoader = useDataLoader<Extra>({
+    fetchFunction: useCallback(async () => {
       const filters: any = {};
       if (selectedCliente) filters.cliente = selectedCliente;
       if (selectedTipo) filters.tipo = selectedTipo;
       if (activeTab === 'vigentes') filters.vigente = true;
 
-      const extrasData = await extraService.getExtras(filters) as any;
-      setExtras(extrasData.data || extrasData);
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-      showNotification({
-        title: 'Error',
-        message: 'No se pudieron cargar los datos',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      const response = await extraService.getExtras(filters);
+      // La API devuelve directamente el array, no un objeto con .data
+      const data = Array.isArray(response) ? response : [];
+      return {
+        data,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: data.length, itemsPerPage: data.length }
+      };
+    }, [selectedCliente, selectedTipo, activeTab]),
+    dependencies: [selectedCliente, selectedTipo, activeTab],
+    errorMessage: 'Error al cargar extras'
+  });
+
+  // Hook para cargar clientes (solo una vez)
+  const clientesLoader = useDataLoader<Cliente>({
+    fetchFunction: async () => {
+      const response = await clienteService.getAll();
+      // La API de clientes puede devolver data dentro de response
+      const data = response.data || response;
+      return {
+        data: Array.isArray(data) ? data : [],
+        pagination: { currentPage: 1, totalPages: 1, totalItems: Array.isArray(data) ? data.length : 0, itemsPerPage: Array.isArray(data) ? data.length : 0 }
+      };
+    },
+    errorMessage: 'Error cargando clientes'
+  });
+
+  // Datos y estados
+  const extras = extrasLoader.data;
+  const clientes = clientesLoader.data;
+  const loading = extrasLoader.loading || clientesLoader.loading;
+  const loadData = extrasLoader.refresh;
 
   const handleEdit = (extra: Extra) => {
     // TODO: Abrir modal de edición

@@ -25,9 +25,10 @@ import {
   IconEye,
   IconBuilding
 } from '@tabler/icons-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { useModal } from '../../hooks/useModal';
 import { empresaExcelService } from '../../services/BaseExcelService';
@@ -39,41 +40,38 @@ import { DEFAULT_PAGE_SIZE } from '../../constants';
 
 export default function EmpresasPage() {
   const navigate = useNavigate();
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalItems, setTotalItems] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [filters, setFilters] = useState<EmpresaFilters>({});
   const [deleteLoading, setDeleteLoading] = useState(false);
   const deleteModal = useModal<Empresa>();
   const importModal = useModal();
 
-  const loadEmpresas = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await empresaService.getAll({
-        ...filters,
-        page: currentPage,
-        limit: pageSize
-      });
-      
-      setEmpresas(response.data);
-      setTotalItems(response.pagination.totalItems);
-    } catch (error) {
-      console.error('Error loading empresas:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, currentPage, pageSize]);
-
-  useEffect(() => {
-    loadEmpresas();
-  }, [loadEmpresas]);
+  // Hook centralizado para carga de datos
+  const {
+    data: empresas,
+    loading,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage: pageSize,
+    setItemsPerPage,
+    refresh: loadEmpresas
+  } = useDataLoader<Empresa>({
+    fetchFunction: useCallback((params) => empresaService.getAll({
+      ...filters,
+      ...(params || {})
+    }), [filters]),
+    dependencies: [filters],
+    enablePagination: true,
+    errorMessage: 'Error al cargar empresas'
+  });
 
   const handleFiltersChange = (newFilters: EmpresaFilters) => {
     setFilters(newFilters);
     setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setItemsPerPage(newPageSize);
   };
 
   const handleDelete = async () => {
@@ -284,7 +282,7 @@ export default function EmpresasPage() {
               currentPage={currentPage}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
+              onPageSizeChange={handlePageSizeChange}
               onFiltersChange={handleFiltersChange}
               searchPlaceholder="Buscar empresas..."
               emptyMessage="No se encontraron empresas"

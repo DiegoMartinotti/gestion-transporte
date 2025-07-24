@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Container,
   Title,
@@ -14,6 +14,7 @@ import {
   SegmentedControl
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import { 
   IconPlus, 
   IconEdit, 
@@ -39,59 +40,54 @@ import { useModal } from '../../hooks/useModal';
 import { siteExcelService } from '../../services/BaseExcelService';
 
 const SitesPage: React.FC = () => {
-  const [sites, setSites] = useState<Site[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'map'>('table');
   const [selectedSite, setSelectedSite] = useState<Site | undefined>();
-  const [filters, setFilters] = useState<SiteFilters>({
-    page: 1,
-    limit: 10,
+  const [baseFilters, setBaseFilters] = useState<Omit<SiteFilters, 'page' | 'limit'>>({
     sortBy: 'nombre',
     sortOrder: 'asc'
-  });
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10
   });
   const deleteModal = useModal<Site>();
   const importModal = useModal();
 
-  const loadSites = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await siteService.getAll(filters);
-      setSites(response.data);
-      setPagination(response.pagination);
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudieron cargar los sites',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
+  // Hook para cargar sites con paginación real
+  const sitesLoader = useDataLoader<Site>({
+    fetchFunction: useCallback((params) => {
+      const filters = {
+        ...baseFilters,
+        page: params?.page || 1,
+        limit: params?.limit || 10
+      };
+      return siteService.getAll(filters);
+    }, [baseFilters]),
+    dependencies: [baseFilters],
+    enablePagination: true,
+    errorMessage: 'No se pudieron cargar los sites'
+  });
 
-  const loadClientes = useCallback(async () => {
-    try {
+  // Hook para cargar clientes
+  const clientesLoader = useDataLoader<Cliente>({
+    fetchFunction: async () => {
       const response = await clienteService.getAll({ limit: 1000 });
-      setClientes(response.data);
-    } catch (error) {
-      console.error('Error cargando clientes:', error);
-    }
-  }, []);
+      return {
+        data: response.data,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
+      };
+    },
+    errorMessage: 'Error cargando clientes'
+  });
 
-  useEffect(() => {
-    loadSites();
-  }, [loadSites]);
+  // Datos y estados
+  const sites = sitesLoader.data;
+  const clientes = clientesLoader.data;
+  const loading = sitesLoader.loading || clientesLoader.loading;
+  const pagination = {
+    currentPage: sitesLoader.currentPage,
+    totalPages: sitesLoader.totalPages,
+    totalItems: sitesLoader.totalItems,
+    itemsPerPage: sitesLoader.itemsPerPage
+  };
 
-  useEffect(() => {
-    loadClientes();
-  }, [loadClientes]);
+  const loadSites = sitesLoader.refresh;
 
   // Hook unificado para operaciones Excel
   const excelOperations = useExcelOperations({
@@ -108,12 +104,13 @@ const SitesPage: React.FC = () => {
   };
 
 
-  const handleFilterChange = (key: keyof SiteFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+  const handleFilterChange = (key: keyof Omit<SiteFilters, 'page' | 'limit'>, value: any) => {
+    setBaseFilters(prev => ({ ...prev, [key]: value }));
+    sitesLoader.setCurrentPage(1); // Reset a primera página
   };
 
   const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }));
+    sitesLoader.setCurrentPage(page);
   };
 
 
@@ -312,7 +309,7 @@ const SitesPage: React.FC = () => {
             <Button
               variant="outline"
               leftSection={<IconDownload size={16} />}
-              onClick={() => excelOperations.handleExport(filters)}
+              onClick={() => excelOperations.handleExport(baseFilters)}
               loading={excelOperations.isExporting}
             >
               Exportar
@@ -336,7 +333,7 @@ const SitesPage: React.FC = () => {
                     label: cliente.nombre
                   }))
                 ]}
-                value={filters.cliente || ''}
+                value={baseFilters.cliente || ''}
                 onChange={(value) => handleFilterChange('cliente', value || undefined)}
                 clearable
               />
@@ -350,8 +347,8 @@ const SitesPage: React.FC = () => {
                   { value: '50', label: '50' },
                   { value: '100', label: '100' }
                 ]}
-                value={filters.limit?.toString() || '10'}
-                onChange={(value) => handleFilterChange('limit', parseInt(value || '10'))}
+                value={sitesLoader.itemsPerPage.toString()}
+                onChange={(value) => sitesLoader.setItemsPerPage(parseInt(value || '10'))}
               />
             </Grid.Col>
           </Grid>
@@ -366,14 +363,14 @@ const SitesPage: React.FC = () => {
             currentPage={pagination.currentPage}
             pageSize={pagination.itemsPerPage}
             onPageChange={handlePageChange}
-            onPageSizeChange={(pageSize) => handleFilterChange('limit', pageSize)}
-            onFiltersChange={(filters) => {
-              if (filters.search !== undefined) handleFilterChange('search', filters.search);
-              if (filters.sortBy && filters.sortOrder) {
-                setFilters(prev => ({
+            onPageSizeChange={(pageSize) => sitesLoader.setItemsPerPage(pageSize)}
+            onFiltersChange={(tableFilters) => {
+              if (tableFilters.search !== undefined) handleFilterChange('search', tableFilters.search);
+              if (tableFilters.sortBy && tableFilters.sortOrder) {
+                setBaseFilters(prev => ({
                   ...prev,
-                  sortBy: filters.sortBy!,
-                  sortOrder: filters.sortOrder!
+                  sortBy: tableFilters.sortBy!,
+                  sortOrder: tableFilters.sortOrder!
                 }));
               }
             }}

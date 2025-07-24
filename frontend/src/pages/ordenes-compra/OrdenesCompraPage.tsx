@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Container,
   Group,
@@ -26,6 +26,7 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import DataTable from '../../components/base/DataTable';
 import LoadingOverlay from '../../components/base/LoadingOverlay';
 import SearchInput from '../../components/base/SearchInput';
@@ -43,53 +44,50 @@ const ESTADOS_OPTIONS = [
 ];
 
 export function OrdenesCompraPage() {
-  const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<OrdenCompraFilter>({});
-  const [pagination, setPagination] = useState({
-    page: 1,
-    totalPages: 1,
-    total: 0
+
+  // Hook para cargar órdenes de compra con paginación
+  const ordenesLoader = useDataLoader<OrdenCompra>({
+    fetchFunction: async (params) => {
+      const response = await OrdenCompraService.getAll(filters, params?.page || 1);
+      return {
+        data: response.data,
+        pagination: {
+          currentPage: response.page,
+          totalPages: response.totalPages,
+          totalItems: response.total,
+          itemsPerPage: response.data.length
+        }
+      };
+    },
+    dependencies: [filters],
+    enablePagination: true,
+    errorMessage: 'No se pudieron cargar las órdenes de compra'
   });
 
-  const loadOrdenes = async () => {
-    setLoading(true);
-    try {
-      const response = await OrdenCompraService.getAll(filters, pagination.page);
-      setOrdenes(response.data);
-      setPagination({
-        page: response.page,
-        totalPages: response.totalPages,
-        total: response.total
-      });
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudieron cargar las órdenes de compra',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadClientes = async () => {
-    try {
+  // Hook para cargar clientes (solo una vez)
+  const clientesLoader = useDataLoader<Cliente>({
+    fetchFunction: async () => {
       const response = await ClienteService.getAll();
-      setClientes(response.data);
-    } catch (error) {
-      console.error('Error cargando clientes:', error);
-    }
+      return {
+        data: response.data,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
+      };
+    },
+    errorMessage: 'Error cargando clientes'
+  });
+
+  // Datos y estados
+  const ordenes = ordenesLoader.data;
+  const clientes = clientesLoader.data;
+  const loading = ordenesLoader.loading || clientesLoader.loading;
+  const pagination = {
+    page: ordenesLoader.currentPage,
+    totalPages: ordenesLoader.totalPages,
+    total: ordenesLoader.totalItems
   };
 
-  useEffect(() => {
-    loadClientes();
-  }, []);
-
-  useEffect(() => {
-    loadOrdenes();
-  }, [filters, pagination.page]);
+  const loadOrdenes = ordenesLoader.refresh;
 
   const handleDelete = async (orden: OrdenCompra) => {
     modals.openConfirmModal({
@@ -110,7 +108,7 @@ export function OrdenesCompraPage() {
             message: 'Orden de compra eliminada correctamente',
             color: 'green'
           });
-          loadOrdenes();
+          ordenesLoader.refresh();
         } catch (error) {
           notifications.show({
             title: 'Error',
@@ -397,7 +395,7 @@ export function OrdenesCompraPage() {
             loading={loading}
             currentPage={pagination.page}
             totalItems={pagination.total}
-            onPageChange={(page: number) => setPagination(prev => ({ ...prev, page }))}
+            onPageChange={(page: number) => ordenesLoader.setCurrentPage(page)}
             emptyMessage="No se encontraron órdenes de compra"
           />
         </Card>
