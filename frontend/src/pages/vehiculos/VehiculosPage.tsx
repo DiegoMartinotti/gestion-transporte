@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useCallback } from 'react';
 import {
   Container,
   Title,
@@ -44,25 +44,25 @@ export default function VehiculosPage() {
 
   // Hook para cargar empresas (siempre necesarias)
   const empresasLoader = useDataLoader<Empresa>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const response = await empresaService.getAll();
       return {
         data: response.data,
         pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
       };
-    },
+    }, []),
     errorMessage: 'Error al cargar empresas'
   });
 
   // Hook para cargar vehículos regulares
   const vehiculosLoader = useDataLoader<Vehiculo>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const vehiculosData = await vehiculoService.getVehiculos(filters);
       return {
         data: vehiculosData as Vehiculo[],
         pagination: { currentPage: 1, totalPages: 1, totalItems: vehiculosData.length, itemsPerPage: vehiculosData.length }
       };
-    },
+    }, [filters]),
     dependencies: [filters],
     initialLoading: activeTab !== 'vencimientos',
     errorMessage: 'Error al cargar vehículos'
@@ -70,13 +70,13 @@ export default function VehiculosPage() {
 
   // Hook para cargar vehículos con vencimientos
   const vencimientosLoader = useDataLoader<VehiculoConVencimientos>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const vencimientosData = await vehiculoService.getVehiculosConVencimientos(30);
       return {
         data: vencimientosData,
         pagination: { currentPage: 1, totalPages: 1, totalItems: vencimientosData.length, itemsPerPage: vencimientosData.length }
       };
-    },
+    }, []),
     initialLoading: activeTab === 'vencimientos',
     errorMessage: 'Error al cargar vencimientos'
   });

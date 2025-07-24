@@ -178,26 +178,49 @@ export interface Site {
   updatedAt: Date;
 }
 
-export interface Tramo {
+export interface TramoSite {
   _id: string;
   nombre: string;
-  cliente: string | Cliente;
-  siteOrigen: string | Site;
-  siteDestino: string | Site;
-  distancia: number;
-  tipoCalculo: 'Distancia' | 'Peso' | 'Tiempo' | 'Formula';
-  tarifas: TarifaTramo[];
-  activo: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  direccion: string;
+  location?: {
+    coordinates: [number, number];
+  };
 }
 
-export interface TarifaTramo {
-  fechaInicio: Date;
-  fechaFin?: Date;
-  precioBase: number;
-  moneda: 'USD' | 'ARS';
-  activo: boolean;
+export interface TramoCliente {
+  _id: string;
+  nombre: string;
+}
+
+export interface Tramo {
+  _id: string;
+  origen: TramoSite;
+  destino: TramoSite;
+  cliente: TramoCliente;
+  distancia: number;
+  tarifasHistoricas: TarifaHistorica[];
+  tarifaVigente?: TarifaHistorica;
+  tarifasVigentes?: TarifaHistorica[];
+  // Campos de la tarifa vigente a nivel raíz (desde el backend)
+  tipo?: 'TRMC' | 'TRMI';
+  metodoCalculo?: 'Kilometro' | 'Palet' | 'Fijo';
+  valor?: number;
+  valorPeaje?: number;
+  vigenciaDesde?: string;
+  vigenciaHasta?: string;
+  activo?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TarifaHistorica {
+  _id: string;
+  tipo: 'TRMC' | 'TRMI';
+  metodoCalculo: 'Kilometro' | 'Palet' | 'Fijo';
+  valor: number;
+  valorPeaje: number;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
 }
 
 export interface Vehiculo {
@@ -328,7 +351,10 @@ export interface SiteFilters extends BaseFilters {
 
 export interface TramoFilters extends BaseFilters {
   cliente?: string;
-  tipoCalculo?: 'Distancia' | 'Peso' | 'Tiempo' | 'Formula';
+  origen?: string;
+  destino?: string;
+  conTarifa?: boolean;
+  sinTarifa?: boolean;
 }
 
 export interface VehiculoFilters extends BaseFilters {

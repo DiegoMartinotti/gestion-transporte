@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useCallback } from 'react';
 import {
   Container,
   Title,
@@ -67,10 +67,10 @@ export const PersonalPage: React.FC = () => {
 
   // Hook para cargar personal con paginación
   const personalLoader = useDataLoader<Personal>({
-    fetchFunction: (params) => personalService.getAll({
+    fetchFunction: useCallback((params) => personalService.getAll({
       ...filters,
       ...params
-    }),
+    }), [filters]),
     dependencies: [filters],
     enablePagination: true,
     errorMessage: 'Error al cargar personal'
@@ -78,13 +78,13 @@ export const PersonalPage: React.FC = () => {
 
   // Hook para cargar empresas
   const empresasLoader = useDataLoader<Empresa>({
-    fetchFunction: async () => {
+    fetchFunction: useCallback(async () => {
       const response = await empresaService.getAll({ activa: true });
       return {
         data: response.data,
         pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
       };
-    },
+    }, []),
     errorMessage: 'Error al cargar empresas'
   });
 
