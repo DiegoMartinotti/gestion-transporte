@@ -1,8 +1,10 @@
 import React from 'react';
 import { Alert, Text, Stack, Group, ThemeIcon } from '@mantine/core';
 import { IconCheck, IconX, IconAlertTriangle } from '@tabler/icons-react';
+import { ValidationResult } from './BaseValidator';
 
-interface ValidationResult {
+// Interfaz específica para resultados de fórmula (mantiene compatibilidad)
+interface FormulaValidationResult {
   isValid: boolean;
   errors?: string[];
   warnings?: string[];
@@ -11,7 +13,7 @@ interface ValidationResult {
 }
 
 interface FormulaValidatorProps {
-  result: ValidationResult | null;
+  result: FormulaValidationResult | null;
 }
 
 export const FormulaValidator: React.FC<FormulaValidatorProps> = ({ result }) => {
@@ -23,10 +25,19 @@ export const FormulaValidator: React.FC<FormulaValidatorProps> = ({ result }) =>
     );
   }
 
+  // Usar las utilidades del BaseValidator para consistencia
+  const getValidationIcon = (isValid: boolean) => {
+    return isValid ? <IconCheck size={16} /> : <IconX size={16} />;
+  };
+
+  const getValidationColor = (isValid: boolean) => {
+    return isValid ? 'green' : 'red';
+  };
+
   if (result.isValid) {
     return (
       <Stack gap="xs">
-        <Alert icon={<IconCheck size={16} />} color="green">
+        <Alert icon={getValidationIcon(true)} color={getValidationColor(true)}>
           <Group justify="apart">
             <Text size="sm" fw={500}>Fórmula válida</Text>
             {result.result !== undefined && (
@@ -56,7 +67,7 @@ export const FormulaValidator: React.FC<FormulaValidatorProps> = ({ result }) =>
   }
 
   return (
-    <Alert icon={<IconX size={16} />} color="red">
+    <Alert icon={getValidationIcon(false)} color={getValidationColor(false)}>
       <Text size="sm" fw={500} mb="xs">Errores en la fórmula:</Text>
       {result.errors?.map((error, index) => (
         <Text key={index} size="sm">• {error}</Text>
