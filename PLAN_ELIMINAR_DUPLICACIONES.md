@@ -116,6 +116,15 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 - [x] Validar funcionamiento con Playwright tests
 - [x] Commit: "refactor: implementar useDataLoader para centralizar lógica de carga"
 
+### 2.4.1 Completar Migración de Páginas Restantes
+- [x] Migrar EmpresasPage para usar useDataLoader (alta prioridad)
+- [x] Migrar OrdenesCompraPage para usar useDataLoader (alta prioridad)
+- [x] Migrar SitesPage para usar useDataLoader (múltiples loaders)
+- [x] Migrar ExtrasPage para usar useDataLoader (tabs + doble carga)
+- [x] Migrar ViajesPage para usar useDataLoader (consistencia)
+- [x] Validar todas las páginas migradas con Playwright
+- [ ] Commit: "refactor: completar migración de todas las páginas a useDataLoader"
+
 ## 3. Validadores Unificados
 
 ### 3.1 Crear Clase Base para Validadores
