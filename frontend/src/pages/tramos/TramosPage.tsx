@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import {
   Paper,
   Title,
@@ -34,6 +34,7 @@ import {
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
+import { useDataLoader } from '../../hooks/useDataLoader';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { useModal } from '../../hooks/useModal';
 import { tramoExcelService } from '../../services/BaseExcelService';
@@ -60,10 +61,6 @@ interface LocalSite {
 }
 
 const TramosPage: React.FC = () => {
-  const [tramos, setTramos] = useState<Tramo[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [sites, setSites] = useState<LocalSite[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCliente, setSelectedCliente] = useState<string>('');
   const [selectedOrigen, setSelectedOrigen] = useState<string>('');
@@ -71,43 +68,69 @@ const TramosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('todos');
   const [viewMode] = useState<'list' | 'cards'>('list');
 
+  // Hooks centralizados para carga de datos
+  const tramosLoader = useDataLoader<Tramo>({
+    fetchFunction: async () => {
+      const response = await tramoService.getAll();
+      const tramosData = Array.isArray(response) ? response : (response as any)?.data || [];
+      return {
+        data: tramosData,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: tramosData.length, itemsPerPage: tramosData.length }
+      };
+    },
+    errorMessage: 'Error al cargar tramos',
+    onSuccess: (data) => console.log('Datos de tramos recibidos:', data.length, 'tramos')
+  });
+
+  const clientesLoader = useDataLoader<Cliente>({
+    fetchFunction: async () => {
+      const response = await clienteService.getAll();
+      const clientesData = Array.isArray(response) ? response : response.data;
+      return {
+        data: clientesData,
+        pagination: { currentPage: 1, totalPages: 1, totalItems: clientesData.length, itemsPerPage: clientesData.length }
+      };
+    },
+    errorMessage: 'Error al cargar clientes'
+  });
+
+  const sitesLoader = useDataLoader<LocalSite>({
+    fetchFunction: async () => {
+      const response = await siteService.getAll();
+      const sitesData = Array.isArray(response) ? response : response.data;
+      return {
+        data: sitesData.map((site: any) => ({
+          _id: site._id,
+          nombre: site.nombre,
+          cliente: typeof site.cliente === 'string' ? site.cliente : site.cliente._id
+        })),
+        pagination: { currentPage: 1, totalPages: 1, totalItems: sitesData.length, itemsPerPage: sitesData.length }
+      };
+    },
+    errorMessage: 'Error al cargar sites'
+  });
+
+  // Datos y estados de carga
+  const tramos = tramosLoader.data;
+  const clientes = clientesLoader.data;
+  const sites = sitesLoader.data;
+  const loading = tramosLoader.loading || clientesLoader.loading || sitesLoader.loading;
+
+  // Función de recarga para todos los datos
+  const loadData = async () => {
+    await Promise.all([
+      tramosLoader.refresh(),
+      clientesLoader.refresh(),
+      sitesLoader.refresh()
+    ]);
+  };
+
   const formModal = useModal<Tramo>({
     onSuccess: () => loadData()
   });
   const detailModal = useModal<Tramo>();
   const deleteModal = useModal<Tramo>();
   const importModal = useModal();
-
-  // Cargar datos iniciales
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [tramosData, clientesData, sitesData] = await Promise.all([
-        tramoService.getAll(),
-        clienteService.getAll(),
-        siteService.getAll()
-      ]);
-      
-      const processedTramos = Array.isArray(tramosData) ? tramosData : (tramosData as any)?.data || [];
-      console.log('Datos de tramos recibidos:', processedTramos.length, 'tramos');
-      setTramos(processedTramos);
-      setClientes(Array.isArray(clientesData) ? clientesData : clientesData.data);
-      setSites((Array.isArray(sitesData) ? sitesData : sitesData.data).map((site: any) => ({
-        _id: site._id,
-        nombre: site.nombre,
-        cliente: typeof site.cliente === 'string' ? site.cliente : site.cliente._id
-      })));
-    } catch (error) {
-      console.error('Error loading data:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'Error al cargar datos',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Hook unificado para operaciones Excel
   const excelOperations = useExcelOperations({
@@ -117,11 +140,6 @@ const TramosPage: React.FC = () => {
     templateFunction: () => tramoExcelService.getTemplate(),
     reloadFunction: loadData,
   });
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    loadData();
-  }, []);
 
   // Filtrar tramos
   const filteredTramos = tramos.filter(tramo => {

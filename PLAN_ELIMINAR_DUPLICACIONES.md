@@ -84,32 +84,37 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 ## 2. Frontend - Hooks Reutilizables
 
 ### 2.1 Crear Hook useModal
-- [ ] Crear archivo `frontend/src/hooks/useModal.ts`
-- [ ] Implementar lógica común: `isOpen`, `openCreate`, `openEdit`, `close`, `selectedItem`
-- [ ] Agregar tests unitarios para el hook
-- [ ] Documentar el uso del hook con ejemplos
+- [x] Crear archivo `frontend/src/hooks/useModal.ts`
+- [x] Implementar lógica común: `isOpen`, `openCreate`, `openEdit`, `close`, `selectedItem`
+- [x] Agregar tests unitarios para el hook
+- [x] Documentar el uso del hook con ejemplos
 
 ### 2.2 Migrar Páginas a useModal
-- [ ] Migrar `VehiculosPage` para usar `useModal`
-- [ ] Migrar `ClientesPage` para usar `useModal`
-- [ ] Migrar `EmpresasPage` para usar `useModal`
-- [ ] Migrar `PersonalPage` para usar `useModal`
-- [ ] Migrar `SitesPage` para usar `useModal`
-- [ ] Verificar que todas las funcionalidades siguen funcionando
-- [ ] Commit: "refactor: implementar useModal hook para eliminar duplicación"
+- [x] Migrar `VehiculosPage` para usar `useModal` (ya estaba hecho)
+- [x] Migrar `ClientesPage` para usar `useModal`
+- [x] Migrar `EmpresasPage` para usar `useModal`
+- [x] Migrar `PersonalPage` para usar `useModal`
+- [x] Migrar `SitesPage` para usar `useModal`
+- [x] Migrar `TramosPage` para usar `useModal` (adicional)
+- [x] Verificar que todas las funcionalidades siguen funcionando
+- [x] Commit: "refactor: implementar useModal hook para eliminar duplicación"
 
 ### 2.3 Crear Hook useDataLoader
-- [ ] Crear archivo `frontend/src/hooks/useDataLoader.ts`
-- [ ] Implementar patrón común: `data`, `loading`, `error`, `loadData`, `refresh`
-- [ ] Agregar soporte para paginación
-- [ ] Agregar tests unitarios
-- [ ] Documentar con ejemplos de uso
+- [x] Crear archivo `frontend/src/hooks/useDataLoader.ts`
+- [x] Implementar patrón común: `data`, `loading`, `error`, `loadData`, `refresh`
+- [x] Agregar soporte para paginación
+- [x] Agregar tests unitarios
+- [x] Documentar con ejemplos de uso
 
 ### 2.4 Migrar Páginas a useDataLoader
-- [ ] Identificar todas las páginas con patrón `loadData`
-- [ ] Migrar cada página para usar `useDataLoader`
-- [ ] Verificar manejo de errores consistente
-- [ ] Commit: "refactor: implementar useDataLoader para centralizar lógica de carga"
+- [x] Identificar todas las páginas con patrón `loadData`
+- [x] Migrar ClientesPage para usar `useDataLoader`
+- [x] Migrar TramosPage para usar `useDataLoader`
+- [x] Migrar VehiculosPage para usar `useDataLoader`
+- [x] Migrar PersonalPage para usar `useDataLoader`
+- [x] Verificar manejo de errores consistente
+- [x] Validar funcionamiento con Playwright tests
+- [x] Commit: "refactor: implementar useDataLoader para centralizar lógica de carga"
 
 ## 3. Validadores Unificados
 
