@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Paper,
   Title,
@@ -45,6 +45,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import dayjs from 'dayjs';
+import { BaseValidator, ValidationRule, ValidationResult, useValidation, BaseValidatorProps } from './BaseValidator';
 
 // Tipos base para validación
 export interface DocumentoValidacion {
@@ -64,20 +65,16 @@ export interface DocumentoValidacion {
   requerido: boolean; // Si es obligatorio para la entidad
 }
 
-export interface ValidationRule {
-  id: string;
-  name: string;
-  description: string;
+// Interfaces extendidas para validación de documentos  
+export interface DocumentValidationRule extends ValidationRule<DocumentoValidacion[]> {
   category: 'obligatoriedad' | 'vencimiento' | 'consistencia' | 'integridad';
   enabled: boolean;
-  severity: 'error' | 'warning' | 'info';
   applicableTo: ('vehiculo' | 'personal')[];
-  validate: (documentos: DocumentoValidacion[], config: ValidationConfig) => ValidationResult[];
+  validate: (documentos: DocumentoValidacion[], config: ValidationConfig) => DocumentValidationResult[];
 }
 
-export interface ValidationResult {
+export interface DocumentValidationResult extends ValidationResult {
   ruleId: string;
-  severity: 'error' | 'warning' | 'info';
   documentoId: string;
   entidadId: string;
   entidadNombre: string;
@@ -144,8 +141,99 @@ const DEFAULT_CONFIG: ValidationConfig = {
   permitirDocumentosVencidos: false
 };
 
+// Clase validadora que extiende BaseValidator
+export class DocumentValidator extends BaseValidator<DocumentoValidacion[]> {
+  private config: ValidationConfig;
+  private enabledRules: Set<string>;
+
+  constructor(config: ValidationConfig = DEFAULT_CONFIG, enabledRuleIds?: string[]) {
+    super();
+    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.enabledRules = new Set(enabledRuleIds || VALIDATION_RULES.map(r => r.id));
+  }
+
+  getValidationRules(): ValidationRule<DocumentoValidacion[]>[] {
+    return VALIDATION_RULES
+      .filter(rule => this.enabledRules.has(rule.id))
+      .map(rule => ({
+        id: rule.id,
+        category: rule.category,
+        name: rule.name,
+        description: rule.description,
+        severity: rule.severity,
+        required: rule.severity === 'error',
+        validator: (documentos: DocumentoValidacion[]) => this.validateDocumentRule(rule, documentos)
+      }));
+  }
+
+  private validateDocumentRule(rule: DocumentValidationRule, documentos: DocumentoValidacion[]): ValidationResult {
+    try {
+      const results = rule.validate(documentos, this.config);
+      
+      if (results.length === 0) {
+        return {
+          passed: true,
+          message: `Validación ${rule.name} pasó correctamente`
+        };
+      }
+
+      // Consolidar resultados múltiples en uno solo para BaseValidator
+      const errorMessages = results.map(r => r.mensaje);
+      const details = results.map(r => r.detalles).filter(Boolean) as string[];
+      
+      return {
+        passed: false,
+        message: `${rule.name}: ${errorMessages.join(', ')}`,
+        details: details.length > 0 ? details : undefined,
+        suggestion: results[0]?.sugerencia
+      };
+    } catch (error) {
+      return {
+        passed: false,
+        message: `Error en validación ${rule.name}: ${error}`,
+        suggestion: 'Verifique los datos e intente nuevamente'
+      };
+    }
+  }
+
+  // Métodos para manejar configuración
+  updateConfig(newConfig: Partial<ValidationConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+  }
+
+  toggleRule(ruleId: string): void {
+    if (this.enabledRules.has(ruleId)) {
+      this.enabledRules.delete(ruleId);
+    } else {
+      this.enabledRules.add(ruleId);
+    }
+  }
+
+  isRuleEnabled(ruleId: string): boolean {
+    return this.enabledRules.has(ruleId);
+  }
+
+  getConfig(): ValidationConfig {
+    return { ...this.config };
+  }
+
+  // Método para obtener resultados detallados para la UI
+  getDetailedResults(documentos: DocumentoValidacion[]): DocumentValidationResult[] {
+    const results: DocumentValidationResult[] = [];
+    
+    VALIDATION_RULES
+      .filter(rule => this.enabledRules.has(rule.id))
+      .forEach(rule => {
+        const ruleResults = rule.validate(documentos, this.config);
+        results.push(...ruleResults);
+      });
+    
+    return results;
+  }
+}
+
 // Reglas de validación predefinidas
-const VALIDATION_RULES: ValidationRule[] = [
+const VALIDATION_RULES: DocumentValidationRule[] = [
   // Reglas de obligatoriedad
   {
     id: 'documentos-requeridos',
@@ -154,9 +242,11 @@ const VALIDATION_RULES: ValidationRule[] = [
     category: 'obligatoriedad',
     enabled: true,
     severity: 'error',
+    required: true,
     applicableTo: ['vehiculo', 'personal'],
+    validator: () => ({ passed: true, message: '' }), // Se implementa en validateDocumentRule
     validate: (documentos, config) => {
-      const results: ValidationResult[] = [];
+      const results: DocumentValidationResult[] = [];
       const entidades = new Map<string, DocumentoValidacion[]>();
       
       // Agrupar por entidad
@@ -176,7 +266,8 @@ const VALIDATION_RULES: ValidationRule[] = [
           if (!tiposPresentes.includes(tipoRequerido)) {
             results.push({
               ruleId: 'documentos-requeridos',
-              severity: 'error',
+              passed: false,
+              message: `Falta documento requerido: ${tipoRequerido}`,
               documentoId: '',
               entidadId: id,
               entidadNombre: docs[0].entidadNombre,
@@ -201,9 +292,11 @@ const VALIDATION_RULES: ValidationRule[] = [
     category: 'vencimiento',
     enabled: true,
     severity: 'error',
+    required: true,
     applicableTo: ['vehiculo', 'personal'],
+    validator: () => ({ passed: true, message: '' }), // Se implementa en validateDocumentRule
     validate: (documentos, config) => {
-      const results: ValidationResult[] = [];
+      const results: DocumentValidationResult[] = [];
       const hoy = new Date();
       
       documentos.forEach(doc => {
@@ -214,7 +307,8 @@ const VALIDATION_RULES: ValidationRule[] = [
         if (diasRestantes < 0 && !config.permitirDocumentosVencidos) {
           results.push({
             ruleId: 'documentos-vencidos',
-            severity: 'error',
+            passed: false,
+            message: `Documento vencido hace ${Math.abs(diasRestantes)} días`,
             documentoId: doc._id,
             entidadId: doc.entidadId,
             entidadNombre: doc.entidadNombre,
@@ -226,7 +320,8 @@ const VALIDATION_RULES: ValidationRule[] = [
         } else if (diasRestantes <= config.diasCritico) {
           results.push({
             ruleId: 'documentos-vencidos',
-            severity: 'warning',
+            passed: false,
+            message: `Documento vence en ${diasRestantes} días`,
             documentoId: doc._id,
             entidadId: doc.entidadId,
             entidadNombre: doc.entidadNombre,
@@ -250,9 +345,11 @@ const VALIDATION_RULES: ValidationRule[] = [
     category: 'consistencia',
     enabled: true,
     severity: 'warning',
+    required: false,
     applicableTo: ['vehiculo', 'personal'],
+    validator: () => ({ passed: true, message: '' }), // Se implementa en validateDocumentRule
     validate: (documentos, config) => {
-      const results: ValidationResult[] = [];
+      const results: DocumentValidationResult[] = [];
       
       documentos.forEach(doc => {
         if (!doc.fechaEmision || !doc.fechaVencimiento || !doc.activo) return;
@@ -263,7 +360,8 @@ const VALIDATION_RULES: ValidationRule[] = [
         if (vencimiento.isBefore(emision)) {
           results.push({
             ruleId: 'fechas-consistentes',
-            severity: 'error',
+            passed: false,
+            message: 'Fecha de vencimiento anterior a fecha de emisión',
             documentoId: doc._id,
             entidadId: doc.entidadId,
             entidadNombre: doc.entidadNombre,
@@ -279,7 +377,8 @@ const VALIDATION_RULES: ValidationRule[] = [
         if (duracionAnios > 10) {
           results.push({
             ruleId: 'fechas-consistentes',
-            severity: 'warning',
+            passed: false,
+            message: `Duración del documento muy larga: ${duracionAnios.toFixed(1)} años`,
             documentoId: doc._id,
             entidadId: doc.entidadId,
             entidadNombre: doc.entidadNombre,
@@ -303,9 +402,11 @@ const VALIDATION_RULES: ValidationRule[] = [
     category: 'integridad',
     enabled: true,
     severity: 'warning',
+    required: false,
     applicableTo: ['vehiculo', 'personal'],
+    validator: () => ({ passed: true, message: '' }), // Se implementa en validateDocumentRule
     validate: (documentos, config) => {
-      const results: ValidationResult[] = [];
+      const results: DocumentValidationResult[] = [];
       
       documentos.forEach(doc => {
         if (!config.requiereNumeroDocumento || !doc.activo) return;
@@ -313,7 +414,8 @@ const VALIDATION_RULES: ValidationRule[] = [
         if (!doc.numero || doc.numero.trim() === '') {
           results.push({
             ruleId: 'numeros-validos',
-            severity: 'warning',
+            passed: false,
+            message: 'Número de documento faltante',
             documentoId: doc._id,
             entidadId: doc.entidadId,
             entidadNombre: doc.entidadNombre,
@@ -325,7 +427,8 @@ const VALIDATION_RULES: ValidationRule[] = [
         } else if (doc.numero.length < 3) {
           results.push({
             ruleId: 'numeros-validos',
-            severity: 'info',
+            passed: false,
+            message: 'Número de documento muy corto',
             documentoId: doc._id,
             entidadId: doc.entidadId,
             entidadNombre: doc.entidadNombre,
@@ -356,35 +459,43 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
 }) => {
   // Estados locales
   const [selectedTab, setSelectedTab] = useState('summary');
-  const [enabledRules, setEnabledRules] = useState<string[]>(
-    VALIDATION_RULES.filter(r => r.enabled).map(r => r.id)
-  );
   const [validationConfig, setValidationConfig] = useState<ValidationConfig>({
     ...DEFAULT_CONFIG,
     ...config
   });
+  const [enabledRules, setEnabledRules] = useState<string[]>(
+    VALIDATION_RULES.filter(r => r.enabled).map(r => r.id)
+  );
   const [configModalOpened, { open: openConfigModal, close: closeConfigModal }] = useDisclosure(false);
   const [detailsOpened, { toggle: toggleDetails }] = useDisclosure(false);
 
-  // Ejecutar validaciones
-  const validationResults = useMemo(() => {
-    const results: ValidationResult[] = [];
-    
-    VALIDATION_RULES
-      .filter(rule => enabledRules.includes(rule.id))
-      .forEach(rule => {
-        const ruleResults = rule.validate(documentos, validationConfig);
-        results.push(...ruleResults);
-      });
-    
-    return results;
-  }, [documentos, enabledRules, validationConfig]);
+  // Crear instancia del validador
+  const validator = useMemo(() => {
+    return new DocumentValidator(validationConfig, enabledRules);
+  }, [validationConfig, enabledRules]);
 
-  // Agrupar resultados
+  // Obtener resultados detallados para la UI
+  const detailedResults = useMemo(() => {
+    return validator.getDetailedResults(documentos);
+  }, [validator, documentos]);
+
+  // Usar el hook de validación de BaseValidator
+  const { validationResults, validationSummary, runValidation } = useValidation(
+    validator,
+    documentos,
+    true,
+    useCallback((summary: any) => {
+      if (onValidationComplete) {
+        onValidationComplete(detailedResults);
+      }
+    }, [onValidationComplete, detailedResults])
+  );
+
+  // Agrupar resultados detallados por categoría
   const resultsByCategory = useMemo(() => {
-    const groups: Record<string, ValidationResult[]> = {};
+    const groups: Record<string, DocumentValidationResult[]> = {};
     
-    validationResults.forEach(result => {
+    detailedResults.forEach(result => {
       const rule = VALIDATION_RULES.find(r => r.id === result.ruleId);
       const category = rule?.category || 'otros';
       
@@ -393,26 +504,29 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
     });
     
     return groups;
-  }, [validationResults]);
+  }, [detailedResults]);
 
-  // Estadísticas
+  // Estadísticas basadas en BaseValidator
   const stats = useMemo(() => {
-    const total = validationResults.length;
-    const errors = validationResults.filter(r => r.severity === 'error').length;
-    const warnings = validationResults.filter(r => r.severity === 'warning').length;
-    const infos = validationResults.filter(r => r.severity === 'info').length;
+    const total = detailedResults.length;
+    const errors = validationSummary.errors.length;
+    const warnings = validationSummary.warnings.length;
+    const infos = validationSummary.infos.length;
     
-    return { total, errors, warnings, infos };
-  }, [validationResults]);
+    return { 
+      total, 
+      errors, 
+      warnings, 
+      infos,
+      score: validationSummary.score,
+      canSave: validationSummary.canSave
+    };
+  }, [detailedResults, validationSummary]);
 
-  // Callbacks
-  React.useEffect(() => {
-    if (onValidationComplete) {
-      onValidationComplete(validationResults);
-    }
-  }, [validationResults, onValidationComplete]);
-
-  const handleConfigSave = () => {
+  // Manejo de configuración
+  const handleConfigSave = useCallback(() => {
+    // Actualizar el validador con la nueva configuración
+    validator.updateConfig(validationConfig);
     onConfigChange?.(validationConfig);
     closeConfigModal();
     
@@ -421,15 +535,24 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
       message: 'Las reglas de validación han sido actualizadas',
       color: 'green'
     });
-  };
+  }, [validator, validationConfig, onConfigChange, closeConfigModal]);
 
-  const handleToggleRule = (ruleId: string) => {
-    setEnabledRules(prev => 
-      prev.includes(ruleId) 
+  const handleToggleRule = useCallback((ruleId: string) => {
+    setEnabledRules(prev => {
+      const newRules = prev.includes(ruleId) 
         ? prev.filter(id => id !== ruleId)
-        : [...prev, ruleId]
-    );
-  };
+        : [...prev, ruleId];
+      
+      // También actualizar el validador
+      validator.toggleRule(ruleId);
+      return newRules;
+    });
+  }, [validator]);
+
+  // Actualizar configuración cuando cambia
+  React.useEffect(() => {
+    validator.updateConfig(validationConfig);
+  }, [validator, validationConfig]);
 
   // Render de estadísticas
   const renderStats = () => (
@@ -476,18 +599,16 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
       )}
       
       {/* Lista de problemas principales */}
-      {validationResults.slice(0, 5).map((result, index) => (
+      {detailedResults.slice(0, 5).map((result, index) => (
         <Card key={index} withBorder p="sm">
           <Group justify="space-between">
             <Group>
               <ThemeIcon
                 size="sm"
-                color={result.severity === 'error' ? 'red' : result.severity === 'warning' ? 'orange' : 'blue'}
+                color="red"
                 variant="light"
               >
-                {result.severity === 'error' ? <IconX size={14} /> : 
-                 result.severity === 'warning' ? <IconAlertTriangle size={14} /> : 
-                 <IconInfoCircle size={14} />}
+                <IconX size={14} />
               </ThemeIcon>
               
               <Box>
@@ -515,9 +636,9 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
         </Card>
       ))}
       
-      {validationResults.length > 5 && (
+      {detailedResults.length > 5 && (
         <Text size="sm" c="dimmed" ta="center">
-          Y {validationResults.length - 5} problema{validationResults.length - 5 > 1 ? 's' : ''} más...
+          Y {detailedResults.length - 5} problema{detailedResults.length - 5 > 1 ? 's' : ''} más...
         </Text>
       )}
     </Stack>
@@ -539,12 +660,10 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
                 <Group>
                   <ThemeIcon
                     size="xs"
-                    color={result.severity === 'error' ? 'red' : result.severity === 'warning' ? 'orange' : 'blue'}
+                    color="red"
                     variant="light"
                   >
-                    {result.severity === 'error' ? <IconX size={12} /> : 
-                     result.severity === 'warning' ? <IconAlertTriangle size={12} /> : 
-                     <IconInfoCircle size={12} />}
+                    <IconX size={12} />
                   </ThemeIcon>
                   
                   <Text size="sm">{result.entidadNombre}: {result.mensaje}</Text>
@@ -616,6 +735,9 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
         
         <Text size="sm" c="dimmed">
           Validando {documentos.length} documentos con {enabledRules.length} reglas activas
+          {stats.score && (
+            <> • Puntuación: {stats.score.toFixed(0)}%</>
+          )}
         </Text>
       </Paper>
 
@@ -656,7 +778,7 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {validationResults.map((result, index) => (
+              {detailedResults.map((result, index) => (
                 <Table.Tr key={index}>
                   <Table.Td>
                     <Group gap="xs">
@@ -671,11 +793,8 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
                     )}
                   </Table.Td>
                   <Table.Td>
-                    <Badge 
-                      color={result.severity === 'error' ? 'red' : result.severity === 'warning' ? 'orange' : 'blue'}
-                      size="sm"
-                    >
-                      {result.severity}
+                    <Badge color="red" size="sm">
+                      error
                     </Badge>
                   </Table.Td>
                   <Table.Td>
