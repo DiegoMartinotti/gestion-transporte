@@ -22,8 +22,15 @@ import {
   IconChevronUp,
   IconRefresh,
 } from '@tabler/icons-react';
+import {
+  BaseValidator,
+  ValidationRule,
+  ValidationResult as BaseValidationResult,
+  useValidation,
+} from './BaseValidator';
 
-interface ValidationRule {
+// Configuración simple para cross-entity rules
+interface CrossEntityRuleConfig {
   id: string;
   name: string;
   description: string;
@@ -32,105 +39,57 @@ interface ValidationRule {
   severity: 'error' | 'warning' | 'info';
 }
 
-interface ValidationResult {
+// Extensión de ValidationResult para incluir detalles cross-entity
+interface CrossEntityValidationResult extends BaseValidationResult {
   ruleId: string;
-  passed: boolean;
-  message: string;
   affectedRecords: number;
   details?: any[];
 }
 
 interface CrossEntityValidatorProps {
   data: Record<string, any[]>;
-  rules?: ValidationRule[];
-  onValidationComplete?: (results: ValidationResult[]) => void;
+  rules?: CrossEntityRuleConfig[];
+  onValidationComplete?: (results: CrossEntityValidationResult[]) => void;
   autoValidate?: boolean;
 }
 
-const defaultRules: ValidationRule[] = [
-  {
-    id: 'cliente-site-relationship',
-    name: 'Relación Cliente-Site',
-    description: 'Verificar que todos los sites pertenezcan a clientes existentes',
-    entityType: 'sites',
-    dependencies: ['clientes'],
-    severity: 'error',
-  },
-  {
-    id: 'empresa-personal-relationship',
-    name: 'Relación Empresa-Personal',
-    description: 'Verificar que todo el personal pertenezca a empresas existentes',
-    entityType: 'personal',
-    dependencies: ['empresas'],
-    severity: 'error',
-  },
-  {
-    id: 'empresa-vehiculo-relationship',
-    name: 'Relación Empresa-Vehículo',
-    description: 'Verificar que todos los vehículos pertenezcan a empresas existentes',
-    entityType: 'vehiculos',
-    dependencies: ['empresas'],
-    severity: 'error',
-  },
-  {
-    id: 'tramo-site-relationship',
-    name: 'Relación Tramo-Site',
-    description: 'Verificar que origen y destino de tramos sean sites existentes',
-    entityType: 'tramos',
-    dependencies: ['sites'],
-    severity: 'error',
-  },
-  {
-    id: 'tramo-cliente-relationship',
-    name: 'Relación Tramo-Cliente',
-    description: 'Verificar que los tramos pertenezcan a clientes existentes',
-    entityType: 'tramos',
-    dependencies: ['clientes'],
-    severity: 'error',
-  },
-  {
-    id: 'viaje-tramo-relationship',
-    name: 'Relación Viaje-Tramo',
-    description: 'Verificar que los viajes usen tramos existentes',
-    entityType: 'viajes',
-    dependencies: ['tramos'],
-    severity: 'error',
-  },
-  {
-    id: 'viaje-vehiculo-relationship',
-    name: 'Relación Viaje-Vehículo',
-    description: 'Verificar que los viajes usen vehículos existentes',
-    entityType: 'viajes',
-    dependencies: ['vehiculos'],
-    severity: 'warning',
-  },
-  {
-    id: 'extra-cliente-relationship',
-    name: 'Relación Extra-Cliente',
-    description: 'Verificar que los extras pertenezcan a clientes existentes',
-    entityType: 'extras',
-    dependencies: ['clientes'],
-    severity: 'error',
-  },
-];
+// Clase validadora que extiende BaseValidator
+class CrossEntityValidatorImpl extends BaseValidator<Record<string, any[]>> {
+  constructor(private rules: CrossEntityRuleConfig[]) {
+    super();
+  }
 
-export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
-  data,
-  rules = defaultRules,
-  onValidationComplete,
-  autoValidate = true,
-}) => {
-  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
-  const [isValidating, setIsValidating] = useState(false);
-  const [expandedRules, setExpandedRules] = useState<Set<string>>(new Set());
+  getValidationRules(): ValidationRule<Record<string, any[]>>[] {
+    return this.rules.map(rule => ({
+      id: rule.id,
+      name: rule.name,
+      description: rule.description,
+      severity: rule.severity,
+      category: 'Cross-Entity',
+      required: rule.severity === 'error',
+      validator: (data: Record<string, any[]>) => this.validateRule(rule, data)
+    }));
+  }
 
-  const validateRule = (rule: ValidationRule): ValidationResult => {
+  private validateRule(rule: CrossEntityRuleConfig, data: Record<string, any[]>): BaseValidationResult & { ruleId: string; affectedRecords: number; details?: any[] } {
     const entityData = data[rule.entityType] || [];
     const dependencyData: Record<string, any[]> = {};
     
     rule.dependencies.forEach(dep => {
       dependencyData[dep] = data[dep] || [];
     });
+
+    // Verificar que las dependencias existan
+    const hasAllDependencies = rule.dependencies.every(dep => data[dep] && data[dep].length > 0);
+    
+    if (!hasAllDependencies || !data[rule.entityType]) {
+      return {
+        ruleId: rule.id,
+        passed: true,
+        message: `Saltado: datos insuficientes para ${rule.name}`,
+        affectedRecords: 0,
+      };
+    }
 
     let passed = true;
     let affectedRecords = 0;
@@ -270,45 +229,114 @@ export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
       affectedRecords,
       details: details.length > 0 ? details : undefined,
     };
-  };
+  }
+}
 
-  const runValidation = async () => {
-    setIsValidating(true);
+const defaultRules: CrossEntityRuleConfig[] = [
+  {
+    id: 'cliente-site-relationship',
+    name: 'Relación Cliente-Site',
+    description: 'Verificar que todos los sites pertenezcan a clientes existentes',
+    entityType: 'sites',
+    dependencies: ['clientes'],
+    severity: 'error',
+  },
+  {
+    id: 'empresa-personal-relationship',
+    name: 'Relación Empresa-Personal',
+    description: 'Verificar que todo el personal pertenezca a empresas existentes',
+    entityType: 'personal',
+    dependencies: ['empresas'],
+    severity: 'error',
+  },
+  {
+    id: 'empresa-vehiculo-relationship',
+    name: 'Relación Empresa-Vehículo',
+    description: 'Verificar que todos los vehículos pertenezcan a empresas existentes',
+    entityType: 'vehiculos',
+    dependencies: ['empresas'],
+    severity: 'error',
+  },
+  {
+    id: 'tramo-site-relationship',
+    name: 'Relación Tramo-Site',
+    description: 'Verificar que origen y destino de tramos sean sites existentes',
+    entityType: 'tramos',
+    dependencies: ['sites'],
+    severity: 'error',
+  },
+  {
+    id: 'tramo-cliente-relationship',
+    name: 'Relación Tramo-Cliente',
+    description: 'Verificar que los tramos pertenezcan a clientes existentes',
+    entityType: 'tramos',
+    dependencies: ['clientes'],
+    severity: 'error',
+  },
+  {
+    id: 'viaje-tramo-relationship',
+    name: 'Relación Viaje-Tramo',
+    description: 'Verificar que los viajes usen tramos existentes',
+    entityType: 'viajes',
+    dependencies: ['tramos'],
+    severity: 'error',
+  },
+  {
+    id: 'viaje-vehiculo-relationship',
+    name: 'Relación Viaje-Vehículo',
+    description: 'Verificar que los viajes usen vehículos existentes',
+    entityType: 'viajes',
+    dependencies: ['vehiculos'],
+    severity: 'warning',
+  },
+  {
+    id: 'extra-cliente-relationship',
+    name: 'Relación Extra-Cliente',
+    description: 'Verificar que los extras pertenezcan a clientes existentes',
+    entityType: 'extras',
+    dependencies: ['clientes'],
+    severity: 'error',
+  },
+];
+
+export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
+  data,
+  rules = defaultRules,
+  onValidationComplete,
+  autoValidate = true,
+}) => {
+  const [expandedRules, setExpandedRules] = useState<Set<string>>(new Set());
+  
+  // Crear instancia del validador
+  const validatorInstance = new CrossEntityValidatorImpl(rules);
+  
+  // Usar el hook de validación
+  const {
+    validationResults: baseValidationResults,
+    validationSummary,
+    runValidation
+  } = useValidation(validatorInstance, data, autoValidate);
+
+  // Convertir resultados a formato CrossEntityValidationResult
+  const validationResults: CrossEntityValidationResult[] = Object.entries(baseValidationResults).map(([ruleId, result]) => {
+    const rule = rules.find(r => r.id === ruleId);
+    const extendedResult = result as BaseValidationResult & { ruleId?: string; affectedRecords?: number; details?: any[] };
     
-    try {
-      const results: ValidationResult[] = [];
-      
-      for (const rule of rules) {
-        // Verificar que las dependencias existan
-        const hasAllDependencies = rule.dependencies.every(dep => data[dep] && data[dep].length > 0);
-        
-        if (hasAllDependencies && data[rule.entityType]) {
-          const result = validateRule(rule);
-          results.push(result);
-        } else {
-          results.push({
-            ruleId: rule.id,
-            passed: true,
-            message: `Saltado: datos insuficientes para ${rule.name}`,
-            affectedRecords: 0,
-          });
-        }
-      }
-      
-      setValidationResults(results);
-      onValidationComplete?.(results);
-    } catch (error) {
-      console.error('Error en validación cross-entity:', error);
-    } finally {
-      setIsValidating(false);
-    }
-  };
+    return {
+      ruleId,
+      passed: result.passed,
+      message: result.message,
+      affectedRecords: extendedResult.affectedRecords || 0,
+      details: extendedResult.details
+    };
+  });
 
+  // Notificar resultados al callback cuando se complete la validación
   useEffect(() => {
-    if (autoValidate && Object.keys(data).length > 0) {
-      runValidation();
+    if (validationResults.length > 0 && onValidationComplete) {
+      onValidationComplete(validationResults);
     }
-  }, [data, rules, autoValidate]);
+  }, [validationSummary.totalRules, onValidationComplete]);
 
   const toggleRuleExpansion = (ruleId: string) => {
     const newExpanded = new Set(expandedRules);
@@ -320,18 +348,12 @@ export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
     setExpandedRules(newExpanded);
   };
 
-  const getValidationSummary = () => {
-    const total = validationResults.length;
-    const passed = validationResults.filter(r => r.passed).length;
-    const errors = validationResults.filter(r => !r.passed && 
-      rules.find(rule => rule.id === r.ruleId)?.severity === 'error').length;
-    const warnings = validationResults.filter(r => !r.passed && 
-      rules.find(rule => rule.id === r.ruleId)?.severity === 'warning').length;
-
-    return { total, passed, errors, warnings };
+  const summary = {
+    total: validationSummary.totalRules,
+    passed: validationSummary.passedRules,
+    errors: validationSummary.errors.length,
+    warnings: validationSummary.warnings.length
   };
-
-  const summary = getValidationSummary();
 
   return (
     <Box>
@@ -340,7 +362,6 @@ export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
           <Title order={4}>Validación Cross-Entity</Title>
           <Button
             leftSection={<IconRefresh size={16} />}
-            loading={isValidating}
             onClick={runValidation}
             variant="light"
           >
