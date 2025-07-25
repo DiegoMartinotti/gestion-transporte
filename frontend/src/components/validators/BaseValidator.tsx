@@ -11,11 +11,30 @@ export interface ValidationRule<T = any> {
   validator: (data: T) => ValidationResult;
 }
 
+// Extensión para reglas de negocio multi-entidad
+export interface BusinessRuleValidationRule extends ValidationRule<Record<string, any[]>> {
+  entityType: string;
+  enabled: boolean;
+  validationFn: (record: any, context?: any) => {
+    passed: boolean;
+    message?: string;
+    details?: any;
+  };
+}
+
 export interface ValidationResult {
   passed: boolean;
   message: string;
   details?: string[];
   suggestion?: string;
+}
+
+// Extensión para resultados de reglas de negocio
+export interface BusinessRuleValidationResult extends ValidationResult {
+  ruleId: string;
+  affectedRecords: number;
+  category: string;
+  entityDetails?: any[];
 }
 
 export interface ValidationSummary {
@@ -144,6 +163,89 @@ export abstract class BaseValidator<T> {
 
   protected isValidArray(array: any): boolean {
     return Array.isArray(array) && array.length > 0;
+  }
+}
+
+// Clase especializada para validadores de reglas de negocio multi-entidad
+export abstract class BusinessRuleBaseValidator extends BaseValidator<Record<string, any[]>> {
+  protected contextData?: any;
+  protected enabledRules: Set<string>;
+
+  constructor(contextData?: any, enabledRuleIds?: string[]) {
+    super();
+    this.contextData = contextData;
+    this.enabledRules = new Set(enabledRuleIds || []);
+  }
+
+  // Implementación específica para reglas de negocio
+  abstract getBusinessRules(): BusinessRuleValidationRule[];
+
+  // Implementar el método abstracto de BaseValidator
+  getValidationRules(): ValidationRule<Record<string, any[]>>[] {
+    return this.getBusinessRules()
+      .filter(rule => this.enabledRules.size === 0 || this.enabledRules.has(rule.id))
+      .map(rule => ({
+        ...rule,
+        validator: (data: Record<string, any[]>) => this.validateBusinessRule(rule, data)
+      }));
+  }
+
+  private validateBusinessRule(rule: BusinessRuleValidationRule, data: Record<string, any[]>): BusinessRuleValidationResult {
+    const entityData = data[rule.entityType] || [];
+    let passedCount = 0;
+    const entityDetails: any[] = [];
+
+    entityData.forEach(record => {
+      try {
+        const result = rule.validationFn(record, this.contextData);
+        if (result.passed) {
+          passedCount++;
+        } else {
+          entityDetails.push({
+            record,
+            message: result.message,
+            details: result.details,
+          });
+        }
+      } catch (error) {
+        entityDetails.push({
+          record,
+          message: `Error en validación: ${error}`,
+          details: { error: String(error) },
+        });
+      }
+    });
+
+    const totalRecords = entityData.length;
+    const passed = entityDetails.length === 0;
+
+    return {
+      ruleId: rule.id,
+      passed,
+      message: passed
+        ? `Todos los registros pasaron la validación (${totalRecords})`
+        : `${entityDetails.length} de ${totalRecords} registros fallaron la validación`,
+      affectedRecords: entityDetails.length,
+      entityDetails: entityDetails.length > 0 ? entityDetails : undefined,
+      category: rule.category,
+    };
+  }
+
+  // Métodos para manejar reglas habilitadas
+  toggleRule(ruleId: string): void {
+    if (this.enabledRules.has(ruleId)) {
+      this.enabledRules.delete(ruleId);
+    } else {
+      this.enabledRules.add(ruleId);
+    }
+  }
+
+  isRuleEnabled(ruleId: string): boolean {
+    return this.enabledRules.has(ruleId);
+  }
+
+  setEnabledRules(ruleIds: string[]): void {
+    this.enabledRules = new Set(ruleIds);
   }
 }
 
