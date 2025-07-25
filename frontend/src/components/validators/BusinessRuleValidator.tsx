@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Text,
@@ -25,7 +25,10 @@ import {
   IconSettings,
   IconInfoCircle,
 } from '@tabler/icons-react';
+import { useValidation, BusinessRuleValidationResult } from './BaseValidator';
+import { DefaultBusinessRuleValidator, defaultBusinessRules } from './DefaultBusinessRuleValidator';
 
+// Interface legacy para compatibilidad con el código existente
 interface BusinessRule {
   id: string;
   name: string;
@@ -41,20 +44,11 @@ interface BusinessRule {
   };
 }
 
-interface ValidationResult {
-  ruleId: string;
-  passed: boolean;
-  message: string;
-  affectedRecords: number;
-  details?: any[];
-  category: string;
-}
-
 interface BusinessRuleValidatorProps {
   data: Record<string, any[]>;
   contextData?: any;
   rules?: BusinessRule[];
-  onValidationComplete?: (results: ValidationResult[]) => void;
+  onValidationComplete?: (results: BusinessRuleValidationResult[]) => void;
   onRuleToggle?: (ruleId: string, enabled: boolean) => void;
   autoValidate?: boolean;
   entityType?: string;
@@ -63,248 +57,6 @@ interface BusinessRuleValidatorProps {
   showSeverityFilter?: boolean;
 }
 
-const defaultBusinessRules: BusinessRule[] = [
-  // Reglas Financieras
-  {
-    id: 'tarifa-positive-amount',
-    name: 'Tarifas con Montos Positivos',
-    description: 'Las tarifas deben tener montos mayores a cero',
-    category: 'financial',
-    entityType: 'tramos',
-    severity: 'error',
-    enabled: true,
-    validationFn: (tramo) => {
-      const tarifas = tramo.tarifas || [];
-      for (const tarifa of tarifas) {
-        if (tarifa.monto <= 0) {
-          return {
-            passed: false,
-            message: `Tarifa con monto inválido: ${tarifa.monto}`,
-            details: { tarifa, tramo: tramo.nombre }
-          };
-        }
-      }
-      return { passed: true };
-    }
-  },
-  {
-    id: 'extra-valid-pricing',
-    name: 'Precios de Extras Válidos',
-    description: 'Los extras deben tener precios unitarios válidos',
-    category: 'financial',
-    entityType: 'extras',
-    severity: 'error',
-    enabled: true,
-    validationFn: (extra) => {
-      if (!extra.precioUnitario || extra.precioUnitario <= 0) {
-        return {
-          passed: false,
-          message: `Extra con precio inválido: ${extra.precioUnitario}`,
-          details: { extra: extra.nombre }
-        };
-      }
-      return { passed: true };
-    }
-  },
-
-  // Reglas Operacionales
-  {
-    id: 'vehiculo-capacity-consistency',
-    name: 'Consistencia de Capacidad Vehicular',
-    description: 'La capacidad del vehículo debe ser coherente con su tipo',
-    category: 'operational',
-    entityType: 'vehiculos',
-    severity: 'warning',
-    enabled: true,
-    validationFn: (vehiculo) => {
-      const { tipoUnidad, capacidadKg, capacidadM3 } = vehiculo;
-      
-      // Reglas básicas por tipo de unidad
-      const capacityRules: Record<string, { minKg: number; maxKg: number; minM3?: number; maxM3?: number }> = {
-        'Camión': { minKg: 3000, maxKg: 50000, minM3: 10, maxM3: 100 },
-        'Camioneta': { minKg: 500, maxKg: 3000, minM3: 2, maxM3: 15 },
-        'Utilitario': { minKg: 200, maxKg: 1500, minM3: 1, maxM3: 8 },
-      };
-
-      const rule = capacityRules[tipoUnidad];
-      if (rule) {
-        if (capacidadKg < rule.minKg || capacidadKg > rule.maxKg) {
-          return {
-            passed: false,
-            message: `Capacidad en kg inconsistente para ${tipoUnidad}: ${capacidadKg}kg`,
-            details: { expected: `${rule.minKg}-${rule.maxKg}kg`, actual: `${capacidadKg}kg` }
-          };
-        }
-      }
-      
-      return { passed: true };
-    }
-  },
-  {
-    id: 'personal-driver-license',
-    name: 'Licencia de Conducir Válida',
-    description: 'Los choferes deben tener licencia de conducir vigente',
-    category: 'operational',
-    entityType: 'personal',
-    severity: 'error',
-    enabled: true,
-    validationFn: (personal) => {
-      if (personal.tipoPersonal === 'Chofer') {
-        const documentacion = personal.documentacion || {};
-        const licencia = documentacion.licenciaConducir;
-        
-        if (!licencia || !licencia.numero) {
-          return {
-            passed: false,
-            message: 'Chofer sin licencia de conducir',
-            details: { personal: `${personal.nombre} ${personal.apellido}` }
-          };
-        }
-
-        const vencimiento = new Date(licencia.vencimiento);
-        const hoy = new Date();
-        
-        if (vencimiento < hoy) {
-          return {
-            passed: false,
-            message: 'Licencia de conducir vencida',
-            details: { 
-              personal: `${personal.nombre} ${personal.apellido}`,
-              vencimiento: licencia.vencimiento 
-            }
-          };
-        }
-      }
-      
-      return { passed: true };
-    }
-  },
-
-  // Reglas Temporales
-  {
-    id: 'tarifa-date-overlap',
-    name: 'Superposición de Fechas en Tarifas',
-    description: 'No debe haber superposición de fechas en tarifas del mismo tramo',
-    category: 'temporal',
-    entityType: 'tramos',
-    severity: 'error',
-    enabled: true,
-    validationFn: (tramo) => {
-      const tarifas = (tramo.tarifas || []).filter((t: any) => t.activa);
-      
-      for (let i = 0; i < tarifas.length; i++) {
-        for (let j = i + 1; j < tarifas.length; j++) {
-          const tarifa1 = tarifas[i];
-          const tarifa2 = tarifas[j];
-          
-          const inicio1 = new Date(tarifa1.fechaDesde);
-          const fin1 = tarifa1.fechaHasta ? new Date(tarifa1.fechaHasta) : new Date('2099-12-31');
-          const inicio2 = new Date(tarifa2.fechaDesde);
-          const fin2 = tarifa2.fechaHasta ? new Date(tarifa2.fechaHasta) : new Date('2099-12-31');
-          
-          // Verificar superposición
-          if (inicio1 <= fin2 && inicio2 <= fin1) {
-            return {
-              passed: false,
-              message: 'Superposición de fechas en tarifas',
-              details: {
-                tarifa1: `${tarifa1.fechaDesde} - ${tarifa1.fechaHasta || 'indefinido'}`,
-                tarifa2: `${tarifa2.fechaDesde} - ${tarifa2.fechaHasta || 'indefinido'}`
-              }
-            };
-          }
-        }
-      }
-      
-      return { passed: true };
-    }
-  },
-  {
-    id: 'viaje-future-date',
-    name: 'Fechas de Viaje Válidas',
-    description: 'Los viajes no pueden tener fechas muy alejadas en el futuro',
-    category: 'temporal',
-    entityType: 'viajes',
-    severity: 'warning',
-    enabled: true,
-    validationFn: (viaje) => {
-      const fechaViaje = new Date(viaje.fecha);
-      const hoy = new Date();
-      const unAñoEnFuturo = new Date();
-      unAñoEnFuturo.setFullYear(hoy.getFullYear() + 1);
-      
-      if (fechaViaje > unAñoEnFuturo) {
-        return {
-          passed: false,
-          message: 'Fecha de viaje muy alejada en el futuro',
-          details: { fecha: viaje.fecha }
-        };
-      }
-      
-      return { passed: true };
-    }
-  },
-
-  // Reglas de Capacidad
-  {
-    id: 'site-coordinates-valid',
-    name: 'Coordenadas de Site Válidas',
-    description: 'Los sites deben tener coordenadas dentro de rangos válidos',
-    category: 'capacity',
-    entityType: 'sites',
-    severity: 'error',
-    enabled: true,
-    validationFn: (site) => {
-      const { latitud, longitud } = site.coordenadas || {};
-      
-      if (!latitud || !longitud) {
-        return {
-          passed: false,
-          message: 'Site sin coordenadas',
-          details: { site: site.nombre }
-        };
-      }
-      
-      // Validar rangos (Argentina aproximadamente)
-      if (latitud < -55 || latitud > -21 || longitud < -73 || longitud > -53) {
-        return {
-          passed: false,
-          message: 'Coordenadas fuera del rango esperado',
-          details: { latitud, longitud, site: site.nombre }
-        };
-      }
-      
-      return { passed: true };
-    }
-  },
-
-  // Reglas de Documentación
-  {
-    id: 'vehiculo-required-docs',
-    name: 'Documentación Obligatoria de Vehículos',
-    description: 'Los vehículos deben tener documentación obligatoria',
-    category: 'documentation',
-    entityType: 'vehiculos',
-    severity: 'error',
-    enabled: true,
-    validationFn: (vehiculo) => {
-      const documentacion = vehiculo.documentacion || {};
-      const requiredDocs = ['tarjetaVerde', 'seguro', 'vtv'];
-      
-      for (const doc of requiredDocs) {
-        if (!documentacion[doc] || !documentacion[doc].numero) {
-          return {
-            passed: false,
-            message: `Falta documentación obligatoria: ${doc}`,
-            details: { vehiculo: vehiculo.patente }
-          };
-        }
-      }
-      
-      return { passed: true };
-    }
-  }
-];
 
 const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
   data,
@@ -314,83 +66,43 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
   onRuleToggle,
   autoValidate = true,
 }) => {
-  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
-  const [isValidating, setIsValidating] = useState(false);
+  // Estados para la UI
   const [expandedRules, setExpandedRules] = useState<Set<string>>(new Set());
-  const [enabledRules, setEnabledRules] = useState<Set<string>>(
-    new Set(rules.filter(r => r.enabled).map(r => r.id))
-  );
+  
+  // Crear instancia del validador con configuración dinámica
+  const validator = useMemo(() => {
+    const enabledRuleIds = rules.filter(r => r.enabled).map(r => r.id);
+    return new DefaultBusinessRuleValidator(rules, contextData, enabledRuleIds);
+  }, [rules, contextData]);
 
-  const validateRule = (rule: BusinessRule): ValidationResult => {
-    const entityData = data[rule.entityType] || [];
-    let passedCount = 0;
-    const details: any[] = [];
+  // Usar el hook de validación
+  const { 
+    validationResults: baseValidationResults, 
+    validationSummary, 
+    validationRules,
+    runValidation 
+  } = useValidation(validator, data, autoValidate);
 
-    entityData.forEach(record => {
-      try {
-        const result = rule.validationFn(record, contextData);
-        if (result.passed) {
-          passedCount++;
-        } else {
-          details.push({
-            record,
-            message: result.message,
-            details: result.details,
-          });
-        }
-      } catch (error) {
-        details.push({
-          record,
-          message: `Error en validación: ${error}`,
-          details: { error: String(error) },
-        });
-      }
-    });
+  // Convertir resultados base a formato esperado por la UI
+  const validationResults = useMemo(() => {
+    return Object.entries(baseValidationResults)
+      .filter(([_, result]) => result)
+      .map(([ruleId, result]) => {
+        const businessResult = result as BusinessRuleValidationResult;
+        return businessResult;
+      });
+  }, [baseValidationResults]);
 
-    const totalRecords = entityData.length;
-    const passed = details.length === 0;
+  const isValidating = false; // El nuevo sistema es síncrono
 
-    return {
-      ruleId: rule.id,
-      passed,
-      message: passed
-        ? `Todos los registros pasaron la validación (${totalRecords})`
-        : `${details.length} de ${totalRecords} registros fallaron la validación`,
-      affectedRecords: details.length,
-      details: details.length > 0 ? details : undefined,
-      category: rule.category,
-    };
-  };
-
-  const runValidation = async () => {
-    setIsValidating(true);
-
-    try {
-      const results: ValidationResult[] = [];
-
-      for (const rule of rules) {
-        if (enabledRules.has(rule.id) && data[rule.entityType]) {
-          const result = validateRule(rule);
-          results.push(result);
-        }
-      }
-
-      setValidationResults(results);
-      onValidationComplete?.(results);
-    } catch (error) {
-      console.error('Error en validación de reglas de negocio:', error);
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
+  // Notificar cambios de validación
   useEffect(() => {
-    if (autoValidate && Object.keys(data).length > 0) {
-      runValidation();
+    if (validationResults.length > 0) {
+      onValidationComplete?.(validationResults);
     }
-  }, [data, enabledRules, autoValidate]);
+  }, [validationResults, onValidationComplete]);
 
-  const toggleRuleExpansion = (ruleId: string) => {
+  const toggleRuleExpansion = useCallback((ruleId: string) => {
     const newExpanded = new Set(expandedRules);
     if (newExpanded.has(ruleId)) {
       newExpanded.delete(ruleId);
@@ -398,20 +110,16 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
       newExpanded.add(ruleId);
     }
     setExpandedRules(newExpanded);
-  };
+  }, [expandedRules]);
 
-  const toggleRule = (ruleId: string) => {
-    const newEnabled = new Set(enabledRules);
-    if (newEnabled.has(ruleId)) {
-      newEnabled.delete(ruleId);
-    } else {
-      newEnabled.add(ruleId);
-    }
-    setEnabledRules(newEnabled);
-    onRuleToggle?.(ruleId, newEnabled.has(ruleId));
-  };
+  const toggleRule = useCallback((ruleId: string) => {
+    validator.toggleRule(ruleId);
+    onRuleToggle?.(ruleId, validator.isRuleEnabled(ruleId));
+    // Forzar revalidación después de cambiar las reglas habilitadas
+    setTimeout(() => runValidation(), 0);
+  }, [validator, onRuleToggle, runValidation]);
 
-  const getValidationSummary = () => {
+  const getValidationSummary = useCallback(() => {
     const byCategory = validationResults.reduce((acc, result) => {
       const category = result.category;
       if (!acc[category]) {
@@ -431,7 +139,7 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
     const failed = total - passed;
 
     return { total, passed, failed, byCategory };
-  };
+  }, [validationResults]);
 
   const summary = getValidationSummary();
 
@@ -506,7 +214,7 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
           {rules.map((rule) => {
             const result = validationResults.find(r => r.ruleId === rule.id);
             const isExpanded = expandedRules.has(rule.id);
-            const isEnabled = enabledRules.has(rule.id);
+            const isEnabled = validator.isRuleEnabled(rule.id);
 
             return (
               <Card key={rule.id} withBorder opacity={isEnabled ? 1 : 0.6}>
@@ -559,7 +267,7 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
                     </Box>
                   </Group>
 
-                  {result && result.details && result.details.length > 0 && (
+                  {result && result.entityDetails && result.entityDetails.length > 0 && (
                     <ActionIcon
                       variant="subtle"
                       onClick={() => toggleRuleExpansion(rule.id)}
@@ -569,13 +277,13 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
                   )}
                 </Group>
 
-                <Collapse in={isExpanded && !!(result && result.details && result.details.length > 0)}>
+                <Collapse in={isExpanded && !!(result && result.entityDetails && result.entityDetails.length > 0)}>
                   <Box mt="md" pt="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
                     <Text size="sm" fw={500} mb="xs">
-                      Registros que fallan ({result?.details?.length}):
+                      Registros que fallan ({result?.entityDetails?.length}):
                     </Text>
                     <Stack gap="xs">
-                      {result?.details?.slice(0, 5).map((detail, idx) => (
+                      {result?.entityDetails?.slice(0, 5).map((detail, idx) => (
                         <Box key={idx} p="xs" style={{ background: 'var(--mantine-color-gray-0)', borderRadius: 4 }}>
                           <Text size="xs" c="red" fw={500}>
                             {detail.message}
@@ -587,9 +295,9 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
                           )}
                         </Box>
                       ))}
-                      {result && result.details && result.details.length > 5 && (
+                      {result && result.entityDetails && result.entityDetails.length > 5 && (
                         <Text size="xs" c="dimmed">
-                          ... y {result.details.length - 5} registros más
+                          ... y {result.entityDetails.length - 5} registros más
                         </Text>
                       )}
                     </Stack>
