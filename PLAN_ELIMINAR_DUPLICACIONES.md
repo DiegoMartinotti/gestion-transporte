@@ -187,26 +187,121 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 - [x] Agregar validación integrada
 
 ### 4.2 Refactorizar PersonalForm
-- [ ] Reemplazar `addPeriodoEmpleo` con DynamicListField
-- [ ] Reemplazar `addCapacitacion` con DynamicListField
-- [ ] Reemplazar `addIncidente` con DynamicListField
-- [ ] Verificar que el formulario mantiene toda su funcionalidad
-- [ ] Commit: "refactor: usar DynamicListField en PersonalForm"
+- [x] Reemplazar `addPeriodoEmpleo` con DynamicListField
+- [x] Reemplazar `addCapacitacion` con DynamicListField
+- [x] Reemplazar `addIncidente` con DynamicListField
+- [x] Verificar que el formulario mantiene toda su funcionalidad
+- [x] Commit: "refactor: usar DynamicListField en PersonalForm"
 
 ## 5. Servicios Backend
 
 ### 5.1 Crear Servicio Base
-- [ ] Crear `backend/services/BaseService.ts`
-- [ ] Implementar métodos CRUD genéricos
-- [ ] Agregar manejo de errores estándar
-- [ ] Incluir logging consistente
+
+#### 5.1.1 Análisis de Patrones Comunes ✅
+- [x] **5.1.1.1** Revisar `tramoService.ts` para identificar métodos CRUD repetidos
+- [x] **5.1.1.2** Revisar `vehiculoService.ts` para identificar patrones de paginación
+- [x] **5.1.1.3** Documentar patrones de transacciones y logging encontrados
+
+#### 5.1.2 Crear Estructura Base ✅
+- [x] **5.1.2.1** Crear estructura base de `backend/services/BaseService.ts`
+- [x] **5.1.2.2** Definir interfaces TypeScript para paginación y resultados
+- [x] **5.1.2.3** Crear clase abstracta `BaseService<T>` con generics
+- [x] **5.1.2.4** Implementar constructor que recibe el modelo Mongoose
+
+#### 5.1.3 Implementar Métodos CRUD Genéricos ✅
+- [x] **5.1.3.1** `getAll()` con soporte para paginación y filtros
+- [x] **5.1.3.2** `getById()` con validación de ID y logging mejorado
+- [x] **5.1.3.3** `create()` con validaciones y transacciones automáticas
+- [x] **5.1.3.4** `update()` con verificación de existencia y soporte upsert
+- [x] **5.1.3.5** `delete()` con manejo seguro de referencias y hooks
+
+#### 5.1.4 Agregar Manejo de Errores Estándar ✅
+- [x] **5.1.4.1** Método `executeInTransaction()` para operaciones con rollback
+- [x] **5.1.4.2** Validaciones genéricas (`validateId`, `validateExists`, `validateRequired`)
+- [x] **5.1.4.3** Manejo consistente de errores Mongoose (`handleMongooseError`)
+
+#### 5.1.5 Incluir Logging Consistente ✅
+- [x] **5.1.5.1** Métodos protegidos `logOperation()`, `logSuccess()`, `logFailure()`
+- [x] **5.1.5.2** Formato estándar para logs con contexto y timestamp
+- [x] **5.1.5.3** Integración completa con el sistema de logger existente
+
+#### 5.1.6 Testing y Documentación ✅
+- [x] **5.1.6.1** Crear tests unitarios completos para BaseService
+- [x] **5.1.6.2** Tests para métodos CRUD genéricos y validaciones
+- [x] **5.1.6.3** Tests para manejo de transacciones y rollback
+- [x] **5.1.6.4** Configuración Jest + MongoDB Memory Server
+
+#### 5.1.7 Documentación del BaseService ✅
+- [x] **5.1.7.1** JSDoc completo para todos los métodos
+- [x] **5.1.7.2** Guía completa de implementación (`BaseService-guide.md`)
+- [x] **5.1.7.3** Ejemplos prácticos de uso (`BaseService-examples.md`)
 
 ### 5.2 Refactorizar Servicios Existentes
-- [ ] Identificar servicios con patrones CRUD similares
-- [ ] Extender BaseService donde sea apropiado
-- [ ] Mantener lógica específica del dominio
-- [ ] Agregar tests de integración
-- [ ] Commit: "refactor: implementar BaseService para reducir duplicación"
+
+#### 5.2.1 Servicio Piloto - VehiculoService
+- [ ] **5.2.1.1** Migrar `vehiculoService.ts` a BaseService
+  - [ ] Crear `VehiculoService extends BaseService<IVehiculo>`
+  - [ ] Migrar métodos CRUD básicos al BaseService
+  - [ ] Mantener métodos específicos (`getVehiculosConVencimientos`, `createVehiculosBulk`)
+- [ ] **5.2.1.2** Actualizar controladores de vehículos
+  - [ ] Verificar que controladores modulares funcionen con el nuevo servicio
+  - [ ] Mantener compatibilidad con APIs existentes
+- [ ] **5.2.1.3** Ejecutar tests de regresión
+  - [ ] Verificar que todas las funcionalidades de vehículos sigan funcionando
+  - [ ] Validar endpoints de API con Postman/tests automatizados
+- [ ] **5.2.1.4** Commit parcial: "refactor: migrar VehiculoService a BaseService"
+
+#### 5.2.2 Migrar TramoService
+- [ ] **5.2.2.1** Crear `TramoService extends BaseService<ITramo>`
+  - [ ] Migrar operaciones CRUD básicas
+  - [ ] Mantener lógica específica (`bulkImportTramos`, `getTarifasVigentes`, `createTramosBulk`)
+  - [ ] Preservar la compleja lógica de tarifas históricas
+- [ ] **5.2.2.2** Actualizar controladores de tramos
+  - [ ] Verificar compatibilidad con controladores modulares existentes
+  - [ ] Mantener todas las funcionalidades de importación Excel
+- [ ] **5.2.2.3** Tests específicos para TramoService
+  - [ ] Verificar cálculos de tarifas
+  - [ ] Validar importaciones masivas
+  - [ ] Tests de conflictos de fechas
+
+#### 5.2.3 Identificar y Migrar Otros Servicios
+- [ ] **5.2.3.1** Auditar servicios existentes
+  - [ ] Revisar `geocodingService.ts` - no necesita BaseService (servicio externo)
+  - [ ] Revisar `formulaClienteService.ts` - evaluar si aplica BaseService
+  - [ ] Revisar `tarifaService.ts` - candidato para BaseService
+  - [ ] Revisar `excelTemplateService.ts` - servicio utilitario, no aplica
+- [ ] **5.2.3.2** Crear servicios faltantes con BaseService
+  - [ ] `ClienteService extends BaseService<ICliente>`
+  - [ ] `SiteService extends BaseService<ISite>`
+  - [ ] `EmpresaService extends BaseService<IEmpresa>`
+  - [ ] `PersonalService extends BaseService<IPersonal>`
+
+### 5.3 Integración y Testing
+- [ ] **5.3.1** Tests de integración end-to-end
+  - [ ] Verificar que todos los endpoints funcionen correctamente
+  - [ ] Validar operaciones CRUD en cada entidad migrada
+  - [ ] Tests de rendimiento para operaciones con paginación
+- [ ] **5.3.2** Actualizar documentación
+  - [ ] Actualizar README con ejemplos del nuevo BaseService
+  - [ ] Documentar patrones de extensión para nuevos servicios
+  - [ ] Guía de migración para futuros desarrolladores
+- [ ] **5.3.3** Commit final: "refactor: completar implementación de BaseService para todos los servicios"
+
+### 5.4 Limpieza y Optimización
+- [ ] **5.4.1** Eliminar código duplicado restante
+  - [ ] Verificar que no queden métodos CRUD duplicados
+  - [ ] Consolidar validaciones comunes
+  - [ ] Unificar patrones de logging
+- [ ] **5.4.2** Optimizaciones de rendimiento
+  - [ ] Revisar queries Mongoose generados por BaseService
+  - [ ] Optimizar paginación para grandes datasets
+  - [ ] Agregar índices de base de datos si es necesario
+- [ ] **5.4.3** Verificación final
+  - [ ] Ejecutar todos los tests del proyecto
+  - [ ] Verificar que no hay regresiones
+  - [ ] Validar que el bundle size no se haya incrementado significativamente
+
+**Estimación Total**: ~3-4 horas de trabajo, dividido en sesiones de 30-45 minutos por subtarea.
 
 ## 6. Validación y Testing
 
