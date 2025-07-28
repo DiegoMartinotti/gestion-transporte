@@ -238,31 +238,31 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 
 ### 5.2 Refactorizar Servicios Existentes
 
-#### 5.2.1 Servicio Piloto - VehiculoService
-- [ ] **5.2.1.1** Migrar `vehiculoService.ts` a BaseService
-  - [ ] Crear `VehiculoService extends BaseService<IVehiculo>`
-  - [ ] Migrar métodos CRUD básicos al BaseService
-  - [ ] Mantener métodos específicos (`getVehiculosConVencimientos`, `createVehiculosBulk`)
-- [ ] **5.2.1.2** Actualizar controladores de vehículos
-  - [ ] Verificar que controladores modulares funcionen con el nuevo servicio
-  - [ ] Mantener compatibilidad con APIs existentes
-- [ ] **5.2.1.3** Ejecutar tests de regresión
-  - [ ] Verificar que todas las funcionalidades de vehículos sigan funcionando
-  - [ ] Validar endpoints de API con Postman/tests automatizados
-- [ ] **5.2.1.4** Commit parcial: "refactor: migrar VehiculoService a BaseService"
+#### 5.2.1 Migrar VehiculoService ✅
+- [x] **5.2.1.1** Migrar `vehiculoService.ts` a BaseService
+  - [x] Crear `VehiculoService extends BaseService<IVehiculo>`
+  - [x] Migrar métodos CRUD básicos al BaseService
+  - [x] Mantener métodos específicos (`getVehiculosConVencimientos`, `createVehiculosBulk`)
+- [x] **5.2.1.2** Actualizar controladores de vehículos
+  - [x] Verificar que controladores modulares funcionen con el nuevo servicio
+  - [x] Mantener compatibilidad con APIs existentes
+- [x] **5.2.1.3** Ejecutar tests de regresión
+  - [x] Verificar que todas las funcionalidades de vehículos sigan funcionando
+  - [x] Validar endpoints de API con Postman/tests automatizados
+- [x] **5.2.1.4** Commit parcial: "refactor: migrar VehiculoService a BaseService"
 
-#### 5.2.2 Migrar TramoService
-- [ ] **5.2.2.1** Crear `TramoService extends BaseService<ITramo>`
-  - [ ] Migrar operaciones CRUD básicas
-  - [ ] Mantener lógica específica (`bulkImportTramos`, `getTarifasVigentes`, `createTramosBulk`)
-  - [ ] Preservar la compleja lógica de tarifas históricas
-- [ ] **5.2.2.2** Actualizar controladores de tramos
-  - [ ] Verificar compatibilidad con controladores modulares existentes
-  - [ ] Mantener todas las funcionalidades de importación Excel
-- [ ] **5.2.2.3** Tests específicos para TramoService
-  - [ ] Verificar cálculos de tarifas
-  - [ ] Validar importaciones masivas
-  - [ ] Tests de conflictos de fechas
+#### 5.2.2 Migrar TramoService ✅
+- [x] **5.2.2.1** Crear `TramoService extends BaseService<ITramo>`
+  - [x] Migrar operaciones CRUD básicas
+  - [x] Mantener lógica específica (`bulkImportTramos`, `getTarifasVigentes`, `createTramosBulk`)
+  - [x] Preservar la compleja lógica de tarifas históricas
+- [x] **5.2.2.2** Actualizar controladores de tramos
+  - [x] Verificar compatibilidad con controladores modulares existentes
+  - [x] Mantener todas las funcionalidades de importación Excel
+- [x] **5.2.2.3** Tests específicos para TramoService
+  - [x] Verificar cálculos de tarifas
+  - [x] Validar importaciones masivas
+  - [x] Tests de conflictos de fechas
 
 #### 5.2.3 Identificar y Migrar Otros Servicios
 - [ ] **5.2.3.1** Auditar servicios existentes
