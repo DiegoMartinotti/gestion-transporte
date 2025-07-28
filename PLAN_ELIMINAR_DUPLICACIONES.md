@@ -128,18 +128,55 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
 ## 3. Validadores Unificados
 
 ### 3.1 Crear Clase Base para Validadores
-- [ ] Crear `frontend/src/components/validators/BaseValidator.tsx`
-- [ ] Extraer lógica común de `runValidation`
-- [ ] Definir interfaz estándar para reglas de validación
-- [ ] Implementar manejo de errores centralizado
+- [x] Crear `frontend/src/components/validators/BaseValidator.tsx`
+- [x] Extraer lógica común de `runValidation`
+- [x] Definir interfaz estándar para reglas de validación
+- [x] Implementar manejo de errores centralizado
 
 ### 3.2 Refactorizar Validadores Existentes
-- [ ] Refactorizar `BusinessRuleValidator` para extender BaseValidator
-- [ ] Refactorizar `CrossEntityValidator` para extender BaseValidator
-- [ ] Refactorizar `ViajeValidator` para extender BaseValidator
-- [ ] Eliminar código duplicado
-- [ ] Agregar tests para verificar que las validaciones siguen funcionando
-- [ ] Commit: "refactor: unificar validadores con clase base"
+
+### 3.2.1 Migrar FormulaValidator (Simple - 1-2 horas)
+- [x] Refactorizar `FormulaValidator` para extender BaseValidator
+- [x] Actualizar importaciones en `FormulaForm.tsx`
+- [x] Verificar funcionalidad con tests
+- [x] Commit: "refactor: migrar FormulaValidator a BaseValidator"
+
+### 3.2.2 Migrar CrossEntityValidator (Medio - 3-4 horas) ✅
+- [x] Refactorizar `CrossEntityValidator` para extender BaseValidator
+- [x] Extraer reglas cross-entity al método `getValidationRules()`
+- [x] Adaptar validaciones de relaciones entre entidades
+- [x] Verificar funcionalidad con tests
+- [x] Commit: "refactor: migrar CrossEntityValidator a BaseValidator"
+
+### 3.2.3 Migrar BusinessRuleValidator (Complejo - 4-5 horas) ✅
+- [x] Refactorizar `BusinessRuleValidator` para extender BaseValidator
+- [x] Convertir reglas de negocio al formato estándar
+- [x] Adaptar validaciones por categoría
+- [x] Mantener configuración dinámica de reglas
+- [x] Verificar funcionalidad con tests
+- [x] Commit: "refactor: migrar BusinessRuleValidator a BaseValidator"
+
+### 3.2.4 Migrar ViajeValidator (Complejo - 5-6 horas)
+- [x] Refactorizar `ViajeValidator` para extender BaseValidator
+- [x] Dividir 12 reglas en categorías lógicas
+- [x] Adaptar validaciones específicas de viajes
+- [x] Mantener lógica de compatibilidad cliente-tramo
+- [x] Verificar funcionalidad con tests
+- [x] Commit: "refactor: migrar ViajeValidator a BaseValidator"
+
+### 3.2.5 Migrar DocumentValidatorGeneric (Muy Complejo - 6-8 horas)
+- [x] **Fase A**: Migrar reglas básicas de validación
+- [x] **Fase B**: Adaptar sistema de configuración avanzada
+- [x] **Fase C**: Mantener funcionalidad de múltiples vistas y modos
+- [x] Verificar toda la funcionalidad con tests exhaustivos
+- [x] Commit: "refactor: migrar DocumentValidatorGeneric a BaseValidator"
+
+### 3.2.6 Finalizar Migración y Documentación (1 hora)
+- [ ] Actualizar `ExampleValidatorUsage.tsx` con nuevos patrones
+- [ ] Eliminar código duplicado identificado
+- [ ] Agregar documentación de uso del BaseValidator
+- [ ] Verificar que todos los validadores siguen funcionando
+- [ ] Commit: "refactor: completar unificación de validadores con BaseValidator"
 
 ## 4. Componentes de Formulario Genéricos
 
