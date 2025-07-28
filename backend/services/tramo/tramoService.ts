@@ -1,9 +1,11 @@
 /**
- * @module services/tramo/tramoService
- * @description Servicio para la gestión de tramos y tarifas
+ * @module services/tramo/TramoService
+ * @description Servicio para gestión de tramos extendiendo BaseService
+ * Mantiene lógica específica compleja de tarifas históricas mientras usa funcionalidad común
  */
 
-import Tramo from '../../models/Tramo';
+import { BaseService, PaginationOptions, PaginationResult, BulkResult, TransactionOptions } from '../BaseService';
+import Tramo, { ITramo, ITarifaHistorica } from '../../models/Tramo';
 import Cliente from '../../models/Cliente';
 import Site from '../../models/Site';
 import { fechasSuperpuestas, generarTramoId, sonTramosIguales } from '../../utils/tramoValidator';
@@ -11,6 +13,8 @@ import { calcularTarifaPaletConFormula } from '../../utils/formulaParser';
 import { calcularDistanciaRuta } from '../routingService';
 import logger from '../../utils/logger';
 import mongoose from 'mongoose';
+
+// ==================== INTERFACES ESPECÍFICAS ====================
 
 interface SiteMap {
   sitesMap: Map<string, any>;
@@ -91,13 +95,150 @@ interface CreateTramosBulkResult {
   }>;
 }
 
+// ==================== CLASE TRAMO SERVICE ====================
+
 /**
- * Construye mapas de sitios para búsqueda rápida
- * 
- * @private
- * @returns Objeto con mapas por ID y código
+ * Servicio de tramos que extiende BaseService
+ * Proporciona funcionalidad CRUD común más métodos específicos de tramos
  */
-async function _buildSiteMaps(): Promise<SiteMap> {
+class TramoService extends BaseService<ITramo> {
+  constructor() {
+    super(Tramo);
+  }
+
+  // ==================== HOOKS ABSTRACTOS IMPLEMENTADOS ====================
+
+  /**
+   * Validaciones específicas para datos de tramos
+   */
+  protected async validateData(data: Partial<ITramo>): Promise<void> {
+    if (!data) {
+      throw new Error('Los datos del tramo son requeridos');
+    }
+
+    // Validar campos requeridos
+    if (data.origen !== undefined && !data.origen) {
+      throw new Error('El sitio origen es obligatorio');
+    }
+
+    if (data.destino !== undefined && !data.destino) {
+      throw new Error('El sitio destino es obligatorio');
+    }
+
+    if (data.cliente !== undefined && !data.cliente) {
+      throw new Error('El cliente es obligatorio');
+    }
+
+    // Validar que origen y destino no sean iguales
+    if (data.origen && data.destino && data.origen.toString() === data.destino.toString()) {
+      throw new Error('El origen y el destino no pueden ser el mismo sitio');
+    }
+
+    // Validar que las referencias existan
+    if (data.cliente) {
+      const clienteExiste = await Cliente.findById(data.cliente);
+      if (!clienteExiste) {
+        throw new Error('El cliente especificado no existe');
+      }
+    }
+
+    if (data.origen) {
+      const origenExiste = await Site.findById(data.origen);
+      if (!origenExiste) {
+        throw new Error('El sitio origen especificado no existe');
+      }
+    }
+
+    if (data.destino) {
+      const destinoExiste = await Site.findById(data.destino);
+      if (!destinoExiste) {
+        throw new Error('El sitio destino especificado no existe');
+      }
+    }
+
+    // Validar tarifas históricas si están presentes
+    if (data.tarifasHistoricas && data.tarifasHistoricas.length > 0) {
+      await this.validateTarifasHistoricas(data.tarifasHistoricas);
+    }
+  }
+
+  /**
+   * Valida que las tarifas históricas no tengan conflictos de fechas
+   */
+  private async validateTarifasHistoricas(tarifas: ITarifaHistorica[]): Promise<void> {
+    // Validar que cada tarifa tenga vigenciaHasta >= vigenciaDesde
+    for (const tarifa of tarifas) {
+      if (tarifa.vigenciaHasta < tarifa.vigenciaDesde) {
+        throw new Error('La fecha de fin de vigencia debe ser mayor o igual a la fecha de inicio');
+      }
+    }
+
+    // Verificar superposición de fechas entre tarifas del mismo tipo y método
+    for (let i = 0; i < tarifas.length - 1; i++) {
+      for (let j = i + 1; j < tarifas.length; j++) {
+        const tarifaA = tarifas[i];
+        const tarifaB = tarifas[j];
+        
+        // Si el tipo o método de cálculo es diferente, pueden coexistir
+        if (tarifaA.tipo !== tarifaB.tipo || tarifaA.metodoCalculo !== tarifaB.metodoCalculo) {
+          continue;
+        }
+        
+        // Comprobar si hay superposición usando la función utilitaria
+        if (fechasSuperpuestas(
+          tarifaA.vigenciaDesde, tarifaA.vigenciaHasta,
+          tarifaB.vigenciaDesde, tarifaB.vigenciaHasta
+        )) {
+          throw new Error(`Existen tarifas con el mismo tipo (${tarifaA.tipo}) y método de cálculo (${tarifaA.metodoCalculo}) con fechas que se superponen`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Hook después de crear - log adicional para tramos
+   */
+  protected async afterCreate(tramo: ITramo, options: TransactionOptions = {}): Promise<void> {
+    this.logInfo('Tramo creado exitosamente', {
+      tramoId: tramo._id,
+      origen: tramo.origen,
+      destino: tramo.destino,
+      cliente: tramo.cliente,
+      tarifasCount: tramo.tarifasHistoricas?.length || 0
+    });
+  }
+
+  /**
+   * Hook después de actualizar - log adicional para tramos
+   */
+  protected async afterUpdate(tramo: ITramo, options: TransactionOptions = {}): Promise<void> {
+    this.logInfo('Tramo actualizado exitosamente', {
+      tramoId: tramo._id,
+      tarifasCount: tramo.tarifasHistoricas?.length || 0
+    });
+  }
+
+  /**
+   * Hook antes de eliminar - verificar dependencias
+   */
+  protected async beforeDelete(tramo: ITramo, options: TransactionOptions = {}): Promise<void> {
+    // Aquí se pueden agregar validaciones adicionales antes de eliminar
+    // Por ejemplo, verificar si el tramo está siendo usado en viajes
+    this.logInfo('Preparando eliminación de tramo', {
+      tramoId: tramo._id,
+      origen: tramo.origen,
+      destino: tramo.destino
+    });
+  }
+
+  // ==================== MÉTODOS ESPECÍFICOS DE TRAMOS (PRESERVADOS) ====================
+
+  /**
+   * Construye mapas de sitios para búsqueda rápida
+   * @private
+   * @returns Objeto con mapas por ID y código
+   */
+  private async _buildSiteMaps(): Promise<SiteMap> {
     // Obtener todos los sitios (esto se hace una sola vez)
     const allSites = await Site.find({}).select('_id Site codigo location').lean();
     
@@ -118,18 +259,17 @@ async function _buildSiteMaps(): Promise<SiteMap> {
     logger.debug(`Mapas de sitios construidos con ${sitesMap.size} sitios y ${sitesMapByCode.size} códigos`);
     
     return { sitesMap, sitesMapByCode };
-}
+  }
 
-/**
- * Procesa una fila de datos de tramo para importación
- * 
- * @private
- * @param tramoData - Datos del tramo a procesar
- * @param indiceTramo - Índice del tramo (para logging)
- * @param options - Opciones de procesamiento
- * @returns Resultado del procesamiento (operación, tramo, error)
- */
-async function _processTramoRow(tramoData: TramoData, indiceTramo: number, options: ProcessOptions): Promise<ProcessResult> {
+  /**
+   * Procesa una fila de datos de tramo para importación
+   * @private
+   * @param tramoData - Datos del tramo a procesar
+   * @param indiceTramo - Índice del tramo (para logging)
+   * @param options - Opciones de procesamiento
+   * @returns Resultado del procesamiento (operación, tramo, error)
+   */
+  private async _processTramoRow(tramoData: TramoData, indiceTramo: number, options: ProcessOptions): Promise<ProcessResult> {
     const { clienteId, reutilizarDistancias, sitesMap, sitesMapByCode, mapaTramos } = options;
     
     try {
@@ -307,19 +447,18 @@ async function _processTramoRow(tramoData: TramoData, indiceTramo: number, optio
             }
         };
     }
-}
+  }
 
-/**
- * Importación masiva de tramos
- * 
- * @param clienteId - ID del cliente
- * @param tramosData - Array de objetos con datos de tramos
- * @param reutilizarDistancias - Indica si se deben reutilizar distancias pre-calculadas
- * @param actualizarExistentes - Indica si se deben actualizar tramos existentes
- * @returns Resultado de la operación con tramos creados y errores
- * @throws Error si hay problemas en la importación
- */
-async function bulkImportTramos(clienteId: string, tramosData: TramoData[], reutilizarDistancias: boolean = true, actualizarExistentes: boolean = false): Promise<BulkImportResult> {
+  /**
+   * Importación masiva de tramos
+   * @param clienteId - ID del cliente
+   * @param tramosData - Array de objetos con datos de tramos
+   * @param reutilizarDistancias - Indica si se deben reutilizar distancias pre-calculadas
+   * @param actualizarExistentes - Indica si se deben actualizar tramos existentes
+   * @returns Resultado de la operación con tramos creados y errores
+   * @throws Error si hay problemas en la importación
+   */
+  async bulkImportTramos(clienteId: string, tramosData: TramoData[], reutilizarDistancias: boolean = true, actualizarExistentes: boolean = false): Promise<BulkImportResult> {
     logger.debug(`Procesando ${tramosData.length} tramos para cliente ${clienteId}`);
     logger.debug(`Opciones: reutilizarDistancias=${reutilizarDistancias}, actualizarExistentes=${actualizarExistentes}`);
     
@@ -334,7 +473,7 @@ async function bulkImportTramos(clienteId: string, tramosData: TramoData[], reut
     
     try {
         // Construir mapas de sitios para búsqueda rápida
-        const { sitesMap, sitesMapByCode } = await _buildSiteMaps();
+        const { sitesMap, sitesMapByCode } = await this._buildSiteMaps();
         
         // Cargar todos los tramos existentes para este cliente
         const tramosExistentes = await Tramo.find({ 
@@ -380,7 +519,7 @@ async function bulkImportTramos(clienteId: string, tramosData: TramoData[], reut
                 const indiceTramo = i + 1; // Para mensajes de error (1-indexed)
                 
                 // Procesar la fila de datos
-                const resultado = await _processTramoRow(tramoData, indiceTramo, options);
+                const resultado = await this._processTramoRow(tramoData, indiceTramo, options);
                 
                 if (resultado.status === 'insert') {
                     operacionesInsert.push(resultado.operation);
@@ -430,15 +569,15 @@ async function bulkImportTramos(clienteId: string, tramosData: TramoData[], reut
         logger.error('Error general en bulkImportTramos:', error);
         throw error;
     }
-}
+  }
 
-/**
- * Obtiene los tramos activos para un cliente específico
- * @param clienteId - ID del cliente
- * @param opciones - Opciones de filtrado
- * @returns Array de tramos filtrados
- */
-async function getTramosByCliente(clienteId: string, opciones: { desde?: string; hasta?: string; incluirHistoricos?: string } = {}): Promise<any> {
+  /**
+   * Obtiene los tramos activos para un cliente específico
+   * @param clienteId - ID del cliente
+   * @param opciones - Opciones de filtrado
+   * @returns Array de tramos filtrados
+   */
+  async getTramosByCliente(clienteId: string, opciones: { desde?: string; hasta?: string; incluirHistoricos?: string } = {}): Promise<any> {
     const { desde, hasta, incluirHistoricos } = opciones;
     
     logger.debug(`Buscando tramos para cliente: ${clienteId}`);
@@ -454,21 +593,21 @@ async function getTramosByCliente(clienteId: string, opciones: { desde?: string;
     
     // Si se solicitan tramos históricos con filtro de fecha
     if (desde && hasta && incluirHistoricos === 'true') {
-        return await obtenerTramosHistoricos(todosLosTramos, desde, hasta);
+        return await this.obtenerTramosHistoricos(todosLosTramos, desde, hasta);
     }
     
     // Caso default: obtener tramos actuales
-    return obtenerTramosActuales(todosLosTramos);
-}
+    return this.obtenerTramosActuales(todosLosTramos);
+  }
 
-/**
- * Filtra tramos por fechas históricas
- * @param tramos - Lista de tramos a filtrar
- * @param desde - Fecha inicial (ISO string)
- * @param hasta - Fecha final (ISO string)
- * @returns Objeto con tramos filtrados y metadata
- */
-async function obtenerTramosHistoricos(tramos: any[], desde: string, hasta: string): Promise<any> {
+  /**
+   * Filtra tramos por fechas históricas
+   * @param tramos - Lista de tramos a filtrar
+   * @param desde - Fecha inicial (ISO string)
+   * @param hasta - Fecha final (ISO string)
+   * @returns Objeto con tramos filtrados y metadata
+   */
+  private async obtenerTramosHistoricos(tramos: any[], desde: string, hasta: string): Promise<any> {
     logger.debug('Procesando tramos históricos con filtro de fecha');
     
     // Convertir fechas a objetos Date para comparación
@@ -562,14 +701,14 @@ async function obtenerTramosHistoricos(tramos: any[], desde: string, hasta: stri
             tramosHistoricos: tramosHistoricos.length
         }
     };
-}
+  }
 
-/**
- * Obtiene los tramos actuales (más recientes) para cada combinación origen-destino-tipo
- * @param tramos - Lista de tramos a procesar
- * @returns Objeto con tramos actuales y metadata
- */
-function obtenerTramosActuales(tramos: any[]): any {
+  /**
+   * Obtiene los tramos actuales (más recientes) para cada combinación origen-destino-tipo
+   * @param tramos - Lista de tramos a procesar
+   * @returns Objeto con tramos actuales y metadata
+   */
+  private obtenerTramosActuales(tramos: any[]): any {
     // Función para crear la clave única por origen-destino-tipo
     const crearClave = (origen: any, destino: any, tipo: string): string => 
         // Manejar posible nulidad de origen/destino al crear la clave
@@ -656,13 +795,13 @@ function obtenerTramosActuales(tramos: any[]): any {
             combinacionesUnicas: tramosUnicos.size
         }
     };
-}
+  }
 
-/**
- * Obtiene todas las distancias calculadas de tramos existentes
- * @returns Lista de distancias calculadas
- */
-async function getDistanciasCalculadas(): Promise<any[]> {
+  /**
+   * Obtiene todas las distancias calculadas de tramos existentes
+   * @returns Lista de distancias calculadas
+   */
+  async getDistanciasCalculadas(): Promise<any[]> {
     // Obtener todas las distancias calculadas de tramos existentes
     const distancias = await Tramo.aggregate([
         // Filtrar solo tramos con distancia calculada
@@ -688,18 +827,17 @@ async function getDistanciasCalculadas(): Promise<any[]> {
 
     logger.debug(`Se encontraron ${distancias.length} distancias pre-calculadas`);
     return distancias;
-}
+  }
 
-/**
- * Crea o actualiza tramos masivamente desde la plantilla de corrección.
- * Resuelve los sitios (origen y destino) por nombre.
- * Crea tarifas históricas iniciales para cada tramo.
- *
- * @param tramosData - Array con datos de tramos extraídos de la plantilla.
- * @param options - Opciones, incluye la session de mongoose.
- * @returns Resultado con insertados, actualizados y errores.
- */
-const createTramosBulk = async (tramosData: TramosBulkData[], options: { session?: mongoose.ClientSession } = {}): Promise<CreateTramosBulkResult> => {
+  /**
+   * Crea o actualiza tramos masivamente desde la plantilla de corrección.
+   * Resuelve los sitios (origen y destino) por nombre.
+   * Crea tarifas históricas iniciales para cada tramo.
+   * @param tramosData - Array con datos de tramos extraídos de la plantilla.
+   * @param options - Opciones, incluye la session de mongoose.
+   * @returns Resultado con insertados, actualizados y errores.
+   */
+  async createTramosBulk(tramosData: TramosBulkData[], options: { session?: mongoose.ClientSession } = {}): Promise<CreateTramosBulkResult> {
     const session = options.session;
     let insertados = 0;
     let actualizados = 0;
@@ -956,25 +1094,24 @@ const createTramosBulk = async (tramosData: TramosBulkData[], options: { session
         actualizados,
         errores
     };
-};
+  }
 
-/**
- * Obtiene el tipo de tramo con la tarifa más alta para una combinación origen-destino-cliente en una fecha específica.
- * Si no hay tarifas vigentes, busca la más reciente.
- * Si no existe el tramo, retorna 'TRMC' por defecto.
- * 
- * @param origenId - ID del sitio origen
- * @param destinoId - ID del sitio destino
- * @param clienteId - ID del cliente
- * @param fecha - Fecha para buscar tarifas vigentes
- * @returns Tipo de tramo con tarifa más alta ('TRMC' o 'TRMI')
- */
-async function getTipoTramoConTarifaMasAlta(
+  /**
+   * Obtiene el tipo de tramo con la tarifa más alta para una combinación origen-destino-cliente en una fecha específica.
+   * Si no hay tarifas vigentes, busca la más reciente.
+   * Si no existe el tramo, retorna 'TRMC' por defecto.
+   * @param origenId - ID del sitio origen
+   * @param destinoId - ID del sitio destino
+   * @param clienteId - ID del cliente
+   * @param fecha - Fecha para buscar tarifas vigentes
+   * @returns Tipo de tramo con tarifa más alta ('TRMC' o 'TRMI')
+   */
+  async getTipoTramoConTarifaMasAlta(
     origenId: string,
     destinoId: string,
     clienteId: string,
     fecha: Date = new Date()
-): Promise<'TRMC' | 'TRMI'> {
+  ): Promise<'TRMC' | 'TRMI'> {
     try {
         logger.debug(`Buscando tipo de tramo con tarifa más alta para origen: ${origenId}, destino: ${destinoId}, cliente: ${clienteId}, fecha: ${fecha.toISOString()}`);
         
@@ -1045,13 +1182,48 @@ async function getTipoTramoConTarifaMasAlta(
         logger.error(`Error al obtener tipo de tramo con tarifa más alta: ${error}`);
         return 'TRMC'; // Valor por defecto en caso de error
     }
+  }
 }
 
-// Exportar las funciones públicas
-export {
-    bulkImportTramos,
-    getTramosByCliente,
-    getDistanciasCalculadas,
-    createTramosBulk,
-    getTipoTramoConTarifaMasAlta
+// ==================== INSTANCIA SINGLETON ====================
+
+const tramoService = new TramoService();
+
+// ==================== EXPORTS PARA COMPATIBILIDAD ====================
+
+export { TramoService };
+export default tramoService;
+
+// Exportar métodos individuales para compatibilidad con controladores existentes
+export const bulkImportTramos = (clienteId: string, tramosData: TramoData[], reutilizarDistancias?: boolean, actualizarExistentes?: boolean) => 
+  tramoService.bulkImportTramos(clienteId, tramosData, reutilizarDistancias, actualizarExistentes);
+
+export const getTramosByCliente = (clienteId: string, opciones?: { desde?: string; hasta?: string; incluirHistoricos?: string }) => 
+  tramoService.getTramosByCliente(clienteId, opciones);
+
+export const getDistanciasCalculadas = () => tramoService.getDistanciasCalculadas();
+
+export const createTramosBulk = (tramosData: TramosBulkData[], options?: { session?: mongoose.ClientSession }) => 
+  tramoService.createTramosBulk(tramosData, options);
+
+export const getTipoTramoConTarifaMasAlta = (origenId: string, destinoId: string, clienteId: string, fecha?: Date) => 
+  tramoService.getTipoTramoConTarifaMasAlta(origenId, destinoId, clienteId, fecha);
+
+// Métodos CRUD básicos adicionales para compatibilidad
+export const getAllTramos = async (opciones?: PaginationOptions<ITramo>) => {
+  const result = await tramoService.getAll(opciones);
+  // Convertir formato BaseService a formato esperado por controladores
+  return {
+    tramos: result.data,
+    paginacion: result.paginacion
+  };
+};
+
+export const getTramoById = (id: string) => tramoService.getById(id);
+export const createTramo = (data: Partial<ITramo>) => tramoService.create(data);
+export const updateTramo = (id: string, data: Partial<ITramo>) => tramoService.update(id, data);
+export const deleteTramo = async (id: string) => {
+  const result = await tramoService.delete(id);
+  // Convertir formato BaseService a formato esperado por controladores
+  return { message: result.message || 'Tramo eliminado correctamente' };
 };
