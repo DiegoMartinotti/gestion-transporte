@@ -1,23 +1,16 @@
-import Vehiculo from '../../models/Vehiculo';
+/**
+ * @module services/vehiculo/VehiculoService
+ * @description Servicio para gestión de vehículos extendiendo BaseService
+ * Mantiene métodos específicos de vehículos mientras usa funcionalidad común
+ */
+
+import { BaseService, PaginationOptions, PaginationResult, BulkResult, TransactionOptions } from '../BaseService';
+import Vehiculo, { IVehiculo } from '../../models/Vehiculo';
 import Empresa from '../../models/Empresa';
 import mongoose from 'mongoose';
 import logger from '../../utils/logger';
 
-interface PaginationOptions {
-  limite?: number;
-  pagina?: number;
-  filtros?: Record<string, any>;
-}
-
-interface PaginationResult<T> {
-  vehiculos: T[];
-  paginacion: {
-    total: number;
-    paginas: number;
-    paginaActual: number;
-    limite: number;
-  };
-}
+// ==================== INTERFACES ESPECÍFICAS ====================
 
 interface VehiculoData {
   dominio?: string;
@@ -43,580 +36,427 @@ interface VehiculoBulkData {
   empresa: string;
 }
 
-interface BulkCreateResult {
-  success: boolean;
-  insertados: number;
-  actualizados: number;
-  errores: Array<{
-    index?: number | string;
-    message: string;
-    code?: number;
-    data?: any;
-  }>;
-}
+// ==================== CLASE VEHICULO SERVICE ====================
 
 /**
- * Obtiene todos los vehículos con información de empresa
- * Optimizado para paginar resultados y mejorar rendimiento
- * @param opciones - Opciones de filtrado y paginación
+ * Servicio de vehículos que extiende BaseService
+ * Proporciona funcionalidad CRUD común más métodos específicos de vehículos
  */
-const getAllVehiculos = async (opciones: PaginationOptions = {}): Promise<PaginationResult<any>> => {
-  try {
-    const { limite = 50, pagina = 1, filtros = {} } = opciones;
-    const skip = (pagina - 1) * limite;
-    
-    logger.info(`Obteniendo vehículos: página ${pagina}, límite ${limite}, filtros: ${JSON.stringify(filtros)}`);
-    
-    // Creamos el objeto de consulta con los filtros
-    const query = { ...filtros };
-    
-    // Utilizamos lean() para mejorar rendimiento al obtener objetos simples
-    // y limitar los campos que necesitamos con select
-    const vehiculos = await Vehiculo.find(query)
-      .populate('empresa', 'nombre tipo')
-      .limit(limite)
-      .skip(skip)
-      .lean()
-      .exec();
-    
-    // Obtenemos el total para la paginación
-    const total = await Vehiculo.countDocuments(query);
-    
-    return {
-      vehiculos,
-      paginacion: {
-        total,
-        paginas: Math.ceil(total / limite),
-        paginaActual: pagina,
-        limite
+class VehiculoService extends BaseService<IVehiculo> {
+  constructor() {
+    super(Vehiculo);
+  }
+
+  // ==================== HOOKS ABSTRACTOS IMPLEMENTADOS ====================
+
+  /**
+   * Validaciones específicas para datos de vehículos
+   */
+  protected async validateData(data: Partial<IVehiculo>): Promise<void> {
+    if (!data) {
+      throw new Error('Los datos del vehículo son requeridos');
+    }
+
+    // Validar campos requeridos para creación
+    if (data.dominio !== undefined) {
+      if (!data.dominio) {
+        throw new Error('El dominio del vehículo es obligatorio');
       }
-    };
-  } catch (error) {
-    logger.error('Error al obtener vehículos:', error);
-    throw new Error(`Error al obtener vehículos: ${(error as Error).message}`);
-  }
-};
-
-/**
- * Obtiene los vehículos de una empresa específica
- * @param empresaId - ID de la empresa
- * @param opciones - Opciones de filtrado y paginación
- */
-const getVehiculosByEmpresa = async (empresaId: string, opciones: PaginationOptions = {}): Promise<any[]> => {
-  try {
-    if (!empresaId) {
-      logger.warn('Se solicitaron vehículos sin especificar empresa');
-      throw new Error('Se requiere el ID de la empresa');
-    }
-    
-    const { limite = 100, pagina = 1 } = opciones;
-    const skip = (pagina - 1) * limite;
-    
-    logger.info(`Consultando vehículos de empresa ${empresaId}`);
-    
-    // Optimizamos la consulta con índices
-    const query = { empresa: empresaId };
-    
-    const vehiculos = await Vehiculo.find(query)
-      .populate('empresa', 'nombre tipo')
-      .limit(limite)
-      .skip(skip)
-      .lean()
-      .exec();
-    
-    return vehiculos;
-  } catch (error) {
-    logger.error(`Error al obtener vehículos de la empresa ${empresaId}:`, error);
-    throw new Error(`Error al obtener vehículos por empresa: ${(error as Error).message}`);
-  }
-};
-
-/**
- * Obtiene un vehículo por su ID
- * @param id - ID del vehículo
- */
-const getVehiculoById = async (id: string): Promise<any> => {
-  try {
-    if (!id) {
-      logger.warn('Se solicitó vehículo sin especificar ID');
-      throw new Error('Se requiere el ID del vehículo');
-    }
-    
-    logger.info(`Consultando vehículo con ID ${id}`);
-    
-    const vehiculo = await Vehiculo.findById(id)
-      .populate('empresa', 'nombre tipo')
-      .lean()
-      .exec();
       
-    if (!vehiculo) {
-      logger.warn(`Vehículo no encontrado: ${id}`);
-      throw new Error('Vehículo no encontrado');
+      // Normalizar dominio
+      data.dominio = data.dominio.toUpperCase().trim();
+      
+      // Validar formato de patente argentina
+      if (!/^[A-Z]{3}[0-9]{3}$|^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(data.dominio)) {
+        throw new Error('Formato de patente inválido');
+      }
     }
-    
-    return vehiculo;
-  } catch (error) {
-    logger.error(`Error al obtener vehículo ${id}:`, error);
-    throw error;
-  }
-};
 
-/**
- * Crea un nuevo vehículo con transacción
- * @param vehiculoData - Datos del vehículo a crear
- */
-const createVehiculo = async (vehiculoData: VehiculoData): Promise<any> => {
-  // Iniciamos sesión para la transacción
-  const session = await mongoose.startSession();
-  
-  try {
-    session.startTransaction();
-    logger.info('Iniciando transacción para crear vehículo');
-    
-    // Validaciones previas
-    if (!vehiculoData) {
-      throw new Error('No se proporcionaron datos del vehículo');
+    if (data.tipo !== undefined && !data.tipo) {
+      throw new Error('El tipo de vehículo es obligatorio');
     }
-    
-    if (!vehiculoData.dominio) {
-      throw new Error('El dominio del vehículo es obligatorio');
-    }
-    
-    if (!vehiculoData.empresa) {
+
+    if (data.empresa !== undefined && !data.empresa) {
       throw new Error('La empresa del vehículo es obligatoria');
     }
-    
-    // Verificar que la empresa existe
-    const empresaExiste = await Empresa.findById(vehiculoData.empresa).session(session || null);
-    if (!empresaExiste) {
-      logger.warn(`Empresa no encontrada al crear vehículo: ${vehiculoData.empresa}`);
-      throw new Error('La empresa especificada no existe');
-    }
 
-    // Normalizamos el dominio (siempre en mayúsculas)
-    vehiculoData.dominio = vehiculoData.dominio.toUpperCase();
-    
-    // Verificar si ya existe un vehículo con el mismo dominio
-    const dominioExiste = await Vehiculo.findOne({ 
-      dominio: vehiculoData.dominio 
-    }).session(session || null);
-    
-    if (dominioExiste) {
-      logger.warn(`Intento de crear vehículo con dominio duplicado: ${vehiculoData.dominio}`);
-      throw new Error('Ya existe un vehículo con ese dominio');
-    }
-
-    // Creamos el vehículo dentro de la transacción
-    const vehiculo = new Vehiculo(vehiculoData);
-    const vehiculoGuardado = await vehiculo.save({ session });
-    
-    logger.info(`Vehículo creado con ID: ${vehiculoGuardado._id}`);
-    
-    // Actualizar la referencia en la empresa
-    await Empresa.findByIdAndUpdate(
-      vehiculoData.empresa,
-      { $push: { flota: vehiculoGuardado._id } },
-      { session }
-    );
-    
-    logger.info(`Actualizada referencia en empresa ${vehiculoData.empresa}`);
-
-    // Commit de la transacción
-    await session.commitTransaction();
-    logger.info('Transacción completada: vehículo creado correctamente');
-    
-    return vehiculoGuardado;
-  } catch (error) {
-    // Rollback en caso de error
-    await session.abortTransaction();
-    logger.error('Error en transacción al crear vehículo, rollback aplicado:', error);
-    throw error;
-  } finally {
-    // Finalizamos la sesión
-    session.endSession();
-  }
-};
-
-/**
- * Actualiza un vehículo existente con transacción
- * @param id - ID del vehículo a actualizar
- * @param vehiculoData - Nuevos datos del vehículo
- */
-const updateVehiculo = async (id: string, vehiculoData: VehiculoData): Promise<any> => {
-  const session = await mongoose.startSession();
-  
-  try {
-    session.startTransaction();
-    logger.info(`Iniciando transacción para actualizar vehículo ${id}`);
-    
-    // Validaciones previas
-    if (!id) {
-      throw new Error('Se requiere el ID del vehículo');
-    }
-    
-    if (!vehiculoData) {
-      throw new Error('No se proporcionaron datos para actualizar');
-    }
-    
-    // Verificar que la empresa existe si se está cambiando
-    if (vehiculoData.empresa) {
-      const empresaExiste = await Empresa.findById(vehiculoData.empresa).session(session || null);
+    // Validar que la empresa existe
+    if (data.empresa) {
+      const empresaExiste = await Empresa.findById(data.empresa);
       if (!empresaExiste) {
-        logger.warn(`Empresa no encontrada al actualizar vehículo: ${vehiculoData.empresa}`);
         throw new Error('La empresa especificada no existe');
       }
     }
 
-    // Verificar si el vehículo existe
-    const vehiculo = await Vehiculo.findById(id).session(session || null);
-    if (!vehiculo) {
-      logger.warn(`Vehículo no encontrado al actualizar: ${id}`);
-      throw new Error('Vehículo no encontrado');
-    }
-
-    // Si se cambia el dominio, verificar que no exista otro con ese dominio
-    if (vehiculoData.dominio) {
-      // Normalizamos el dominio (siempre en mayúsculas)
-      vehiculoData.dominio = vehiculoData.dominio.toUpperCase();
-      
-      if (vehiculoData.dominio !== vehiculo.dominio) {
-        const dominioExiste = await Vehiculo.findOne({ 
-          dominio: vehiculoData.dominio,
-          _id: { $ne: id } // Excluimos el vehículo actual
-        }).session(session || null);
-        
-        if (dominioExiste) {
-          logger.warn(`Intento de actualizar vehículo con dominio duplicado: ${vehiculoData.dominio}`);
-          throw new Error('Ya existe un vehículo con ese dominio');
-        }
+    // Validar duplicación de dominio
+    if (data.dominio) {
+      const dominioExiste = await Vehiculo.findOne({ dominio: data.dominio });
+      if (dominioExiste) {
+        throw new Error('Ya existe un vehículo con ese dominio');
       }
     }
+  }
 
-    // Si se cambia la empresa, actualizar las referencias
-    if (vehiculoData.empresa && vehiculoData.empresa.toString() !== vehiculo.empresa.toString()) {
-      // Eliminar de la empresa anterior
-      logger.info(`Cambiando vehículo de empresa: ${vehiculo.empresa} -> ${vehiculoData.empresa}`);
+  /**
+   * Hook después de crear - actualizar referencia en empresa
+   */
+  protected async afterCreate(vehiculo: IVehiculo, options: TransactionOptions = {}): Promise<void> {
+    if (vehiculo.empresa) {
+      await Empresa.findByIdAndUpdate(
+        vehiculo.empresa,
+        { $push: { flota: vehiculo._id } },
+        { session: options.session }
+      );
       
+      this.logInfo('Actualizada referencia en empresa', {
+        vehiculoId: vehiculo._id,
+        empresaId: vehiculo.empresa
+      });
+    }
+  }
+
+  /**
+   * Hook después de actualizar - manejar cambio de empresa
+   */
+  protected async afterUpdate(vehiculo: IVehiculo, options: TransactionOptions = {}): Promise<void> {
+    // Este hook se puede usar para lógica adicional después de actualizar
+    // La lógica de cambio de empresa se maneja en updateWithEmpresaChange
+  }
+
+  /**
+   * Hook antes de eliminar - limpiar referencias
+   */
+  protected async beforeDelete(vehiculo: IVehiculo, options: TransactionOptions = {}): Promise<void> {
+    if (vehiculo.empresa) {
       await Empresa.findByIdAndUpdate(
         vehiculo.empresa,
         { $pull: { flota: vehiculo._id } },
-        { session }
+        { session: options.session }
       );
       
-      // Agregar a la nueva empresa
-      await Empresa.findByIdAndUpdate(
-        vehiculoData.empresa,
-        { $push: { flota: vehiculo._id } },
-        { session }
+      this.logInfo('Eliminada referencia en empresa', {
+        vehiculoId: vehiculo._id,
+        empresaId: vehiculo.empresa
+      });
+    }
+  }
+
+  // ==================== MÉTODOS ESPECÍFICOS DE VEHÍCULOS ====================
+
+  /**
+   * Obtiene vehículos de una empresa específica
+   */
+  async getVehiculosByEmpresa(empresaId: string, opciones: PaginationOptions<IVehiculo> = {}): Promise<IVehiculo[]> {
+    try {
+      this.validateId(empresaId, 'ID de empresa');
+      
+      const { limite = 100, pagina = 1 } = opciones;
+      const skip = (pagina - 1) * limite;
+      
+      this.logOperation('getVehiculosByEmpresa', { empresaId, limite, pagina });
+      
+      const vehiculos = await this.model.find({ empresa: empresaId })
+        .populate('empresa', 'nombre tipo')
+        .limit(limite)
+        .skip(skip)
+        .lean()
+        .exec();
+      
+      this.logSuccess('getVehiculosByEmpresa', { 
+        empresaId, 
+        found: vehiculos.length 
+      });
+      
+      return vehiculos as IVehiculo[];
+    } catch (error) {
+      this.logFailure('getVehiculosByEmpresa', error);
+      throw this.handleMongooseError(error);
+    }
+  }
+
+  /**
+   * Obtiene vehículos con documentación próxima a vencer
+   */
+  async getVehiculosConVencimientos(dias: number): Promise<IVehiculo[]> {
+    try {
+      const diasLimite = parseInt(String(dias)) || 30;
+      const hoy = new Date();
+      const limite = new Date();
+      limite.setDate(limite.getDate() + diasLimite);
+      
+      this.logOperation('getVehiculosConVencimientos', { diasLimite });
+
+      const vehiculos = await this.model.find({
+        $or: [
+          { 'documentacion.seguro.vencimiento': { $gte: hoy, $lte: limite } },
+          { 'documentacion.vtv.vencimiento': { $gte: hoy, $lte: limite } },
+          { 'documentacion.ruta.vencimiento': { $gte: hoy, $lte: limite } },
+          { 'documentacion.senasa.vencimiento': { $gte: hoy, $lte: limite } }
+        ]
+      })
+      .populate('empresa', 'nombre tipo')
+      .lean()
+      .exec();
+      
+      this.logSuccess('getVehiculosConVencimientos', { 
+        diasLimite,
+        found: vehiculos.length 
+      });
+      
+      return vehiculos as IVehiculo[];
+    } catch (error) {
+      this.logFailure('getVehiculosConVencimientos', error);
+      throw this.handleMongooseError(error);
+    }
+  }
+
+  /**
+   * Obtiene vehículos con documentación vencida
+   */
+  async getVehiculosVencidos(): Promise<IVehiculo[]> {
+    try {
+      const hoy = new Date();
+      
+      this.logOperation('getVehiculosVencidos');
+
+      const vehiculos = await this.model.find({
+        $or: [
+          { 'documentacion.seguro.vencimiento': { $lt: hoy } },
+          { 'documentacion.vtv.vencimiento': { $lt: hoy } },
+          { 'documentacion.ruta.vencimiento': { $lt: hoy } },
+          { 'documentacion.senasa.vencimiento': { $lt: hoy } }
+        ]
+      })
+      .populate('empresa', 'nombre tipo')
+      .lean()
+      .exec();
+      
+      this.logSuccess('getVehiculosVencidos', { found: vehiculos.length });
+      
+      return vehiculos as IVehiculo[];
+    } catch (error) {
+      this.logFailure('getVehiculosVencidos', error);
+      throw this.handleMongooseError(error);
+    }
+  }
+
+  /**
+   * Actualiza un vehículo con manejo especial de cambio de empresa
+   */
+  async updateWithEmpresaChange(id: string, data: Partial<IVehiculo>, options: TransactionOptions = {}): Promise<IVehiculo | null> {
+    this.logOperation('updateWithEmpresaChange', { id, hasData: !!data });
+    
+    return this.executeInTransaction(async (session) => {
+      this.validateId(id, 'ID del vehículo');
+      
+      // Obtener vehículo actual
+      const vehiculoActual = await this.validateExists(id, session);
+      
+      // Validar datos (sin verificar duplicación de dominio si no cambió)
+      if (data.dominio && data.dominio !== vehiculoActual.dominio) {
+        data.dominio = data.dominio.toUpperCase().trim();
+        const dominioExiste = await this.model.findOne({ 
+          dominio: data.dominio,
+          _id: { $ne: id }
+        }).session(session);
+        
+        if (dominioExiste) {
+          throw new Error('Ya existe un vehículo con ese dominio');
+        }
+      }
+
+      // Validar empresa si cambió
+      if (data.empresa && data.empresa.toString() !== vehiculoActual.empresa.toString()) {
+        const empresaExiste = await Empresa.findById(data.empresa).session(session);
+        if (!empresaExiste) {
+          throw new Error('La empresa especificada no existe');
+        }
+
+        // Eliminar de empresa anterior
+        await Empresa.findByIdAndUpdate(
+          vehiculoActual.empresa,
+          { $pull: { flota: vehiculoActual._id } },
+          { session }
+        );
+        
+        // Agregar a nueva empresa
+        await Empresa.findByIdAndUpdate(
+          data.empresa,
+          { $push: { flota: vehiculoActual._id } },
+          { session }
+        );
+
+        this.logInfo('Vehículo cambiado de empresa', {
+          vehiculoId: id,
+          empresaAnterior: vehiculoActual.empresa,
+          empresaNueva: data.empresa
+        });
+      }
+
+      // Actualizar vehículo
+      const vehiculoActualizado = await this.model.findByIdAndUpdate(
+        id,
+        data,
+        { new: true, runValidators: true, session }
       );
-    }
-
-    // Actualizamos el vehículo dentro de la transacción
-    const vehiculoActualizado = await Vehiculo.findByIdAndUpdate(
-      id,
-      vehiculoData,
-      { new: true, runValidators: true, session }
-    );
-    
-    logger.info(`Vehículo ${id} actualizado correctamente`);
-
-    // Commit de la transacción
-    await session.commitTransaction();
-    logger.info('Transacción completada: vehículo actualizado correctamente');
-    
-    return vehiculoActualizado;
-  } catch (error) {
-    // Rollback en caso de error
-    await session.abortTransaction();
-    logger.error(`Error en transacción al actualizar vehículo ${id}, rollback aplicado:`, error);
-    throw error;
-  } finally {
-    // Finalizamos la sesión
-    session.endSession();
+      
+      this.logSuccess('updateWithEmpresaChange', { 
+        id, 
+        updated: !!vehiculoActualizado 
+      });
+      
+      return vehiculoActualizado;
+    }, { autoManage: !options.session });
   }
-};
 
-/**
- * Elimina un vehículo con transacción
- * @param id - ID del vehículo a eliminar
- */
-const deleteVehiculo = async (id: string): Promise<{ message: string }> => {
-  const session = await mongoose.startSession();
-  
-  try {
-    session.startTransaction();
-    logger.info(`Iniciando transacción para eliminar vehículo ${id}`);
-    
-    // Validaciones previas
-    if (!id) {
-      throw new Error('Se requiere el ID del vehículo');
-    }
-    
-    const vehiculo = await Vehiculo.findById(id).session(session || null);
-    
-    if (!vehiculo) {
-      logger.warn(`Vehículo no encontrado al eliminar: ${id}`);
-      throw new Error('Vehículo no encontrado');
-    }
-
-    // Eliminar la referencia en la empresa
-    await Empresa.findByIdAndUpdate(
-      vehiculo.empresa,
-      { $pull: { flota: vehiculo._id } },
-      { session }
-    );
-    
-    logger.info(`Eliminada referencia en empresa ${vehiculo.empresa}`);
-
-    // Eliminar el vehículo
-    await Vehiculo.findByIdAndDelete(id, { session });
-    logger.info(`Vehículo ${id} eliminado correctamente`);
-    
-    // Commit de la transacción
-    await session.commitTransaction();
-    logger.info('Transacción completada: vehículo eliminado correctamente');
-    
-    return { message: 'Vehículo eliminado correctamente' };
-  } catch (error) {
-    // Rollback en caso de error
-    await session.abortTransaction();
-    logger.error(`Error en transacción al eliminar vehículo ${id}, rollback aplicado:`, error);
-    throw error;
-  } finally {
-    // Finalizamos la sesión
-    session.endSession();
-  }
-};
-
-/**
- * Obtiene vehículos con documentación próxima a vencer
- * @param dias - Días de límite para vencimiento
- */
-const getVehiculosConVencimientos = async (dias: number): Promise<any[]> => {
-  try {
-    const diasLimite = parseInt(String(dias)) || 30;
-    const hoy = new Date();
-    const limite = new Date();
-    limite.setDate(limite.getDate() + diasLimite);
-    
-    logger.info(`Consultando vehículos con vencimientos en los próximos ${diasLimite} días`);
-
-    // Optimizamos la consulta con índices apropiados y lean()
-    const vehiculos = await Vehiculo.find({
-      $or: [
-        { 'documentacion.seguro.vencimiento': { $gte: hoy, $lte: limite } },
-        { 'documentacion.vtv.vencimiento': { $gte: hoy, $lte: limite } },
-        { 'documentacion.ruta.vencimiento': { $gte: hoy, $lte: limite } },
-        { 'documentacion.senasa.vencimiento': { $gte: hoy, $lte: limite } }
-      ]
-    })
-    .populate('empresa', 'nombre tipo')
-    .lean()
-    .exec();
-    
-    return vehiculos;
-  } catch (error) {
-    logger.error('Error al obtener vehículos con vencimientos próximos:', error);
-    throw new Error(`Error al obtener vehículos con vencimientos: ${(error as Error).message}`);
-  }
-};
-
-/**
- * Obtiene vehículos con documentación vencida
- */
-const getVehiculosVencidos = async (): Promise<any[]> => {
-  try {
-    const hoy = new Date();
-    
-    logger.info('Consultando vehículos con documentación vencida');
-
-    // Optimizamos la consulta con lean()
-    const vehiculos = await Vehiculo.find({
-      $or: [
-        { 'documentacion.seguro.vencimiento': { $lt: hoy } },
-        { 'documentacion.vtv.vencimiento': { $lt: hoy } },
-        { 'documentacion.ruta.vencimiento': { $lt: hoy } },
-        { 'documentacion.senasa.vencimiento': { $lt: hoy } }
-      ]
-    })
-    .populate('empresa', 'nombre tipo')
-    .lean()
-    .exec();
-    
-    return vehiculos;
-  } catch (error) {
-    logger.error('Error al obtener vehículos con documentación vencida:', error);
-    throw new Error(`Error al obtener vehículos vencidos: ${(error as Error).message}`);
-  }
-};
-
-/**
- * Crea o actualiza vehículos masivamente desde la plantilla de corrección.
- * Resuelve la empresa por ID o Nombre.
- * Usa 'patenteFaltante' para buscar; si existe, actualiza; si no, crea.
- *
- * @param vehiculosData - Array con datos de vehículos extraídos de la plantilla.
- * @param options - Opciones, incluye la session de mongoose.
- * @returns Resultado con insertados, actualizados y errores.
- */
-const createVehiculosBulk = async (vehiculosData: VehiculoBulkData[], options: { session?: mongoose.ClientSession } = {}): Promise<BulkCreateResult> => {
+  /**
+   * Crea o actualiza vehículos masivamente
+   */
+  async createVehiculosBulk(vehiculosData: VehiculoBulkData[], options: TransactionOptions = {}): Promise<BulkResult> {
     const session = options.session;
     let insertados = 0;
     let actualizados = 0;
-    const errores: BulkCreateResult['errores'] = [];
-    const operations: any[] = []; // Array para bulkWrite [{updateOne: {...}}, {insertOne: {...}}]
+    const errores: BulkResult['errores'] = [];
+    const operations: any[] = [];
 
     if (!Array.isArray(vehiculosData) || vehiculosData.length === 0) {
-        return { success: false, insertados, actualizados, errores: [{ message: 'No vehicle data provided for bulk operation.' }] };
+      return { 
+        success: false, 
+        insertados, 
+        actualizados, 
+        errores: [{ message: 'No vehicle data provided for bulk operation.' }] 
+      };
     }
-    logger.info(`[createVehiculosBulk] Iniciando proceso para ${vehiculosData.length} vehículos.`);
 
-    // 1. Resolver Empresas
-    const empresaIdentifiers = [...new Set(vehiculosData.map(v => v.empresa).filter(e => e))];
-    const empresaIds = empresaIdentifiers.filter(id => mongoose.Types.ObjectId.isValid(id));
-    const empresaNombres = empresaIdentifiers.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    this.logOperation('createVehiculosBulk', { count: vehiculosData.length });
 
-    const empresasFoundById = await Empresa.find({ _id: { $in: empresaIds } }).session(session || null).lean();
-    const empresasFoundByName = await Empresa.find({ nombre: { $in: empresaNombres } }).session(session || null).lean();
-    const empresaMap = new Map();
-    [...empresasFoundById, ...empresasFoundByName].forEach(emp => {
+    try {
+      // Resolver empresas
+      const empresaIdentifiersSet = new Set(vehiculosData.map(v => v.empresa).filter(e => e));
+      const empresaIdentifiers = Array.from(empresaIdentifiersSet);
+      const empresaIds = empresaIdentifiers.filter(id => mongoose.Types.ObjectId.isValid(id));
+      const empresaNombres = empresaIdentifiers.filter(id => !mongoose.Types.ObjectId.isValid(id));
+
+      const empresasFoundById = await Empresa.find({ _id: { $in: empresaIds } }).session(session || null).lean();
+      const empresasFoundByName = await Empresa.find({ nombre: { $in: empresaNombres } }).session(session || null).lean();
+      
+      const empresaMap = new Map();
+      [...empresasFoundById, ...empresasFoundByName].forEach(emp => {
         empresaMap.set(emp._id.toString(), emp._id);
         if (emp.nombre) {
-            empresaMap.set(emp.nombre.toLowerCase(), emp._id);
+          empresaMap.set(emp.nombre.toLowerCase(), emp._id);
         }
-    });
-    logger.debug(`[createVehiculosBulk] Empresas resueltas: ${empresaMap.size} encontradas.`);
+      });
 
-    // 2. Buscar Vehículos Existentes por patenteFaltante (dominio)
-    const patentesFaltantes = vehiculosData.map(v => String(v.patenteFaltante || '').trim().toUpperCase()).filter(p => p);
-    const vehiculosExistentes = await Vehiculo.find({ dominio: { $in: patentesFaltantes } }).session(session || null).lean();
-    const vehiculosExistentesMap = new Map(vehiculosExistentes.map(v => [v.dominio, v]));
-    logger.debug(`[createVehiculosBulk] Vehículos existentes encontrados: ${vehiculosExistentesMap.size}`);
+      // Buscar vehículos existentes
+      const patentesFaltantes = vehiculosData.map(v => String(v.patenteFaltante || '').trim().toUpperCase()).filter(p => p);
+      const vehiculosExistentes = await this.model.find({ dominio: { $in: patentesFaltantes } }).session(session || null).lean();
+      const vehiculosExistentesMap = new Map(vehiculosExistentes.map(v => [v.dominio, v]));
 
-    // 3. Procesar cada registro y preparar operaciones
-    for (const [index, item] of vehiculosData.entries()) {
+      // Procesar cada registro
+      for (let i = 0; i < vehiculosData.length; i++) {
+        const index = i;
+        const item = vehiculosData[i];
         const patente = String(item.patenteFaltante || '').trim().toUpperCase();
 
-        // Validar campos básicos (patente, tipo, empresa)
+        // Validar campos básicos
         if (!patente || !item.tipo || !item.empresa) {
-            errores.push({ index, message: 'Faltan campos requeridos (Patente Faltante, Tipo, Empresa)', data: item });
-            continue;
+          errores.push({ index, message: 'Faltan campos requeridos (Patente Faltante, Tipo, Empresa)', data: item });
+          continue;
         }
 
-        // Resolver Empresa ID
+        // Resolver empresa
         let empresaId: mongoose.Types.ObjectId | null = null;
         const empresaKey = typeof item.empresa === 'string' ? item.empresa.toLowerCase() : item.empresa;
+        
         if (mongoose.Types.ObjectId.isValid(item.empresa)) {
-            empresaId = empresaMap.get(item.empresa.toString());
+          empresaId = empresaMap.get(item.empresa.toString());
         } else if (typeof empresaKey === 'string') {
-            empresaId = empresaMap.get(empresaKey);
+          empresaId = empresaMap.get(empresaKey);
         }
 
         if (!empresaId) {
-            errores.push({ index, message: `Empresa '${item.empresa}' no encontrada o inválida`, data: item });
-            continue;
+          errores.push({ index, message: `Empresa '${item.empresa}' no encontrada o inválida`, data: item });
+          continue;
         }
 
         const vehiculoDataToSet = {
-            tipo: item.tipo,
-            marca: item.marca || null,
-            modelo: item.modelo || null,
-            anio: item.anio || null,
-            empresa: empresaId,
-            // Otros campos relevantes del modelo Vehiculo podrían ir aquí
+          tipo: item.tipo,
+          marca: item.marca || null,
+          modelo: item.modelo || null,
+          año: item.anio || null,
+          empresa: empresaId,
         };
 
         const vehiculoExistente = vehiculosExistentesMap.get(patente);
 
         if (vehiculoExistente) {
-            // Preparar actualización
-            operations.push({
-                updateOne: {
-                    filter: { _id: vehiculoExistente._id },
-                    update: { $set: vehiculoDataToSet }
-                }
-            });
-        } else {
-            // Preparar inserción
-            operations.push({
-                insertOne: {
-                    document: {
-                        dominio: patente, // Usar patenteFaltante como dominio
-                        ...vehiculoDataToSet
-                    }
-                }
-            });
-        }
-    }
-
-    // 4. Ejecutar bulkWrite
-    if (operations.length > 0) {
-        try {
-            const result = await Vehiculo.bulkWrite(operations, { session, ordered: false });
-            insertados = result.insertedCount;
-            actualizados = result.modifiedCount;
-            logger.info(`[createVehiculosBulk] BulkWrite completado. Insertados: ${insertados}, Actualizados: ${actualizados}`);
-
-            // Manejar errores de escritura individuales
-            if (result.hasWriteErrors()) {
-                 result.getWriteErrors().forEach(err => {
-                     // Intentar mapear el error al índice original (puede ser complejo)
-                     const opType = (err as any).op?.insertOne ? 'insert' : 'update';
-                     const targetDomain = (err as any).op?.insertOne ? (err as any).op.insertOne.document.dominio : (err as any).op?.updateOne?.filter?.dominio; // Puede ser _id
-                     const originalIndex = vehiculosData.findIndex(v => String(v.patenteFaltante || '').trim().toUpperCase() === targetDomain);
-
-                    errores.push({
-                        index: originalIndex !== -1 ? originalIndex : 'N/A',
-                        message: `Error en operación ${opType} para patente ${targetDomain || 'desconocida'}: ${err.errmsg}`,
-                        code: err.code,
-                        data: (err as any).op || 'No disponible' // Contiene la operación fallida
-                    });
-                 });
-                 logger.warn(`[createVehiculosBulk] ${errores.length} errores durante bulkWrite.`);
+          operations.push({
+            updateOne: {
+              filter: { _id: vehiculoExistente._id },
+              update: { $set: vehiculoDataToSet }
             }
-
-             // Actualizar referencias en empresas (solo para los insertados)
-             const insertedIds = Object.values(result.insertedIds || {});
-             if (insertedIds.length > 0) {
-                 const vehiculosInsertados = await Vehiculo.find({ _id: { $in: insertedIds } }).session(session || null).lean();
-                 const vehiculosPorEmpresa: Record<string, mongoose.Types.ObjectId[]> = {};
-                 vehiculosInsertados.forEach(vehiculo => {
-                     const empresaIdStr = vehiculo.empresa.toString();
-                     if (!vehiculosPorEmpresa[empresaIdStr]) vehiculosPorEmpresa[empresaIdStr] = [];
-                     vehiculosPorEmpresa[empresaIdStr].push(vehiculo._id as mongoose.Types.ObjectId);
-                 });
-
-                 const actualizacionesEmpresas = Object.entries(vehiculosPorEmpresa).map(([empresaId, vehiculosIds]) =>
-                     Empresa.findByIdAndUpdate(empresaId, { $push: { flota: { $each: vehiculosIds } } }, { session })
-                 );
-                 await Promise.all(actualizacionesEmpresas);
-                 logger.info(`[createVehiculosBulk] Actualizadas referencias en ${actualizacionesEmpresas.length} empresas para vehículos nuevos.`);
-             }
-
-        } catch (error) {
-            logger.error('[createVehiculosBulk] Error durante bulkWrite:', error);
-            errores.push({ message: `Error general durante bulkWrite: ${(error as Error).message}` });
+          });
+        } else {
+          operations.push({
+            insertOne: {
+              document: {
+                dominio: patente,
+                ...vehiculoDataToSet
+              }
+            }
+          });
         }
-    } else {
-        logger.info('[createVehiculosBulk] No se prepararon operaciones válidas.');
+      }
+
+      // Ejecutar operaciones bulk
+      const bulkResult = await this.executeBulkWrite(operations, { session });
+      
+      this.logSuccess('createVehiculosBulk', {
+        insertados: bulkResult.insertados,
+        actualizados: bulkResult.actualizados,
+        errores: bulkResult.errores.length
+      });
+
+      return {
+        ...bulkResult,
+        errores: [...errores, ...bulkResult.errores]
+      };
+
+    } catch (error) {
+      this.logFailure('createVehiculosBulk', error);
+      throw this.handleMongooseError(error);
     }
+  }
+}
 
-    return {
-        success: errores.length === 0,
-        insertados,
-        actualizados,
-        errores
-    };
-};
+// ==================== INSTANCIA SINGLETON ====================
 
-export {
-  getAllVehiculos,
-  getVehiculosByEmpresa,
-  getVehiculoById,
-  createVehiculo,
-  updateVehiculo,
-  deleteVehiculo,
-  getVehiculosConVencimientos,
-  getVehiculosVencidos,
-  createVehiculosBulk
+const vehiculoService = new VehiculoService();
+
+// ==================== EXPORTS PARA COMPATIBILIDAD ====================
+
+export { VehiculoService };
+export default vehiculoService;
+
+// Exportar métodos individuales para compatibilidad con controladores existentes
+export const getAllVehiculos = async (opciones?: PaginationOptions<IVehiculo>) => {
+  const result = await vehiculoService.getAll(opciones);
+  // Convertir formato BaseService a formato esperado por controladores
+  return {
+    vehiculos: result.data,
+    paginacion: result.paginacion
+  };
 };
+export const getVehiculoById = (id: string) => vehiculoService.getById(id);
+export const createVehiculo = (data: Partial<IVehiculo>) => vehiculoService.create(data);
+export const updateVehiculo = (id: string, data: Partial<IVehiculo>) => vehiculoService.updateWithEmpresaChange(id, data);
+export const deleteVehiculo = async (id: string) => {
+  const result = await vehiculoService.delete(id);
+  // Convertir formato BaseService a formato esperado por controladores
+  return { message: result.message || 'Vehículo eliminado correctamente' };
+};
+export const getVehiculosByEmpresa = (empresaId: string, opciones?: PaginationOptions<IVehiculo>) => vehiculoService.getVehiculosByEmpresa(empresaId, opciones);
+export const getVehiculosConVencimientos = (dias: number) => vehiculoService.getVehiculosConVencimientos(dias);
+export const getVehiculosVencidos = () => vehiculoService.getVehiculosVencidos();
+export const createVehiculosBulk = (vehiculosData: VehiculoBulkData[], options?: TransactionOptions) => vehiculoService.createVehiculosBulk(vehiculosData, options);
