@@ -264,17 +264,17 @@ Eliminar código duplicado identificado en el proyecto para mejorar la mantenibi
   - [x] Validar importaciones masivas
   - [x] Tests de conflictos de fechas
 
-#### 5.2.3 Identificar y Migrar Otros Servicios
-- [ ] **5.2.3.1** Auditar servicios existentes
-  - [ ] Revisar `geocodingService.ts` - no necesita BaseService (servicio externo)
-  - [ ] Revisar `formulaClienteService.ts` - evaluar si aplica BaseService
-  - [ ] Revisar `tarifaService.ts` - candidato para BaseService
-  - [ ] Revisar `excelTemplateService.ts` - servicio utilitario, no aplica
-- [ ] **5.2.3.2** Crear servicios faltantes con BaseService
-  - [ ] `ClienteService extends BaseService<ICliente>`
-  - [ ] `SiteService extends BaseService<ISite>`
-  - [ ] `EmpresaService extends BaseService<IEmpresa>`
-  - [ ] `PersonalService extends BaseService<IPersonal>`
+#### 5.2.3 Identificar y Migrar Otros Servicios ✅
+- [x] **5.2.3.1** Auditar servicios existentes
+  - [x] Revisar `geocodingService.ts` - no necesita BaseService (servicio externo)
+  - [x] Revisar `formulaClienteService.ts` - evaluar si aplica BaseService
+  - [x] Revisar `tarifaService.ts` - candidato para BaseService
+  - [x] Revisar `excelTemplateService.ts` - servicio utilitario, no aplica
+- [x] **5.2.3.2** Crear servicios faltantes con BaseService
+  - [x] `ClienteService extends BaseService<ICliente>`
+  - [x] `SiteService extends BaseService<ISite>`
+  - [x] `EmpresaService extends BaseService<IEmpresa>`
+  - [x] `PersonalService extends BaseService<IPersonal>`
 
 ### 5.3 Integración y Testing
 - [ ] **5.3.1** Tests de integración end-to-end
