@@ -16,6 +16,27 @@ El sistema permite:
 
 El sistema está construido con una arquitectura moderna de frontend y backend separados, siguiendo principios de programación funcional y con un enfoque en la seguridad, rate limiting y experiencia de usuario.
 
+### 🏗️ Arquitectura BaseService (Completamente Implementada)
+
+El proyecto implementa una **arquitectura unificada de servicios** basada en el patrón `BaseService`, que elimina duplicación de código y proporciona funcionalidad consistente:
+
+**Servicios migrados a BaseService:**
+- ✅ `ClienteService` - Gestión completa de clientes
+- ✅ `VehiculoService` - Administración de flota de vehículos  
+- ✅ `TramoService` - Gestión de rutas y tarifas complejas
+- ✅ `SiteService` - Manejo de ubicaciones con geocodificación
+- ✅ `EmpresaService` - Administración de empresas
+- ✅ `PersonalService` - Gestión de recursos humanos
+
+**Características del BaseService:**
+- **CRUD Unificado**: Operaciones create, read, update, delete consistentes
+- **Paginación Inteligente**: Sistema avanzado con filtros y ordenamiento
+- **Transacciones Automáticas**: Manejo seguro de operaciones complejas
+- **Logging Centralizado**: Trazabilidad completa de operaciones
+- **Validaciones Genéricas**: Validación de IDs, existencia y datos requeridos
+- **Manejo de Errores**: Gestión consistente de errores Mongoose
+- **Performance Optimizado**: Queries eficientes y operaciones en lote
+
 ## Tecnologías Utilizadas
 
 ### Backend (TypeScript - Completamente migrado)
