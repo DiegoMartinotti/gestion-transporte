@@ -10,8 +10,34 @@ import logger from '../../utils/logger';
 /**
  * Servicio especializado para la gestión de clientes
  * Hereda toda la funcionalidad básica de BaseService y añade lógica específica
+ * 
+ * @class ClienteService
+ * @extends BaseService<ICliente>
+ * 
+ * @example
+ * ```typescript
+ * const clienteService = new ClienteService();
+ * 
+ * // Crear cliente
+ * const cliente = await clienteService.create({
+ *   nombre: 'Empresa ABC',
+ *   cuit: '20-12345678-9',
+ *   activo: true
+ * });
+ * 
+ * // Obtener con paginación
+ * const result = await clienteService.getAll({
+ *   pagina: 1,
+ *   limite: 10,
+ *   filtros: { activo: true }
+ * });
+ * ```
  */
 class ClienteService extends BaseService<ICliente> {
+    /**
+     * Constructor del servicio de clientes
+     * Inicializa el servicio base con el modelo Cliente
+     */
     constructor() {
         super(Cliente);
     }
