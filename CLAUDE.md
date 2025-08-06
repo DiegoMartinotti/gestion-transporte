@@ -17,6 +17,33 @@ Before creating ANY new code, verify it doesn't duplicate existing functionality
 
 **CRITICAL**: Before writing any code (using Edit, Write, MultiEdit tools), ALWAYS consult MCP Context7 first to get current documentation for the libraries, frameworks, or APIs being used. This ensures code follows latest best practices and correct usage patterns.
 
+## MANDATORY: Proactive Use of Specialized Agents
+
+**CRITICAL**: ALWAYS use specialized agents proactively for tasks matching their expertise. The project has 15 configured agents:
+
+### Global Agents (in ~/.claude/agents/):
+
+- **typescript-pro**: TypeScript development and type safety
+- **react-pro**: React patterns and hooks
+- **backend-architect**: Node.js/Express architecture
+- **database-optimizer**: MongoDB query optimization
+- **test-automator**: Jest/Playwright testing
+- **code-reviewer**: SOLID/DRY principles review
+- **api-documenter**: Swagger and API documentation
+- **performance-engineer**: Performance optimization
+- **legacy-modernizer**: Code refactoring
+- **security-auditor**: Security validation
+
+### Project-Specific Agents (in .claude/agents/):
+
+- **transport-business-expert**: Transportation logic, tariffs, formulas (uses MongoDB MCP)
+- **excel-specialist**: Excel operations with BaseExcelService
+- **geocoding-routes-expert**: Geocoding and route calculations (uses WebFetch)
+- **mantine-ui-expert**: Mantine UI components and patterns (uses Playwright MCP)
+- **mongodb-atlas-specialist**: Direct MongoDB operations (uses MongoDB MCP tools)
+
+**Usage**: Invoke agents using the Task tool when their expertise matches the current task. Multiple agents can work concurrently on different aspects of a problem.
+
 ## Project Overview
 
 This is a Transportation Management System (Sistema de Gestión de Transporte) - a comprehensive full-stack application for managing transportation logistics including clients, sites, routes, vehicles, trips, and billing. The system consists of a REST API backend (Node.js/Express/TypeScript) and a modern React frontend.
