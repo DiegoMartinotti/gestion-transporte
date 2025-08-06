@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MANDATORY: Style Guide Compliance
+
+**CRITICAL**: ALWAYS follow the project's style guide located at `docs/STYLE_GUIDE.md`. This guide enforces:
+
+- DRY (Don't Repeat Yourself) principles
+- SOLID design patterns
+- Anti-duplication patterns
+- Code reusability through hooks, base services, and modular controllers
+
+Before creating ANY new code, verify it doesn't duplicate existing functionality.
+
 ## MANDATORY: MCP Context7 Consultation
 
 **CRITICAL**: Before writing any code (using Edit, Write, MultiEdit tools), ALWAYS consult MCP Context7 first to get current documentation for the libraries, frameworks, or APIs being used. This ensures code follows latest best practices and correct usage patterns.
@@ -137,6 +148,22 @@ When adding new features, follow the existing pattern of routes → controllers 
    - Excel operations: useExcelOperations + BaseExcelService
    - Import/Export: Unified modal and processing system
    - Validation: Shared validation engines and components
+
+### Required Patterns to Follow
+
+#### Frontend Patterns
+
+- **Modal Management**: ALWAYS use `useModal` hook for modal states
+- **Data Loading**: ALWAYS use `useDataLoader` hook for data fetching with loading/error states
+- **Forms**: Use DynamicListField for repeating form sections
+- **Validation**: Extend BaseValidator for new validators
+
+#### Backend Patterns
+
+- **Controllers**: Use modular pattern (one file per operation) in `controllers/entity/` folders
+- **Services**: ALWAYS extend BaseService for CRUD operations
+- **Validation**: Centralize in validators folder, not in controllers/services
+- **Error Handling**: Use ApiResponse utility for consistent responses
 
 ### Excel System Architecture
 
