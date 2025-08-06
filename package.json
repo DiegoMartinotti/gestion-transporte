@@ -10,7 +10,14 @@
     "set-prod": "node scripts/set-production.js",
     "set-dev": "node scripts/set-development.js",
     "start-prod": "npm run set-prod && npm run dev",
-    "start-dev": "npm run set-dev && npm run dev"
+    "start-dev": "npm run set-dev && npm run dev",
+    "prepare": "husky install",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npx eslint . --ext .ts",
+    "lint:frontend": "cd frontend && npx eslint . --ext .ts,.tsx",
+    "lint:fix": "npm run lint:fix:backend && npm run lint:fix:frontend",
+    "lint:fix:backend": "cd backend && npx eslint . --ext .ts --fix",
+    "lint:fix:frontend": "cd frontend && npx eslint . --ext .ts,.tsx --fix"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -18,6 +25,10 @@
     "@types/swagger-jsdoc": "^6.0.4",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
+    "eslint-plugin-sonarjs": "^0.23.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.6.2",
     "typescript": "^5.8.3"
   },
   "dependencies": {

@@ -1,0 +1,87 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": 12,
+    "sourceType": "module"
+  },
+  "plugins": ["react", "react-hooks", "@typescript-eslint", "sonarjs"],
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "rules": {
+    // Reglas para prevenir duplicación
+    "no-duplicate-imports": "error",
+    "no-duplicate-case": "error",
+    "@typescript-eslint/no-duplicate-enum-values": "error",
+
+    // Reglas de SonarJS para detectar código duplicado
+    "sonarjs/no-duplicate-string": ["error", { "threshold": 3 }],
+    "sonarjs/no-identical-functions": "error",
+    "sonarjs/no-duplicated-branches": "error",
+    "sonarjs/no-identical-conditions": "error",
+    "sonarjs/no-identical-expressions": "error",
+    "sonarjs/no-inverted-boolean-check": "error",
+    "sonarjs/no-redundant-boolean": "error",
+    "sonarjs/no-redundant-jump": "error",
+    "sonarjs/no-same-line-conditional": "error",
+    "sonarjs/no-useless-catch": "error",
+    "sonarjs/prefer-immediate-return": "error",
+
+    // Complejidad cognitiva para mantener componentes simples
+    "sonarjs/cognitive-complexity": ["error", 15],
+
+    // Reglas adicionales de calidad
+    "complexity": ["error", 10],
+    "max-lines": ["warn", { "max": 400, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": [
+      "warn",
+      { "max": 100, "skipBlankLines": true, "skipComments": true }
+    ],
+    "max-depth": ["error", 4],
+    "max-nested-callbacks": ["error", 3],
+    "max-params": ["warn", 4],
+
+    // React específicas
+    "react/prop-types": "off",
+    "react/react-in-jsx-scope": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+
+    // TypeScript específicas
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+
+    // Permitir requires en ciertos casos
+    "@typescript-eslint/no-var-requires": "off"
+  },
+  "ignorePatterns": [
+    "build/",
+    "dist/",
+    "node_modules/",
+    "*.js",
+    "*.test.tsx",
+    "*.test.ts",
+    "setupTests.ts",
+    "reportWebVitals.ts",
+    "e2e/**/*.ts",
+    "e2e/**/*.tsx"
+  ]
+}
