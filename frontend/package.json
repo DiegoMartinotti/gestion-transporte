@@ -50,6 +50,10 @@
     "test:coverage": "react-scripts test --coverage --watchAll=false",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:all": "npm run type-check && npm run lint && npm run test -- --watchAll=false && npm run test:e2e",
+    "test:regression": "playwright test e2e/regression",
+    "test:smoke": "playwright test e2e/smoke",
     "eject": "react-scripts eject",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
@@ -80,6 +84,7 @@
     "@testing-library/dom": "^10.4.0",
     "@types/jest": "^30.0.0",
     "eslint": "^8.36.0",
+    "eslint-plugin-sonarjs": "^3.0.4",
     "react-scripts": "^5.0.1"
   },
   "jest": {

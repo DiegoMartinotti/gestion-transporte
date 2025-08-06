@@ -1,9 +1,11 @@
 # Frontend - Sistema de Gestión de Transporte
 
 ## Descripción
+
 Frontend desarrollado con React + TypeScript + Mantine UI para el sistema de gestión de transporte.
 
 ## Tecnologías Principales
+
 - **React 18** con TypeScript
 - **Mantine UI v8.1** - Component library con tema oscuro
 - **React Router v7** - Routing client-side
@@ -40,6 +42,7 @@ frontend/
 ## Páginas Implementadas
 
 ### Gestión Principal
+
 - **Dashboard**: KPIs, gráficos, actividad reciente
 - **Clientes**: CRUD completo con Excel import/export
 - **Sites**: Gestión de ubicaciones con geocodificación
@@ -47,6 +50,7 @@ frontend/
 - **Viajes**: Gestión de viajes con cálculos complejos
 
 ### Recursos y Configuración
+
 - **Vehículos**: Gestión de flota con tracking de documentos
 - **Personal**: Gestión de empleados/choferes
 - **Empresas**: Gestión de compañías
@@ -54,19 +58,40 @@ frontend/
 - **Calculadora**: Calculadora independiente de precios
 
 ### Herramientas
+
 - **Importación**: Sistema unificado para todas las entidades
 - **Reports**: Herramientas de exportación y análisis
 
 ## Características Clave
 
+### Custom Hooks Reutilizables
+
+El frontend implementa hooks personalizados que eliminan duplicación y estandarizan patrones comunes:
+
+#### useModal
+
+- **Propósito**: Gestión centralizada de estados de modales
+- **Uso**: Elimina ~15 líneas de código duplicado por página
+- **Funciones**: `openCreate`, `openEdit`, `openView`, `openDelete`, callbacks configurables
+- **Documentación completa**: Ver [`src/hooks/useModal.md`](src/hooks/useModal.md)
+
+#### useDataLoader
+
+- **Propósito**: Manejo unificado de carga de datos con estados y paginación
+- **Uso**: Abstrae loading, error, refresh y paginación automática
+- **Funciones**: `refresh`, `setCurrentPage`, manejo de errores consistente
+- **Documentación completa**: Ver [`src/hooks/useDataLoader.ts`](src/hooks/useDataLoader.ts) (JSDoc completo)
+
 ### Sistema Excel Unificado
+
 - **Hook**: `useExcelOperations` - Centraliza export, template e import
 - **Service**: `BaseExcelService` - API consistente para todas las entidades
 - **Componentes**: ExcelImportModal, ExcelUploadZone, ExcelTemplateGenerator
-- **Plantillas**: Generación automática con campos obligatorios (*)
+- **Plantillas**: Generación automática con campos obligatorios (\*)
 - **Referencias**: Hojas con datos existentes para completar formularios
 
 ### Diseño y UX
+
 - **Tema Oscuro**: Por defecto con alternador claro/oscuro
 - **Responsive**: Interfaces mobile-friendly
 - **Lazy Loading**: Code splitting para performance
@@ -90,9 +115,11 @@ npx tsc --noEmit
 ```
 
 ## Acceso
+
 - **URL**: http://localhost:3000
 - **Puerto**: 3000 (con hot-reload)
 - **Backend**: Conecta a API en puerto 3001
 
 ## Autenticación
+
 Sistema JWT con contexto React, rutas protegidas y gestión automática de tokens.
