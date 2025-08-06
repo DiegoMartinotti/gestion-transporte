@@ -6,6 +6,7 @@
 
 import mongoose, { Document, Model, ClientSession, FilterQuery, Error as MongooseError } from 'mongoose';
 import logger from '../utils/logger';
+import * as commonValidators from '../utils/commonValidators';
 
 // ==================== INTERFACES UNIFICADAS ====================
 
@@ -172,86 +173,7 @@ export abstract class BaseService<T extends Document> {
     }
   }
 
-  /**
-   * Valida formato de email
-   * @param email - Email a validar
-   * @param fieldName - Nombre del campo para el mensaje de error
-   */
-  protected validateEmail(email: string, fieldName: string = 'email'): void {
-    if (!email) return;
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      throw new Error(`El formato del ${fieldName} no es válido`);
-    }
-  }
 
-  /**
-   * Valida formato de CUIT argentino
-   * @param cuit - CUIT a validar
-   * @param fieldName - Nombre del campo para el mensaje de error
-   */
-  protected validateCUIT(cuit: string, fieldName: string = 'CUIT'): void {
-    if (!cuit) return;
-    
-    // Formato argentino: XX-XXXXXXXX-X
-    const cuitRegex = /^\d{2}-\d{8}-\d{1}$/;
-    if (!cuitRegex.test(cuit)) {
-      throw new Error(`El formato del ${fieldName} no es válido (debe ser formato argentino)`);
-    }
-  }
-
-  /**
-   * Valida formato de CUIL argentino
-   * @param cuil - CUIL a validar
-   * @param fieldName - Nombre del campo para el mensaje de error
-   */
-  protected validateCUIL(cuil: string, fieldName: string = 'CUIL'): void {
-    if (!cuil) return;
-    
-    // Formato argentino: XX-XXXXXXXX-X
-    const cuilRegex = /^\d{2}-\d{8}-\d{1}$/;
-    if (!cuilRegex.test(cuil)) {
-      throw new Error(`El ${fieldName} debe tener formato XX-XXXXXXXX-X`);
-    }
-  }
-
-  /**
-   * Valida formato de teléfono
-   * @param telefono - Teléfono a validar
-   * @param fieldName - Nombre del campo para el mensaje de error
-   */
-  protected validateTelefono(telefono: string, fieldName: string = 'teléfono'): void {
-    if (!telefono) return;
-    
-    // Permitir números con guiones, espacios o sin separadores
-    const telefonoRegex = /^[\d\s\-\+\(\)]{8,15}$/;
-    if (!telefonoRegex.test(telefono)) {
-      throw new Error(`El formato del ${fieldName} no es válido`);
-    }
-  }
-
-  /**
-   * Valida que un valor no esté duplicado en la base de datos
-   * @param field - Campo a verificar
-   * @param value - Valor a buscar
-   * @param excludeId - ID a excluir de la búsqueda (para updates)
-   * @param fieldName - Nombre del campo para el mensaje de error
-   */
-  protected async validateUnique(field: string, value: any, excludeId?: string, fieldName?: string): Promise<void> {
-    if (!value) return;
-    
-    const query: any = { [field]: value };
-    if (excludeId) {
-      query._id = { $ne: excludeId };
-    }
-    
-    const existing = await this.model.findOne(query);
-    if (existing) {
-      const displayName = fieldName || field;
-      throw new Error(`Ya existe un registro con ese ${displayName}: ${value}`);
-    }
-  }
 
   /**
    * Maneja errores de Mongoose y los convierte a errores más legibles
@@ -293,31 +215,48 @@ export abstract class BaseService<T extends Document> {
   async getAll(opciones: PaginationOptions<T> = {}): Promise<PaginationResult<T>> {
     try {
       const { limite = 50, pagina = 1, filtros = {}, ordenamiento, proyeccion } = opciones;
-      const skip = (pagina - 1) * limite;
       
-      this.logOperation('getAll', { pagina, limite });
+      // Validar y limitar el tamaño de la página para prevenir consultas excesivas
+      const maxLimite = 100;
+      const limiteFinal = Math.min(limite, maxLimite);
+      const skip = (pagina - 1) * limiteFinal;
+      
+      this.logOperation('getAll', { pagina, limite: limiteFinal });
       
       const query = filtros as FilterQuery<T>;
       
-      // Construir query base
-      const findQuery = this.model.find(query)
-        .limit(limite)
+      // Construir query base con todas las opciones
+      let findQuery = this.model.find(query)
+        .limit(limiteFinal)
         .skip(skip)
         .lean();
       
-      // Ejecutar consultas en paralelo para mejor rendimiento
+      // Agregar ordenamiento si se especifica
+      if (ordenamiento) {
+        findQuery = findQuery.sort(ordenamiento);
+      } else {
+        // Ordenamiento por defecto por _id descendente (más eficiente que createdAt)
+        findQuery = findQuery.sort({ _id: -1 });
+      }
+      
+      // Agregar proyección si se especifica para reducir transferencia de datos
+      if (proyeccion) {
+        findQuery = findQuery.select(proyeccion);
+      }
+      
+      // Ejecutar consultas en paralelo para mejor rendimiento con hints de índices
       const [data, total] = await Promise.all([
         findQuery.exec(),
-        this.model.countDocuments(query)
+        this.model.countDocuments(query).hint({ _id: 1 })
       ]);
       
       const result = {
         data: data as T[],
         paginacion: {
           total,
-          paginas: Math.ceil(total / limite),
+          paginas: Math.ceil(total / limiteFinal),
           paginaActual: pagina,
-          limite
+          limite: limiteFinal
         }
       };
       
@@ -595,6 +534,183 @@ export abstract class BaseService<T extends Document> {
   protected logWarn(message: string, data?: any): void {
     const context = this.formatLogContext('warning', data);
     logger.warn(`[${this.modelName}] ${message}`, context);
+  }
+
+  // ==================== MÉTODOS DE VALIDACIÓN COMÚN ====================
+
+  /**
+   * Valida unicidad de un campo - versión que retorna booleano
+   */
+  protected async validateUnique(
+    field: string,
+    value: any,
+    excludeId?: string,
+    additionalFilter?: Record<string, any>
+  ): Promise<boolean>;
+  
+  /**
+   * Valida unicidad de un campo - versión que lanza excepción (para compatibilidad)
+   */
+  protected async validateUnique(
+    field: string,
+    value: any,
+    excludeId?: string,
+    fieldName?: string
+  ): Promise<void>;
+  
+  protected async validateUnique(
+    field: string,
+    value: any,
+    excludeId?: string,
+    additionalFilterOrFieldName?: Record<string, any> | string
+  ): Promise<boolean | void> {
+    // Si el cuarto parámetro es un string, es la versión que lanza excepción
+    if (typeof additionalFilterOrFieldName === 'string') {
+      const isUnique = await commonValidators.validateUnique(
+        this.model,
+        field,
+        value,
+        excludeId
+      );
+      if (!isUnique) {
+        throw new Error(`Ya existe un registro con ese ${additionalFilterOrFieldName || field}: ${value}`);
+      }
+      return;
+    }
+    
+    // Versión que retorna booleano
+    return commonValidators.validateUnique(
+      this.model,
+      field,
+      value,
+      excludeId,
+      additionalFilterOrFieldName
+    );
+  }
+
+  /**
+   * Valida unicidad de múltiples campos
+   */
+  protected async validateUniqueComposite(
+    fields: Record<string, any>,
+    excludeId?: string
+  ): Promise<boolean> {
+    return commonValidators.validateUniqueComposite(
+      this.model,
+      fields,
+      excludeId
+    );
+  }
+
+  /**
+   * Valida CUIT/CUIL argentino
+   */
+  protected validateCUITCUIL(cuitCuil: string): boolean {
+    return commonValidators.validateCUITCUIL(cuitCuil);
+  }
+  
+  /**
+   * Valida CUIT argentino (wrapper para compatibilidad)
+   */
+  protected validateCUIT(cuit: string, fieldName: string = 'CUIT'): void {
+    if (!cuit) return;
+    if (!this.validateCUITCUIL(cuit)) {
+      throw new Error(`El formato del ${fieldName} no es válido`);
+    }
+  }
+  
+  /**
+   * Valida CUIL argentino (wrapper para compatibilidad)
+   */
+  protected validateCUIL(cuil: string, fieldName: string = 'CUIL'): void {
+    if (!cuil) return;
+    if (!this.validateCUITCUIL(cuil)) {
+      throw new Error(`El formato del ${fieldName} no es válido`);
+    }
+  }
+  
+  /**
+   * Valida teléfono (wrapper para compatibilidad)
+   */
+  protected validateTelefono(telefono: string, fieldName: string = 'teléfono'): void {
+    if (!telefono) return;
+    if (!this.validatePhoneNumber(telefono)) {
+      throw new Error(`El formato del ${fieldName} no es válido`);
+    }
+  }
+
+  /**
+   * Valida coordenadas geográficas
+   */
+  protected validateCoordinates(lat: number, lng: number): boolean {
+    return commonValidators.validateCoordinates(lat, lng);
+  }
+
+  /**
+   * Valida rango de fechas
+   */
+  protected validateDateRange(fechaDesde: Date, fechaHasta?: Date | null): boolean {
+    return commonValidators.validateDateRange(fechaDesde, fechaHasta);
+  }
+
+  /**
+   * Valida que no haya superposición de fechas
+   */
+  protected async validateNoDateOverlap(
+    fechaDesde: Date,
+    fechaHasta: Date | null,
+    filterFields: Record<string, any>,
+    excludeId?: string
+  ): Promise<boolean> {
+    return commonValidators.validateNoDateOverlap(
+      this.model,
+      fechaDesde,
+      fechaHasta,
+      filterFields,
+      excludeId
+    );
+  }
+
+  /**
+   * Valida formato de email - versión que retorna booleano
+   */
+  protected validateEmail(email: string): boolean;
+  
+  /**
+   * Valida formato de email - versión que lanza excepción (para compatibilidad)
+   */
+  protected validateEmail(email: string, fieldName: string): void;
+  
+  protected validateEmail(email: string, fieldName?: string): boolean | void {
+    // Si se pasa fieldName, es la versión que lanza excepción
+    if (fieldName !== undefined) {
+      if (!email) return;
+      if (!commonValidators.validateEmail(email)) {
+        throw new Error(`El formato del ${fieldName} no es válido`);
+      }
+      return;
+    }
+    
+    // Versión que retorna booleano
+    return commonValidators.validateEmail(email);
+  }
+
+  /**
+   * Valida formato de teléfono
+   */
+  protected validatePhoneNumber(phone: string): boolean {
+    return commonValidators.validatePhoneNumber(phone);
+  }
+
+  /**
+   * Valida que una referencia exista
+   */
+  protected async validateReference<R extends Document>(
+    model: Model<R>,
+    id: string,
+    additionalFilter?: Record<string, any>
+  ): Promise<boolean> {
+    return commonValidators.validateReference(model, id, additionalFilter);
   }
 
   // ==================== MÉTODOS ABSTRACTOS ====================
