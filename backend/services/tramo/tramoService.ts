@@ -847,7 +847,7 @@ class TramoService extends BaseService<ITramo> {
     if (!Array.isArray(tramosData) || tramosData.length === 0) {
         return { success: false, insertados, actualizados, errores: [{ message: 'No tramo data provided for bulk operation.' }] };
     }
-    logger.info(`[createTramosBulk] Iniciando proceso para ${tramosData.length} tramos.`);
+    this.logOperation('createTramosBulk', { count: tramosData.length });
 
     // 1. Extraer todos los nombres de sitios necesarios para consulta
     const sitiosNecesarios = [...new Set([
@@ -868,7 +868,7 @@ class TramoService extends BaseService<ITramo> {
     sitios.forEach(sitio => {
         if (sitio.nombre) sitiosPorNombre.set(sitio.nombre.toLowerCase(), sitio);
     });
-    logger.debug(`[createTramosBulk] Sitios encontrados: ${sitiosPorNombre.size} de ${sitiosNecesarios.length} necesarios.`);
+    this.logDebug(`Sitios encontrados: ${sitiosPorNombre.size} de ${sitiosNecesarios.length} necesarios`);
 
     // 4. Obtener los tramos existentes para determinar si actualizar o crear
     const origenesDest: Array<{ origen: any; destino: any }> = [];
@@ -901,7 +901,7 @@ class TramoService extends BaseService<ITramo> {
         const key = `${tramo.origen.toString()}-${tramo.destino.toString()}-${tramo.cliente.toString()}`;
         tramosPorOrigenDestino.set(key, tramo);
     });
-    logger.debug(`[createTramosBulk] Tramos existentes encontrados: ${tramosPorOrigenDestino.size}.`);
+    this.logDebug(`Tramos existentes encontrados: ${tramosPorOrigenDestino.size}`);
 
     // 5. Procesar cada tramo
     for (const [index, tramoData] of tramosData.entries()) {
@@ -1049,7 +1049,7 @@ class TramoService extends BaseService<ITramo> {
                 });
             }
         } catch (error) {
-            logger.error(`[createTramosBulk] Error procesando tramo en índice ${index}:`, error);
+            this.logError(`Error procesando tramo en índice ${index}`, error);
             errores.push({
                 index,
                 message: `Error procesando tramo: ${(error as Error).message}`,
@@ -1064,12 +1064,12 @@ class TramoService extends BaseService<ITramo> {
             const result = await Tramo.bulkWrite(operations, { session, ordered: false });
             insertados = result.insertedCount;
             actualizados = result.modifiedCount;
-            logger.info(`[createTramosBulk] BulkWrite completado. Insertados: ${insertados}, Actualizados: ${actualizados}`);
+            this.logSuccess('createTramosBulk', { insertados, actualizados });
 
             // Manejar errores de escritura
             if (result.hasWriteErrors && result.hasWriteErrors()) {
                 const writeErrors = result.getWriteErrors();
-                logger.warn(`[createTramosBulk] ${writeErrors.length} errores durante bulkWrite.`);
+                this.logWarn(`${writeErrors.length} errores durante bulkWrite`);
                 
                 writeErrors.forEach(err => {
                     errores.push({
@@ -1081,11 +1081,11 @@ class TramoService extends BaseService<ITramo> {
                 });
             }
         } catch (error) {
-            logger.error('[createTramosBulk] Error durante bulkWrite:', error);
+            this.logFailure('createTramosBulk', error);
             errores.push({ message: `Error general durante bulkWrite: ${(error as Error).message}` });
         }
     } else {
-        logger.info('[createTramosBulk] No se prepararon operaciones válidas.');
+        this.logInfo('No se prepararon operaciones válidas');
     }
 
     return {

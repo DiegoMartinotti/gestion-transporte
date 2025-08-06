@@ -67,7 +67,7 @@ class PersonalService extends BaseService<IPersonal> {
 
         // Validar CUIL si está presente
         if (data.cuil) {
-            this.validateCuil(data.cuil);
+            this.validateCUIL(data.cuil);
         }
 
         // Validar email si está presente
@@ -100,16 +100,7 @@ class PersonalService extends BaseService<IPersonal> {
         }
     }
 
-    /**
-     * Valida formato de CUIL argentino
-     * @param cuil - CUIL a validar
-     */
-    private validateCuil(cuil: string): void {
-        const cuilRegex = /^[0-9]{2}-[0-9]{8}-[0-9]$/;
-        if (!cuilRegex.test(cuil)) {
-            throw new Error('El CUIL debe tener formato XX-XXXXXXXX-X');
-        }
-    }
+    // Método validateCuil migrado a BaseService como validateCUIL
 
     /**
      * Valida que el tipo de personal sea válido
@@ -122,16 +113,7 @@ class PersonalService extends BaseService<IPersonal> {
         }
     }
 
-    /**
-     * Valida formato de email
-     * @param email - Email a validar
-     */
-    private validateEmail(email: string): void {
-        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-        if (!emailRegex.test(email)) {
-            throw new Error('El formato del email no es válido');
-        }
-    }
+    // Método validateEmail migrado a BaseService
 
     /**
      * Valida que la fecha de nacimiento sea lógica

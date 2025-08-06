@@ -42,12 +42,12 @@ class EmpresaService extends BaseService<IEmpresa> {
 
         // Validar email si está presente
         if (data.mail) {
-            this.validateEmail(data.mail);
+            this.validateEmail(data.mail, 'email');
         }
 
         // Validar CUIT si está presente
         if (data.cuit) {
-            this.validateCuit(data.cuit);
+            this.validateCUIT(data.cuit);
         }
 
         // Validar teléfono si está presente
@@ -57,7 +57,7 @@ class EmpresaService extends BaseService<IEmpresa> {
 
         // Validar unicidad del nombre si está presente
         if (data.nombre) {
-            await this.validateUniqueNombre(data.nombre, data._id?.toString());
+            await this.validateUnique('nombre', data.nombre.trim(), data._id?.toString(), 'nombre');
         }
 
         // Validar unicidad del CUIT si está presente
@@ -66,55 +66,8 @@ class EmpresaService extends BaseService<IEmpresa> {
         }
     }
 
-    /**
-     * Valida formato de email
-     * @param email - Email a validar
-     */
-    private validateEmail(email: string): void {
-        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-        if (!emailRegex.test(email)) {
-            throw new Error('El formato del email no es válido');
-        }
-    }
-
-    /**
-     * Valida formato de CUIT argentino
-     * @param cuit - CUIT a validar
-     */
-    private validateCuit(cuit: string): void {
-        const cuitRegex = /^(20|23|24|25|26|27|30|33|34)([0-9]{9}|-[0-9]{8}-[0-9]{1})$/;
-        if (!cuitRegex.test(cuit)) {
-            throw new Error('El formato del CUIT no es válido (debe ser formato argentino)');
-        }
-    }
-
-    /**
-     * Valida formato de teléfono
-     * @param telefono - Teléfono a validar
-     */
-    private validateTelefono(telefono: string): void {
-        // Aceptar diversos formatos de teléfono argentino
-        const telefonoRegex = /^[\d\s\-\+\(\)]{8,15}$/;
-        if (!telefonoRegex.test(telefono)) {
-            throw new Error('El formato del teléfono no es válido');
-        }
-    }
-
-    /**
-     * Valida que el nombre de la empresa sea único
-     * @param nombre - Nombre a validar
-     * @param excludeId - ID a excluir de la validación (para updates)
-     */
-    private async validateUniqueNombre(nombre: string, excludeId?: string): Promise<void> {
-        const existingEmpresa = await this.model.findOne({ 
-            nombre: nombre.trim(),
-            ...(excludeId ? { _id: { $ne: excludeId } } : {})
-        });
-
-        if (existingEmpresa) {
-            throw new Error(`Ya existe una empresa con el nombre: ${nombre}`);
-        }
-    }
+    // Métodos de validación migrados a BaseService
+    // Se usan: this.validateEmail(), this.validateCUIT(), this.validateTelefono(), this.validateUnique()
 
     /**
      * Valida que el CUIT de la empresa sea único
