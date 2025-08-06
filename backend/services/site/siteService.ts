@@ -43,7 +43,7 @@ class SiteService extends BaseService<ISite> {
 
         // Validar coordenadas si están presentes
         if (data.location?.coordinates) {
-            this.validateCoordinates(data.location.coordinates);
+            this.validateSiteCoordinates(data.location.coordinates);
         }
 
         // Las validaciones de unicidad (nombre + cliente) se manejan en el modelo
@@ -69,7 +69,7 @@ class SiteService extends BaseService<ISite> {
      * Valida que las coordenadas sean válidas
      * @param coordinates - Array [longitude, latitude]
      */
-    private validateCoordinates(coordinates: number[]): void {
+    private validateSiteCoordinates(coordinates: number[]): void {
         if (!Array.isArray(coordinates) || coordinates.length !== 2) {
             throw new Error('Las coordenadas deben ser un array de [longitud, latitud]');
         }
@@ -220,7 +220,7 @@ class SiteService extends BaseService<ISite> {
         this.logOperation('getSitesNearLocation', { lng, lat, maxDistance, opciones });
         
         try {
-            this.validateCoordinates([lng, lat]);
+            this.validateSiteCoordinates([lng, lat]);
 
             const { limite = 50, pagina = 1, filtros = {} } = opciones;
             const skip = (pagina - 1) * limite;
