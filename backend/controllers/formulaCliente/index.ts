@@ -5,10 +5,15 @@ export { updateFormula } from './updateFormula';
 export { deleteFormula } from './deleteFormula';
 export { checkOverlap } from './utils/checkOverlap';
 
+// New extended controllers for multi-method support
+export { getAllFormulas, getAllFormulasValidators } from './getAllFormulas';
+export { getFormulaById, getFormulaByIdValidators } from './getFormulaById';
+export { validateFormula, validateFormulaValidators } from './validateFormula';
+
 // Re-export types
 export type {
   FormulaCreateRequest,
   FormulaUpdateRequest,
   FormulaQueryParams,
-  ApiResponse
+  ApiResponse,
 } from './types';
