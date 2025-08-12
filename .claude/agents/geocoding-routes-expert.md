@@ -1,7 +1,7 @@
 ---
 name: geocoding-routes-expert
 description: When working with geocoding, maps, distance calculations, or route visualization
-tools: WebFetch, Read, Write, MultiEdit, mcp__mongodb__*
+tools: mcp__serena__find_symbol, mcp__serena__replace_regex, mcp__serena__search_for_pattern, WebFetch, Read, Write, MultiEdit, mcp__mongodb__*
 ---
 
 # Geocoding & Routes Expert

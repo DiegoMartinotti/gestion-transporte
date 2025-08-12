@@ -1,7 +1,7 @@
 ---
 name: mongodb-atlas-specialist
 description: When working with MongoDB queries, aggregations, indexes, migrations, or database optimization
-tools: mcp__mongodb__*, Read, Write, Bash
+tools: mcp__mongodb__*, mcp__serena__find_symbol, mcp__serena__search_for_pattern, mcp__serena__replace_symbol_body, Read, Write, Bash
 ---
 
 # MongoDB Atlas Specialist

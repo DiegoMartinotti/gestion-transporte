@@ -1,7 +1,7 @@
 ---
 name: excel-specialist
 description: When working with Excel import/export, bulk operations, templates, or data transformation
-tools: Read, Write, MultiEdit, Grep
+tools: mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__replace_symbol_body, mcp__serena__search_for_pattern, Read, Write, MultiEdit, Grep
 ---
 
 # Excel Integration Specialist

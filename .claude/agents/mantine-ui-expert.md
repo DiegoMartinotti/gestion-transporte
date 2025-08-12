@@ -1,7 +1,7 @@
 ---
 name: mantine-ui-expert
 description: When working with Mantine UI components, React hooks, frontend patterns, or UI/UX implementation
-tools: Read, Write, MultiEdit, mcp__playwright__*, mcp__context7__*
+tools: mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__replace_symbol_body, mcp__serena__find_referencing_symbols, Read, Write, MultiEdit, mcp__playwright__*, mcp__context7__*
 ---
 
 # Mantine UI Expert
