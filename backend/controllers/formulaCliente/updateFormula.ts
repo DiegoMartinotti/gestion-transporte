@@ -1,13 +1,15 @@
 // @allow-duplicate: migración legítima de controlador monolítico a modular
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-import FormulasPersonalizadasCliente, { IFormulasPersonalizadasCliente } from '../../models/FormulasPersonalizadasCliente';
+import FormulasPersonalizadasCliente, {
+  IFormulasPersonalizadasCliente,
+} from '../../models/FormulasPersonalizadasCliente';
 import logger from '../../utils/logger';
 import { checkOverlap } from './utils/checkOverlap';
 import { FormulaUpdateRequest, ApiResponse } from './types';
 
 export const updateFormula = async (
-  req: Request<{ id: string }, IFormulasPersonalizadasCliente | ApiResponse, FormulaUpdateRequest>, 
+  req: Request<{ id: string }, IFormulasPersonalizadasCliente | ApiResponse, FormulaUpdateRequest>,
   res: Response<IFormulasPersonalizadasCliente | ApiResponse>
 ): Promise<void> => {
   try {
@@ -29,19 +31,27 @@ export const updateFormula = async (
     const desdeDate = vigenciaDesde ? new Date(vigenciaDesde) : formulaExistente.vigenciaDesde;
     const hastaDate = vigenciaHasta ? new Date(vigenciaHasta) : formulaExistente.vigenciaHasta;
 
-    if (req.body.hasOwnProperty('vigenciaHasta') && vigenciaHasta === null) {
+    if (Object.prototype.hasOwnProperty.call(req.body, 'vigenciaHasta') && vigenciaHasta === null) {
       // Permitir establecer vigenciaHasta a null
     } else if (hastaDate && desdeDate >= hastaDate) {
-      res.status(400).json({ message: 'La fecha de vigenciaDesde debe ser anterior a vigenciaHasta' });
+      res
+        .status(400)
+        .json({ message: 'La fecha de vigenciaDesde debe ser anterior a vigenciaHasta' });
       return;
     }
 
     // Validar solapamiento excluyendo el documento actual
-    const overlap = await checkOverlap(formulaExistente.clienteId.toString(), formulaExistente.tipoUnidad, desdeDate, hastaDate || null, id);
+    const overlap = await checkOverlap(
+      formulaExistente.clienteId.toString(),
+      formulaExistente.tipoUnidad,
+      desdeDate,
+      hastaDate || null,
+      id
+    );
     if (overlap) {
       res.status(400).json({
         message: `El nuevo período de vigencia se solapa con otra fórmula existente (ID: ${overlap._id})`,
-        overlappingFormula: overlap
+        overlappingFormula: overlap,
       });
       return;
     }
@@ -50,16 +60,17 @@ export const updateFormula = async (
     if (formula) formulaExistente.formula = formula;
     if (vigenciaDesde) formulaExistente.vigenciaDesde = desdeDate;
     // Manejar explícitamente la actualización de vigenciaHasta (incluyendo null)
-    if (req.body.hasOwnProperty('vigenciaHasta')) {
+    if (Object.prototype.hasOwnProperty.call(req.body, 'vigenciaHasta')) {
       formulaExistente.vigenciaHasta = hastaDate;
     }
 
     const formulaActualizada = await formulaExistente.save();
     logger.info(`Fórmula ${id} actualizada.`);
     res.json(formulaActualizada);
-
   } catch (error: any) {
     logger.error(`Error al actualizar fórmula ${req.params.id}:`, error);
-    res.status(500).json({ message: 'Error interno al actualizar la fórmula', error: error.message });
+    res
+      .status(500)
+      .json({ message: 'Error interno al actualizar la fórmula', error: error.message });
   }
 };
