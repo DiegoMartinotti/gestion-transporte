@@ -17,32 +17,25 @@ Before creating ANY new code, verify it doesn't duplicate existing functionality
 
 **CRITICAL**: Before writing any code (using Edit, Write, MultiEdit tools), ALWAYS consult MCP Context7 first to get current documentation for the libraries, frameworks, or APIs being used. This ensures code follows latest best practices and correct usage patterns.
 
-## MANDATORY: Proactive Use of Specialized Agents
+## MANDATORY: Proactive Use of Project-Specific Agents
 
-**CRITICAL**: ALWAYS use specialized agents proactively for tasks matching their expertise. The project has 15 configured agents:
-
-### Global Agents (in ~/.claude/agents/):
-
-- **typescript-pro**: TypeScript development and type safety
-- **react-pro**: React patterns and hooks
-- **backend-architect**: Node.js/Express architecture
-- **database-optimizer**: MongoDB query optimization
-- **test-automator**: Jest/Playwright testing
-- **code-reviewer**: SOLID/DRY principles review
-- **api-documenter**: Swagger and API documentation
-- **performance-engineer**: Performance optimization
-- **legacy-modernizer**: Code refactoring
-- **security-auditor**: Security validation
+**CRITICAL**: ALWAYS use specialized agents proactively for tasks matching their expertise. This project has 5 specific agents configured in .claude/agents/:
 
 ### Project-Specific Agents (in .claude/agents/):
 
-- **transport-business-expert**: Transportation logic, tariffs, formulas (uses MongoDB MCP)
-- **excel-specialist**: Excel operations with BaseExcelService
-- **geocoding-routes-expert**: Geocoding and route calculations (uses WebFetch)
-- **mantine-ui-expert**: Mantine UI components and patterns (uses Playwright MCP)
-- **mongodb-atlas-specialist**: Direct MongoDB operations (uses MongoDB MCP tools)
+- **transport-business-expert**: Transportation domain logic, tariff calculations, trip management, client-specific formulas (uses MongoDB MCP for direct database access)
+- **excel-specialist**: Excel import/export operations using BaseExcelService patterns, bulk operations, templates
+- **geocoding-routes-expert**: Geocoding services, distance calculations, route visualization with Leaflet (uses WebFetch for external APIs)
+- **mantine-ui-expert**: Mantine UI v8 components, React hooks, frontend patterns (uses Playwright MCP for UI testing)
+- **mongodb-atlas-specialist**: Direct MongoDB operations, complex aggregations, index optimization (uses all MongoDB MCP tools)
 
 **Usage**: Invoke agents using the Task tool when their expertise matches the current task. Multiple agents can work concurrently on different aspects of a problem.
+
+**Note**: Global agents (typescript-pro, react-pro, backend-architect, database-optimizer, test-automator, code-reviewer, api-documenter, performance-engineer, legacy-modernizer, security-auditor) are also available in ~/.claude/agents/ and should be used for general development tasks.
+
+## MANDATORY: Use Serena MCP for Code Navigation
+
+**CRITICAL**: ALWAYS use Serena MCP server for efficient code navigation and editing. Serena provides semantic code analysis tools that must be used instead of reading entire files. Use `find_symbol`, `get_symbols_overview`, and `search_for_pattern` for exploration, and `replace_symbol_body` or `replace_regex` for precise edits.
 
 ## Project Overview
 

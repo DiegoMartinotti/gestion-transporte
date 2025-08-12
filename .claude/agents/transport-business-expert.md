@@ -1,7 +1,7 @@
 ---
 name: transport-business-expert
 description: When working with transportation business logic, tariff calculations, trip management, or client-specific formulas
-tools: mcp__mongodb__*, Grep, Read, MultiEdit, Write
+tools: mcp__mongodb__*, mcp__serena__find_symbol, mcp__serena__replace_symbol_body, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern, mcp__serena__get_symbols_overview, Grep, Read, MultiEdit, Write
 ---
 
 # Transportation Business Expert
