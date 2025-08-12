@@ -14,6 +14,12 @@ import personalRoutes from './personal';
 import formulaClienteRoutes from './formulaClienteRoutes';
 import proxyRouter from './proxy';
 
+// Importar nuevas rutas del sistema de tarifas flexible
+import tarifaMetodosRoutes from './tarifaMetodos';
+import reglasTarifaRoutes from './reglasTarifa';
+import formulasClienteExtendedRoutes from './formulasClienteExtended';
+import tarifaEngineRoutes from './tarifaEngine';
+
 // Importar las funciones específicas de template para rutas públicas
 import { getClienteTemplate } from '../controllers/cliente';
 import { getEmpresaTemplate } from '../controllers/empresa';
@@ -56,17 +62,22 @@ const protectedRoutes: ProtectedRoute[] = [
   { path: '/empresas', router: empresasRoutes },
   { path: '/vehiculos', router: vehiculosRoutes },
   { path: '/personal', router: personalRoutes },
-  { path: '/formulas', router: formulaClienteRoutes }
+  { path: '/formulas', router: formulaClienteRoutes },
+  // Nuevas rutas del sistema de tarifas flexible
+  { path: '/tarifa-metodos', router: tarifaMetodosRoutes },
+  { path: '/reglas-tarifa', router: reglasTarifaRoutes },
+  { path: '/formulas-cliente-extended', router: formulasClienteExtendedRoutes },
+  { path: '/tarifa-engine', router: tarifaEngineRoutes },
 ];
 
 // Registrar todas las rutas protegidas
-protectedRoutes.forEach(route => {
+protectedRoutes.forEach((route) => {
   router.use(route.path, authenticateToken, route.router);
 });
 
 // Ruta para verificar que el router está funcionando
 router.get('/status', (_req: express.Request, res: express.Response) => {
-    res.json({ status: 'ok', message: 'API Router funcionando correctamente' });
+  res.json({ status: 'ok', message: 'API Router funcionando correctamente' });
 });
 
 export default router;
