@@ -13,20 +13,19 @@ import {
   Alert,
   ActionIcon,
   Tooltip,
-  LoadingOverlay
+  LoadingOverlay,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { notifications } from '@mantine/notifications';
-import {
-  IconMapPin,
-  IconSearch,
-  IconCheck,
-  IconX,
-  IconInfoCircle
-} from '@tabler/icons-react';
+import { IconMapPin, IconSearch, IconCheck, IconX, IconInfoCircle } from '@tabler/icons-react';
 import { Site, Cliente } from '../../types';
-import { siteService, CreateSiteData } from '../../services/siteService';
-import { clienteService } from '../../services/clienteService';
+import { CreateSiteData } from '../../services/siteService';
+import {
+  siteValidationRules,
+  getInitialValues,
+  hasValidCoordinates,
+} from './validation/siteValidation';
+import { loadClientes, geocodeAddress, submitSite, openGoogleMaps } from './helpers/siteHelpers';
+import { PROVINCIAS_ARGENTINA } from './constants/siteConstants';
 
 interface SiteFormProps {
   site?: Site;
@@ -35,163 +34,53 @@ interface SiteFormProps {
   loading?: boolean;
 }
 
-const PROVINCIAS_ARGENTINA = [
-  'Buenos Aires',
-  'Catamarca',
-  'Chaco',
-  'Chubut',
-  'Córdoba',
-  'Corrientes',
-  'Entre Ríos',
-  'Formosa',
-  'Jujuy',
-  'La Pampa',
-  'La Rioja',
-  'Mendoza',
-  'Misiones',
-  'Neuquén',
-  'Río Negro',
-  'Salta',
-  'San Juan',
-  'San Luis',
-  'Santa Cruz',
-  'Santa Fe',
-  'Santiago del Estero',
-  'Tierra del Fuego',
-  'Tucumán'
-];
-
 export default function SiteForm({ site, onSubmit, onCancel, loading = false }: SiteFormProps) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
 
   const form = useForm<CreateSiteData>({
-    initialValues: {
-      nombre: site?.nombre || '',
-      direccion: site?.direccion || '',
-      ciudad: site?.localidad || '',
-      provincia: site?.provincia || '',
-      codigoPostal: '',
-      pais: 'Argentina',
-      cliente: typeof site?.cliente === 'string' ? site.cliente : site?.cliente?._id || '',
-      coordenadas: site?.coordenadas || { lat: 0, lng: 0 },
-      contacto: '',
-      telefono: '',
-      activo: true
-    },
-    validate: {
-      nombre: (value) => (!value ? 'El nombre es requerido' : null),
-      direccion: (value) => (!value ? 'La dirección es requerida' : null),
-      ciudad: (value) => (!value ? 'La ciudad es requerida' : null),
-      provincia: (value) => (!value ? 'La provincia es requerida' : null),
-      pais: (value) => (!value ? 'El país es requerido' : null),
-      cliente: (value) => (!value ? 'Debe seleccionar un cliente' : null),
-      coordenadas: {
-        lat: (value) => (value === 0 ? 'Las coordenadas son requeridas' : null),
-        lng: (value) => (value === 0 ? 'Las coordenadas son requeridas' : null)
-      }
-    }
+    initialValues: getInitialValues(site),
+    validate: siteValidationRules,
   });
 
-  const loadClientes = async () => {
-    try {
-      setLoadingClientes(true);
-      const response = await clienteService.getAll({ limit: 1000 });
-      setClientes(response.data);
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudieron cargar los clientes',
-        color: 'red'
-      });
-    } finally {
-      setLoadingClientes(false);
-    }
-  };
-
   useEffect(() => {
-    loadClientes();
+    loadClientes(setClientes, setLoadingClientes);
   }, []);
 
   const handleGeocodeAddress = async () => {
-    const { direccion, ciudad, provincia, pais } = form.values;
-    const fullAddress = `${direccion}, ${ciudad}, ${provincia}, ${pais}`;
-
-    if (!direccion || !ciudad) {
-      notifications.show({
-        title: 'Error',
-        message: 'Ingrese al menos la dirección y ciudad para geocodificar',
-        color: 'orange'
-      });
-      return;
-    }
-
-    try {
-      setGeocoding(true);
-      const coords = await siteService.geocodeAddress(fullAddress);
-      
+    setGeocoding(true);
+    const coords = await geocodeAddress(
+      form.values.direccion,
+      form.values.ciudad,
+      form.values.provincia,
+      form.values.pais
+    );
+    if (coords) {
       form.setFieldValue('coordenadas', coords);
-      
-      notifications.show({
-        title: 'Éxito',
-        message: 'Coordenadas obtenidas correctamente',
-        color: 'green'
-      });
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudieron obtener las coordenadas de la dirección',
-        color: 'red'
-      });
-    } finally {
-      setGeocoding(false);
     }
+    setGeocoding(false);
   };
 
-  const handleSubmit = async (values: CreateSiteData) => {
-    try {
-      let result: Site;
-      
-      if (site) {
-        result = await siteService.update(site._id, values);
-        notifications.show({
-          title: 'Éxito',
-          message: 'Site actualizado correctamente',
-          color: 'green'
-        });
-      } else {
-        result = await siteService.create(values);
-        notifications.show({
-          title: 'Éxito',
-          message: 'Site creado correctamente',
-          color: 'green'
-        });
-      }
-      
-      onSubmit(result);
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: `No se pudo ${site ? 'actualizar' : 'crear'} el site`,
-        color: 'red'
-      });
-    }
+  const handleSubmit = (values: CreateSiteData) => {
+    submitSite(values, site, onSubmit);
   };
 
-  const hasValidCoordinates = form.values.coordenadas?.lat !== 0 && form.values.coordenadas?.lng !== 0;
+  const validCoordinates = hasValidCoordinates(form.values.coordenadas);
 
   return (
     <Box pos="relative">
       <LoadingOverlay visible={loading} />
-      
+
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           {/* Información básica */}
           <Paper p="md" withBorder>
             <Stack gap="md">
-              <Text fw={600} size="lg">Información Básica</Text>
-              
+              <Text fw={600} size="lg">
+                Información Básica
+              </Text>
+
               <TextInput
                 label="Nombre del Site"
                 placeholder="Ej: Depósito Central"
@@ -205,9 +94,9 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
                 required
                 searchable
                 nothingFoundMessage="No se encontraron clientes"
-                data={clientes.map(cliente => ({
+                data={clientes.map((cliente) => ({
                   value: cliente._id,
-                  label: cliente.nombre
+                  label: cliente.nombre,
                 }))}
                 {...form.getInputProps('cliente')}
                 disabled={loadingClientes}
@@ -240,7 +129,9 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
           <Paper p="md" withBorder>
             <Stack gap="md">
               <Group justify="space-between">
-                <Text fw={600} size="lg">Ubicación</Text>
+                <Text fw={600} size="lg">
+                  Ubicación
+                </Text>
                 <Button
                   variant="light"
                   size="sm"
@@ -296,23 +187,29 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
               </Group>
 
               {/* Coordenadas */}
-              <Paper p="sm" withBorder radius="sm" bg={hasValidCoordinates ? 'green.0' : 'gray.0'}>
+              <Paper p="sm" withBorder radius="sm" bg={validCoordinates ? 'green.0' : 'gray.0'}>
                 <Stack gap="xs">
                   <Group justify="space-between">
-                    <Text fw={500} size="sm">Coordenadas GPS</Text>
-                    {hasValidCoordinates ? (
+                    <Text fw={500} size="sm">
+                      Coordenadas GPS
+                    </Text>
+                    {validCoordinates ? (
                       <Group gap={4}>
                         <IconCheck size={16} color="green" />
-                        <Text size="xs" c="green">Válidas</Text>
+                        <Text size="xs" c="green">
+                          Válidas
+                        </Text>
                       </Group>
                     ) : (
                       <Group gap={4}>
                         <IconX size={16} color="red" />
-                        <Text size="xs" c="red">Requeridas</Text>
+                        <Text size="xs" c="red">
+                          Requeridas
+                        </Text>
                       </Group>
                     )}
                   </Group>
-                  
+
                   <Group>
                     <NumberInput
                       label="Latitud"
@@ -330,7 +227,7 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
                       {...form.getInputProps('coordenadas.lng')}
                       style={{ flex: 1 }}
                     />
-                    {hasValidCoordinates && (
+                    {validCoordinates && (
                       <Tooltip label="Ver en Google Maps">
                         <ActionIcon
                           variant="light"
@@ -340,8 +237,7 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
                           onClick={() => {
                             const coords = form.values.coordenadas;
                             if (coords) {
-                              const url = `https://maps.google.com/?q=${coords.lat},${coords.lng}`;
-                              window.open(url, '_blank');
+                              openGoogleMaps(coords.lat, coords.lng);
                             }
                           }}
                         >
@@ -353,14 +249,11 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
                 </Stack>
               </Paper>
 
-              <Alert
-                icon={<IconInfoCircle size={16} />}
-                color="blue"
-                variant="light"
-              >
+              <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
                 <Text size="sm">
-                  Use el botón "Geocodificar" para obtener automáticamente las coordenadas de la dirección,
-                  o ingrese las coordenadas manualmente si conoce la ubicación exacta.
+                  Use el botón &quot;Geocodificar&quot; para obtener automáticamente las coordenadas
+                  de la dirección, o ingrese las coordenadas manualmente si conoce la ubicación
+                  exacta.
                 </Text>
               </Alert>
             </Stack>
@@ -371,11 +264,7 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
             <Button variant="subtle" onClick={onCancel}>
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              loading={loading}
-              disabled={!hasValidCoordinates}
-            >
+            <Button type="submit" loading={loading} disabled={!validCoordinates}>
               {site ? 'Actualizar' : 'Crear'} Site
             </Button>
           </Group>
