@@ -15,7 +15,7 @@ import {
   Table,
   ActionIcon,
   Modal,
-  Divider
+  Divider,
 } from '@mantine/core';
 import {
   IconRoute,
@@ -25,13 +25,18 @@ import {
   IconPlus,
   IconTrash,
   IconEdit,
-  IconAlertTriangle
+  IconAlertTriangle,
 } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
-import { tramoService } from '../../services/tramoService';
 import TarifaForm from './TarifaForm';
+import { tramoValidationRules, getInitialTramoValues } from './validation/tramoValidation';
+import {
+  calculateDistance,
+  validateTarifaConflicts,
+  filterSitesByClient,
+} from './helpers/tramoHelpers';
 
 interface Site {
   _id: string;
@@ -84,13 +89,7 @@ interface TramoFormProps {
   onCancel: () => void;
 }
 
-const TramoForm: React.FC<TramoFormProps> = ({
-  tramo,
-  clientes,
-  sites,
-  onSubmit,
-  onCancel
-}) => {
+const TramoForm: React.FC<TramoFormProps> = ({ tramo, clientes, sites, onSubmit, onCancel }) => {
   const [sitesFiltered, setSitesFiltered] = useState<Site[]>([]);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [selectedTarifa, setSelectedTarifa] = useState<TarifaHistorica | null>(null);
@@ -101,127 +100,37 @@ const TramoForm: React.FC<TramoFormProps> = ({
   const [tarifaModalOpened, { open: openTarifaModal, close: closeTarifaModal }] = useDisclosure();
 
   const form = useForm({
-    initialValues: {
-      cliente: tramo?.cliente._id || '',
-      origen: tramo?.origen._id || '',
-      destino: tramo?.destino._id || '',
-      distancia: tramo?.distancia || 0,
-      tarifasHistoricas: tramo?.tarifasHistoricas || []
-    },
-    validate: {
-      cliente: (value) => (!value ? 'Cliente es requerido' : null),
-      origen: (value) => (!value ? 'Origen es requerido' : null),
-      destino: (value) => (!value ? 'Destino es requerido' : null),
-      distancia: (value) => (value <= 0 ? 'Distancia debe ser mayor a 0' : null)
-    }
+    initialValues: getInitialTramoValues(tramo),
+    validate: tramoValidationRules,
   });
 
   // Filtrar sites por cliente seleccionado
   useEffect(() => {
-    if (form.values.cliente) {
-      const filtered = sites.filter(site => site.cliente === form.values.cliente);
-      setSitesFiltered(filtered);
-      
-      // Limpiar origen y destino si no pertenecen al cliente seleccionado
-      if (form.values.origen && !filtered.find(s => s._id === form.values.origen)) {
-        form.setFieldValue('origen', '');
-      }
-      if (form.values.destino && !filtered.find(s => s._id === form.values.destino)) {
-        form.setFieldValue('destino', '');
-      }
-    } else {
-      setSitesFiltered([]);
-    }
-  }, [form.values.cliente, sites, form]);
+    filterSitesByClient(form.values.cliente, sites, form, setSitesFiltered);
+  }, [form.values.cliente, sites]);
 
   // Calcular distancia automáticamente
-  const calculateDistance = async () => {
-    if (!form.values.origen || !form.values.destino) {
-      notifications.show({
-        title: 'Error',
-        message: 'Selecciona origen y destino para calcular distancia',
-        color: 'red'
-      });
-      return;
-    }
-
-    const origenSite = sitesFiltered.find(s => s._id === form.values.origen);
-    const destinoSite = sitesFiltered.find(s => s._id === form.values.destino);
-
-    if (!origenSite?.location?.coordinates || !destinoSite?.location?.coordinates) {
-      notifications.show({
-        title: 'Error',
-        message: 'Los sitios seleccionados no tienen coordenadas válidas',
-        color: 'red'
-      });
-      return;
-    }
-
-    setCalculatingDistance(true);
-    try {
-      // Simular cálculo de distancia (en implementación real usaríamos Google Maps API)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Cálculo aproximado usando coordenadas
-      const lat1 = origenSite.location.coordinates[1];
-      const lon1 = origenSite.location.coordinates[0];
-      const lat2 = destinoSite.location.coordinates[1];
-      const lon2 = destinoSite.location.coordinates[0];
-
-      const R = 6371; // Radio de la Tierra en km
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      const distance = R * c;
-
-      form.setFieldValue('distancia', Math.round(distance));
-      
-      notifications.show({
-        title: 'Éxito',
-        message: `Distancia calculada: ${Math.round(distance)} km`,
-        color: 'green'
-      });
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al calcular distancia',
-        color: 'red'
-      });
-    } finally {
-      setCalculatingDistance(false);
-    }
+  const handleCalculateDistance = async () => {
+    await calculateDistance(
+      form.values.origen,
+      form.values.destino,
+      sitesFiltered,
+      setCalculatingDistance,
+      (distance) => form.setFieldValue('distancia', distance)
+    );
   };
 
   // Validar conflictos de tarifas
-  const validateTarifaConflicts = async () => {
-    if (!form.values.cliente || !form.values.origen || !form.values.destino) return;
-
-    setValidatingConflicts(true);
-    try {
-      const result = await tramoService.validarConflictosTarifas({
-        origen: form.values.origen,
-        destino: form.values.destino,
-        cliente: form.values.cliente,
-        tarifasHistoricas: form.values.tarifasHistoricas
-      });
-
-      setConflicts(result.conflicts || []);
-    } catch (error) {
-      console.error('Error validating conflicts:', error);
-    } finally {
-      setValidatingConflicts(false);
-    }
+  const handleValidateTarifaConflicts = async () => {
+    await validateTarifaConflicts(form.values, setConflicts, setValidatingConflicts);
   };
 
   // Validar conflictos cuando cambien las tarifas
   useEffect(() => {
     if (form.values.tarifasHistoricas.length > 0) {
-      validateTarifaConflicts();
+      handleValidateTarifaConflicts();
     }
-  }, [form.values.tarifasHistoricas, validateTarifaConflicts]);
+  }, [form.values.tarifasHistoricas]);
 
   const handleAddTarifa = () => {
     setSelectedTarifa(null);
@@ -243,7 +152,7 @@ const TramoForm: React.FC<TramoFormProps> = ({
 
   const handleTarifaSubmit = (tarifaData: Omit<TarifaHistorica, '_id'>) => {
     const newTarifas = [...form.values.tarifasHistoricas];
-    
+
     if (tarifaIndex >= 0) {
       // Editar tarifa existente
       newTarifas[tarifaIndex] = { ...newTarifas[tarifaIndex], ...tarifaData };
@@ -251,7 +160,7 @@ const TramoForm: React.FC<TramoFormProps> = ({
       // Agregar nueva tarifa
       newTarifas.push(tarifaData as TarifaHistorica);
     }
-    
+
     form.setFieldValue('tarifasHistoricas', newTarifas);
     closeTarifaModal();
   };
@@ -261,7 +170,7 @@ const TramoForm: React.FC<TramoFormProps> = ({
       notifications.show({
         title: 'Error',
         message: 'Hay conflictos en las tarifas que deben resolverse',
-        color: 'red'
+        color: 'red',
       });
       return;
     }
@@ -269,8 +178,8 @@ const TramoForm: React.FC<TramoFormProps> = ({
     onSubmit(values);
   };
 
-  const origenSite = sitesFiltered.find(s => s._id === form.values.origen);
-  const destinoSite = sitesFiltered.find(s => s._id === form.values.destino);
+  const origenSite = sitesFiltered.find((s) => s._id === form.values.origen);
+  const destinoSite = sitesFiltered.find((s) => s._id === form.values.destino);
 
   return (
     <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -278,9 +187,7 @@ const TramoForm: React.FC<TramoFormProps> = ({
         <Tabs defaultValue="basico">
           <Tabs.List>
             <Tabs.Tab value="basico">Datos Básicos</Tabs.Tab>
-            <Tabs.Tab value="tarifas">
-              Tarifas ({form.values.tarifasHistoricas.length})
-            </Tabs.Tab>
+            <Tabs.Tab value="tarifas">Tarifas ({form.values.tarifasHistoricas.length})</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="basico">
@@ -297,7 +204,7 @@ const TramoForm: React.FC<TramoFormProps> = ({
                   <Select
                     label="Cliente"
                     placeholder="Selecciona un cliente"
-                    data={clientes.map(c => ({ value: c._id, label: c.nombre }))}
+                    data={clientes.map((c) => ({ value: c._id, label: c.nombre }))}
                     {...form.getInputProps('cliente')}
                     searchable
                     required
@@ -308,9 +215,9 @@ const TramoForm: React.FC<TramoFormProps> = ({
                   <Select
                     label="Origen"
                     placeholder="Selecciona origen"
-                    data={sitesFiltered.map(s => ({ 
-                      value: s._id, 
-                      label: `${s.nombre} - ${s.direccion}` 
+                    data={sitesFiltered.map((s) => ({
+                      value: s._id,
+                      label: `${s.nombre} - ${s.direccion}`,
                     }))}
                     {...form.getInputProps('origen')}
                     searchable
@@ -323,10 +230,12 @@ const TramoForm: React.FC<TramoFormProps> = ({
                   <Select
                     label="Destino"
                     placeholder="Selecciona destino"
-                    data={sitesFiltered.filter(s => s._id !== form.values.origen).map(s => ({ 
-                      value: s._id, 
-                      label: `${s.nombre} - ${s.direccion}` 
-                    }))}
+                    data={sitesFiltered
+                      .filter((s) => s._id !== form.values.origen)
+                      .map((s) => ({
+                        value: s._id,
+                        label: `${s.nombre} - ${s.direccion}`,
+                      }))}
                     {...form.getInputProps('destino')}
                     searchable
                     required
@@ -349,7 +258,7 @@ const TramoForm: React.FC<TramoFormProps> = ({
                           size="xs"
                           variant="light"
                           leftSection={<IconCalculator size={14} />}
-                          onClick={calculateDistance}
+                          onClick={handleCalculateDistance}
                           loading={calculatingDistance}
                         >
                           Calcular Distancia
@@ -371,7 +280,6 @@ const TramoForm: React.FC<TramoFormProps> = ({
                   />
                 </Grid.Col>
               </Grid>
-
             </Paper>
           </Tabs.Panel>
 
@@ -380,19 +288,15 @@ const TramoForm: React.FC<TramoFormProps> = ({
               <Paper p="md" withBorder>
                 <Group justify="space-between" mb="md">
                   <Title order={4}>Tarifas Históricas</Title>
-                  <Button
-                    leftSection={<IconPlus size={16} />}
-                    onClick={handleAddTarifa}
-                    size="sm"
-                  >
+                  <Button leftSection={<IconPlus size={16} />} onClick={handleAddTarifa} size="sm">
                     Agregar Tarifa
                   </Button>
                 </Group>
 
                 {conflicts.length > 0 && (
-                  <Alert 
-                    icon={<IconAlertTriangle size={16} />} 
-                    color="red" 
+                  <Alert
+                    icon={<IconAlertTriangle size={16} />}
+                    color="red"
                     mb="md"
                     title="Conflictos Detectados"
                   >
@@ -408,7 +312,8 @@ const TramoForm: React.FC<TramoFormProps> = ({
 
                 {form.values.tarifasHistoricas.length === 0 ? (
                   <Alert color="yellow" title="Sin tarifas">
-                    Este tramo no tiene tarifas configuradas. Agrega al menos una tarifa para poder calcular costos.
+                    Este tramo no tiene tarifas configuradas. Agrega al menos una tarifa para poder
+                    calcular costos.
                   </Alert>
                 ) : (
                   <Table striped highlightOnHover>
@@ -424,55 +329,57 @@ const TramoForm: React.FC<TramoFormProps> = ({
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {form.values.tarifasHistoricas.map((tarifa, index) => {
-                        const now = new Date();
-                        const desde = new Date(tarifa.vigenciaDesde);
-                        const hasta = new Date(tarifa.vigenciaHasta);
-                        const vigente = desde <= now && hasta >= now;
+                      {form.values.tarifasHistoricas.map(
+                        (tarifa: TarifaHistorica, index: number) => {
+                          const now = new Date();
+                          const desde = new Date(tarifa.vigenciaDesde);
+                          const hasta = new Date(tarifa.vigenciaHasta);
+                          const vigente = desde <= now && hasta >= now;
 
-                        return (
-                          <Table.Tr key={index}>
-                            <Table.Td>
-                              <Badge color={tarifa.tipo === 'TRMC' ? 'blue' : 'green'}>
-                                {tarifa.tipo}
-                              </Badge>
-                            </Table.Td>
-                            <Table.Td>{tarifa.metodoCalculo}</Table.Td>
-                            <Table.Td>${tarifa.valor}</Table.Td>
-                            <Table.Td>${tarifa.valorPeaje}</Table.Td>
-                            <Table.Td>
-                              <Text size="xs">
-                                {new Date(tarifa.vigenciaDesde).toLocaleDateString()} - {' '}
-                                {new Date(tarifa.vigenciaHasta).toLocaleDateString()}
-                              </Text>
-                            </Table.Td>
-                            <Table.Td>
-                              <Badge color={vigente ? 'green' : 'gray'} size="sm">
-                                {vigente ? 'Vigente' : 'No vigente'}
-                              </Badge>
-                            </Table.Td>
-                            <Table.Td>
-                              <Group gap="xs">
-                                <ActionIcon
-                                  size="sm"
-                                  variant="light"
-                                  onClick={() => handleEditTarifa(tarifa, index)}
-                                >
-                                  <IconEdit size={14} />
-                                </ActionIcon>
-                                <ActionIcon
-                                  size="sm"
-                                  variant="light"
-                                  color="red"
-                                  onClick={() => handleDeleteTarifa(index)}
-                                >
-                                  <IconTrash size={14} />
-                                </ActionIcon>
-                              </Group>
-                            </Table.Td>
-                          </Table.Tr>
-                        );
-                      })}
+                          return (
+                            <Table.Tr key={index}>
+                              <Table.Td>
+                                <Badge color={tarifa.tipo === 'TRMC' ? 'blue' : 'green'}>
+                                  {tarifa.tipo}
+                                </Badge>
+                              </Table.Td>
+                              <Table.Td>{tarifa.metodoCalculo}</Table.Td>
+                              <Table.Td>${tarifa.valor}</Table.Td>
+                              <Table.Td>${tarifa.valorPeaje}</Table.Td>
+                              <Table.Td>
+                                <Text size="xs">
+                                  {new Date(tarifa.vigenciaDesde).toLocaleDateString()} -{' '}
+                                  {new Date(tarifa.vigenciaHasta).toLocaleDateString()}
+                                </Text>
+                              </Table.Td>
+                              <Table.Td>
+                                <Badge color={vigente ? 'green' : 'gray'} size="sm">
+                                  {vigente ? 'Vigente' : 'No vigente'}
+                                </Badge>
+                              </Table.Td>
+                              <Table.Td>
+                                <Group gap="xs">
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="light"
+                                    onClick={() => handleEditTarifa(tarifa, index)}
+                                  >
+                                    <IconEdit size={14} />
+                                  </ActionIcon>
+                                  <ActionIcon
+                                    size="sm"
+                                    variant="light"
+                                    color="red"
+                                    onClick={() => handleDeleteTarifa(index)}
+                                  >
+                                    <IconTrash size={14} />
+                                  </ActionIcon>
+                                </Group>
+                              </Table.Td>
+                            </Table.Tr>
+                          );
+                        }
+                      )}
                     </Table.Tbody>
                   </Table>
                 )}
@@ -487,11 +394,7 @@ const TramoForm: React.FC<TramoFormProps> = ({
           <Button variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button 
-            type="submit" 
-            loading={validatingConflicts}
-            disabled={conflicts.length > 0}
-          >
+          <Button type="submit" loading={validatingConflicts} disabled={conflicts.length > 0}>
             {tramo ? 'Actualizar' : 'Crear'} Tramo
           </Button>
         </Group>
