@@ -12,14 +12,14 @@ import {
   Tabs,
   Paper,
   Title,
-  Switch
+  Switch,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { notifications } from '@mantine/notifications';
-import { vehiculoService } from '../../services/vehiculoService';
-import { empresaService } from '../../services/empresaService';
-import { Vehiculo, VehiculoTipo } from '../../types/vehiculo';
+import { Vehiculo } from '../../types/vehiculo';
 import { Empresa } from '../../types';
+import { vehiculoValidationRules, getInitialVehiculoValues } from './validation/vehiculoValidation';
+import { TIPOS_VEHICULO } from './constants/vehiculoConstants';
+import { loadEmpresas, submitVehiculo } from './helpers/vehiculoHelpers';
 
 interface VehiculoFormProps {
   opened: boolean;
@@ -33,104 +33,17 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>('basicos');
 
-  const tiposVehiculo: VehiculoTipo[] = ['Camión', 'Acoplado', 'Semirremolque', 'Bitren', 'Furgón', 'Utilitario'];
-
   const form = useForm<Vehiculo>({
-    initialValues: {
-      dominio: '',
-      tipo: 'Camión' as VehiculoTipo,
-      marca: '',
-      modelo: '',
-      año: new Date().getFullYear(),
-      numeroChasis: '',
-      numeroMotor: '',
-      empresa: '',
-      documentacion: {
-        seguro: {
-          numero: '',
-          vencimiento: '',
-          compania: ''
-        },
-        vtv: {
-          numero: '',
-          vencimiento: ''
-        },
-        ruta: {
-          numero: '',
-          vencimiento: ''
-        },
-        senasa: {
-          numero: '',
-          vencimiento: ''
-        }
-      },
-      caracteristicas: {
-        capacidadCarga: 0,
-        tara: 0,
-        largo: 0,
-        ancho: 0,
-        alto: 0,
-        configuracionEjes: '',
-        tipoCarroceria: ''
-      },
-      mantenimiento: [],
-      activo: true,
-      observaciones: ''
-    },
-    validate: {
-      dominio: (value) => {
-        if (!value) return 'El dominio es obligatorio';
-        if (!/^[A-Z]{3}[0-9]{3}$|^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(value.toUpperCase())) {
-          return 'Formato de patente inválido';
-        }
-        return null;
-      },
-      empresa: (value) => !value ? 'La empresa es obligatoria' : null,
-      año: (value) => {
-        if (value && (value < 1950 || value > new Date().getFullYear() + 1)) {
-          return 'Año inválido';
-        }
-        return null;
-      }
-    }
+    initialValues: getInitialVehiculoValues(),
+    validate: vehiculoValidationRules,
   });
 
   useEffect(() => {
     if (opened) {
-      loadEmpresas();
-      
+      loadEmpresas(setEmpresas);
+
       if (vehiculo) {
-        form.setValues({
-          ...vehiculo,
-          documentacion: {
-            seguro: {
-              numero: vehiculo.documentacion?.seguro?.numero || '',
-              vencimiento: vehiculo.documentacion?.seguro?.vencimiento || '',
-              compania: vehiculo.documentacion?.seguro?.compania || ''
-            },
-            vtv: {
-              numero: vehiculo.documentacion?.vtv?.numero || '',
-              vencimiento: vehiculo.documentacion?.vtv?.vencimiento || ''
-            },
-            ruta: {
-              numero: vehiculo.documentacion?.ruta?.numero || '',
-              vencimiento: vehiculo.documentacion?.ruta?.vencimiento || ''
-            },
-            senasa: {
-              numero: vehiculo.documentacion?.senasa?.numero || '',
-              vencimiento: vehiculo.documentacion?.senasa?.vencimiento || ''
-            }
-          },
-          caracteristicas: {
-            capacidadCarga: vehiculo.caracteristicas?.capacidadCarga || 0,
-            tara: vehiculo.caracteristicas?.tara || 0,
-            largo: vehiculo.caracteristicas?.largo || 0,
-            ancho: vehiculo.caracteristicas?.ancho || 0,
-            alto: vehiculo.caracteristicas?.alto || 0,
-            configuracionEjes: vehiculo.caracteristicas?.configuracionEjes || '',
-            tipoCarroceria: vehiculo.caracteristicas?.tipoCarroceria || ''
-          }
-        });
+        form.setValues(getInitialVehiculoValues(vehiculo));
       } else {
         form.reset();
         setActiveTab('basicos');
@@ -138,55 +51,8 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
     }
   }, [opened, vehiculo]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadEmpresas = async () => {
-    try {
-      const response = await empresaService.getAll();
-      setEmpresas(response.data);
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al cargar las empresas',
-        color: 'red'
-      });
-    }
-  };
-
-  const handleSubmit = async (values: Vehiculo) => {
-    try {
-      setLoading(true);
-      
-      // Convertir dominio a mayúsculas
-      values.dominio = values.dominio.toUpperCase();
-      if (values.numeroChasis) values.numeroChasis = values.numeroChasis.toUpperCase();
-      if (values.numeroMotor) values.numeroMotor = values.numeroMotor.toUpperCase();
-
-      if (vehiculo?._id) {
-        await vehiculoService.updateVehiculo(vehiculo._id, values);
-        notifications.show({
-          title: 'Éxito',
-          message: 'Vehículo actualizado correctamente',
-          color: 'green'
-        });
-      } else {
-        await vehiculoService.createVehiculo(values);
-        notifications.show({
-          title: 'Éxito',
-          message: 'Vehículo creado correctamente',
-          color: 'green'
-        });
-      }
-      
-      onSuccess();
-      onClose();
-    } catch (error: any) {
-      notifications.show({
-        title: 'Error',
-        message: error.response?.data?.message || 'Error al guardar el vehículo',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = async (values: any) => {
+    await submitVehiculo(values as Vehiculo, vehiculo, onSuccess, onClose, setLoading);
   };
 
   return (
@@ -218,7 +84,7 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
                 <Grid.Col span={6}>
                   <Select
                     label="Tipo de Vehículo"
-                    data={tiposVehiculo.map(tipo => ({ value: tipo, label: tipo }))}
+                    data={TIPOS_VEHICULO.map((tipo) => ({ value: tipo, label: tipo }))}
                     required
                     {...form.getInputProps('tipo')}
                   />
@@ -271,7 +137,7 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
               <Select
                 label="Empresa"
                 placeholder="Seleccionar empresa"
-                data={empresas.map(e => ({ value: e._id!, label: e.nombre }))}
+                data={empresas.map((e) => ({ value: e._id!, label: e.nombre }))}
                 searchable
                 required
                 {...form.getInputProps('empresa')}
@@ -294,7 +160,9 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
           <Tabs.Panel value="documentacion">
             <Stack gap="md">
               <Paper withBorder p="md">
-                <Title order={5} mb="sm">Seguro</Title>
+                <Title order={5} mb="sm">
+                  Seguro
+                </Title>
                 <Grid>
                   <Grid.Col span={4}>
                     <TextInput
@@ -320,13 +188,12 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
               </Paper>
 
               <Paper withBorder p="md">
-                <Title order={5} mb="sm">VTV</Title>
+                <Title order={5} mb="sm">
+                  VTV
+                </Title>
                 <Grid>
                   <Grid.Col span={6}>
-                    <TextInput
-                      label="Número"
-                      {...form.getInputProps('documentacion.vtv.numero')}
-                    />
+                    <TextInput label="Número" {...form.getInputProps('documentacion.vtv.numero')} />
                   </Grid.Col>
                   <Grid.Col span={6}>
                     <TextInput
@@ -340,7 +207,9 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
               </Paper>
 
               <Paper withBorder p="md">
-                <Title order={5} mb="sm">Ruta</Title>
+                <Title order={5} mb="sm">
+                  Ruta
+                </Title>
                 <Grid>
                   <Grid.Col span={6}>
                     <TextInput
@@ -360,7 +229,9 @@ function VehiculoForm({ opened, onClose, vehiculo, onSuccess }: VehiculoFormProp
               </Paper>
 
               <Paper withBorder p="md">
-                <Title order={5} mb="sm">SENASA</Title>
+                <Title order={5} mb="sm">
+                  SENASA
+                </Title>
                 <Grid>
                   <Grid.Col span={6}>
                     <TextInput
