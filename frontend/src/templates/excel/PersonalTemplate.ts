@@ -1,5 +1,22 @@
 import * as XLSX from 'xlsx';
 import { WorkSheet, WorkBook } from 'xlsx';
+import { PersonalRawData } from '../../types/excel';
+import { EXCEL_SHARED_CONSTANTS } from './constants';
+import ReferenceDataSheets from './ReferenceDataSheets';
+import {
+  validateRequiredFields,
+  validateEmailFormat,
+  validateDNIFormat,
+  validateCUILFormat,
+  validateDuplicates,
+  validateInReferenceList,
+  validateEnumValue,
+  parseDate,
+  formatDate,
+  parseBooleanValue,
+  combineValidationResults,
+  formatRowError,
+} from '../../utils/excel/validationHelpers';
 
 export interface PersonalTemplateData {
   nombre: string;
@@ -40,55 +57,33 @@ export interface PersonalTemplateData {
   observaciones?: string;
 }
 
-export class PersonalTemplate {
-  private static HEADERS = [
-    // Datos básicos
-    'Nombre (*)',
-    'Apellido (*)',
-    'DNI (*)',
-    'CUIL',
-    'Tipo (*)',
-    'Fecha Nacimiento',
-    'Empresa (*)',
-    'N° Legajo',
-    'Fecha Ingreso',
-    
-    // Dirección
-    'Dirección - Calle',
-    'Dirección - Número',
-    'Dirección - Localidad',
-    'Dirección - Provincia',
-    'Dirección - Código Postal',
-    
-    // Contacto
-    'Teléfono',
-    'Teléfono Emergencia',
-    'Email',
-    
-    // Documentación - Licencia
-    'Licencia - Número',
-    'Licencia - Categoría',
-    'Licencia - Vencimiento',
-    
-    // Documentación - Carnet Profesional
-    'Carnet Prof. - Número',
-    'Carnet Prof. - Vencimiento',
-    
-    // Documentación - Evaluaciones
-    'Eval. Médica - Fecha',
-    'Eval. Médica - Vencimiento',
-    'Psicofísico - Fecha',
-    'Psicofísico - Vencimiento',
-    
-    // Datos laborales
-    'Categoría',
-    'Obra Social',
-    'ART',
-    'Activo',
-    'Observaciones'
-  ];
-
-  private static SAMPLE_DATA: Partial<PersonalTemplateData>[] = [
+// Constantes para PersonalTemplate
+const PERSONAL_CONSTANTS = {
+  VALIDATION: {
+    DNI_REGEX: /^[0-9]{7,8}$/,
+    CUIL_REGEX: /^[0-9]{2}-[0-9]{8}-[0-9]$/,
+    EMAIL_REGEX: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+  },
+  MESSAGES: {
+    REQUIRED_NAME: 'El nombre es obligatorio',
+    REQUIRED_LASTNAME: 'El apellido es obligatorio',
+    REQUIRED_DNI: 'El DNI es obligatorio',
+    REQUIRED_TYPE: 'El tipo es obligatorio',
+    REQUIRED_EMPRESA: 'La empresa es obligatoria',
+    INVALID_DNI: 'DNI con formato inválido',
+    DUPLICATE_DNI: 'DNI duplicado en el archivo',
+    INVALID_TYPE: 'Tipo inválido',
+    EMPRESA_NOT_FOUND: 'Empresa no encontrada',
+    INVALID_CUIL: 'CUIL con formato inválido',
+    INVALID_EMAIL: 'Email con formato inválido',
+    REQUIRED_LICENSE: 'Licencia obligatoria para conductores',
+  },
+  ERROR_PREFIX: 'Fila',
+  DEFAULTS: {
+    FILENAME: 'plantilla_personal.xlsx',
+    ACTIVE_VALUE: 'Sí',
+  },
+  SAMPLE_DATA: [
     {
       nombre: 'Juan Carlos',
       apellido: 'Pérez',
@@ -120,14 +115,14 @@ export class PersonalTemplate {
       obraSocial: 'OSDE',
       art: 'La Caja ART',
       activo: true,
-      observaciones: 'Conductor experimentado'
+      observaciones: 'Conductor experimentado',
     },
     {
       nombre: 'María',
       apellido: 'González',
       dni: '87654321',
       cuil: '27-87654321-4',
-      tipo: 'Administrativo',
+      tipo: 'Administrativo' as const,
       fechaNacimiento: new Date('1990-08-22'),
       empresaNombre: 'Transportes del Norte',
       numeroLegajo: '0002',
@@ -143,118 +138,104 @@ export class PersonalTemplate {
       obraSocial: 'Swiss Medical',
       art: 'Galeno ART',
       activo: true,
-      observaciones: 'Encargada de facturación'
-    }
-  ];
+      observaciones: 'Encargada de facturación',
+    },
+  ] as Partial<PersonalTemplateData>[],
+};
 
+export class PersonalTemplate {
   /**
-   * Genera una plantilla Excel para carga masiva de personal
+   * Funciones auxiliares para reducir complejidad ciclomática
    */
-  static generateTemplate(empresas: { id: string, nombre: string }[] = []): WorkBook {
-    const wb = XLSX.utils.book_new();
-    
-    // Hoja principal con plantilla
-    const wsData = [
-      this.HEADERS,
-      ...this.SAMPLE_DATA.map(row => [
-        row.nombre || '',
-        row.apellido || '',
-        row.dni || '',
-        row.cuil || '',
-        row.tipo || '',
-        row.fechaNacimiento ? this.formatDate(row.fechaNacimiento) : '',
-        row.empresaNombre || '',
-        row.numeroLegajo || '',
-        row.fechaIngreso ? this.formatDate(row.fechaIngreso) : '',
-        row.direccionCalle || '',
-        row.direccionNumero || '',
-        row.direccionLocalidad || '',
-        row.direccionProvincia || '',
-        row.direccionCodigoPostal || '',
-        row.telefono || '',
-        row.telefonoEmergencia || '',
-        row.email || '',
-        row.licenciaNumero || '',
-        row.licenciaCategoria || '',
-        row.licenciaVencimiento ? this.formatDate(row.licenciaVencimiento) : '',
-        row.carnetProfesionalNumero || '',
-        row.carnetProfesionalVencimiento ? this.formatDate(row.carnetProfesionalVencimiento) : '',
-        row.evaluacionMedicaFecha ? this.formatDate(row.evaluacionMedicaFecha) : '',
-        row.evaluacionMedicaVencimiento ? this.formatDate(row.evaluacionMedicaVencimiento) : '',
-        row.psicofisicoFecha ? this.formatDate(row.psicofisicoFecha) : '',
-        row.psicofisicoVencimiento ? this.formatDate(row.psicofisicoVencimiento) : '',
-        row.categoria || '',
-        row.obraSocial || '',
-        row.art || '',
-        row.activo !== undefined ? (row.activo ? 'Sí' : 'No') : 'Sí',
-        row.observaciones || ''
-      ])
-    ];
+  private static mapRowToColumns(row: PersonalTemplateData): (string | number)[] {
+    const formatValue = (value: unknown) => value || '';
+    const formatBoolean = (value?: boolean) =>
+      value !== undefined
+        ? value
+          ? EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.SI
+          : EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.NO
+        : PERSONAL_CONSTANTS.DEFAULTS.ACTIVE_VALUE;
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    
-    // Configurar ancho de columnas
-    ws['!cols'] = [
-      { wch: 15 }, // Nombre
-      { wch: 15 }, // Apellido
-      { wch: 12 }, // DNI
-      { wch: 15 }, // CUIL
-      { wch: 15 }, // Tipo
-      { wch: 12 }, // Fecha Nacimiento
-      { wch: 20 }, // Empresa
-      { wch: 10 }, // N° Legajo
-      { wch: 12 }, // Fecha Ingreso
-      { wch: 20 }, // Dir. Calle
-      { wch: 8 },  // Dir. Número
-      { wch: 15 }, // Dir. Localidad
-      { wch: 15 }, // Dir. Provincia
-      { wch: 10 }, // Dir. CP
-      { wch: 15 }, // Teléfono
-      { wch: 15 }, // Tel. Emergencia
-      { wch: 25 }, // Email
-      { wch: 15 }, // Lic. Número
-      { wch: 10 }, // Lic. Categoría
-      { wch: 12 }, // Lic. Vencimiento
-      { wch: 15 }, // Carnet Número
-      { wch: 12 }, // Carnet Vencimiento
-      { wch: 12 }, // Eval. Médica Fecha
-      { wch: 12 }, // Eval. Médica Venc.
-      { wch: 12 }, // Psicofísico Fecha
-      { wch: 12 }, // Psicofísico Venc.
-      { wch: 15 }, // Categoría
-      { wch: 15 }, // Obra Social
-      { wch: 15 }, // ART
-      { wch: 8 },  // Activo
-      { wch: 30 }  // Observaciones
+    // Orden de columnas según HEADERS
+    return [
+      formatValue(row.nombre),
+      formatValue(row.apellido),
+      formatValue(row.dni),
+      formatValue(row.cuil),
+      formatValue(row.tipo),
+      formatDate(row.fechaNacimiento || null),
+      formatValue(row.empresaNombre),
+      formatValue(row.numeroLegajo),
+      formatDate(row.fechaIngreso || null),
+      formatValue(row.direccionCalle),
+      formatValue(row.direccionNumero),
+      formatValue(row.direccionLocalidad),
+      formatValue(row.direccionProvincia),
+      formatValue(row.direccionCodigoPostal),
+      formatValue(row.telefono),
+      formatValue(row.telefonoEmergencia),
+      formatValue(row.email),
+      formatValue(row.licenciaNumero),
+      formatValue(row.licenciaCategoria),
+      formatDate(row.licenciaVencimiento || null),
+      formatValue(row.carnetProfesionalNumero),
+      formatDate(row.carnetProfesionalVencimiento || null),
+      formatDate(row.evaluacionMedicaFecha || null),
+      formatDate(row.evaluacionMedicaVencimiento || null),
+      formatDate(row.psicofisicoFecha || null),
+      formatDate(row.psicofisicoVencimiento || null),
+      formatValue(row.categoria),
+      formatValue(row.obraSocial),
+      formatValue(row.art),
+      formatBoolean(row.activo),
+      formatValue(row.observaciones),
     ];
+  }
 
-    // Agregar validaciones de datos
-    if (!ws['!dataValidation']) ws['!dataValidation'] = [];
-    
+  private static createColumnWidths() {
+    // Usar Object.values para crear el array de widths automáticamente
+    return Object.values(EXCEL_SHARED_CONSTANTS.PERSONAL.COLUMN_WIDTHS).map((width) => ({
+      wch: width,
+    }));
+  }
+
+  private static addDataValidations(
+    ws: WorkSheet,
+    empresas: { id: string; nombre: string }[] = []
+  ) {
+    const DATA_VALIDATION_KEY = '!dataValidation';
+    if (!ws[DATA_VALIDATION_KEY]) ws[DATA_VALIDATION_KEY] = [];
+
     // Validación para Tipo
-    ws['!dataValidation'].push({
+    ws[DATA_VALIDATION_KEY].push({
       sqref: 'E2:E1000',
       type: 'list',
-      formula1: '"Conductor,Administrativo,Mecánico,Supervisor,Otro"'
+      formula1: `"${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.CONDUCTOR},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.ADMINISTRATIVO},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.MECANICO},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.SUPERVISOR},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.OTRO}"`,
     });
 
     // Validación para Empresa (si se proporcionan empresas)
     if (empresas.length > 0) {
-      const empresaNames = empresas.map(e => e.nombre).join(',');
-      ws['!dataValidation'].push({
+      const empresaNames = empresas.map((e) => e.nombre).join(',');
+      ws[DATA_VALIDATION_KEY].push({
         sqref: 'G2:G1000',
         type: 'list',
-        formula1: `"${empresaNames}"`
+        formula1: `"${empresaNames}"`,
       });
     }
 
     // Validación para Activo
-    ws['!dataValidation'].push({
+    ws[DATA_VALIDATION_KEY].push({
       sqref: 'AE2:AE1000',
       type: 'list',
-      formula1: '"Sí,No"'
+      formula1: `"${EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.SI},${EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.NO}"`,
     });
+  }
 
+  private static addWorksheets(
+    wb: WorkBook,
+    ws: WorkSheet,
+    empresas: { id: string; nombre: string }[] = []
+  ) {
     XLSX.utils.book_append_sheet(wb, ws, 'Personal');
 
     // Hoja de instrucciones
@@ -266,6 +247,32 @@ export class PersonalTemplate {
       const empresasWs = this.createEmpresasReferenceSheet(empresas);
       XLSX.utils.book_append_sheet(wb, empresasWs, 'Ref_Empresas');
     }
+  }
+
+  /**
+   * Genera una plantilla Excel para carga masiva de personal
+   */
+  static generateTemplate(empresas: { id: string; nombre: string }[] = []): WorkBook {
+    const wb = XLSX.utils.book_new();
+
+    // Hoja principal con plantilla
+    const wsData = [
+      EXCEL_SHARED_CONSTANTS.PERSONAL.HEADERS,
+      ...PERSONAL_CONSTANTS.SAMPLE_DATA.map((row) =>
+        this.mapRowToColumns(row as PersonalTemplateData)
+      ),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Configurar ancho de columnas usando constantes
+    ws['!cols'] = this.createColumnWidths();
+
+    // Agregar validaciones de datos
+    this.addDataValidations(ws, empresas);
+
+    // Agregar todas las hojas del workbook
+    this.addWorksheets(wb, ws, empresas);
 
     return wb;
   }
@@ -274,221 +281,362 @@ export class PersonalTemplate {
    * Crea hoja de instrucciones
    */
   private static createInstructionsSheet(): WorkSheet {
-    const instructions = [
-      ['PLANTILLA PARA CARGA MASIVA DE PERSONAL'],
-      [''],
-      ['INSTRUCCIONES DE USO:'],
-      [''],
-      ['1. Complete la información en la hoja "Personal"'],
-      ['2. Los campos marcados con (*) son obligatorios'],
-      ['3. Formatos requeridos:'],
-      ['   - DNI: Solo números, 7-8 dígitos'],
-      ['   - CUIL: Formato XX-XXXXXXXX-X'],
-      ['   - Fechas: DD/MM/AAAA'],
-      ['   - Email: Formato válido de correo'],
-      ['   - Tipo: Seleccione del menú desplegable'],
-      ['   - Empresa: Seleccione del menú (ver hoja Ref_Empresas)'],
-      [''],
-      ['TIPOS DE PERSONAL:'],
-      ['- Conductor: Personal autorizado para manejar vehículos'],
-      ['- Administrativo: Personal de oficina y gestión'],
-      ['- Mecánico: Personal de mantenimiento'],
-      ['- Supervisor: Personal de supervisión y control'],
-      ['- Otro: Otros tipos no especificados'],
-      [''],
-      ['DOCUMENTACIÓN REQUERIDA PARA CONDUCTORES:'],
-      ['- Licencia de Conducir: Obligatoria para tipo "Conductor"'],
-      ['- Carnet Profesional: Requerido para transporte comercial'],
-      ['- Evaluación Médica: Renovación anual obligatoria'],
-      ['- Psicofísico: Evaluación psicológica anual'],
-      [''],
-      ['VALIDACIONES:'],
-      ['- El DNI debe ser único en el sistema'],
-      ['- La empresa debe existir en el sistema'],
-      ['- El número de legajo debe ser único por empresa'],
-      ['- Las fechas de vencimiento deben ser futuras'],
-      ['- Para conductores, la licencia es obligatoria'],
-      [''],
-      ['NOTAS IMPORTANTES:'],
-      ['- Elimine las filas de ejemplo antes de cargar'],
-      ['- El sistema generará legajos automáticamente si no se especifican'],
-      ['- Verifique las fechas de vencimiento de documentos'],
-      ['- Para personal nuevo, la fecha de ingreso es obligatoria'],
-      ['- Use la hoja "Ref_Empresas" para ver empresas disponibles'],
-      [''],
-      ['CAMPOS OBLIGATORIOS (*)'],
-      ['- Nombre: Nombre de pila'],
-      ['- Apellido: Apellido completo'],
-      ['- DNI: Documento Nacional de Identidad'],
-      ['- Tipo: Clasificación del personal'],
-      ['- Empresa: Empresa a la que pertenece']
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(instructions);
-    ws['!cols'] = [{ wch: 70 }];
-    
+    const ws = XLSX.utils.aoa_to_sheet(EXCEL_SHARED_CONSTANTS.PERSONAL.INSTRUCTIONS);
+    ws['!cols'] = [{ wch: EXCEL_SHARED_CONSTANTS.COLUMN_WIDTHS.INSTRUCTIONS_WIDE }];
     return ws;
   }
 
   /**
    * Crea hoja de referencia de empresas
    */
-  private static createEmpresasReferenceSheet(empresas: { id: string, nombre: string }[]): WorkSheet {
-    const data = [
-      ['ID', 'Nombre de Empresa'],
-      ...empresas.map(empresa => [empresa.id, empresa.nombre])
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 25 }, { wch: 40 }];
-    
-    return ws;
+  private static createEmpresasReferenceSheet(
+    empresas: { id: string; nombre: string }[]
+  ): WorkSheet {
+    // Adaptar el tipo de empresas para ReferenceDataSheets
+    const empresasCompletas = empresas.map((e) => ({
+      ...e,
+      tipo: 'Propia' as const,
+      activa: true,
+    }));
+    return ReferenceDataSheets.createEmpresasReferenceSheet(empresasCompletas);
   }
 
   /**
    * Formatea fecha para Excel
    */
-  private static formatDate(date: Date): string {
-    return date.toLocaleDateString('es-AR');
+  private static formatDate(date: Date | null): string {
+    return formatDate(date);
   }
 
   /**
    * Parsea fecha desde string
    */
-  private static parseDate(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
-    const [day, month, year] = parts.map(p => parseInt(p, 10));
-    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-    return new Date(year, month - 1, day);
+  private static parseDate(dateStr: any): Date | null {
+    return parseDate(dateStr);
   }
 
   /**
    * Valida datos de personal desde Excel
    */
-  static validateData(data: any[], empresas: { id: string, nombre: string }[] = []): { valid: PersonalTemplateData[], errors: string[] } {
+  static validateData(
+    data: unknown[],
+    empresas: { id: string; nombre: string }[] = []
+  ): { valid: PersonalTemplateData[]; errors: string[] } {
     const valid: PersonalTemplateData[] = [];
     const errors: string[] = [];
     const dnisVistos = new Set<string>();
-    const empresaMap = new Map(empresas.map(e => [e.nombre, e.id]));
+    const empresaMap = new Map(empresas.map((e) => [e.nombre, e.id]));
 
     data.forEach((row, index) => {
       const rowNum = index + 2;
-      const nombre = row['Nombre (*)']?.toString()?.trim();
-      const apellido = row['Apellido (*)']?.toString()?.trim();
-      const dni = row['DNI (*)']?.toString()?.trim()?.replace(/\D/g, '');
-      const cuil = row['CUIL']?.toString()?.trim();
-      const tipo = row['Tipo (*)']?.toString()?.trim();
-      const empresaNombre = row['Empresa (*)']?.toString()?.trim();
+      const personal = this.parsePersonalRowData(row);
 
-      // Validar campos obligatorios
-      if (!nombre) {
-        errors.push(`Fila ${rowNum}: El nombre es obligatorio`);
-        return;
+      // Validación usando métodos auxiliares
+      const validationResult = this.validatePersonalRow({
+        personal,
+        rowNum,
+        dnisVistos,
+        empresaMap,
+        empresas,
+      });
+
+      if (validationResult.isValid && validationResult.personalData) {
+        valid.push(validationResult.personalData);
+      } else {
+        errors.push(...validationResult.errors);
       }
-
-      if (!apellido) {
-        errors.push(`Fila ${rowNum}: El apellido es obligatorio`);
-        return;
-      }
-
-      if (!dni) {
-        errors.push(`Fila ${rowNum}: El DNI es obligatorio`);
-        return;
-      }
-
-      if (!tipo) {
-        errors.push(`Fila ${rowNum}: El tipo es obligatorio`);
-        return;
-      }
-
-      if (!empresaNombre) {
-        errors.push(`Fila ${rowNum}: La empresa es obligatoria`);
-        return;
-      }
-
-      // Validar formato DNI
-      if (!/^[0-9]{7,8}$/.test(dni)) {
-        errors.push(`Fila ${rowNum}: DNI con formato inválido`);
-        return;
-      }
-
-      // Validar duplicados DNI
-      if (dnisVistos.has(dni)) {
-        errors.push(`Fila ${rowNum}: DNI duplicado en el archivo`);
-        return;
-      }
-      dnisVistos.add(dni);
-
-      // Validar tipo
-      const tiposValidos = ['Conductor', 'Administrativo', 'Mecánico', 'Supervisor', 'Otro'];
-      if (!tiposValidos.includes(tipo)) {
-        errors.push(`Fila ${rowNum}: Tipo inválido`);
-        return;
-      }
-
-      // Validar empresa
-      const empresaId = empresaMap.get(empresaNombre);
-      if (empresas.length > 0 && !empresaId) {
-        errors.push(`Fila ${rowNum}: Empresa no encontrada`);
-        return;
-      }
-
-      // Validar CUIL si se proporciona
-      if (cuil && !/^[0-9]{2}-[0-9]{8}-[0-9]$/.test(cuil)) {
-        errors.push(`Fila ${rowNum}: CUIL con formato inválido`);
-        return;
-      }
-
-      // Validar email si se proporciona
-      const email = row['Email']?.toString()?.trim();
-      if (email && !/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-        errors.push(`Fila ${rowNum}: Email con formato inválido`);
-        return;
-      }
-
-      // Para conductores, validar licencia
-      if (tipo === 'Conductor') {
-        const licenciaNumero = row['Licencia - Número']?.toString()?.trim();
-        if (!licenciaNumero) {
-          errors.push(`Fila ${rowNum}: Licencia obligatoria para conductores`);
-          return;
-        }
-      }
-
-      const personalData: PersonalTemplateData = {
-        nombre,
-        apellido,
-        dni,
-        tipo: tipo as any,
-        empresaId,
-        empresaNombre
-      };
-
-      // Agregar campos opcionales procesados
-      if (cuil) personalData.cuil = cuil;
-      if (email) personalData.email = email;
-
-      // Procesar fechas
-      const fechaNacimiento = this.parseDate(row['Fecha Nacimiento']?.toString()?.trim());
-      if (fechaNacimiento) personalData.fechaNacimiento = fechaNacimiento;
-
-      const fechaIngreso = this.parseDate(row['Fecha Ingreso']?.toString()?.trim());
-      if (fechaIngreso) personalData.fechaIngreso = fechaIngreso;
-
-      // Agregar más campos según necesidad...
-
-      valid.push(personalData);
     });
 
     return { valid, errors };
   }
 
+  // Método auxiliar para parsear datos de fila de personal
+  private static parsePersonalRowData(row: unknown): PersonalRawData {
+    // Mapa de columnas a propiedades
+    const columnMap: { [key: string]: string } = {
+      'Nombre (*)': 'nombre',
+      'Apellido (*)': 'apellido',
+      'DNI (*)': 'dni',
+      CUIL: 'cuil',
+      'Tipo (*)': 'tipo',
+      'Fecha Nacimiento': 'fechaNacimiento',
+      'Empresa (*)': 'empresaNombre',
+      'N° Legajo': 'numeroLegajo',
+      'Fecha Ingreso': 'fechaIngreso',
+      'Dirección - Calle': 'direccionCalle',
+      'Dirección - Número': 'direccionNumero',
+      'Dirección - Localidad': 'direccionLocalidad',
+      'Dirección - Provincia': 'direccionProvincia',
+      'Dirección - Código Postal': 'direccionCodigoPostal',
+      Teléfono: 'telefono',
+      'Teléfono Emergencia': 'telefonoEmergencia',
+      Email: 'email',
+      'Licencia - Número': 'licenciaNumero',
+      'Licencia - Categoría': 'licenciaCategoria',
+      'Licencia - Vencimiento': 'licenciaVencimiento',
+      'Carnet Prof. - Número': 'carnetProfesionalNumero',
+      'Carnet Prof. - Vencimiento': 'carnetProfesionalVencimiento',
+      'Eval. Médica - Fecha': 'evaluacionMedicaFecha',
+      'Eval. Médica - Vencimiento': 'evaluacionMedicaVencimiento',
+      'Psicofísico - Fecha': 'psicofisicoFecha',
+      'Psicofísico - Vencimiento': 'psicofisicoVencimiento',
+      Categoría: 'categoria',
+      'Obra Social': 'obraSocial',
+      ART: 'art',
+      Activo: 'activo',
+      Observaciones: 'observaciones',
+    };
+
+    const parsedData: any = {};
+
+    // Parsear todos los campos usando el mapa
+    Object.entries(columnMap).forEach(([columnName, propName]) => {
+      const value = row[columnName];
+      if (value !== undefined && value !== null && value !== '') {
+        // Tratamiento especial para DNI (solo números)
+        if (propName === 'dni') {
+          parsedData[propName] = value.toString().trim().replace(/\D/g, '');
+        }
+        // Tratamiento para fechas
+        else if (
+          propName.includes('fecha') ||
+          propName.includes('Fecha') ||
+          propName.includes('Vencimiento')
+        ) {
+          parsedData[propName] = value.toString().trim();
+        }
+        // Tratamiento para activo (booleano)
+        else if (propName === 'activo') {
+          parsedData[propName] = parseBooleanValue(value);
+        }
+        // Campos normales
+        else {
+          parsedData[propName] = value.toString().trim();
+        }
+      }
+    });
+
+    return parsedData;
+  }
+
+  // Interfaz para parámetros de validación
+  private static validatePersonalRow(params: {
+    personal: PersonalRawData;
+    rowNum: number;
+    dnisVistos: Set<string>;
+    empresaMap: Map<string, string>;
+    empresas: { id: string; nombre: string }[];
+  }): { isValid: boolean; personalData?: PersonalTemplateData; errors: string[] } {
+    const { personal, rowNum, dnisVistos, empresaMap, empresas } = params;
+
+    // Validar campos obligatorios
+    const requiredResult = this.validatePersonalRequiredFields(personal, rowNum);
+    if (!requiredResult.isValid) {
+      return { isValid: false, errors: requiredResult.errors };
+    }
+
+    // Validar formatos básicos
+    const formatResult = this.validatePersonalFormats(personal, rowNum);
+    if (!formatResult.isValid) {
+      return { isValid: false, errors: formatResult.errors };
+    }
+
+    // Validar duplicados
+    const duplicateResult = this.validatePersonalDuplicates(personal.dni || '', rowNum, dnisVistos);
+    if (!duplicateResult.isValid) {
+      return { isValid: false, errors: duplicateResult.errors };
+    }
+
+    // Validar empresa
+    const empresaResult = this.validatePersonalEmpresa(
+      personal.empresaNombre as string,
+      rowNum,
+      empresaMap,
+      empresas
+    );
+    if (!empresaResult.isValid) {
+      return { isValid: false, errors: empresaResult.errors };
+    }
+
+    // Validar campos específicos según tipo
+    const specificResult = this.validatePersonalSpecificFields(personal, rowNum);
+    if (!specificResult.isValid) {
+      return { isValid: false, errors: specificResult.errors };
+    }
+
+    // Construir objeto personalData
+    const personalData = this.buildPersonalData(personal, empresaResult.empresaId);
+
+    return { isValid: true, personalData, errors: [] };
+  }
+
+  // Validar campos obligatorios específicos de personal
+  private static validatePersonalRequiredFields(
+    personal: any,
+    rowNum: number
+  ): { isValid: boolean; errors: string[] } {
+    return validateRequiredFields([
+      { value: personal.nombre, fieldName: 'Nombre', rowNum, required: true },
+      { value: personal.apellido, fieldName: 'Apellido', rowNum, required: true },
+      { value: personal.dni, fieldName: 'DNI', rowNum, required: true },
+      { value: personal.tipo, fieldName: 'Tipo', rowNum, required: true },
+      { value: personal.empresaNombre, fieldName: 'Empresa', rowNum, required: true },
+    ]);
+  }
+
+  // Validar formatos de personal
+  private static validatePersonalFormats(
+    personal: any,
+    rowNum: number
+  ): { isValid: boolean; errors: string[] } {
+    const validationResults = [];
+
+    // Validar formato DNI
+    if (personal.dni) {
+      validationResults.push(validateDNIFormat(personal.dni, rowNum));
+    }
+
+    // Validar tipo
+    const validTypes = Object.values(EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS);
+    validationResults.push(validateEnumValue(personal.tipo, rowNum, validTypes, 'Tipo'));
+
+    // Validar CUIL si se proporciona
+    if (personal.cuil) {
+      validationResults.push(validateCUILFormat(personal.cuil, rowNum));
+    }
+
+    // Validar email si se proporciona
+    if (personal.email) {
+      validationResults.push(validateEmailFormat(personal.email, rowNum));
+    }
+
+    return combineValidationResults(...validationResults);
+  }
+
+  // Validar duplicados de DNI
+  private static validatePersonalDuplicates(
+    dni: string,
+    rowNum: number,
+    dnisVistos: Set<string>
+  ): { isValid: boolean; errors: string[] } {
+    return validateDuplicates(dni, rowNum, dnisVistos, 'DNI');
+  }
+
+  // Validar empresa
+  private static validatePersonalEmpresa(
+    empresaNombre: string,
+    rowNum: number,
+    empresaMap: Map<string, string>,
+    _empresas: { id: string; nombre: string }[]
+  ): { isValid: boolean; errors: string[]; empresaId?: string } {
+    const result = validateInReferenceList(empresaNombre, rowNum, empresaMap, 'Empresa');
+
+    return {
+      isValid: result.isValid,
+      errors: result.errors,
+      empresaId: result.referenceId,
+    };
+  }
+
+  // Validar campos específicos según tipo de personal
+  private static validatePersonalSpecificFields(
+    personal: any,
+    rowNum: number
+  ): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Validaciones específicas por tipo usando un mapa
+    const typeValidations: { [key: string]: () => void } = {
+      [EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.CONDUCTOR]: () => {
+        if (!personal.licenciaNumero) {
+          errors.push(formatRowError(rowNum, 'Licencia obligatoria para conductores'));
+        }
+      },
+    };
+
+    // Ejecutar validación específica si existe
+    const validation = typeValidations[personal.tipo];
+    if (validation) {
+      validation();
+    }
+
+    return { isValid: errors.length === 0, errors };
+  }
+
+  // Construir objeto PersonalTemplateData
+  private static buildPersonalData(personal: any, empresaId?: string): PersonalTemplateData {
+    // Campos básicos obligatorios
+    const baseData: PersonalTemplateData = {
+      nombre: personal.nombre,
+      apellido: personal.apellido,
+      dni: personal.dni,
+      tipo: personal.tipo as any,
+      empresaId,
+      empresaNombre: personal.empresaNombre,
+    };
+
+    // Agregar campos opcionales de texto
+    const textFields = [
+      'cuil',
+      'email',
+      'licenciaNumero',
+      'licenciaCategoria',
+      'carnetProfesionalNumero',
+      'numeroLegajo',
+      'direccionCalle',
+      'direccionNumero',
+      'direccionLocalidad',
+      'direccionProvincia',
+      'direccionCodigoPostal',
+      'telefono',
+      'telefonoEmergencia',
+      'categoria',
+      'obraSocial',
+      'art',
+      'observaciones',
+    ];
+
+    textFields.forEach((field) => {
+      if (personal[field]) {
+        (baseData as any)[field] = personal[field];
+      }
+    });
+
+    // Agregar campos de fecha
+    const dateFields = [
+      'fechaNacimiento',
+      'fechaIngreso',
+      'licenciaVencimiento',
+      'carnetProfesionalVencimiento',
+      'evaluacionMedicaFecha',
+      'evaluacionMedicaVencimiento',
+      'psicofisicoFecha',
+      'psicofisicoVencimiento',
+    ];
+
+    dateFields.forEach((field) => {
+      if (personal[field]) {
+        (baseData as any)[field] = parseDate(personal[field]);
+      }
+    });
+
+    // Campo booleano
+    if (personal.activo !== undefined) {
+      baseData.activo = parseBooleanValue(personal.activo);
+    }
+
+    return baseData;
+  }
+
+  // Métodos auxiliares para reducción de complejidad
+
   /**
    * Genera archivo Excel para descarga
    */
-  static downloadTemplate(empresas: { id: string, nombre: string }[] = [], filename: string = 'plantilla_personal.xlsx'): void {
+  static downloadTemplate(
+    empresas: { id: string; nombre: string }[] = [],
+    filename = PERSONAL_CONSTANTS.DEFAULTS.FILENAME
+  ): void {
     const wb = this.generateTemplate(empresas);
     XLSX.writeFile(wb, filename);
   }

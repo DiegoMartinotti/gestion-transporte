@@ -3,43 +3,59 @@ import type { Personal, PersonalFilters, ApiResponse, PaginatedResponse } from '
 import { previewExcelFile, validateExcelFile, processExcelFile } from './excel';
 
 export const personalService = {
+  // Helper function to build query parameters
+  buildQueryParams: (filters?: PersonalFilters): URLSearchParams => {
+    const params = new URLSearchParams();
+
+    const paramMappings: Array<[keyof PersonalFilters, (value: any) => string]> = [
+      ['search', (v) => v],
+      ['tipo', (v) => v],
+      ['empresa', (v) => v],
+      ['activo', (v) => v.toString()],
+      ['page', (v) => v.toString()],
+      ['limit', (v) => v.toString()],
+      ['sortBy', (v) => v],
+      ['sortOrder', (v) => v],
+    ];
+
+    paramMappings.forEach(([key, transformer]) => {
+      const value = filters?.[key];
+      if (value !== undefined && value !== null) {
+        params.append(key, transformer(value));
+      }
+    });
+
+    return params;
+  },
+
+  // Helper function to create default pagination
+  createDefaultPagination: (data: Personal[], filters?: PersonalFilters) => ({
+    currentPage: filters?.page || 1,
+    totalPages: 1,
+    totalItems: data.length,
+    itemsPerPage: data.length,
+  }),
+
   // Get all personal with optional filters
   getAll: async (filters?: PersonalFilters): Promise<PaginatedResponse<Personal>> => {
-    const params = new URLSearchParams();
-    
-    if (filters?.search) params.append('search', filters.search);
-    if (filters?.tipo) params.append('tipo', filters.tipo);
-    if (filters?.empresa) params.append('empresa', filters.empresa);
-    if (filters?.activo !== undefined) params.append('activo', filters.activo.toString());
-    if (filters?.page) params.append('page', filters.page.toString());
-    if (filters?.limit) params.append('limit', filters.limit.toString());
-    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
-    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
-
+    const params = personalService.buildQueryParams(filters);
     const response = await apiService.get<any>(`/personal?${params.toString()}`);
-    
-    // El backend puede devolver directo el array o en formato { data: [...] }
+
+    // Handle direct array response
     if (Array.isArray(response)) {
       return {
         data: response,
-        pagination: {
-          currentPage: filters?.page || 1,
-          totalPages: 1,
-          totalItems: response.length,
-          itemsPerPage: response.length
-        }
+        pagination: personalService.createDefaultPagination(response, filters),
       };
     }
-    // Si viene en formato ApiResponse
-    return response.data || {
-      data: [],
-      pagination: {
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 0,
-        itemsPerPage: 0
+
+    // Handle ApiResponse format
+    return (
+      response.data || {
+        data: [],
+        pagination: personalService.createDefaultPagination([], filters),
       }
-    };
+    );
   },
 
   // Get personal by ID
@@ -52,7 +68,9 @@ export const personalService = {
   },
 
   // Create new personal
-  create: async (personalData: Omit<Personal, '_id' | 'createdAt' | 'updatedAt' | 'numeroLegajo'>): Promise<Personal> => {
+  create: async (
+    personalData: Omit<Personal, '_id' | 'createdAt' | 'updatedAt' | 'numeroLegajo'>
+  ): Promise<Personal> => {
     const response = await apiService.post<ApiResponse<Personal>>('/personal', personalData);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Error al crear personal');
@@ -61,7 +79,10 @@ export const personalService = {
   },
 
   // Update personal
-  update: async (id: string, personalData: Partial<Omit<Personal, '_id' | 'createdAt' | 'updatedAt'>>): Promise<Personal> => {
+  update: async (
+    id: string,
+    personalData: Partial<Omit<Personal, '_id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<Personal> => {
     const response = await apiService.put<ApiResponse<Personal>>(`/personal/${id}`, personalData);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Error al actualizar personal');
@@ -87,10 +108,13 @@ export const personalService = {
   },
 
   // Get personal by empresa
-  getByEmpresa: async (empresaId: string, filters?: Partial<PersonalFilters>): Promise<Personal[]> => {
+  getByEmpresa: async (
+    empresaId: string,
+    filters?: Partial<PersonalFilters>
+  ): Promise<Personal[]> => {
     const params = new URLSearchParams();
     params.append('empresa', empresaId);
-    
+
     if (filters?.tipo) params.append('tipo', filters.tipo);
     if (filters?.activo !== undefined) params.append('activo', filters.activo.toString());
     if (filters?.search) params.append('search', filters.search);
@@ -108,7 +132,7 @@ export const personalService = {
     const params = new URLSearchParams();
     params.append('tipo', 'Conductor');
     params.append('activo', 'true');
-    
+
     if (empresaId) params.append('empresa', empresaId);
 
     const response = await apiService.get<any>(`/personal?${params.toString()}`);
@@ -120,8 +144,10 @@ export const personalService = {
   },
 
   // Get personal with expiring documents
-  getWithExpiringDocuments: async (dias: number = 30): Promise<Personal[]> => {
-    const response = await apiService.get<ApiResponse<Personal[]>>(`/personal/expiring-documents?dias=${dias}`);
+  getWithExpiringDocuments: async (dias = 30): Promise<Personal[]> => {
+    const response = await apiService.get<ApiResponse<Personal[]>>(
+      `/personal/expiring-documents?dias=${dias}`
+    );
     if (!response.data?.data) {
       throw new Error('Error al obtener documentos por vencer');
     }
@@ -129,7 +155,9 @@ export const personalService = {
   },
 
   // Get personal statistics
-  getStats: async (empresaId?: string): Promise<{
+  getStats: async (
+    empresaId?: string
+  ): Promise<{
     total: number;
     activos: number;
     inactivos: number;
@@ -145,22 +173,32 @@ export const personalService = {
   },
 
   // Validate DNI
-  validateDNI: async (dni: string, personalId?: string): Promise<{ valid: boolean; message?: string }> => {
+  validateDNI: async (
+    dni: string,
+    personalId?: string
+  ): Promise<{ valid: boolean; message?: string }> => {
     const params = new URLSearchParams();
     params.append('dni', dni);
     if (personalId) params.append('excludeId', personalId);
 
-    const response = await apiService.get<ApiResponse<{ valid: boolean; message?: string }>>(`/personal/validate-dni?${params.toString()}`);
+    const response = await apiService.get<ApiResponse<{ valid: boolean; message?: string }>>(
+      `/personal/validate-dni?${params.toString()}`
+    );
     return response.data?.data || { valid: false, message: 'Error de validación' };
   },
 
   // Validate CUIL
-  validateCUIL: async (cuil: string, personalId?: string): Promise<{ valid: boolean; message?: string }> => {
+  validateCUIL: async (
+    cuil: string,
+    personalId?: string
+  ): Promise<{ valid: boolean; message?: string }> => {
     const params = new URLSearchParams();
     params.append('cuil', cuil);
     if (personalId) params.append('excludeId', personalId);
 
-    const response = await apiService.get<ApiResponse<{ valid: boolean; message?: string }>>(`/personal/validate-cuil?${params.toString()}`);
+    const response = await apiService.get<ApiResponse<{ valid: boolean; message?: string }>>(
+      `/personal/validate-cuil?${params.toString()}`
+    );
     return response.data?.data || { valid: false, message: 'Error de validación' };
   },
 
@@ -176,30 +214,32 @@ export const personalService = {
   },
 
   processExcelFile: async (file: File, options: any): Promise<any> => {
-    return await processExcelFile(file, { 
-      ...options, 
+    return await processExcelFile(file, {
+      ...options,
       endpoint: '/personal/import',
-      entityType: 'personal'
+      entityType: 'personal',
     });
   },
 
   // Legacy export method (for backward compatibility)
   exportToExcelLegacy: async (filters?: PersonalFilters): Promise<Blob> => {
     const params = new URLSearchParams();
-    
+
     if (filters?.search) params.append('search', filters.search);
     if (filters?.tipo) params.append('tipo', filters.tipo);
     if (filters?.empresa) params.append('empresa', filters.empresa);
     if (filters?.activo !== undefined) params.append('activo', filters.activo.toString());
 
     const response = await apiService.getClient().get(`/personal/export?${params.toString()}`, {
-      responseType: 'blob'
+      responseType: 'blob',
     });
     return response.data;
   },
 
   // Legacy import method
-  importFromExcel: async (file: File): Promise<{
+  importFromExcel: async (
+    file: File
+  ): Promise<{
     success: number;
     errors: Array<{ row: number; errors: string[] }>;
   }> => {
@@ -211,7 +251,7 @@ export const personalService = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    
+
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Error al importar datos');
     }

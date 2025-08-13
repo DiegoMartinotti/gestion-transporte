@@ -1,6 +1,12 @@
-import { Select, MultiSelect, Group, Text, Badge, Avatar, Box } from '@mantine/core';
-import { IconUser, IconTruck, IconLicense } from '@tabler/icons-react';
-import { useState, forwardRef } from 'react';
+import { Select } from '@mantine/core';
+import { useState } from 'react';
+
+import { PersonalMultiSelect } from './PersonalMultiSelect';
+import {
+  filterPersonal,
+  transformPersonalToSelectData,
+  getMockPersonalData,
+} from './helpers/personalSelectorHelpers';
 
 interface Personal {
   _id: string;
@@ -50,88 +56,13 @@ interface PersonalSelectorProps {
   requireSpecificCategory?: string; // Requiere categoría específica de licencia
 }
 
-// Interface para las props del SelectItem
-interface SelectItemProps {
-  label: string; 
-  nombre: string; 
-  apellido: string; 
-  tipo: string; 
-  licencia?: string; 
-  categoria?: string;
-  dni?: string; 
-  empresa?: string;
-  showLicencia?: boolean;
-  showEmpresa?: boolean;
-  showDni?: boolean;
-  withAvatar?: boolean;
-  compact?: boolean;
-  [key: string]: any;
-}
-
-// Componente para renderizar items del selector
-const SelectItem = forwardRef<HTMLDivElement, SelectItemProps>(({ 
-  label, 
-  nombre, 
-  apellido, 
-  tipo, 
-  licencia, 
-  categoria,
-  dni, 
-  empresa,
-  showLicencia,
-  showEmpresa,
-  showDni,
-  withAvatar,
-  compact,
-  ...others 
-}, ref) => (
-  <div ref={ref} {...others}>
-    <Group gap="sm" wrap="nowrap">
-      {withAvatar && (
-        <Avatar size="sm" color={tipo === 'Conductor' ? 'blue' : 'green'}>
-          {tipo === 'Conductor' ? <IconTruck size={16} /> : <IconUser size={16} />}
-        </Avatar>
-      )}
-      
-      <Box style={{ flex: 1 }}>
-        <Group gap="xs" align="center">
-          <Text size="sm" fw={500}>
-            {nombre} {apellido}
-          </Text>
-          <Badge size="xs" variant="light" color={tipo === 'Conductor' ? 'blue' : 'green'}>
-            {tipo}
-          </Badge>
-        </Group>
-        
-        {!compact && (
-          <Group gap="md" mt={2}>
-            {showDni && dni && (
-              <Text size="xs" c="dimmed">DNI: {dni}</Text>
-            )}
-            {showLicencia && licencia && (
-              <Group gap={4}>
-                <IconLicense size={12} />
-                <Text size="xs" c="dimmed">
-                  {licencia}
-                  {categoria && ` (${categoria})`}
-                </Text>
-              </Group>
-            )}
-            {showEmpresa && empresa && (
-              <Text size="xs" c="dimmed">Empresa: {empresa}</Text>
-            )}
-          </Group>
-        )}
-      </Box>
-    </Group>
-  </div>
-));
+// Los componentes SelectItem y PersonalMultiSelect se han movido a archivos separados
 
 export function PersonalSelector({
   value,
   onChange,
   label,
-  placeholder = "Selecciona personal",
+  placeholder = 'Selecciona personal',
   required = false,
   clearable = false,
   error,
@@ -148,185 +79,40 @@ export function PersonalSelector({
   showDni = false,
   compact = false,
   requireValidLicense = false,
-  requireSpecificCategory
+  requireSpecificCategory,
 }: PersonalSelectorProps) {
-  const [personal, setPersonal] = useState<Personal[]>([
-    {
-      _id: '1',
-      nombre: 'Juan',
-      apellido: 'Pérez',
-      tipo: 'Conductor',
-      dni: '12345678',
-      licenciaNumero: 'B123456789',
-      empresa: { _id: 'emp1', nombre: 'Transportes SA' },
-      documentacion: {
-        licenciaConducir: {
-          numero: 'B123456789',
-          categoria: 'Profesional',
-          vencimiento: '2025-12-31'
-        }
-      },
-      activo: true
-    },
-    {
-      _id: '2',
-      nombre: 'Carlos',
-      apellido: 'González',
-      tipo: 'Conductor',
-      dni: '87654321',
-      licenciaNumero: 'B987654321',
-      empresa: { _id: 'emp1', nombre: 'Transportes SA' },
-      documentacion: {
-        licenciaConducir: {
-          numero: 'B987654321',
-          categoria: 'Profesional',
-          vencimiento: '2024-06-15'
-        }
-      },
-      activo: true
-    },
-    {
-      _id: '3',
-      nombre: 'Roberto',
-      apellido: 'Martínez',
-      tipo: 'Conductor',
-      dni: '11223344',
-      licenciaNumero: 'B456789123',
-      empresa: { _id: 'emp2', nombre: 'Logística Plus' },
-      documentacion: {
-        licenciaConducir: {
-          numero: 'B456789123',
-          categoria: 'Particular',
-          vencimiento: '2025-03-20'
-        }
-      },
-      activo: true
-    },
-    {
-      _id: '4',
-      nombre: 'Miguel',
-      apellido: 'López',
-      tipo: 'Ayudante',
-      dni: '55667788',
-      empresa: { _id: 'emp1', nombre: 'Transportes SA' },
-      activo: true
-    },
-    {
-      _id: '5',
-      nombre: 'Luis',
-      apellido: 'Fernández',
-      tipo: 'Ayudante',
-      dni: '99887766',
-      empresa: { _id: 'emp2', nombre: 'Logística Plus' },
-      activo: false
-    },
-    {
-      _id: '6',
-      nombre: 'Ana',
-      apellido: 'Rodríguez',
-      tipo: 'Conductor',
-      dni: '44556677',
-      licenciaNumero: 'B334455667',
-      empresa: { _id: 'emp1', nombre: 'Transportes SA' },
-      documentacion: {
-        licenciaConducir: {
-          numero: 'B334455667',
-          categoria: 'Profesional',
-          vencimiento: '2023-01-15' // Vencida
-        }
-      },
-      activo: true
-    }
-  ]);
+  const [personal] = useState<Personal[]>(getMockPersonalData());
   const [loading] = useState(false);
 
-  // Función para verificar si una licencia está vigente
-  const isLicenseValid = (persona: Personal): boolean => {
-    const vencimiento = persona.documentacion?.licenciaConducir?.vencimiento;
-    if (!vencimiento) return false;
-    return new Date(vencimiento) > new Date();
-  };
-
-  // Función para verificar categoría específica
-  const hasRequiredCategory = (persona: Personal, requiredCategory: string): boolean => {
-    const categoria = persona.documentacion?.licenciaConducir?.categoria;
-    return categoria === requiredCategory;
-  };
-
-  // Aplicar filtros
-  const personalFiltrado = personal.filter(persona => {
-    // Filtro por activos
-    if (soloActivos && !persona.activo) return false;
-    
-    // Filtro por IDs excluidos
-    if (excludeIds.includes(persona._id)) return false;
-    
-    // Filtro por empresa
-    if (empresaId && persona.empresa?._id !== empresaId) return false;
-    
-    // Filtro por tipo
-    if (tipo) {
-      if (Array.isArray(tipo)) {
-        if (!tipo.includes(persona.tipo)) return false;
-      } else {
-        if (persona.tipo !== tipo) return false;
-      }
-    }
-    
-    // Filtro específico para choferes
-    if (soloChoferes) {
-      if (persona.tipo !== 'Conductor') return false;
-      if (!persona.licenciaNumero && !persona.documentacion?.licenciaConducir?.numero) return false;
-    }
-    
-    // Filtro por licencia válida
-    if (requireValidLicense && !isLicenseValid(persona)) return false;
-    
-    // Filtro por categoría específica
-    if (requireSpecificCategory && !hasRequiredCategory(persona, requireSpecificCategory)) return false;
-    
-    return true;
+  // Aplicar filtros usando helper
+  const personalFiltrado = filterPersonal(personal, {
+    soloActivos,
+    excludeIds,
+    empresaId,
+    tipo,
+    soloChoferes,
+    requireValidLicense,
+    requireSpecificCategory,
   });
 
-  // Preparar datos para el selector
-  const data = personalFiltrado.map(persona => {
-    const licencia = persona.documentacion?.licenciaConducir?.numero || persona.licenciaNumero;
-    const categoria = persona.documentacion?.licenciaConducir?.categoria;
-    
-    return {
-      value: persona._id,
-      label: `${persona.nombre} ${persona.apellido}${licencia ? ` (Lic: ${licencia})` : ''}`,
-      // Props adicionales para el componente personalizado
-      nombre: persona.nombre,
-      apellido: persona.apellido,
-      tipo: persona.tipo,
-      licencia,
-      categoria,
-      dni: persona.dni,
-      empresa: persona.empresa?.nombre,
-      showLicencia,
-      showEmpresa,
-      showDni,
-      withAvatar,
-      compact
-    };
+  // Preparar datos para el selector usando helper
+  const data = transformPersonalToSelectData(personalFiltrado, {
+    showLicencia,
+    showEmpresa,
+    showDni,
+    withAvatar,
+    compact,
   });
-
-  const commonProps = {
-    label,
-    placeholder,
-    required,
-    clearable,
-    error,
-    disabled: disabled || loading,
-    searchable: true,
-    itemComponent: SelectItem
-  };
 
   if (multiple) {
     return (
-      <MultiSelect
-        {...commonProps}
+      <PersonalMultiSelect
+        label={label}
+        placeholder={placeholder}
+        required={required}
+        clearable={clearable}
+        error={error}
+        disabled={disabled || loading}
         data={data}
         value={Array.isArray(value) ? value : value ? [value] : []}
         onChange={onChange}
@@ -336,7 +122,14 @@ export function PersonalSelector({
 
   return (
     <Select
-      {...commonProps}
+      label={label}
+      placeholder={placeholder}
+      required={required}
+      clearable={clearable}
+      error={error}
+      disabled={disabled || loading}
+      searchable={true}
+      // itemComponent={PersonalSelectItem} // Comentado temporalmente por compatibilidad
       data={data}
       value={Array.isArray(value) ? value[0] : value}
       onChange={onChange}
@@ -345,17 +138,19 @@ export function PersonalSelector({
 }
 
 // Componente específico para choferes (usando PersonalSelector con configuración predefinida)
-export function ChoferSelector(props: Omit<PersonalSelectorProps, 'soloChoferes' | 'showLicencia' | 'requireValidLicense'> & {
-  requireValidLicense?: boolean;
-}) {
+export function ChoferSelector(
+  props: Omit<PersonalSelectorProps, 'soloChoferes' | 'showLicencia' | 'requireValidLicense'> & {
+    requireValidLicense?: boolean;
+  }
+) {
   return (
     <PersonalSelector
       {...props}
       soloChoferes={true}
       showLicencia={true}
       requireValidLicense={props.requireValidLicense}
-      label={props.label || "Seleccionar Chofer"}
-      placeholder={props.placeholder || "Selecciona un chofer"}
+      label={props.label || 'Seleccionar Chofer'}
+      placeholder={props.placeholder || 'Selecciona un chofer'}
     />
   );
 }
