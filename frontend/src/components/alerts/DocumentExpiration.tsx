@@ -1,10 +1,10 @@
-import { 
-  Alert, 
-  Stack, 
-  Group, 
-  Text, 
-  Badge, 
-  ActionIcon, 
+import {
+  Alert,
+  Stack,
+  Group,
+  Text,
+  Badge,
+  ActionIcon,
   Card,
   Timeline,
   Button,
@@ -12,11 +12,11 @@ import {
   Divider,
   Box,
   Progress,
-  Tooltip
+  Tooltip,
 } from '@mantine/core';
-import { 
-  IconAlertTriangle, 
-  IconCalendar, 
+import {
+  IconAlertTriangle,
+  IconCalendar,
   IconX,
   IconCheck,
   IconEye,
@@ -24,7 +24,7 @@ import {
   IconTruck,
   IconUser,
   IconBell,
-  IconBellOff
+  IconBellOff,
 } from '@tabler/icons-react';
 import { format, differenceInDays, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -44,119 +44,150 @@ interface DocumentoVencimiento {
   empresa?: string;
 }
 
+interface Vehiculo {
+  _id: string;
+  dominio: string;
+  empresa?: { nombre: string };
+  documentacion?: Record<string, { vencimiento?: string; numero?: string }>;
+}
+
+interface Personal {
+  _id: string;
+  nombre: string;
+  apellido: string;
+  empresa?: { nombre: string };
+  documentacion?: Record<string, { vencimiento?: string; numero?: string }>;
+}
+
 interface DocumentExpirationProps {
-  // Datos de vehículos y personal con documentación
-  vehiculos?: any[];
-  personal?: any[];
-  // Configuración de alertas
-  diasAlerta?: number; // días antes del vencimiento para alertar
+  vehiculos?: Vehiculo[];
+  personal?: Personal[];
+  diasAlerta?: number;
   mostrarVencidos?: boolean;
   mostrarProximos?: boolean;
   mostrarVigentes?: boolean;
-  // Callbacks
   onEditVehiculo?: (vehiculoId: string) => void;
   onEditPersonal?: (personalId: string) => void;
-  // Vista compacta o expandida
   compact?: boolean;
 }
 
-const procesarDocumentosVehiculos = (vehiculos: any[], diasAlerta: number = 30): DocumentoVencimiento[] => {
-  const documentos: DocumentoVencimiento[] = [];
-  const hoy = new Date();
+// Funciones auxiliares para reducir complejidad
+const calcularEstadoDocumento = (
+  diasRestantes: number,
+  diasAlerta: number
+): DocumentoVencimiento['estado'] => {
+  if (diasRestantes < 0) return 'vencido';
+  if (diasRestantes <= diasAlerta) return 'proximo';
+  return 'vigente';
+};
 
-  vehiculos.forEach(vehiculo => {
-    const docs = vehiculo.documentacion || {};
-    
-    const procesarDoc = (tipo: string, doc: any) => {
-      if (!doc?.vencimiento) return;
-      
-      try {
-        const fecha = parseISO(doc.vencimiento);
-        if (!isValid(fecha)) return;
-        
-        const diasRestantes = differenceInDays(fecha, hoy);
-        
-        let estado: DocumentoVencimiento['estado'];
-        if (diasRestantes < 0) {
-          estado = 'vencido';
-        } else if (diasRestantes <= diasAlerta) {
-          estado = 'proximo';
-        } else {
-          estado = 'vigente';
-        }
-        
-        documentos.push({
-          id: `vehiculo-${vehiculo._id}-${tipo}`,
-          entidad: 'vehiculo',
-          entidadId: vehiculo._id,
-          entidadNombre: vehiculo.dominio,
-          tipoDocumento: tipo.toUpperCase(),
-          numeroDocumento: doc.numero,
-          fechaVencimiento: fecha,
-          diasRestantes,
-          estado,
-          empresa: vehiculo.empresa?.nombre
-        });
-      } catch (error) {
-        console.warn(`Error procesando documento ${tipo} del vehículo ${vehiculo.dominio}:`, error);
-      }
+// Fixed: Reduce parameters using object parameter pattern
+interface ProcessDocumentParams {
+  tipo: string;
+  doc: { vencimiento?: string; numero?: string } | undefined;
+  entidad: {
+    id: string;
+    nombre: string;
+    tipo: 'vehiculo' | 'personal';
+    empresaNombre?: string;
+  };
+  diasAlerta: number;
+}
+
+const procesarDocumentoGenerico = (params: ProcessDocumentParams): DocumentoVencimiento | null => {
+  const { tipo, doc, entidad, diasAlerta } = params;
+  if (!doc?.vencimiento) return null;
+
+  try {
+    const fecha = parseISO(doc.vencimiento);
+    if (!isValid(fecha)) return null;
+
+    const diasRestantes = differenceInDays(fecha, new Date());
+    const estado = calcularEstadoDocumento(diasRestantes, diasAlerta);
+
+    return {
+      id: `${entidad.tipo}-${entidad.id}-${tipo}`,
+      entidad: entidad.tipo,
+      entidadId: entidad.id,
+      entidadNombre: entidad.nombre,
+      tipoDocumento:
+        entidad.tipo === 'vehiculo'
+          ? tipo.toUpperCase()
+          : tipo
+              .replace(/([A-Z])/g, ' $1')
+              .trim()
+              .toUpperCase(),
+      numeroDocumento: doc.numero,
+      fechaVencimiento: fecha,
+      diasRestantes,
+      estado,
+      empresa: entidad.empresaNombre,
     };
+  } catch (error) {
+    console.warn(`Error procesando documento ${tipo} de ${entidad.nombre}:`, error);
+    return null;
+  }
+};
 
-    procesarDoc('vtv', docs.vtv);
-    procesarDoc('seguro', docs.seguro);
-    procesarDoc('ruta', docs.ruta);
-    procesarDoc('senasa', docs.senasa);
+const procesarDocumentosVehiculos = (
+  vehiculos: Vehiculo[],
+  diasAlerta = 30
+): DocumentoVencimiento[] => {
+  const documentos: DocumentoVencimiento[] = [];
+  const tiposDocumentos = ['vtv', 'seguro', 'ruta', 'senasa'];
+
+  vehiculos.forEach((vehiculo) => {
+    const docs = vehiculo.documentacion || {};
+
+    tiposDocumentos.forEach((tipo) => {
+      const doc = procesarDocumentoGenerico({
+        tipo,
+        doc: docs[tipo],
+        entidad: {
+          id: vehiculo._id,
+          nombre: vehiculo.dominio,
+          tipo: 'vehiculo',
+          empresaNombre: vehiculo.empresa?.nombre,
+        },
+        diasAlerta,
+      });
+      if (doc) documentos.push(doc);
+    });
   });
 
   return documentos;
 };
 
-const procesarDocumentosPersonal = (personal: any[], diasAlerta: number = 30): DocumentoVencimiento[] => {
+const procesarDocumentosPersonal = (
+  personal: Personal[],
+  diasAlerta = 30
+): DocumentoVencimiento[] => {
   const documentos: DocumentoVencimiento[] = [];
-  const hoy = new Date();
+  const tiposDocumentos = [
+    'licenciaConducir',
+    'aptitudPsicofisica',
+    'cargaPeligrosa',
+    'cursoDefensivo',
+  ];
 
-  personal.forEach(persona => {
+  personal.forEach((persona) => {
     const docs = persona.documentacion || {};
-    
-    const procesarDoc = (tipo: string, doc: any) => {
-      if (!doc?.vencimiento) return;
-      
-      try {
-        const fecha = parseISO(doc.vencimiento);
-        if (!isValid(fecha)) return;
-        
-        const diasRestantes = differenceInDays(fecha, hoy);
-        
-        let estado: DocumentoVencimiento['estado'];
-        if (diasRestantes < 0) {
-          estado = 'vencido';
-        } else if (diasRestantes <= diasAlerta) {
-          estado = 'proximo';
-        } else {
-          estado = 'vigente';
-        }
-        
-        documentos.push({
-          id: `personal-${persona._id}-${tipo}`,
-          entidad: 'personal',
-          entidadId: persona._id,
-          entidadNombre: `${persona.nombre} ${persona.apellido}`,
-          tipoDocumento: tipo.replace(/([A-Z])/g, ' $1').trim().toUpperCase(),
-          numeroDocumento: doc.numero,
-          fechaVencimiento: fecha,
-          diasRestantes,
-          estado,
-          empresa: persona.empresa?.nombre
-        });
-      } catch (error) {
-        console.warn(`Error procesando documento ${tipo} del personal ${persona.nombre}:`, error);
-      }
-    };
+    const nombreCompleto = `${persona.nombre} ${persona.apellido}`;
 
-    procesarDoc('licenciaConducir', docs.licenciaConducir);
-    procesarDoc('aptitudPsicofisica', docs.aptitudPsicofisica);
-    procesarDoc('cargaPeligrosa', docs.cargaPeligrosa);
-    procesarDoc('cursoDefensivo', docs.cursoDefensivo);
+    tiposDocumentos.forEach((tipo) => {
+      const doc = procesarDocumentoGenerico({
+        tipo,
+        doc: docs[tipo],
+        entidad: {
+          id: persona._id,
+          nombre: nombreCompleto,
+          tipo: 'personal',
+          empresaNombre: persona.empresa?.nombre,
+        },
+        diasAlerta,
+      });
+      if (doc) documentos.push(doc);
+    });
   });
 
   return documentos;
@@ -164,24 +195,213 @@ const procesarDocumentosPersonal = (personal: any[], diasAlerta: number = 30): D
 
 const getEstadoColor = (estado: DocumentoVencimiento['estado']) => {
   switch (estado) {
-    case 'vencido': return 'red';
-    case 'proximo': return 'yellow';
-    case 'vigente': return 'green';
-    default: return 'gray';
+    case 'vencido':
+      return 'red';
+    case 'proximo':
+      return 'yellow';
+    case 'vigente':
+      return 'green';
+    default:
+      return 'gray';
   }
 };
 
 const getEstadoIcon = (estado: DocumentoVencimiento['estado']) => {
   switch (estado) {
-    case 'vencido': return <IconX size={16} />;
-    case 'proximo': return <IconAlertTriangle size={16} />;
-    case 'vigente': return <IconCheck size={16} />;
-    default: return <IconCalendar size={16} />;
+    case 'vencido':
+      return <IconX size={16} />;
+    case 'proximo':
+      return <IconAlertTriangle size={16} />;
+    case 'vigente':
+      return <IconCheck size={16} />;
+    default:
+      return <IconCalendar size={16} />;
   }
 };
 
 const getEntidadIcon = (entidad: DocumentoVencimiento['entidad']) => {
   return entidad === 'vehiculo' ? <IconTruck size={16} /> : <IconUser size={16} />;
+};
+
+// Componente auxiliar para alertas de estado
+const DocumentAlert: React.FC<{
+  count: number;
+  icon: React.ReactNode;
+  color: string;
+  messageKey: 'vencidos' | 'proximos' | 'vigente';
+}> = ({ count, icon, color, messageKey }) => {
+  const messages = {
+    vencidos: `${count} documento${count > 1 ? 's' : ''} vencido${count > 1 ? 's' : ''}`,
+    proximos: `${count} documento${count > 1 ? 's' : ''} próximo${count > 1 ? 's' : ''} a vencer`,
+    vigente: 'Toda la documentación está vigente',
+  };
+
+  return (
+    <Alert icon={icon} color={color} variant="light">
+      <Text size="sm" fw={500}>
+        {messages[messageKey]}
+      </Text>
+    </Alert>
+  );
+};
+
+// Componente auxiliar para botones de acción
+const CompactActions: React.FC<{
+  alertasHabilitadas: boolean;
+  setAlertasHabilitadas: (value: boolean) => void;
+  setDetailModalOpened: (value: boolean) => void;
+}> = ({ alertasHabilitadas, setAlertasHabilitadas, setDetailModalOpened }) => (
+  <Group gap="xs">
+    <Tooltip label={alertasHabilitadas ? 'Deshabilitar alertas' : 'Habilitar alertas'}>
+      <ActionIcon
+        variant="light"
+        color={alertasHabilitadas ? 'blue' : 'gray'}
+        onClick={() => setAlertasHabilitadas(!alertasHabilitadas)}
+      >
+        {alertasHabilitadas ? <IconBell size={16} /> : <IconBellOff size={16} />}
+      </ActionIcon>
+    </Tooltip>
+    <Button
+      variant="light"
+      size="xs"
+      leftSection={<IconEye size={14} />}
+      onClick={() => setDetailModalOpened(true)}
+    >
+      Ver Detalle
+    </Button>
+  </Group>
+);
+
+// Componente simplificado para vista compacta
+const CompactDocumentView: React.FC<{
+  vencidos: DocumentoVencimiento[];
+  proximos: DocumentoVencimiento[];
+  alertasHabilitadas: boolean;
+  setAlertasHabilitadas: (value: boolean) => void;
+  setDetailModalOpened: (value: boolean) => void;
+}> = ({ vencidos, proximos, alertasHabilitadas, setAlertasHabilitadas, setDetailModalOpened }) => {
+  const hasExpired = vencidos.length > 0;
+  const hasUpcoming = proximos.length > 0;
+  const allCurrent = !hasExpired && !hasUpcoming;
+
+  return (
+    <Card withBorder>
+      <Group justify="space-between" mb="md">
+        <Group>
+          <IconCalendar size={18} />
+          <Text fw={500}>Estado de Documentación</Text>
+        </Group>
+        <CompactActions
+          alertasHabilitadas={alertasHabilitadas}
+          setAlertasHabilitadas={setAlertasHabilitadas}
+          setDetailModalOpened={setDetailModalOpened}
+        />
+      </Group>
+
+      <Stack gap="xs">
+        {hasExpired && (
+          <DocumentAlert
+            count={vencidos.length}
+            icon={<IconX />}
+            color="red"
+            messageKey="vencidos"
+          />
+        )}
+        {hasUpcoming && (
+          <DocumentAlert
+            count={proximos.length}
+            icon={<IconAlertTriangle />}
+            color="yellow"
+            messageKey="proximos"
+          />
+        )}
+        {allCurrent && (
+          <DocumentAlert count={0} icon={<IconCheck />} color="green" messageKey="vigente" />
+        )}
+      </Stack>
+    </Card>
+  );
+};
+
+// Hook personalizado para la lógica de documentos
+const useDocumentExpiration = (
+  vehiculos: Vehiculo[],
+  personal: Personal[],
+  diasAlerta: number,
+  mostrarVencidos: boolean,
+  mostrarProximos: boolean,
+  mostrarVigentes: boolean
+) => {
+  const [alertasHabilitadas, setAlertasHabilitadas] = useState(true);
+  const notificationShownRef = useRef(false);
+
+  const documentos = useMemo(() => {
+    const docsVehiculos = procesarDocumentosVehiculos(vehiculos, diasAlerta);
+    const docsPersonal = procesarDocumentosPersonal(personal, diasAlerta);
+    const todosDocumentos = [...docsVehiculos, ...docsPersonal];
+
+    return todosDocumentos
+      .filter((doc) => {
+        if (doc.estado === 'vencido' && !mostrarVencidos) return false;
+        if (doc.estado === 'proximo' && !mostrarProximos) return false;
+        if (doc.estado === 'vigente' && !mostrarVigentes) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.estado !== b.estado) {
+          const orden = { vencido: 0, proximo: 1, vigente: 2 };
+          return orden[a.estado] - orden[b.estado];
+        }
+        return a.diasRestantes - b.diasRestantes;
+      });
+  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
+
+  const { vencidos, proximos } = useMemo(
+    () => ({
+      vencidos: documentos.filter((doc) => doc.estado === 'vencido'),
+      proximos: documentos.filter((doc) => doc.estado === 'proximo'),
+    }),
+    [documentos]
+  );
+
+  useEffect(() => {
+    notificationShownRef.current = false;
+  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
+
+  useEffect(() => {
+    if (!alertasHabilitadas || notificationShownRef.current) return;
+
+    const vencidosCount = vencidos.length;
+    const proximosCount = proximos.length;
+
+    if (vencidosCount > 0) {
+      notifications.show({
+        title: 'Documentos Vencidos',
+        message: `${vencidosCount} documento${vencidosCount > 1 ? 's' : ''} vencido${vencidosCount > 1 ? 's' : ''}`,
+        color: 'red',
+        icon: <IconAlertTriangle />,
+        autoClose: 5000,
+      });
+      notificationShownRef.current = true;
+    } else if (proximosCount > 0) {
+      notifications.show({
+        title: 'Documentos por Vencer',
+        message: `${proximosCount} documento${proximosCount > 1 ? 's' : ''} próximo${proximosCount > 1 ? 's' : ''} a vencer`,
+        color: 'yellow',
+        icon: <IconAlertTriangle />,
+        autoClose: 5000,
+      });
+      notificationShownRef.current = true;
+    }
+  }, [documentos, alertasHabilitadas, vencidos.length, proximos.length]);
+
+  return {
+    documentos,
+    vencidos,
+    proximos,
+    alertasHabilitadas,
+    setAlertasHabilitadas,
+  };
 };
 
 export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
@@ -193,68 +413,19 @@ export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
   mostrarVigentes = false,
   onEditVehiculo,
   onEditPersonal,
-  compact = false
+  compact = false,
 }) => {
   const [detailModalOpened, setDetailModalOpened] = useState(false);
-  const [alertasHabilitadas, setAlertasHabilitadas] = useState(true);
-  const notificationShownRef = useRef(false);
 
-  // Memoizar procesamiento de documentos para evitar bucles infinitos
-  const documentos = useMemo(() => {
-    const docsVehiculos = procesarDocumentosVehiculos(vehiculos, diasAlerta);
-    const docsPersonal = procesarDocumentosPersonal(personal, diasAlerta);
-    
-    return [...docsVehiculos, ...docsPersonal]
-      .filter(doc => {
-        if (doc.estado === 'vencido' && !mostrarVencidos) return false;
-        if (doc.estado === 'proximo' && !mostrarProximos) return false;
-        if (doc.estado === 'vigente' && !mostrarVigentes) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        // Ordenar por estado (vencidos primero, luego próximos) y luego por días restantes
-        if (a.estado !== b.estado) {
-          const orden = { 'vencido': 0, 'proximo': 1, 'vigente': 2 };
-          return orden[a.estado] - orden[b.estado];
-        }
-        return a.diasRestantes - b.diasRestantes;
-      });
-  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
-
-  // Efecto para resetear flag cuando cambian los datos
-  useEffect(() => {
-    notificationShownRef.current = false;
-  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
-
-  // Efecto separado para mostrar notificaciones (evita loops infinitos)
-  useEffect(() => {
-    if (!alertasHabilitadas || notificationShownRef.current || documentos.length === 0) {
-      return;
-    }
-
-    const vencidos = documentos.filter(doc => doc.estado === 'vencido').length;
-    const proximos = documentos.filter(doc => doc.estado === 'proximo').length;
-
-    if (vencidos > 0) {
-      notifications.show({
-        title: 'Documentos Vencidos',
-        message: `${vencidos} documento${vencidos > 1 ? 's' : ''} vencido${vencidos > 1 ? 's' : ''}`,
-        color: 'red',
-        icon: <IconAlertTriangle />,
-        autoClose: 5000,
-      });
-      notificationShownRef.current = true;
-    } else if (proximos > 0) {
-      notifications.show({
-        title: 'Documentos por Vencer',
-        message: `${proximos} documento${proximos > 1 ? 's' : ''} próximo${proximos > 1 ? 's' : ''} a vencer`,
-        color: 'yellow',
-        icon: <IconAlertTriangle />,
-        autoClose: 5000,
-      });
-      notificationShownRef.current = true;
-    }
-  }, [documentos, alertasHabilitadas]);
+  const { documentos, vencidos, proximos, alertasHabilitadas, setAlertasHabilitadas } =
+    useDocumentExpiration(
+      vehiculos,
+      personal,
+      diasAlerta,
+      mostrarVencidos,
+      mostrarProximos,
+      mostrarVigentes
+    );
 
   if (documentos.length === 0) {
     return (
@@ -264,241 +435,211 @@ export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
     );
   }
 
-  const vencidos = documentos.filter(doc => doc.estado === 'vencido');
-  const proximos = documentos.filter(doc => doc.estado === 'proximo');
-
   if (compact) {
     return (
-      <Card withBorder>
-        <Group justify="space-between" mb="md">
+      <>
+        <CompactDocumentView
+          vencidos={vencidos}
+          proximos={proximos}
+          alertasHabilitadas={alertasHabilitadas}
+          setAlertasHabilitadas={setAlertasHabilitadas}
+          setDetailModalOpened={setDetailModalOpened}
+        />
+
+        <Modal
+          opened={detailModalOpened}
+          onClose={() => setDetailModalOpened(false)}
+          title="Detalle de Vencimientos"
+          size="lg"
+          centered
+        >
+          <Stack gap="md">
+            <Group justify="space-around">
+              <Stack align="center" gap="xs">
+                <Text size="xl" fw={700} c="red">
+                  {vencidos.length}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  Vencidos
+                </Text>
+              </Stack>
+              <Stack align="center" gap="xs">
+                <Text size="xl" fw={700} c="yellow">
+                  {proximos.length}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  Próximos
+                </Text>
+              </Stack>
+              <Stack align="center" gap="xs">
+                <Text size="xl" fw={700} c="blue">
+                  {documentos.length}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  Total
+                </Text>
+              </Stack>
+            </Group>
+            <Divider />
+            <Box style={{ maxHeight: 400, overflowY: 'auto' }}>
+              <Timeline active={-1} bulletSize={16} lineWidth={1}>
+                {documentos.map((doc) => (
+                  <Timeline.Item
+                    key={doc.id}
+                    bullet={getEstadoIcon(doc.estado)}
+                    color={getEstadoColor(doc.estado)}
+                  >
+                    <Group justify="space-between" align="flex-start">
+                      <Stack gap={2}>
+                        <Group gap="xs">
+                          {getEntidadIcon(doc.entidad)}
+                          <Text fw={500} size="sm">
+                            {doc.entidadNombre}
+                          </Text>
+                          <Badge size="xs" variant="light">
+                            {doc.tipoDocumento}
+                          </Badge>
+                        </Group>
+                        <Text size="xs" c="dimmed">
+                          Vence: {format(doc.fechaVencimiento, 'dd/MM/yyyy', { locale: es })}
+                        </Text>
+                        {doc.numeroDocumento && (
+                          <Text size="xs" c="dimmed">
+                            Número: {doc.numeroDocumento}
+                          </Text>
+                        )}
+                        {doc.empresa && (
+                          <Text size="xs" c="dimmed">
+                            Empresa: {doc.empresa}
+                          </Text>
+                        )}
+                      </Stack>
+                      <Badge color={getEstadoColor(doc.estado)} variant="light" size="xs">
+                        {doc.estado === 'vencido'
+                          ? `${Math.abs(doc.diasRestantes)} días vencido`
+                          : doc.estado === 'proximo'
+                            ? `${doc.diasRestantes} días`
+                            : 'Vigente'}
+                      </Badge>
+                    </Group>
+                  </Timeline.Item>
+                ))}
+              </Timeline>
+            </Box>
+          </Stack>
+        </Modal>
+      </>
+    );
+  }
+
+  // Vista expandida (implementación existente simplificada)
+  return (
+    <Card withBorder>
+      <Card.Section withBorder inheritPadding py="xs">
+        <Group justify="space-between">
           <Group>
             <IconCalendar size={18} />
-            <Text fw={500}>Estado de Documentación</Text>
+            <Text fw={500}>Alertas de Vencimiento</Text>
           </Group>
           <Group gap="xs">
-            <Tooltip label={alertasHabilitadas ? "Deshabilitar alertas" : "Habilitar alertas"}>
-              <ActionIcon 
-                variant="light" 
-                color={alertasHabilitadas ? "blue" : "gray"}
+            <Tooltip label={alertasHabilitadas ? 'Deshabilitar alertas' : 'Habilitar alertas'}>
+              <ActionIcon
+                variant="light"
+                color={alertasHabilitadas ? 'blue' : 'gray'}
                 onClick={() => setAlertasHabilitadas(!alertasHabilitadas)}
               >
                 {alertasHabilitadas ? <IconBell size={16} /> : <IconBellOff size={16} />}
               </ActionIcon>
             </Tooltip>
-            <Button 
-              variant="light" 
-              size="xs" 
-              leftSection={<IconEye size={14} />}
-              onClick={() => setDetailModalOpened(true)}
-            >
-              Ver Detalle
-            </Button>
           </Group>
         </Group>
+      </Card.Section>
 
-        <Stack gap="xs">
-          {vencidos.length > 0 && (
-            <Alert icon={<IconX />} color="red" variant="light">
-              <Text size="sm" fw={500}>{vencidos.length} documento{vencidos.length > 1 ? 's' : ''} vencido{vencidos.length > 1 ? 's' : ''}</Text>
-            </Alert>
-          )}
-          
-          {proximos.length > 0 && (
-            <Alert icon={<IconAlertTriangle />} color="yellow" variant="light">
-              <Text size="sm" fw={500}>{proximos.length} documento{proximos.length > 1 ? 's' : ''} próximo{proximos.length > 1 ? 's' : ''} a vencer</Text>
-            </Alert>
-          )}
-
-          {vencidos.length === 0 && proximos.length === 0 && (
-            <Alert icon={<IconCheck />} color="green" variant="light">
-              <Text size="sm">Toda la documentación está vigente</Text>
-            </Alert>
-          )}
-        </Stack>
-      </Card>
-    );
-  }
-
-  return (
-    <>
-      <Card withBorder>
-        <Card.Section withBorder inheritPadding py="xs">
-          <Group justify="space-between">
-            <Group>
-              <IconCalendar size={18} />
-              <Text fw={500}>Alertas de Vencimiento</Text>
-            </Group>
-            <Group gap="xs">
-              <Tooltip label={alertasHabilitadas ? "Deshabilitar alertas" : "Habilitar alertas"}>
-                <ActionIcon 
-                  variant="light" 
-                  color={alertasHabilitadas ? "blue" : "gray"}
-                  onClick={() => setAlertasHabilitadas(!alertasHabilitadas)}
-                >
-                  {alertasHabilitadas ? <IconBell size={16} /> : <IconBellOff size={16} />}
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-          </Group>
-        </Card.Section>
-
-        <Card.Section inheritPadding py="md">
-          <Stack gap="md">
-            {/* Resumen */}
-            <Group justify="space-between">
-              <Text size="sm" c="dimmed">Total de alertas</Text>
-              <Badge color={vencidos.length > 0 ? 'red' : proximos.length > 0 ? 'yellow' : 'green'} variant="light">
-                {documentos.length} documento{documentos.length !== 1 ? 's' : ''}
-              </Badge>
-            </Group>
-
-            <Progress.Root size="lg">
-              <Progress.Section 
-                value={(vencidos.length / documentos.length) * 100} 
-                color="red"
-              >
-                <Progress.Label>Vencidos: {vencidos.length}</Progress.Label>
-              </Progress.Section>
-              <Progress.Section 
-                value={(proximos.length / documentos.length) * 100} 
-                color="yellow"
-              >
-                <Progress.Label>Próximos: {proximos.length}</Progress.Label>
-              </Progress.Section>
-            </Progress.Root>
-
-            <Divider />
-
-            {/* Lista de documentos */}
-            <Timeline active={-1} bulletSize={20} lineWidth={2}>
-              {documentos.map((doc) => (
-                <Timeline.Item 
-                  key={doc.id}
-                  bullet={getEstadoIcon(doc.estado)}
-                  color={getEstadoColor(doc.estado)}
-                >
-                  <Group justify="space-between" mb="xs">
-                    <Group gap="xs">
-                      {getEntidadIcon(doc.entidad)}
-                      <Text fw={500} size="sm">{doc.entidadNombre}</Text>
-                      <Badge size="xs" variant="light">{doc.tipoDocumento}</Badge>
-                    </Group>
-                    <Group gap="xs">
-                      <Badge color={getEstadoColor(doc.estado)} variant="light" size="xs">
-                        {doc.estado === 'vencido' 
-                          ? `${Math.abs(doc.diasRestantes)} días vencido`
-                          : doc.estado === 'proximo'
-                          ? `${doc.diasRestantes} días restantes`
-                          : 'Vigente'
-                        }
-                      </Badge>
-                      <ActionIcon
-                        size="xs"
-                        variant="light"
-                        color="blue"
-                        onClick={() => {
-                          if (doc.entidad === 'vehiculo' && onEditVehiculo) {
-                            onEditVehiculo(doc.entidadId);
-                          } else if (doc.entidad === 'personal' && onEditPersonal) {
-                            onEditPersonal(doc.entidadId);
-                          }
-                        }}
-                      >
-                        <IconEdit size={12} />
-                      </ActionIcon>
-                    </Group>
-                  </Group>
-                  
-                  <Text size="xs" c="dimmed" mb={5}>
-                    Vence: {format(doc.fechaVencimiento, 'dd/MM/yyyy', { locale: es })}
-                  </Text>
-                  
-                  {doc.numeroDocumento && (
-                    <Text size="xs" c="dimmed">
-                      Número: {doc.numeroDocumento}
-                    </Text>
-                  )}
-                  
-                  {doc.empresa && (
-                    <Text size="xs" c="dimmed">
-                      Empresa: {doc.empresa}
-                    </Text>
-                  )}
-                </Timeline.Item>
-              ))}
-            </Timeline>
-          </Stack>
-        </Card.Section>
-      </Card>
-
-      {/* Modal de detalle */}
-      <Modal
-        opened={detailModalOpened}
-        onClose={() => setDetailModalOpened(false)}
-        title="Detalle de Vencimientos"
-        size="lg"
-        centered
-      >
+      <Card.Section inheritPadding py="md">
         <Stack gap="md">
-          {/* Estadísticas */}
-          <Group justify="space-around">
-            <Stack align="center" gap="xs">
-              <Text size="xl" fw={700} c="red">{vencidos.length}</Text>
-              <Text size="sm" c="dimmed">Vencidos</Text>
-            </Stack>
-            <Stack align="center" gap="xs">
-              <Text size="xl" fw={700} c="yellow">{proximos.length}</Text>
-              <Text size="sm" c="dimmed">Próximos</Text>
-            </Stack>
-            <Stack align="center" gap="xs">
-              <Text size="xl" fw={700} c="blue">{documentos.length}</Text>
-              <Text size="sm" c="dimmed">Total</Text>
-            </Stack>
+          <Group justify="space-between">
+            <Text size="sm" c="dimmed">
+              Total de alertas
+            </Text>
+            <Badge
+              color={vencidos.length > 0 ? 'red' : proximos.length > 0 ? 'yellow' : 'green'}
+              variant="light"
+            >
+              {documentos.length} documento{documentos.length !== 1 ? 's' : ''}
+            </Badge>
           </Group>
+
+          <Progress.Root size="lg">
+            <Progress.Section value={(vencidos.length / documentos.length) * 100} color="red">
+              <Progress.Label>Vencidos: {vencidos.length}</Progress.Label>
+            </Progress.Section>
+            <Progress.Section value={(proximos.length / documentos.length) * 100} color="yellow">
+              <Progress.Label>Próximos: {proximos.length}</Progress.Label>
+            </Progress.Section>
+          </Progress.Root>
 
           <Divider />
 
-          {/* Lista detallada */}
-          <Box style={{ maxHeight: 400, overflowY: 'auto' }}>
-            <Timeline active={-1} bulletSize={16} lineWidth={1}>
-              {documentos.map((doc) => (
-                <Timeline.Item 
-                  key={doc.id}
-                  bullet={getEstadoIcon(doc.estado)}
-                  color={getEstadoColor(doc.estado)}
-                >
-                  <Group justify="space-between" align="flex-start">
-                    <Stack gap={2}>
-                      <Group gap="xs">
-                        {getEntidadIcon(doc.entidad)}
-                        <Text fw={500} size="sm">{doc.entidadNombre}</Text>
-                        <Badge size="xs" variant="light">{doc.tipoDocumento}</Badge>
-                      </Group>
-                      <Text size="xs" c="dimmed">
-                        Vence: {format(doc.fechaVencimiento, 'dd/MM/yyyy', { locale: es })}
-                      </Text>
-                      {doc.numeroDocumento && (
-                        <Text size="xs" c="dimmed">Número: {doc.numeroDocumento}</Text>
-                      )}
-                      {doc.empresa && (
-                        <Text size="xs" c="dimmed">Empresa: {doc.empresa}</Text>
-                      )}
-                    </Stack>
-                    <Badge color={getEstadoColor(doc.estado)} variant="light" size="xs">
-                      {doc.estado === 'vencido' 
-                        ? `${Math.abs(doc.diasRestantes)} días vencido`
-                        : doc.estado === 'proximo'
-                        ? `${doc.diasRestantes} días`
-                        : 'Vigente'
-                      }
+          <Timeline active={-1} bulletSize={20} lineWidth={2}>
+            {documentos.map((doc) => (
+              <Timeline.Item
+                key={doc.id}
+                bullet={getEstadoIcon(doc.estado)}
+                color={getEstadoColor(doc.estado)}
+              >
+                <Group justify="space-between" mb="xs">
+                  <Group gap="xs">
+                    {getEntidadIcon(doc.entidad)}
+                    <Text fw={500} size="sm">
+                      {doc.entidadNombre}
+                    </Text>
+                    <Badge size="xs" variant="light">
+                      {doc.tipoDocumento}
                     </Badge>
                   </Group>
-                </Timeline.Item>
-              ))}
-            </Timeline>
-          </Box>
+                  <Group gap="xs">
+                    <Badge color={getEstadoColor(doc.estado)} variant="light" size="xs">
+                      {doc.estado === 'vencido'
+                        ? `${Math.abs(doc.diasRestantes)} días vencido`
+                        : `${doc.diasRestantes} días restantes`}
+                    </Badge>
+                    <ActionIcon
+                      size="xs"
+                      variant="light"
+                      color="blue"
+                      onClick={() => {
+                        if (doc.entidad === 'vehiculo' && onEditVehiculo) {
+                          onEditVehiculo(doc.entidadId);
+                        } else if (doc.entidad === 'personal' && onEditPersonal) {
+                          onEditPersonal(doc.entidadId);
+                        }
+                      }}
+                    >
+                      <IconEdit size={12} />
+                    </ActionIcon>
+                  </Group>
+                </Group>
+
+                <Text size="xs" c="dimmed" mb={5}>
+                  Vence: {format(doc.fechaVencimiento, 'dd/MM/yyyy', { locale: es })}
+                </Text>
+
+                {doc.numeroDocumento && (
+                  <Text size="xs" c="dimmed">
+                    Número: {doc.numeroDocumento}
+                  </Text>
+                )}
+
+                {doc.empresa && (
+                  <Text size="xs" c="dimmed">
+                    Empresa: {doc.empresa}
+                  </Text>
+                )}
+              </Timeline.Item>
+            ))}
+          </Timeline>
         </Stack>
-      </Modal>
-    </>
+      </Card.Section>
+    </Card>
   );
 };
