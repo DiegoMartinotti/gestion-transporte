@@ -21,7 +21,7 @@ import { saveEmpresa, handleEmpresaError, TIPO_EMPRESA_OPTIONS } from './helpers
 // Custom hooks to reduce EmpresaForm complexity
 const useEmpresaSubmit = (
   empresa?: Empresa,
-  mode = 'create',
+  mode: 'create' | 'edit' = 'create',
   onSuccess?: (empresa: Empresa) => void
 ) => {
   return useCallback(
@@ -30,7 +30,7 @@ const useEmpresaSubmit = (
         setLoading(true);
         const result = await saveEmpresa(values, mode, empresa?._id);
         onSuccess?.(result);
-      } catch (error: any) {
+      } catch (error: unknown) {
         handleEmpresaError(error);
       } finally {
         setLoading(false);
@@ -115,7 +115,7 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
     (values: EmpresaFormData) => {
       submitHandler(values, setLoading);
     },
-    [submitHandler]
+    [submitHandler, setLoading]
   );
 
   // Memoize computed values

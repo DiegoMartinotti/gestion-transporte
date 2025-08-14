@@ -30,6 +30,28 @@ import {
 } from '@tabler/icons-react';
 import type { Personal, Empresa } from '../../types';
 
+// Types for helper functions
+interface DireccionData {
+  calle?: string;
+  numero?: string;
+  localidad?: string;
+  provincia?: string;
+  codigoPostal?: string;
+}
+
+interface DatosLaboralesData {
+  categoria?: string;
+  obraSocial?: string;
+  art?: string;
+}
+
+interface PeriodoEmpleo {
+  fechaIngreso: Date | string;
+  fechaEgreso?: Date | string;
+  categoria?: string;
+  motivo?: string;
+}
+
 // Helper functions for calculations and data processing
 const calculateAge = (fechaNacimiento: Date | string | undefined): number | null => {
   if (!fechaNacimiento) return null;
@@ -78,28 +100,28 @@ const getIncidentColor = (tipo: string): string => {
   return colors[tipo as keyof typeof colors] || 'gray';
 };
 
-const isCurrentlyEmployed = (periodosEmpleo: any[]): boolean => {
+const isCurrentlyEmployed = (periodosEmpleo: PeriodoEmpleo[]): boolean => {
   if (!periodosEmpleo || periodosEmpleo.length === 0) return false;
   const lastPeriod = periodosEmpleo[periodosEmpleo.length - 1];
   return !lastPeriod.fechaEgreso;
 };
 
-const getStatusText = (status: any): string => {
+const getStatusText = (status: { status: string; days: number } | null): string => {
   if (!status) return 'Sin vencimiento';
   if (status.status === 'expired') return `Vencida hace ${status.days} días`;
   if (status.status === 'expiring') return `Vence en ${status.days} días`;
   return 'Vigente';
 };
 
-const hasValidAddress = (direccion: any): boolean => {
+const hasValidAddress = (direccion: DireccionData | undefined): boolean => {
   return direccion && Object.values(direccion).some((v) => v);
 };
 
-const hasValidDatosLaborales = (datosLaborales: any): boolean => {
+const hasValidDatosLaborales = (datosLaborales: DatosLaboralesData | undefined): boolean => {
   return datosLaborales && Object.values(datosLaborales).some((v) => v);
 };
 
-const buildAddressString = (direccion: any): string => {
+const buildAddressString = (direccion: DireccionData): string => {
   return [
     direccion.calle,
     direccion.numero,
@@ -142,17 +164,17 @@ const HeaderCard: React.FC<{
             </Badge>
           </Group>
           <Group gap="md" mt="xs">
-            <Text size="sm" color="dimmed">
+            <Text size="sm" c="dimmed">
               <IconId size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
               DNI: {personal.dni}
             </Text>
             {personal.cuil && (
-              <Text size="sm" color="dimmed">
+              <Text size="sm" c="dimmed">
                 CUIL: {personal.cuil}
               </Text>
             )}
             {personal.numeroLegajo && (
-              <Text size="sm" color="dimmed">
+              <Text size="sm" c="dimmed">
                 Legajo: {personal.numeroLegajo}
               </Text>
             )}
@@ -195,13 +217,13 @@ const PersonalInfoCard: React.FC<{
     <Stack gap="sm">
       {personal.fechaNacimiento && (
         <Group justify="space-between">
-          <Text size="sm" color="dimmed">
+          <Text size="sm" c="dimmed">
             Fecha de Nacimiento:
           </Text>
           <Text size="sm">
             {formatDate(personal.fechaNacimiento)}
             {age && (
-              <Text span color="dimmed">
+              <Text span c="dimmed">
                 {' '}
                 ({age} años)
               </Text>
@@ -210,7 +232,7 @@ const PersonalInfoCard: React.FC<{
         </Group>
       )}
       <Group justify="space-between">
-        <Text size="sm" color="dimmed">
+        <Text size="sm" c="dimmed">
           Tipo:
         </Text>
         <Badge color={getTipoColor(personal.tipo)} variant="light">
@@ -218,7 +240,7 @@ const PersonalInfoCard: React.FC<{
         </Badge>
       </Group>
       <Group justify="space-between">
-        <Text size="sm" color="dimmed">
+        <Text size="sm" c="dimmed">
           Estado:
         </Text>
         <Badge color={personal.activo ? 'green' : 'gray'}>
@@ -227,7 +249,7 @@ const PersonalInfoCard: React.FC<{
       </Group>
       {empresa && (
         <Group justify="space-between">
-          <Text size="sm" color="dimmed">
+          <Text size="sm" c="dimmed">
             Empresa:
           </Text>
           <Text size="sm">{empresa.nombre}</Text>
@@ -246,7 +268,7 @@ const ContactInfoCard: React.FC<{ personal: Personal }> = ({ personal }) => (
     <Stack gap="sm">
       {personal.contacto?.telefono && (
         <Group justify="space-between">
-          <Text size="sm" color="dimmed">
+          <Text size="sm" c="dimmed">
             Teléfono:
           </Text>
           <Text size="sm">{personal.contacto.telefono}</Text>
@@ -254,7 +276,7 @@ const ContactInfoCard: React.FC<{ personal: Personal }> = ({ personal }) => (
       )}
       {personal.contacto?.telefonoEmergencia && (
         <Group justify="space-between">
-          <Text size="sm" color="dimmed">
+          <Text size="sm" c="dimmed">
             Tel. Emergencia:
           </Text>
           <Text size="sm">{personal.contacto.telefonoEmergencia}</Text>
@@ -262,7 +284,7 @@ const ContactInfoCard: React.FC<{ personal: Personal }> = ({ personal }) => (
       )}
       {personal.contacto?.email && (
         <Group justify="space-between">
-          <Text size="sm" color="dimmed">
+          <Text size="sm" c="dimmed">
             Email:
           </Text>
           <Text size="sm">{personal.contacto.email}</Text>
@@ -317,12 +339,12 @@ const EmploymentHistoryCard: React.FC<{ personal: Personal }> = ({ personal }) =
               </Group>
             }
           >
-            <Text size="xs" color="dimmed" mb="xs">
+            <Text size="xs" c="dimmed" mb="xs">
               {formatDate(periodo.fechaIngreso)} -{' '}
               {periodo.fechaEgreso ? formatDate(periodo.fechaEgreso) : 'Actualidad'}
             </Text>
             {periodo.motivo && (
-              <Text size="xs" color="dimmed">
+              <Text size="xs" c="dimmed">
                 Motivo: {periodo.motivo}
               </Text>
             )}
@@ -335,7 +357,7 @@ const EmploymentHistoryCard: React.FC<{ personal: Personal }> = ({ personal }) =
 
 const DocumentItem: React.FC<{
   title: string;
-  document: any;
+  document: { vencimiento?: Date | string };
   fields: Array<{ label: string; value?: string }>;
 }> = ({ title, document, fields }) => {
   const status = getDocumentStatus(document.vencimiento);
@@ -356,7 +378,7 @@ const DocumentItem: React.FC<{
         {fields.map(
           (field, index) =>
             field.value && (
-              <Text key={index} size="xs" color="dimmed">
+              <Text key={index} size="xs" c="dimmed">
                 {field.label}: {field.value}
               </Text>
             )
@@ -450,7 +472,7 @@ const LaborDataCard: React.FC<{ personal: Personal }> = ({ personal }) => {
       <Grid>
         {personal.datosLaborales?.categoria && (
           <Grid.Col span={4}>
-            <Text size="sm" color="dimmed">
+            <Text size="sm" c="dimmed">
               Categoría:
             </Text>
             <Text size="sm">{personal.datosLaborales?.categoria}</Text>
@@ -458,7 +480,7 @@ const LaborDataCard: React.FC<{ personal: Personal }> = ({ personal }) => {
         )}
         {personal.datosLaborales?.obraSocial && (
           <Grid.Col span={4}>
-            <Text size="sm" color="dimmed">
+            <Text size="sm" c="dimmed">
               Obra Social:
             </Text>
             <Text size="sm">{personal.datosLaborales?.obraSocial}</Text>
@@ -466,7 +488,7 @@ const LaborDataCard: React.FC<{ personal: Personal }> = ({ personal }) => {
         )}
         {personal.datosLaborales?.art && (
           <Grid.Col span={4}>
-            <Text size="sm" color="dimmed">
+            <Text size="sm" c="dimmed">
               ART:
             </Text>
             <Text size="sm">{personal.datosLaborales?.art}</Text>
@@ -582,13 +604,13 @@ const MetadataCard: React.FC<{ personal: Personal }> = ({ personal }) => (
     </Title>
     <Grid>
       <Grid.Col span={6}>
-        <Text size="sm" color="dimmed">
+        <Text size="sm" c="dimmed">
           Fecha de Creación:
         </Text>
         <Text size="sm">{formatDate(personal.createdAt)}</Text>
       </Grid.Col>
       <Grid.Col span={6}>
-        <Text size="sm" color="dimmed">
+        <Text size="sm" c="dimmed">
           Última Actualización:
         </Text>
         <Text size="sm">{formatDate(personal.updatedAt)}</Text>

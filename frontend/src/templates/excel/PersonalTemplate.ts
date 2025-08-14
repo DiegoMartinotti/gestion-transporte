@@ -148,8 +148,9 @@ export class PersonalTemplate {
    * Funciones auxiliares para reducir complejidad ciclomática
    */
   private static mapRowToColumns(row: PersonalTemplateData): (string | number)[] {
-    const formatValue = (value: unknown) => value || '';
-    const formatBoolean = (value?: boolean) =>
+    const formatValue = (value: unknown): string => String(value || '');
+    const formatDateValue = (date?: Date): string => formatDate(date || null);
+    const formatBoolean = (value?: boolean): string =>
       value !== undefined
         ? value
           ? EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.SI
@@ -163,10 +164,10 @@ export class PersonalTemplate {
       formatValue(row.dni),
       formatValue(row.cuil),
       formatValue(row.tipo),
-      formatDate(row.fechaNacimiento || null),
+      formatDateValue(row.fechaNacimiento),
       formatValue(row.empresaNombre),
       formatValue(row.numeroLegajo),
-      formatDate(row.fechaIngreso || null),
+      formatDateValue(row.fechaIngreso),
       formatValue(row.direccionCalle),
       formatValue(row.direccionNumero),
       formatValue(row.direccionLocalidad),
@@ -177,13 +178,13 @@ export class PersonalTemplate {
       formatValue(row.email),
       formatValue(row.licenciaNumero),
       formatValue(row.licenciaCategoria),
-      formatDate(row.licenciaVencimiento || null),
+      formatDateValue(row.licenciaVencimiento),
       formatValue(row.carnetProfesionalNumero),
-      formatDate(row.carnetProfesionalVencimiento || null),
-      formatDate(row.evaluacionMedicaFecha || null),
-      formatDate(row.evaluacionMedicaVencimiento || null),
-      formatDate(row.psicofisicoFecha || null),
-      formatDate(row.psicofisicoVencimiento || null),
+      formatDateValue(row.carnetProfesionalVencimiento),
+      formatDateValue(row.evaluacionMedicaFecha),
+      formatDateValue(row.evaluacionMedicaVencimiento),
+      formatDateValue(row.psicofisicoFecha),
+      formatDateValue(row.psicofisicoVencimiento),
       formatValue(row.categoria),
       formatValue(row.obraSocial),
       formatValue(row.art),
@@ -302,20 +303,6 @@ export class PersonalTemplate {
   }
 
   /**
-   * Formatea fecha para Excel
-   */
-  private static formatDate(date: Date | null): string {
-    return formatDate(date);
-  }
-
-  /**
-   * Parsea fecha desde string
-   */
-  private static parseDate(dateStr: any): Date | null {
-    return parseDate(dateStr);
-  }
-
-  /**
    * Valida datos de personal desde Excel
    */
   static validateData(
@@ -351,7 +338,7 @@ export class PersonalTemplate {
   }
 
   // Método auxiliar para parsear datos de fila de personal
-  private static parsePersonalRowData(row: unknown): PersonalRawData {
+  private static parsePersonalRowData(row: Record<string, unknown>): PersonalRawData {
     // Mapa de columnas a propiedades
     const columnMap: { [key: string]: string } = {
       'Nombre (*)': 'nombre',
@@ -387,7 +374,7 @@ export class PersonalTemplate {
       Observaciones: 'observaciones',
     };
 
-    const parsedData: any = {};
+    const parsedData: Record<string, unknown> = {};
 
     // Parsear todos los campos usando el mapa
     Object.entries(columnMap).forEach(([columnName, propName]) => {
@@ -472,7 +459,7 @@ export class PersonalTemplate {
 
   // Validar campos obligatorios específicos de personal
   private static validatePersonalRequiredFields(
-    personal: any,
+    personal: PersonalRawData,
     rowNum: number
   ): { isValid: boolean; errors: string[] } {
     return validateRequiredFields([
@@ -486,7 +473,7 @@ export class PersonalTemplate {
 
   // Validar formatos de personal
   private static validatePersonalFormats(
-    personal: any,
+    personal: PersonalRawData,
     rowNum: number
   ): { isValid: boolean; errors: string[] } {
     const validationResults = [];
@@ -540,7 +527,7 @@ export class PersonalTemplate {
 
   // Validar campos específicos según tipo de personal
   private static validatePersonalSpecificFields(
-    personal: any,
+    personal: PersonalRawData,
     rowNum: number
   ): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
@@ -564,7 +551,10 @@ export class PersonalTemplate {
   }
 
   // Construir objeto PersonalTemplateData
-  private static buildPersonalData(personal: any, empresaId?: string): PersonalTemplateData {
+  private static buildPersonalData(
+    personal: PersonalRawData,
+    empresaId?: string
+  ): PersonalTemplateData {
     // Campos básicos obligatorios
     const baseData: PersonalTemplateData = {
       nombre: personal.nombre,
@@ -598,7 +588,7 @@ export class PersonalTemplate {
 
     textFields.forEach((field) => {
       if (personal[field]) {
-        (baseData as any)[field] = personal[field];
+        (baseData as Record<string, string>)[field] = personal[field] as string;
       }
     });
 
@@ -616,7 +606,7 @@ export class PersonalTemplate {
 
     dateFields.forEach((field) => {
       if (personal[field]) {
-        (baseData as any)[field] = parseDate(personal[field]);
+        (baseData as Record<string, unknown>)[field] = parseDate(personal[field]);
       }
     });
 

@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { WorkBook, WorkSheet } from 'xlsx';
+import { WorkBook } from 'xlsx';
 
 export interface ExcelProcessorOptions {
   skipEmptyRows?: boolean;
@@ -12,7 +12,7 @@ export interface ExcelProcessorOptions {
 export interface ProcessedData {
   sheetName: string;
   headers: string[];
-  data: any[];
+  data: Record<string, unknown>[];
   totalRows: number;
   processedRows: number;
   errors: string[];
@@ -26,8 +26,10 @@ export interface ExcelFileInfo {
 }
 
 export class ExcelProcessor {
+  private static readonly ERROR_NO_FILE_LOADED = 'No hay archivo cargado';
+
   private workbook: WorkBook | null = null;
-  private filename: string = '';
+  private filename = '';
   private options: Required<ExcelProcessorOptions>;
 
   constructor(options: ExcelProcessorOptions = {}) {
@@ -36,7 +38,7 @@ export class ExcelProcessor {
       trim: options.trim ?? true,
       dateFormat: options.dateFormat ?? 'DD/MM/YYYY',
       maxRows: options.maxRows ?? 10000,
-      requiredSheets: options.requiredSheets ?? []
+      requiredSheets: options.requiredSheets ?? [],
     };
   }
 
@@ -46,24 +48,24 @@ export class ExcelProcessor {
   async loadFromFile(file: File): Promise<ExcelFileInfo> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           this.workbook = XLSX.read(data, { type: 'array', cellDates: true });
           this.filename = file.name;
-          
+
           const fileInfo = this.getFileInfo();
           resolve(fileInfo);
         } catch (error) {
           reject(new Error(`Error al leer el archivo: ${error}`));
         }
       };
-      
+
       reader.onerror = () => {
         reject(new Error('Error al leer el archivo'));
       };
-      
+
       reader.readAsArrayBuffer(file);
     });
   }
@@ -73,14 +75,15 @@ export class ExcelProcessor {
    */
   getFileInfo(): ExcelFileInfo {
     if (!this.workbook) {
-      throw new Error('No hay archivo cargado');
+      throw new Error(ExcelProcessor.ERROR_NO_FILE_LOADED);
     }
 
     const sheets = this.workbook.SheetNames;
     let totalRows = 0;
 
-    sheets.forEach(sheetName => {
-      const worksheet = this.workbook!.Sheets[sheetName];
+    sheets.forEach((sheetName) => {
+      const worksheet = this.workbook?.Sheets[sheetName];
+      if (!worksheet) return;
       const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
       totalRows += range.e.r + 1; // +1 porque las filas empiezan en 0
     });
@@ -89,7 +92,7 @@ export class ExcelProcessor {
       filename: this.filename,
       size: 0, // Se puede calcular si es necesario
       sheets,
-      totalRows
+      totalRows,
     };
   }
 
@@ -100,16 +103,16 @@ export class ExcelProcessor {
     const errors: string[] = [];
 
     if (!this.workbook) {
-      errors.push('No hay archivo cargado');
+      errors.push(ExcelProcessor.ERROR_NO_FILE_LOADED);
       return { isValid: false, errors };
     }
 
     // Validar hojas requeridas
     if (this.options.requiredSheets.length > 0) {
       const missingSheets = this.options.requiredSheets.filter(
-        sheet => !this.workbook!.SheetNames.includes(sheet)
+        (sheet) => !this.workbook?.SheetNames.includes(sheet)
       );
-      
+
       if (missingSheets.length > 0) {
         errors.push(`Faltan las siguientes hojas: ${missingSheets.join(', ')}`);
       }
@@ -123,12 +126,14 @@ export class ExcelProcessor {
     // Validar tamaño
     const fileInfo = this.getFileInfo();
     if (fileInfo.totalRows > this.options.maxRows) {
-      errors.push(`El archivo tiene demasiadas filas (${fileInfo.totalRows}). Máximo permitido: ${this.options.maxRows}`);
+      errors.push(
+        `El archivo tiene demasiadas filas (${fileInfo.totalRows}). Máximo permitido: ${this.options.maxRows}`
+      );
     }
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -137,7 +142,7 @@ export class ExcelProcessor {
    */
   processSheet(sheetName: string): ProcessedData {
     if (!this.workbook) {
-      throw new Error('No hay archivo cargado');
+      throw new Error(ExcelProcessor.ERROR_NO_FILE_LOADED);
     }
 
     if (!this.workbook.SheetNames.includes(sheetName)) {
@@ -151,8 +156,8 @@ export class ExcelProcessor {
     const rawData = XLSX.utils.sheet_to_json(worksheet, {
       header: 1,
       defval: '',
-      blankrows: !this.options.skipEmptyRows
-    }) as any[][];
+      blankrows: !this.options.skipEmptyRows,
+    }) as unknown[][];
 
     if (rawData.length === 0) {
       return {
@@ -161,7 +166,7 @@ export class ExcelProcessor {
         data: [],
         totalRows: 0,
         processedRows: 0,
-        errors: ['La hoja está vacía']
+        errors: ['La hoja está vacía'],
       };
     }
 
@@ -173,44 +178,23 @@ export class ExcelProcessor {
 
     // Procesar datos (saltar header)
     const dataRows = rawData.slice(1);
-    const processedData: any[] = [];
+    const processedData: Record<string, unknown>[] = [];
 
-    dataRows.forEach((row, rowIndex) => {
-      const actualRowNumber = rowIndex + 2; // +2 porque saltamos header y arrays empiezan en 0
-
+    dataRows.forEach((row) => {
       // Saltar filas vacías si está configurado
       if (this.options.skipEmptyRows && this.isEmptyRow(row)) {
         return;
       }
 
-      const processedRow: any = {};
+      const processedRow: Record<string, unknown> = {};
       let hasData = false;
 
       headers.forEach((header, colIndex) => {
-        let value = row[colIndex];
-
-        // Procesar valor
-        if (value !== undefined && value !== null && value !== '') {
+        const processedValue = this.processCell(row[colIndex]);
+        if (processedValue.hasData) {
           hasData = true;
-          
-          // Trim si está configurado
-          if (this.options.trim && typeof value === 'string') {
-            value = value.trim();
-          }
-
-          // Procesar fechas
-          if (value instanceof Date) {
-            value = this.formatDate(value);
-          } else if (typeof value === 'number' && this.looksLikeDate(value)) {
-            // Excel almacena fechas como números seriales
-            const date = XLSX.SSF.parse_date_code(value);
-            if (date) {
-              value = this.formatDate(new Date(date.y, date.m - 1, date.d));
-            }
-          }
         }
-
-        processedRow[header] = value || '';
+        processedRow[header] = processedValue.value;
       });
 
       // Solo agregar fila si tiene datos o no estamos saltando vacías
@@ -225,7 +209,7 @@ export class ExcelProcessor {
       data: processedData,
       totalRows: dataRows.length,
       processedRows: processedData.length,
-      errors
+      errors,
     };
   }
 
@@ -234,12 +218,10 @@ export class ExcelProcessor {
    */
   processAllSheets(): ProcessedData[] {
     if (!this.workbook) {
-      throw new Error('No hay archivo cargado');
+      throw new Error(ExcelProcessor.ERROR_NO_FILE_LOADED);
     }
 
-    return this.workbook.SheetNames.map(sheetName => 
-      this.processSheet(sheetName)
-    );
+    return this.workbook.SheetNames.map((sheetName) => this.processSheet(sheetName));
   }
 
   /**
@@ -249,8 +231,8 @@ export class ExcelProcessor {
     if (!this.workbook) return null;
 
     const normalizedName = name.toLowerCase().trim();
-    const found = this.workbook.SheetNames.find(sheetName => 
-      sheetName.toLowerCase().trim() === normalizedName
+    const found = this.workbook.SheetNames.find(
+      (sheetName) => sheetName.toLowerCase().trim() === normalizedName
     );
 
     return found || null;
@@ -259,7 +241,7 @@ export class ExcelProcessor {
   /**
    * Obtiene muestra de datos para preview
    */
-  getDataSample(sheetName: string, sampleSize: number = 5): any[] {
+  getDataSample(sheetName: string, sampleSize = 5): Record<string, unknown>[] {
     const processed = this.processSheet(sheetName);
     return processed.data.slice(0, sampleSize);
   }
@@ -270,49 +252,59 @@ export class ExcelProcessor {
   detectTemplateType(sheetName: string): 'cliente' | 'empresa' | 'personal' | 'unknown' {
     try {
       const processed = this.processSheet(sheetName);
-      const headers = processed.headers.map(h => h.toLowerCase());
+      const headers = processed.headers.map((h) => h.toLowerCase());
 
-      // Detectar Cliente
-      if (headers.some(h => h.includes('nombre')) && 
-          headers.some(h => h.includes('cuit'))) {
-        return 'cliente';
-      }
-
-      // Detectar Empresa
-      if (headers.some(h => h.includes('nombre')) && 
-          headers.some(h => h.includes('tipo')) &&
-          (headers.some(h => h.includes('propia')) || headers.some(h => h.includes('subcontratada')))) {
-        return 'empresa';
-      }
-
-      // Detectar Personal
-      if (headers.some(h => h.includes('nombre')) && 
-          headers.some(h => h.includes('apellido')) && 
-          headers.some(h => h.includes('dni'))) {
-        return 'personal';
-      }
-
-      return 'unknown';
+      return this.identifyTemplateByHeaders(headers);
     } catch {
       return 'unknown';
     }
   }
 
+  private identifyTemplateByHeaders(
+    headers: string[]
+  ): 'cliente' | 'empresa' | 'personal' | 'unknown' {
+    const hasHeader = (term: string) => headers.some((h) => h.includes(term));
+
+    // Detectar Personal - más específico primero
+    if (hasHeader('nombre') && hasHeader('apellido') && hasHeader('dni')) {
+      return 'personal';
+    }
+
+    // Detectar Cliente
+    if (hasHeader('nombre') && hasHeader('cuit')) {
+      return 'cliente';
+    }
+
+    // Detectar Empresa
+    if (
+      hasHeader('nombre') &&
+      hasHeader('tipo') &&
+      (hasHeader('propia') || hasHeader('subcontratada'))
+    ) {
+      return 'empresa';
+    }
+
+    return 'unknown';
+  }
+
   /**
    * Valida que los headers requeridos estén presentes
    */
-  validateRequiredHeaders(sheetName: string, requiredHeaders: string[]): { isValid: boolean; missingHeaders: string[] } {
+  validateRequiredHeaders(
+    sheetName: string,
+    requiredHeaders: string[]
+  ): { isValid: boolean; missingHeaders: string[] } {
     const processed = this.processSheet(sheetName);
-    const headers = processed.headers.map(h => h.toLowerCase().trim());
-    
-    const missingHeaders = requiredHeaders.filter(required => {
+    const headers = processed.headers.map((h) => h.toLowerCase().trim());
+
+    const missingHeaders = requiredHeaders.filter((required) => {
       const normalizedRequired = required.toLowerCase().trim();
-      return !headers.some(header => header.includes(normalizedRequired));
+      return !headers.some((header) => header.includes(normalizedRequired));
     });
 
     return {
       isValid: missingHeaders.length === 0,
-      missingHeaders
+      missingHeaders,
     };
   }
 
@@ -326,12 +318,55 @@ export class ExcelProcessor {
 
   // Métodos privados auxiliares
 
-  private isEmptyRow(row: any[]): boolean {
-    return row.every(cell => 
-      cell === undefined || 
-      cell === null || 
-      cell === '' || 
-      (typeof cell === 'string' && cell.trim() === '')
+  private processCell(value: unknown): { value: string; hasData: boolean } {
+    if (this.isEmpty(value)) {
+      return { value: '', hasData: false };
+    }
+
+    const processedValue = this.processValue(value);
+    return { value: processedValue || '', hasData: true };
+  }
+
+  private isEmpty(value: unknown): boolean {
+    return value === undefined || value === null || value === '';
+  }
+
+  private processValue(value: unknown): unknown {
+    let result = value;
+
+    // Trim si está configurado
+    if (this.options.trim && typeof result === 'string') {
+      result = result.trim();
+    }
+
+    // Procesar fechas
+    if (result instanceof Date) {
+      return this.formatDate(result);
+    }
+
+    if (this.isExcelDate(result)) {
+      return this.convertExcelDate(result);
+    }
+
+    return result;
+  }
+
+  private isExcelDate(value: unknown): boolean {
+    return typeof value === 'number' && this.looksLikeDate(value);
+  }
+
+  private convertExcelDate(value: number): string {
+    const date = XLSX.SSF.parse_date_code(value);
+    return date ? this.formatDate(new Date(date.y, date.m - 1, date.d)) : value.toString();
+  }
+
+  private isEmptyRow(row: unknown[]): boolean {
+    return row.every(
+      (cell) =>
+        cell === undefined ||
+        cell === null ||
+        cell === '' ||
+        (typeof cell === 'string' && cell.trim() === '')
     );
   }
 
@@ -340,7 +375,7 @@ export class ExcelProcessor {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear().toString();
-    
+
     return `${day}/${month}/${year}`;
   }
 
@@ -352,10 +387,10 @@ export class ExcelProcessor {
   /**
    * Obtiene estadísticas del procesamiento
    */
-  getProcessingStats(): { 
-    totalSheets: number; 
-    totalRows: number; 
-    processedRows: number; 
+  getProcessingStats(): {
+    totalSheets: number;
+    totalRows: number;
+    processedRows: number;
     errorCount: number;
     memoryUsage: string;
   } {
@@ -365,7 +400,7 @@ export class ExcelProcessor {
         totalRows: 0,
         processedRows: 0,
         errorCount: 0,
-        memoryUsage: '0 MB'
+        memoryUsage: '0 MB',
       };
     }
 
@@ -379,7 +414,7 @@ export class ExcelProcessor {
       totalRows,
       processedRows,
       errorCount,
-      memoryUsage: `${Math.round(JSON.stringify(this.workbook).length / 1024 / 1024 * 100) / 100} MB`
+      memoryUsage: `${Math.round((JSON.stringify(this.workbook).length / 1024 / 1024) * 100) / 100} MB`,
     };
   }
 }

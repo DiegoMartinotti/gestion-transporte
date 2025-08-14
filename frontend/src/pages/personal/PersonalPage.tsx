@@ -23,7 +23,7 @@ import { useExcelOperations } from '../../hooks/useExcelOperations';
 import { useModal } from '../../hooks/useModal';
 import { usePersonalStats } from '../../hooks/usePersonalStats';
 import PersonalStatistics from '../../components/personal/PersonalStatistics';
-import PersonalFilters from '../../components/personal/PersonalFilters';
+import PersonalFiltersComponent from '../../components/personal/PersonalFilters';
 import { personalExcelService } from '../../services/BaseExcelService';
 import {
   IconPlus,
@@ -78,7 +78,7 @@ const createPersonalTableColumns = (
         <Text size="sm" fw={500}>
           {person.nombre} {person.apellido}
         </Text>
-        <Text size="xs" color="dimmed">
+        <Text size="xs" c="dimmed">
           DNI: {person.dni}
         </Text>
       </div>
@@ -342,7 +342,7 @@ export const PersonalPage: React.FC = () => {
         <Group justify="space-between">
           <div>
             <Title order={2}>Gestión de Personal</Title>
-            <Text size="sm" color="dimmed">
+            <Text size="sm" c="dimmed">
               {totalItems} empleado{totalItems !== 1 ? 's' : ''} registrado
               {totalItems !== 1 ? 's' : ''}
             </Text>
@@ -398,7 +398,7 @@ export const PersonalPage: React.FC = () => {
 
           <Tabs.Panel value="list" pt="lg">
             {/* Filters */}
-            <PersonalFilters
+            <PersonalFiltersComponent
               filters={filters}
               empresas={empresas}
               onFilterChange={handleFilterChange}
