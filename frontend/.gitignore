@@ -18,6 +18,9 @@
 .env.test.local
 .env.production.local
 
+# serena memory files
+.serena/
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
