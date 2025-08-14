@@ -10,11 +10,13 @@ import { ViajeGeneralTab } from '../../../components/viajes/ViajeGeneralTab';
 import { ViajeRecursosTab } from '../../../components/viajes/ViajeRecursosTab';
 import { ViajeCargaTab } from '../../../components/viajes/ViajeCargaTab';
 import { ViajeCostosTab } from '../../../components/viajes/ViajeCostosTab';
+import { Viaje } from '../../../types/viaje';
+
 import { ViajeTracker } from '../ViajeTracker';
 import { formatDate, formatCurrency } from '../helpers/viajeDetailHelpers';
 
 interface ViajeDetailTabsProps {
-  viaje: any;
+  viaje: Viaje;
   activeTab: string | null;
   onTabChange: (value: string | null) => void;
   onShowCalculationDetails: () => void;

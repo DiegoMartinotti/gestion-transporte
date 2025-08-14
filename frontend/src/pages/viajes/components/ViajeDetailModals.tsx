@@ -2,8 +2,10 @@ import { Modal } from '@mantine/core';
 import { DocumentViewer } from '../../../components/base/DocumentViewer';
 import { TarifaCalculator } from '../../../components/calculation/TarifaCalculator';
 
+import { Viaje } from '../../../types/viaje';
+
 interface ViajeDetailModalsProps {
-  viaje: any;
+  viaje: Viaje;
   showCalculationDetails: boolean;
   showDocuments: boolean;
   onCloseCalculationDetails: () => void;

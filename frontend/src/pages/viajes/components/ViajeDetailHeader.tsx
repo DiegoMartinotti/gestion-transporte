@@ -2,8 +2,10 @@ import { Group, Title, Badge, Button, ActionIcon } from '@mantine/core';
 import { IconEdit, IconPrinter, IconDownload, IconX } from '@tabler/icons-react';
 import { getEstadoBadgeColor } from '../helpers/viajeDetailHelpers';
 
+import { Viaje } from '../../../types/viaje';
+
 interface ViajeDetailHeaderProps {
-  viaje: any;
+  viaje: Viaje;
   onEdit: () => void;
   onClose: () => void;
   onPrint: () => void;
