@@ -8,7 +8,7 @@ interface PersonalStats {
   documentosVenciendo: number;
 }
 
-const isDocumentExpiring = (vencimiento: string | undefined, daysFromNow = 30): boolean => {
+const isDocumentExpiring = (vencimiento: Date | string | undefined, daysFromNow = 30): boolean => {
   if (!vencimiento) return false;
 
   const now = new Date();
