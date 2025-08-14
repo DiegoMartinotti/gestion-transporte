@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Stack, Grid, Paper, Group, Text, Badge } from '@mantine/core';
 import {
   IconCalendar,
@@ -16,7 +16,7 @@ interface ViajeGeneralTabProps {
   formatDate: (date: string) => string;
 }
 
-export const ViajeGeneralTab: React.FC<ViajeGeneralTabProps> = ({ viaje, formatDate }) => {
+export const ViajeGeneralTab: FC<ViajeGeneralTabProps> = ({ viaje, formatDate }) => {
   return (
     <Stack>
       <Grid>

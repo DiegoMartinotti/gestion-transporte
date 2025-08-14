@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Stack, Grid, Paper, Text, Badge, Group } from '@mantine/core';
 import { Viaje } from '../../types/viaje';
 
@@ -6,7 +6,7 @@ interface ViajeCargaTabProps {
   viaje: Viaje;
 }
 
-export const ViajeCargaTab: React.FC<ViajeCargaTabProps> = ({ viaje }) => {
+export const ViajeCargaTab: FC<ViajeCargaTabProps> = ({ viaje }) => {
   const renderTipoCarga = () => {
     const badges = [];
 
