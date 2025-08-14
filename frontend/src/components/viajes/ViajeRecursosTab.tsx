@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Stack, Paper, Text, Group, Badge, Grid } from '@mantine/core';
 import { IconTruck, IconUser } from '@tabler/icons-react';
 import { Viaje } from '../../types/viaje';
@@ -7,7 +7,7 @@ interface ViajeRecursosTabProps {
   viaje: Viaje;
 }
 
-export const ViajeRecursosTab: React.FC<ViajeRecursosTabProps> = ({ viaje }) => {
+export const ViajeRecursosTab: FC<ViajeRecursosTabProps> = ({ viaje }) => {
   const renderVehiculos = () => {
     if (!viaje.vehiculos || viaje.vehiculos.length === 0) {
       return <Text c="dimmed">No hay vehículos asignados</Text>;

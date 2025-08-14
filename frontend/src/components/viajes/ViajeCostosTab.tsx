@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Stack, Group, Text, Button, Grid, Paper, Table } from '@mantine/core';
 import { IconEye } from '@tabler/icons-react';
 import { Viaje } from '../../types/viaje';
@@ -9,7 +9,7 @@ interface ViajeCostosTabProps {
   onShowCalculationDetails: () => void;
 }
 
-export const ViajeCostosTab: React.FC<ViajeCostosTabProps> = ({
+export const ViajeCostosTab: FC<ViajeCostosTabProps> = ({
   viaje,
   formatCurrency,
   onShowCalculationDetails,
