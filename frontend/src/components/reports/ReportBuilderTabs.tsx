@@ -7,33 +7,20 @@ import {
   Stack,
   Group,
   Button,
-  ActionIcon,
-  Paper,
-  Text,
-  Badge,
-  Checkbox,
   Title,
-  Grid,
+  Text,
   Divider,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconPlus, IconTrash, IconChartBar } from '@tabler/icons-react';
-import {
-  REPORT_TYPES,
-  DATE_RANGES,
-  FILTER_OPERATORS,
-  AGGREGATION_FUNCTIONS,
-  CHART_TYPES,
-} from './ReportBuilderHelpers';
+import { IconPlus, IconChartBar } from '@tabler/icons-react';
+import { REPORT_TYPES, DATE_RANGES } from './ReportBuilderHelpers';
+import { ChartItem, FilterItem, GroupByItem, AggregationItem } from './ReportBuilderTabsHelpers';
 
 interface BasicTabProps {
   form: {
     getInputProps: (field: string) => unknown;
     values: Record<string, unknown> & {
-      filters?: unknown;
-      groupBy?: unknown;
-      aggregations?: unknown;
-      charts?: unknown;
+      dateRange?: string;
     };
     setFieldValue: (field: string, value: unknown) => void;
   };
@@ -109,13 +96,7 @@ export const BasicTab: React.FC<BasicTabProps> = ({ form, dataSources, available
 
 interface FiltersTabProps {
   form: {
-    getInputProps: (field: string) => unknown;
-    values: Record<string, unknown> & {
-      filters?: unknown;
-      groupBy?: unknown;
-      aggregations?: unknown;
-      charts?: unknown;
-    };
+    values: Record<string, unknown> & { filters?: unknown[] };
     setFieldValue: (field: string, value: unknown) => void;
   };
   availableFields: Array<{ key: string; label: string; type: string }>;
@@ -139,43 +120,18 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
       </Button>
     </Group>
 
-    {form.values.filters?.map((filter: Record<string, unknown>, index: number) => (
-      <Paper key={filter.id} p="sm" withBorder>
-        <Group gap="xs" align="end">
-          <Select
-            label="Campo"
-            placeholder="Seleccionar campo"
-            data={availableFields.map((f) => ({ value: f.key, label: f.label }))}
-            value={filter.field}
-            onChange={(value) => updateFilter(index, { field: value })}
-            style={{ flex: 1 }}
-          />
-
-          <Select
-            label="Operador"
-            placeholder="Seleccionar operador"
-            data={FILTER_OPERATORS}
-            value={filter.operator}
-            onChange={(value) => updateFilter(index, { operator: value })}
-            style={{ flex: 1 }}
-          />
-
-          <TextInput
-            label="Valor"
-            placeholder="Valor a filtrar"
-            value={filter.value}
-            onChange={(e) => updateFilter(index, { value: e.currentTarget.value })}
-            style={{ flex: 1 }}
-          />
-
-          <ActionIcon color="red" variant="light" onClick={() => removeFilter(index)}>
-            <IconTrash size={16} />
-          </ActionIcon>
-        </Group>
-      </Paper>
+    {(form.values.filters as Array<Record<string, unknown>>)?.map((filter, index) => (
+      <FilterItem
+        key={filter.id as string}
+        filter={filter}
+        index={index}
+        availableFields={availableFields}
+        onRemove={() => removeFilter(index)}
+        onUpdate={(updates) => updateFilter(index, updates)}
+      />
     ))}
 
-    {(!form.values.filters || form.values.filters.length === 0) && (
+    {(!form.values.filters || (form.values.filters as unknown[]).length === 0) && (
       <Text size="sm" c="dimmed" ta="center">
         No hay filtros configurados
       </Text>
@@ -185,13 +141,7 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
 
 interface GroupingTabProps {
   form: {
-    getInputProps: (field: string) => unknown;
-    values: Record<string, unknown> & {
-      filters?: unknown;
-      groupBy?: unknown;
-      aggregations?: unknown;
-      charts?: unknown;
-    };
+    values: Record<string, unknown> & { groupBy?: unknown[]; aggregations?: unknown[] };
     setFieldValue: (field: string, value: unknown) => void;
   };
   availableFields: Array<{ key: string; label: string; type: string }>;
@@ -218,23 +168,18 @@ export const GroupingTab: React.FC<GroupingTabProps> = ({
         </Button>
       </Group>
 
-      {form.values.groupBy?.map((group: Record<string, unknown>, index: number) => (
-        <Group key={index} gap="xs">
-          <Select
-            placeholder="Seleccionar campo"
-            data={availableFields.map((f) => ({ value: f.key, label: f.label }))}
-            value={group.field}
-            onChange={(value) => {
-              const groupBy = [...form.values.groupBy];
-              groupBy[index] = { ...groupBy[index], field: value };
-              form.setFieldValue('groupBy', groupBy);
-            }}
-            style={{ flex: 1 }}
-          />
-          <ActionIcon color="red" variant="light" onClick={() => removeGroupBy(index)}>
-            <IconTrash size={16} />
-          </ActionIcon>
-        </Group>
+      {(form.values.groupBy as Array<Record<string, unknown>>)?.map((group, index) => (
+        <GroupByItem
+          key={index}
+          group={group}
+          availableFields={availableFields}
+          onRemove={() => removeGroupBy(index)}
+          onUpdate={(updates) => {
+            const groupBy = [...(form.values.groupBy as unknown[])];
+            groupBy[index] = { ...groupBy[index], ...updates };
+            form.setFieldValue('groupBy', groupBy);
+          }}
+        />
       ))}
     </div>
 
@@ -253,47 +198,18 @@ export const GroupingTab: React.FC<GroupingTabProps> = ({
         </Button>
       </Group>
 
-      {form.values.aggregations?.map((aggregation: Record<string, unknown>, index: number) => (
-        <Paper key={index} p="sm" withBorder mb="xs">
-          <Group gap="xs">
-            <Select
-              label="Campo"
-              placeholder="Seleccionar campo"
-              data={availableFields
-                .filter((f) => f.type === 'number' || f.type === 'currency')
-                .map((f) => ({ value: f.key, label: f.label }))}
-              value={aggregation.field}
-              onChange={(value) => {
-                const aggregations = [...form.values.aggregations];
-                aggregations[index] = { ...aggregations[index], field: value };
-                form.setFieldValue('aggregations', aggregations);
-              }}
-              style={{ flex: 1 }}
-            />
-
-            <Select
-              label="Función"
-              placeholder="Seleccionar función"
-              data={AGGREGATION_FUNCTIONS}
-              value={aggregation.function}
-              onChange={(value) => {
-                const aggregations = [...form.values.aggregations];
-                aggregations[index] = { ...aggregations[index], function: value };
-                form.setFieldValue('aggregations', aggregations);
-              }}
-              style={{ flex: 1 }}
-            />
-
-            <ActionIcon
-              color="red"
-              variant="light"
-              mt="lg"
-              onClick={() => removeAggregation(index)}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Group>
-        </Paper>
+      {(form.values.aggregations as Array<Record<string, unknown>>)?.map((aggregation, index) => (
+        <AggregationItem
+          key={index}
+          aggregation={aggregation}
+          availableFields={availableFields}
+          onRemove={() => removeAggregation(index)}
+          onUpdate={(updates) => {
+            const aggregations = [...(form.values.aggregations as unknown[])];
+            aggregations[index] = { ...aggregations[index], ...updates };
+            form.setFieldValue('aggregations', aggregations);
+          }}
+        />
       ))}
     </div>
   </Stack>
@@ -301,13 +217,7 @@ export const GroupingTab: React.FC<GroupingTabProps> = ({
 
 interface ChartsTabProps {
   form: {
-    getInputProps: (field: string) => unknown;
-    values: Record<string, unknown> & {
-      filters?: unknown;
-      groupBy?: unknown;
-      aggregations?: unknown;
-      charts?: unknown;
-    };
+    values: Record<string, unknown> & { charts?: unknown[] };
     setFieldValue: (field: string, value: unknown) => void;
   };
   availableFields: Array<{ key: string; label: string; type: string }>;
@@ -315,97 +225,6 @@ interface ChartsTabProps {
   removeChart: (index: number) => void;
 }
 
-interface ChartItemProps {
-  chart: Record<string, unknown>;
-  index: number;
-  availableFields: Array<{ key: string; label: string; type: string }>;
-  onRemove: () => void;
-  onUpdate: (updates: Record<string, unknown>) => void;
-}
-
-const ChartItem: React.FC<ChartItemProps> = ({
-  chart,
-  index,
-  availableFields,
-  onRemove,
-  onUpdate,
-}) => (
-  <Paper p="md" withBorder>
-    <Stack gap="sm">
-      <Group justify="space-between">
-        <Badge>{`Gráfico ${index + 1}`}</Badge>
-        <ActionIcon color="red" variant="light" onClick={onRemove}>
-          <IconTrash size={16} />
-        </ActionIcon>
-      </Group>
-
-      <Grid>
-        <Grid.Col span={6}>
-          <TextInput
-            label="Título"
-            value={chart.title}
-            onChange={(e) => onUpdate({ title: e.currentTarget.value })}
-          />
-        </Grid.Col>
-
-        <Grid.Col span={6}>
-          <Select
-            label="Tipo de gráfico"
-            data={CHART_TYPES}
-            value={chart.type}
-            onChange={(value) => onUpdate({ type: value })}
-          />
-        </Grid.Col>
-
-        <Grid.Col span={6}>
-          <Select
-            label="Eje X"
-            placeholder="Campo para eje X"
-            data={availableFields.map((f) => ({ value: f.key, label: f.label }))}
-            value={chart.xAxis}
-            onChange={(value) => onUpdate({ xAxis: value })}
-          />
-        </Grid.Col>
-
-        <Grid.Col span={6}>
-          <MultiSelect
-            label="Eje Y"
-            placeholder="Campos para eje Y"
-            data={availableFields
-              .filter((f) => f.type === 'number' || f.type === 'currency')
-              .map((f) => ({ value: f.key, label: f.label }))}
-            value={chart.yAxis}
-            onChange={(value) => onUpdate({ yAxis: value })}
-          />
-        </Grid.Col>
-
-        <Grid.Col span={4}>
-          <Checkbox
-            label="Mostrar leyenda"
-            checked={chart.showLegend}
-            onChange={(e) => onUpdate({ showLegend: e.currentTarget.checked })}
-          />
-        </Grid.Col>
-
-        <Grid.Col span={4}>
-          <Checkbox
-            label="Mostrar grilla"
-            checked={chart.showGrid}
-            onChange={(e) => onUpdate({ showGrid: e.currentTarget.checked })}
-          />
-        </Grid.Col>
-
-        <Grid.Col span={4}>
-          <Checkbox
-            label="Mostrar tooltip"
-            checked={chart.showTooltip}
-            onChange={(e) => onUpdate({ showTooltip: e.currentTarget.checked })}
-          />
-        </Grid.Col>
-      </Grid>
-    </Stack>
-  </Paper>
-);
 export const ChartsTab: React.FC<ChartsTabProps> = ({
   form,
   availableFields,
@@ -420,7 +239,7 @@ export const ChartsTab: React.FC<ChartsTabProps> = ({
       </Button>
     </Group>
 
-    {form.values.charts?.map((chart: Record<string, unknown>, index: number) => (
+    {(form.values.charts as Array<Record<string, unknown>>)?.map((chart, index) => (
       <ChartItem
         key={index}
         chart={chart}
@@ -428,14 +247,14 @@ export const ChartsTab: React.FC<ChartsTabProps> = ({
         availableFields={availableFields}
         onRemove={() => removeChart(index)}
         onUpdate={(updates) => {
-          const charts = [...form.values.charts];
+          const charts = [...(form.values.charts as unknown[])];
           charts[index] = { ...charts[index], ...updates };
           form.setFieldValue('charts', charts);
         }}
       />
     ))}
 
-    {(!form.values.charts || form.values.charts.length === 0) && (
+    {(!form.values.charts || (form.values.charts as unknown[]).length === 0) && (
       <Text size="sm" c="dimmed" ta="center">
         No hay gráficos configurados
       </Text>
