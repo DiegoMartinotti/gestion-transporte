@@ -111,10 +111,10 @@ function VirtualizedDataTable<T = Record<string, unknown>>({
           width="100%"
           itemCount={processedData.length}
           itemSize={itemHeight}
-          itemData={rowData}
+          itemData={rowData as RowData<unknown>}
           overscanCount={overscan}
         >
-          {VirtualizedRow}
+          {VirtualizedRow as React.ComponentType<any>}
         </List>
       </Paper>
     </Stack>

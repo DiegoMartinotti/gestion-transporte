@@ -135,7 +135,9 @@ export const VirtualizedTableControls: React.FC<VirtualizedTableControlsProps> =
 );
 
 export const VirtualizedRow = <T,>({ index, style, data }: VirtualizedRowProps<T>) => {
-  const { columns, data: tableData } = data;
+  // Type assertion to handle react-window's unknown type requirement
+  const typedData = data as RowData<T>;
+  const { columns, data: tableData } = typedData;
   const record = tableData[index];
 
   const renderCell = useCallback((column: DataTableColumn<T>, record: T) => {
