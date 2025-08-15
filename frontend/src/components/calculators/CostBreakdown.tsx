@@ -68,7 +68,7 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({
           <CategorySummaryCard
             key={category.categoria}
             category={category}
-            total={total}
+            _total={total}
             formatCurrency={formatCurrency}
             formatPercentage={formatPercentage}
           />
@@ -87,7 +87,7 @@ const CostBreakdown: React.FC<CostBreakdownProps> = ({
               <CategorySummaryCard
                 key={category.categoria}
                 category={category}
-                total={total}
+                _total={total}
                 formatCurrency={formatCurrency}
                 formatPercentage={formatPercentage}
               />
