@@ -293,7 +293,7 @@ function VirtualizedDataTable<T = any>({
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [displayCount, setDisplayCount] = useState(100);
-  const listRef = useRef<List>(null);
+  const listRef = useRef<List<RowData<T>>>(null);
 
   // Datos filtrados y ordenados localmente para mejor performance
   const processedData = useMemo(
@@ -397,6 +397,7 @@ function VirtualizedDataTable<T = any>({
         <List
           ref={listRef}
           height={height}
+          width="100%"
           itemCount={processedData.length}
           itemSize={itemHeight}
           itemData={rowData}
