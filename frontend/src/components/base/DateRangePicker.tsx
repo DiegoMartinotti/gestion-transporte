@@ -22,13 +22,12 @@ export default function DateRangePicker({
   onStartDateChange,
   onEndDateChange,
   label,
-  placeholder = 'Seleccionar rango de fechas',
   required = false,
   disabled = false,
   size = 'sm',
   clearable = true,
   maxDate,
-  minDate
+  minDate,
 }: DateRangePickerProps) {
   return (
     <Group gap="xs" align="flex-end">
@@ -38,7 +37,7 @@ export default function DateRangePicker({
           {required && <span style={{ color: 'var(--mantine-color-red-6)' }}> *</span>}
         </Text>
       )}
-      
+
       <DateInput
         value={startDate}
         onChange={(value) => onStartDateChange(value ? new Date(value) : null)}
@@ -50,11 +49,11 @@ export default function DateRangePicker({
         maxDate={endDate || maxDate}
         minDate={minDate}
       />
-      
+
       <Text size={size} c="dimmed">
         -
       </Text>
-      
+
       <DateInput
         value={endDate}
         onChange={(value) => onEndDateChange(value ? new Date(value) : null)}

@@ -1,31 +1,28 @@
-import { 
-  TextInput, 
-  Textarea, 
-  Select, 
-  MultiSelect, 
-  NumberInput, 
+import {
+  TextInput,
+  Textarea,
+  Select,
+  MultiSelect,
+  NumberInput,
   Switch,
   Checkbox,
   Radio,
-  Group,
   Stack,
-  Text,
-  Box
 } from '@mantine/core';
-import { DatePickerInput, DateInput } from '@mantine/dates';
+import { DateInput } from '@mantine/dates';
 import { UseFormReturnType } from '@mantine/form';
 
-export type FormFieldType = 
-  | 'text' 
-  | 'textarea' 
-  | 'email' 
-  | 'password' 
-  | 'number' 
-  | 'select' 
-  | 'multiselect' 
-  | 'date' 
-  | 'datetime' 
-  | 'switch' 
+export type FormFieldType =
+  | 'text'
+  | 'textarea'
+  | 'email'
+  | 'password'
+  | 'number'
+  | 'select'
+  | 'multiselect'
+  | 'date'
+  | 'datetime'
+  | 'switch'
   | 'checkbox'
   | 'radio';
 
@@ -58,6 +55,80 @@ interface FormFieldProps {
   radius?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
+// Render functions for each field type
+const renderTextArea = (fieldProps: any, label: string, rows: number) => (
+  <Textarea {...fieldProps} label={label} rows={rows} minRows={rows} autosize />
+);
+
+const renderEmailInput = (fieldProps: any, label: string) => (
+  <TextInput {...fieldProps} type="email" label={label} />
+);
+
+const renderPasswordInput = (fieldProps: any, label: string) => (
+  <TextInput {...fieldProps} type="password" label={label} />
+);
+
+interface NumberInputProps {
+  fieldProps: any;
+  label: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  prefix?: string;
+  suffix?: string;
+}
+
+const renderNumberInput = (props: NumberInputProps) => (
+  <NumberInput
+    {...props.fieldProps}
+    label={props.label}
+    min={props.min}
+    max={props.max}
+    step={props.step}
+    prefix={props.prefix}
+    suffix={props.suffix}
+    allowDecimal={props.step !== undefined ? props.step < 1 : true}
+  />
+);
+
+const renderSelect = (fieldProps: any, label: string, options: FormFieldOption[]) => (
+  <Select
+    {...fieldProps}
+    label={label}
+    data={options.map((opt) => ({ value: opt.value.toString(), label: opt.label }))}
+  />
+);
+
+const renderMultiSelect = (fieldProps: any, label: string, options: FormFieldOption[]) => (
+  <MultiSelect
+    {...fieldProps}
+    label={label}
+    data={options.map((opt) => ({ value: opt.value.toString(), label: opt.label }))}
+  />
+);
+
+const renderDateInput = (fieldProps: any, label: string) => (
+  <DateInput {...fieldProps} label={label} valueFormat="DD/MM/YYYY" />
+);
+
+const renderSwitch = (fieldProps: any, label: string) => (
+  <Switch {...fieldProps} label={label} labelPosition="left" />
+);
+
+const renderCheckbox = (fieldProps: any, label: string) => (
+  <Checkbox {...fieldProps} label={label} />
+);
+
+const renderRadioGroup = (fieldProps: any, label: string, options: FormFieldOption[]) => (
+  <Radio.Group {...fieldProps} label={label}>
+    <Stack>
+      {options.map((option) => (
+        <Radio key={option.value} value={option.value.toString()} label={option.label} />
+      ))}
+    </Stack>
+  </Radio.Group>
+);
+
 export default function FormField({
   name,
   label,
@@ -78,7 +149,7 @@ export default function FormField({
   leftSection,
   rightSection,
   size = 'sm',
-  radius = 'sm'
+  radius = 'sm',
 }: FormFieldProps) {
   const fieldProps = {
     size,
@@ -91,146 +162,28 @@ export default function FormField({
     rightSection,
     ...(form && {
       ...form.getInputProps(name),
-      error: form.errors[name]
-    })
+      error: form.errors[name],
+    }),
   };
 
   const renderField = () => {
-    switch (type) {
-      case 'textarea':
-        return (
-          <Textarea
-            {...fieldProps}
-            label={label}
-            rows={rows}
-            minRows={rows}
-            autosize
-          />
-        );
+    const renderers = {
+      textarea: () => renderTextArea(fieldProps, label, rows),
+      email: () => renderEmailInput(fieldProps, label),
+      password: () => renderPasswordInput(fieldProps, label),
+      number: () => renderNumberInput({ fieldProps, label, min, max, step, prefix, suffix }),
+      select: () => renderSelect(fieldProps, label, options),
+      multiselect: () => renderMultiSelect(fieldProps, label, options),
+      date: () => renderDateInput(fieldProps, label),
+      switch: () => renderSwitch(fieldProps, label),
+      checkbox: () => renderCheckbox(fieldProps, label),
+      radio: () => renderRadioGroup(fieldProps, label, options),
+    };
 
-      case 'email':
-        return (
-          <TextInput
-            {...fieldProps}
-            type="email"
-            label={label}
-          />
-        );
+    const renderer = renderers[type as keyof typeof renderers];
+    if (renderer) return renderer();
 
-      case 'password':
-        return (
-          <TextInput
-            {...fieldProps}
-            type="password"
-            label={label}
-          />
-        );
-
-      case 'number':
-        return (
-          <NumberInput
-            {...fieldProps}
-            label={label}
-            min={min}
-            max={max}
-            step={step}
-            prefix={prefix}
-            suffix={suffix}
-            allowDecimal={step !== undefined ? step < 1 : true}
-            allowNegative={min === undefined || min < 0}
-            hideControls={false}
-          />
-        );
-
-      case 'select':
-        return (
-          <Select
-            {...fieldProps}
-            label={label}
-            data={options}
-            searchable
-            clearable
-          />
-        );
-
-      case 'multiselect':
-        return (
-          <MultiSelect
-            {...fieldProps}
-            label={label}
-            data={options}
-            searchable
-            clearable
-          />
-        );
-
-      case 'date':
-        return (
-          <DateInput
-            {...fieldProps}
-            label={label}
-            valueFormat="DD/MM/YYYY"
-            clearable
-          />
-        );
-
-      case 'datetime':
-        return (
-          <DateInput
-            {...fieldProps}
-            label={label}
-            valueFormat="DD/MM/YYYY HH:mm"
-            clearable
-          />
-        );
-
-      case 'switch':
-        return (
-          <Switch
-            {...fieldProps}
-            label={label}
-            size={size}
-          />
-        );
-
-      case 'checkbox':
-        return (
-          <Checkbox
-            {...fieldProps}
-            label={label}
-            size={size}
-          />
-        );
-
-      case 'radio':
-        return (
-          <Radio.Group
-            {...fieldProps}
-            label={label}
-          >
-            <Stack gap="xs">
-              {options.map((option) => (
-                <Radio
-                  key={option.value}
-                  value={option.value}
-                  label={option.label}
-                  disabled={option.disabled || disabled}
-                  size={size}
-                />
-              ))}
-            </Stack>
-          </Radio.Group>
-        );
-
-      default:
-        return (
-          <TextInput
-            {...fieldProps}
-            label={label}
-            type={type}
-          />
-        );
-    }
+    return <TextInput {...fieldProps} label={label} />;
   };
 
   return renderField();

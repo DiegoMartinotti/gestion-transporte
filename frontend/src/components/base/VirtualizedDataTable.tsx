@@ -1,20 +1,25 @@
-import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import { 
-  Paper, 
-  Stack, 
-  Group, 
-  Text, 
-  TextInput, 
-  Select, 
+import {
+  Paper,
+  Stack,
+  Group,
+  Text,
+  TextInput,
+  Select,
   Badge,
   Center,
   Skeleton,
   Box,
   UnstyledButton,
-  rem
+  rem,
 } from '@mantine/core';
-import { IconSearch, IconSortAscending, IconSortDescending, IconSelector } from '@tabler/icons-react';
+import {
+  IconSearch,
+  IconSortAscending,
+  IconSortDescending,
+  IconSelector,
+} from '@tabler/icons-react';
 import { BaseFilters } from '../../types';
 import { DataTableColumn } from './DataTable';
 
@@ -35,20 +40,106 @@ interface VirtualizedDataTableProps<T = any> {
 interface RowData<T> {
   columns: DataTableColumn<T>[];
   data: T[];
-  keyExtractor: (record: T) => string;
 }
 
-const VirtualizedRow = <T,>({ index, style, data }: { 
-  index: number; 
-  style: React.CSSProperties; 
-  data: RowData<T>; 
+// Utility functions for data processing
+const filterData = <T,>(data: T[], search: string, columns: DataTableColumn<T>[]): T[] => {
+  if (!search) return data;
+
+  return data.filter((item) =>
+    columns.some((column) => {
+      const value = (item as any)[column.key];
+      return value?.toString().toLowerCase().includes(search.toLowerCase());
+    })
+  );
+};
+
+const sortData = <T,>(data: T[], sortBy: string, sortOrder: 'asc' | 'desc'): T[] => {
+  if (!sortBy) return data;
+
+  return [...data].sort((a, b) => {
+    const aValue = (a as any)[sortBy];
+    const bValue = (b as any)[sortBy];
+
+    if (aValue === bValue) return 0;
+
+    const compareResult = aValue > bValue ? 1 : -1;
+    return sortOrder === 'asc' ? compareResult : -compareResult;
+  });
+};
+
+interface ProcessDataParams<T> {
+  data: T[];
+  search: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  columns: DataTableColumn<T>[];
+  displayCount: number;
+}
+
+const processTableData = <T,>(params: ProcessDataParams<T>): T[] => {
+  const { data, search, sortBy, sortOrder, columns, displayCount } = params;
+  const filtered = filterData(data, search, columns);
+  const sorted = sortData(filtered, sortBy, sortOrder);
+  return sorted.slice(0, displayCount);
+};
+
+// Component helpers
+const LoadingSkeleton = ({
+  columns,
+  itemHeight,
+}: {
+  columns: DataTableColumn<any>[];
+  itemHeight: number;
+}) => (
+  <Paper withBorder>
+    <Stack gap={0}>
+      {Array.from({ length: 8 }).map((_, index) => (
+        <Group
+          key={index}
+          gap={0}
+          style={{ minHeight: itemHeight, paddingLeft: rem(12), paddingRight: rem(12) }}
+        >
+          {columns.map((column) => (
+            <Box
+              key={column.key}
+              style={{
+                flex: column.width ? `0 0 ${column.width}` : '1',
+                padding: `${rem(8)} ${rem(12)}`,
+              }}
+            >
+              <Skeleton height={16} />
+            </Box>
+          ))}
+        </Group>
+      ))}
+    </Stack>
+  </Paper>
+);
+
+const EmptyState = ({ height, emptyMessage }: { height: number; emptyMessage: string }) => (
+  <Paper withBorder style={{ minHeight: height }}>
+    <Center style={{ height: height }}>
+      <Text c="dimmed">{emptyMessage}</Text>
+    </Center>
+  </Paper>
+);
+
+const VirtualizedRow = <T,>({
+  index,
+  style,
+  data,
+}: {
+  index: number;
+  style: React.CSSProperties;
+  data: RowData<T>;
 }) => {
-  const { columns, data: tableData, keyExtractor } = data;
+  const { columns, data: tableData } = data;
   const record = tableData[index];
 
   const renderCell = useCallback((column: DataTableColumn<T>, record: T) => {
     const value = (record as any)[column.key];
-    
+
     if (column.render) {
       return column.render(record);
     }
@@ -78,7 +169,7 @@ const VirtualizedRow = <T,>({ index, style, data }: {
           height: '100%',
           alignItems: 'center',
           paddingLeft: rem(12),
-          paddingRight: rem(12)
+          paddingRight: rem(12),
         }}
       >
         {columns.map((column) => (
@@ -90,7 +181,7 @@ const VirtualizedRow = <T,>({ index, style, data }: {
               padding: `${rem(8)} ${rem(12)}`,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
             }}
           >
             <Text size="sm" lineClamp={1}>
@@ -103,25 +194,30 @@ const VirtualizedRow = <T,>({ index, style, data }: {
   );
 };
 
-const VirtualizedHeader = <T,>({ 
-  columns, 
-  sortBy, 
-  sortOrder, 
-  onSort 
+const VirtualizedHeader = <T,>({
+  columns,
+  sortBy,
+  sortOrder,
+  onSort,
 }: {
   columns: DataTableColumn<T>[];
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   onSort: (columnKey: string) => void;
 }) => {
-  const getSortIcon = useCallback((columnKey: string) => {
-    if (sortBy !== columnKey) {
-      return <IconSelector size="0.9rem" />;
-    }
-    return sortOrder === 'asc' 
-      ? <IconSortAscending size="0.9rem" />
-      : <IconSortDescending size="0.9rem" />;
-  }, [sortBy, sortOrder]);
+  const getSortIcon = useCallback(
+    (columnKey: string) => {
+      if (sortBy !== columnKey) {
+        return <IconSelector size="0.9rem" />;
+      }
+      return sortOrder === 'asc' ? (
+        <IconSortAscending size="0.9rem" />
+      ) : (
+        <IconSortDescending size="0.9rem" />
+      );
+    },
+    [sortBy, sortOrder]
+  );
 
   return (
     <Group
@@ -131,7 +227,7 @@ const VirtualizedHeader = <T,>({
         backgroundColor: 'var(--mantine-color-gray-1)',
         minHeight: rem(42),
         paddingLeft: rem(12),
-        paddingRight: rem(12)
+        paddingRight: rem(12),
       }}
     >
       {columns.map((column) => (
@@ -139,7 +235,7 @@ const VirtualizedHeader = <T,>({
           key={column.key}
           style={{
             flex: column.width ? `0 0 ${column.width}` : '1',
-            padding: `${rem(8)} ${rem(12)}`
+            padding: `${rem(8)} ${rem(12)}`,
           }}
         >
           {column.sortable ? (
@@ -150,20 +246,26 @@ const VirtualizedHeader = <T,>({
                 alignItems: 'center',
                 gap: rem(4),
                 width: '100%',
-                justifyContent: column.align === 'center' ? 'center' : 
-                              column.align === 'right' ? 'flex-end' : 'flex-start'
+                justifyContent:
+                  column.align === 'center'
+                    ? 'center'
+                    : column.align === 'right'
+                      ? 'flex-end'
+                      : 'flex-start',
               }}
             >
-              <Text fw={600} size="sm">{column.label}</Text>
+              <Text fw={600} size="sm">
+                {column.label}
+              </Text>
               {getSortIcon(column.key)}
             </UnstyledButton>
           ) : (
-            <Text 
-              fw={600} 
+            <Text
+              fw={600}
               size="sm"
-              style={{ 
+              style={{
                 textAlign: column.align || 'left',
-                width: '100%'
+                width: '100%',
               }}
             >
               {column.label}
@@ -179,14 +281,13 @@ function VirtualizedDataTable<T = any>({
   columns,
   data,
   loading = false,
-  totalItems = 0,
   onFiltersChange,
   searchPlaceholder = 'Buscar...',
   showSearch = true,
   emptyMessage = 'No hay datos para mostrar',
   itemHeight = 48,
   height = 400,
-  overscan = 5
+  overscan = 5,
 }: VirtualizedDataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<string>('');
@@ -195,115 +296,82 @@ function VirtualizedDataTable<T = any>({
   const listRef = useRef<List>(null);
 
   // Datos filtrados y ordenados localmente para mejor performance
-  const processedData = useMemo(() => {
-    let result = [...data];
-    
-    // Filtrar por búsqueda
-    if (search) {
-      result = result.filter(item => 
-        columns.some(column => {
-          const value = (item as any)[column.key];
-          return value?.toString().toLowerCase().includes(search.toLowerCase());
-        })
-      );
-    }
-    
-    // Ordenar
-    if (sortBy) {
-      result.sort((a, b) => {
-        const aValue = (a as any)[sortBy];
-        const bValue = (b as any)[sortBy];
-        
-        if (aValue === bValue) return 0;
-        
-        const compareResult = aValue > bValue ? 1 : -1;
-        return sortOrder === 'asc' ? compareResult : -compareResult;
-      });
-    }
-    
-    // Limitar cantidad mostrada para performance
-    return result.slice(0, displayCount);
-  }, [data, search, sortBy, sortOrder, columns, displayCount]);
+  const processedData = useMemo(
+    () => processTableData({ data, search, sortBy, sortOrder, columns, displayCount }),
+    [data, search, sortBy, sortOrder, columns, displayCount]
+  );
 
   // Manejar cambios en la búsqueda
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-    if (onFiltersChange) {
-      onFiltersChange({
-        search: value,
-        page: 1,
-        sortBy,
-        sortOrder
-      });
-    }
-  }, [onFiltersChange, sortBy, sortOrder]);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value);
+      if (onFiltersChange) {
+        onFiltersChange({
+          search: value,
+          page: 1,
+          sortBy,
+          sortOrder,
+        });
+      }
+    },
+    [onFiltersChange, sortBy, sortOrder]
+  );
 
   // Manejar ordenamiento
-  const handleSort = useCallback((columnKey: string) => {
-    const newSortOrder = sortBy === columnKey && sortOrder === 'asc' ? 'desc' : 'asc';
-    setSortBy(columnKey);
-    setSortOrder(newSortOrder);
-    
-    if (onFiltersChange) {
-      onFiltersChange({
-        search,
-        page: 1,
-        sortBy: columnKey,
-        sortOrder: newSortOrder
-      });
-    }
-  }, [onFiltersChange, search, sortBy, sortOrder]);
+  const handleSort = useCallback(
+    (columnKey: string) => {
+      const newSortOrder = sortBy === columnKey && sortOrder === 'asc' ? 'desc' : 'asc';
+      setSortBy(columnKey);
+      setSortOrder(newSortOrder);
+
+      if (onFiltersChange) {
+        onFiltersChange({
+          search,
+          page: 1,
+          sortBy: columnKey,
+          sortOrder: newSortOrder,
+        });
+      }
+    },
+    [onFiltersChange, search, sortBy, sortOrder]
+  );
 
   // Datos para el componente de filas virtualizadas
-  const rowData: RowData<T> = useMemo(() => ({
-    columns,
-    data: processedData,
-    keyExtractor: (record: any) => record._id || record.id
-  }), [columns, processedData]);
+  const rowData: RowData<T> = useMemo(
+    () => ({
+      columns,
+      data: processedData,
+    }),
+    [columns, processedData]
+  );
 
-  // Skeleton de carga
-  const LoadingSkeleton = useMemo(() => (
-    <Stack gap={0}>
-      {Array.from({ length: 8 }).map((_, index) => (
-        <Group key={index} gap={0} style={{ minHeight: itemHeight, paddingLeft: rem(12), paddingRight: rem(12) }}>
-          {columns.map((column) => (
-            <Box
-              key={column.key}
-              style={{
-                flex: column.width ? `0 0 ${column.width}` : '1',
-                padding: `${rem(8)} ${rem(12)}`
-              }}
-            >
-              <Skeleton height={20} />
-            </Box>
-          ))}
-        </Group>
-      ))}
-    </Stack>
-  ), [columns, itemHeight]);
+  if (loading) {
+    return <LoadingSkeleton columns={columns} itemHeight={itemHeight} />;
+  }
 
-  // Scroll al top cuando cambian los filtros
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollToItem(0);
-    }
-  }, [search, sortBy, sortOrder]);
+  if (processedData.length === 0) {
+    return <EmptyState height={height} emptyMessage={emptyMessage} />;
+  }
 
   return (
     <Stack gap="md">
+      {/* Controles */}
       {showSearch && (
         <Group justify="space-between">
           <TextInput
             placeholder={searchPlaceholder}
-            leftSection={<IconSearch size="1rem" />}
+            leftSection={<IconSearch size="0.9rem" />}
             value={search}
             onChange={(e) => handleSearchChange(e.currentTarget.value)}
-            style={{ minWidth: 300 }}
+            style={{ minWidth: 200 }}
           />
-          
+
           <Group gap="xs">
-            <Text size="sm">Mostrar:</Text>
+            <Text size="sm" c="dimmed">
+              Mostrando {processedData.length} de {data.length}
+            </Text>
             <Select
+              size="xs"
               value={displayCount.toString()}
               onChange={(value) => setDisplayCount(parseInt(value || '100'))}
               data={[
@@ -311,15 +379,14 @@ function VirtualizedDataTable<T = any>({
                 { value: '250', label: '250' },
                 { value: '500', label: '500' },
                 { value: '1000', label: '1000' },
-                { value: '2500', label: '2500' }
               ]}
-              w={80}
+              style={{ width: 80 }}
             />
-            <Text size="sm">elementos</Text>
           </Group>
         </Group>
       )}
 
+      {/* Tabla virtualizada */}
       <Paper withBorder>
         <VirtualizedHeader
           columns={columns}
@@ -327,89 +394,72 @@ function VirtualizedDataTable<T = any>({
           sortOrder={sortOrder}
           onSort={handleSort}
         />
-        
-        {loading ? (
-          LoadingSkeleton
-        ) : processedData.length === 0 ? (
-          <Center py="xl" style={{ minHeight: height }}>
-            <Text c="dimmed" size="sm">
-              {emptyMessage}
-            </Text>
-          </Center>
-        ) : (
-          <List
-            ref={listRef}
-            height={height}
-            width="100%"
-            itemCount={processedData.length}
-            itemSize={itemHeight}
-            itemData={rowData as any}
-            overscanCount={overscan}
-            style={{
-              border: 'none'
-            }}
-          >
-            {VirtualizedRow as any}
-          </List>
-        )}
+        <List
+          ref={listRef}
+          height={height}
+          itemCount={processedData.length}
+          itemSize={itemHeight}
+          itemData={rowData}
+          overscanCount={overscan}
+        >
+          {VirtualizedRow}
+        </List>
       </Paper>
-
-      <Group justify="space-between" align="center">
-        <Text size="sm" c="dimmed">
-          Mostrando {processedData.length} de {totalItems || data.length} elementos
-          {processedData.length < data.length && (
-            <Text span c="orange"> (limitado a {displayCount})</Text>
-          )}
-        </Text>
-        
-        {processedData.length === displayCount && data.length > displayCount && (
-          <Text size="sm" c="blue" style={{ cursor: 'pointer' }} onClick={() => setDisplayCount(prev => prev + 500)}>
-            Cargar más elementos
-          </Text>
-        )}
-      </Group>
     </Stack>
   );
 }
 
-// Comparador personalizado para React.memo
-const areVirtualPropsEqual = <T,>(
-  prevProps: VirtualizedDataTableProps<T>, 
+// Helper functions for prop comparison
+const compareVirtualSimpleProps = <T,>(
+  prevProps: VirtualizedDataTableProps<T>,
   nextProps: VirtualizedDataTableProps<T>
 ): boolean => {
-  // Comparar propiedades simples
-  if (
-    prevProps.loading !== nextProps.loading ||
-    prevProps.totalItems !== nextProps.totalItems ||
-    prevProps.searchPlaceholder !== nextProps.searchPlaceholder ||
-    prevProps.showSearch !== nextProps.showSearch ||
-    prevProps.emptyMessage !== nextProps.emptyMessage ||
-    prevProps.itemHeight !== nextProps.itemHeight ||
-    prevProps.height !== nextProps.height ||
-    prevProps.overscan !== nextProps.overscan
-  ) {
-    return false;
-  }
+  return (
+    prevProps.loading === nextProps.loading &&
+    prevProps.totalItems === nextProps.totalItems &&
+    prevProps.searchPlaceholder === nextProps.searchPlaceholder &&
+    prevProps.showSearch === nextProps.showSearch &&
+    prevProps.emptyMessage === nextProps.emptyMessage &&
+    prevProps.itemHeight === nextProps.itemHeight &&
+    prevProps.height === nextProps.height &&
+    prevProps.overscan === nextProps.overscan
+  );
+};
 
-  // Comparar arrays de datos (shallow comparison)
-  if (prevProps.data?.length !== nextProps.data?.length) {
-    return false;
-  }
-  
-  if (prevProps.columns?.length !== nextProps.columns?.length) {
-    return false;
-  }
+const compareVirtualArrayLengths = <T,>(
+  prevProps: VirtualizedDataTableProps<T>,
+  nextProps: VirtualizedDataTableProps<T>
+): boolean => {
+  return (
+    prevProps.data?.length === nextProps.data?.length &&
+    prevProps.columns?.length === nextProps.columns?.length
+  );
+};
 
-  // Comparación más profunda solo si las longitudes son iguales
+const compareVirtualDataSample = <T,>(prevData: T[], nextData: T[]): boolean => {
+  const compareLimit = Math.min(prevData.length, 50);
+  for (let i = 0; i < compareLimit; i++) {
+    if (prevData[i] !== nextData[i]) return false;
+  }
+  return true;
+};
+
+// Comparador personalizado para React.memo
+const areVirtualPropsEqual = <T,>(
+  prevProps: VirtualizedDataTableProps<T>,
+  nextProps: VirtualizedDataTableProps<T>
+): boolean => {
+  if (!compareVirtualSimpleProps(prevProps, nextProps)) return false;
+  if (!compareVirtualArrayLengths(prevProps, nextProps)) return false;
+
   if (prevProps.data && nextProps.data) {
-    for (let i = 0; i < Math.min(prevProps.data.length, 50); i++) { // Limitar comparación para performance
-      if (prevProps.data[i] !== nextProps.data[i]) {
-        return false;
-      }
-    }
+    return compareVirtualDataSample(prevProps.data, nextProps.data);
   }
 
   return true;
 };
 
-export default React.memo(VirtualizedDataTable, areVirtualPropsEqual) as typeof VirtualizedDataTable;
+export default React.memo(
+  VirtualizedDataTable,
+  areVirtualPropsEqual
+) as typeof VirtualizedDataTable;
