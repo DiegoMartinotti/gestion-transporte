@@ -7,6 +7,7 @@ export { default as ConfirmModal } from './ConfirmModal';
 export { default as SearchInput } from './SearchInput';
 export { default as DateRangePicker } from './DateRangePicker';
 export { default as Breadcrumbs } from './Breadcrumbs';
+export { default as VirtualizedDataTable } from './VirtualizedDataTable';
 
 export type { DataTableColumn } from './DataTable';
 export type { FormFieldType, FormFieldOption } from './FormField';
