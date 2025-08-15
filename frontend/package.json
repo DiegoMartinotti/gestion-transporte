@@ -58,6 +58,7 @@
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "type-check": "tsc --noEmit",
+    "type-check:files": "tsc --noEmit --skipLibCheck --esModuleInterop --jsx react-jsx --target es5 --lib dom,dom.iterable,es6 --module esnext --moduleResolution node --allowJs --allowSyntheticDefaultImports --strict --forceConsistentCasingInFileNames --noFallthroughCasesInSwitch --resolveJsonModule --isolatedModules",
     "type-check:test": "tsc --noEmit --project tsconfig.test.json",
     "type-check:e2e": "tsc --noEmit --project tsconfig.e2e.json"
   },

@@ -50,8 +50,11 @@ cd backend && npm run dev
 # Terminal 2: Frontend (port 3000)
 cd frontend && npm start
 
-# TypeScript check
+# TypeScript check (proyecto completo)
 npx tsc --noEmit
+
+# TypeScript check (archivos específicos con configuración del proyecto)
+npm run type-check:files src/path/to/file.tsx [src/path/to/other/file.ts]
 ```
 
 Both servers run in hot-reload mode. Access the app at http://localhost:3000
@@ -154,6 +157,35 @@ Using Mongoose ODM with:
 - **Formula Calculations**: Uses MathJS for dynamic pricing formulas
 
 When adding new features, follow the existing pattern of routes → controllers → services → models, and ensure proper TypeScript types are added during the ongoing migration.
+
+## TypeScript Verification
+
+### Full Project Check
+
+```bash
+npm run type-check
+```
+
+### Individual File(s) Check with Project Configuration
+
+```bash
+npm run type-check:files src/path/to/file.tsx [additional files...]
+```
+
+**IMPORTANT**: Always use `npm run type-check:files` instead of `npx tsc --noEmit file.tsx` when verifying individual files. This ensures the verification uses the project's tsconfig.json settings (JSX support, module resolution, etc.) rather than TypeScript defaults.
+
+**Examples**:
+
+```bash
+# Single file
+npm run type-check:files src/components/calculators/CostBreakdown.tsx
+
+# Multiple files
+npm run type-check:files src/components/MyComponent.tsx src/hooks/useMyHook.ts
+
+# After making changes to verify specific modified files
+npm run type-check:files src/pages/ClientePage.tsx src/services/ClienteService.ts
+```
 
 ## Frontend Development Principles
 
