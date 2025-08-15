@@ -167,23 +167,25 @@ export default function FormField({
   };
 
   const renderField = () => {
+    const labelText = label ?? '';
     const renderers = {
-      textarea: () => renderTextArea(fieldProps, label, rows),
-      email: () => renderEmailInput(fieldProps, label),
-      password: () => renderPasswordInput(fieldProps, label),
-      number: () => renderNumberInput({ fieldProps, label, min, max, step, prefix, suffix }),
-      select: () => renderSelect(fieldProps, label, options),
-      multiselect: () => renderMultiSelect(fieldProps, label, options),
-      date: () => renderDateInput(fieldProps, label),
-      switch: () => renderSwitch(fieldProps, label),
-      checkbox: () => renderCheckbox(fieldProps, label),
-      radio: () => renderRadioGroup(fieldProps, label, options),
+      textarea: () => renderTextArea(fieldProps, labelText, rows),
+      email: () => renderEmailInput(fieldProps, labelText),
+      password: () => renderPasswordInput(fieldProps, labelText),
+      number: () =>
+        renderNumberInput({ fieldProps, label: labelText, min, max, step, prefix, suffix }),
+      select: () => renderSelect(fieldProps, labelText, options),
+      multiselect: () => renderMultiSelect(fieldProps, labelText, options),
+      date: () => renderDateInput(fieldProps, labelText),
+      switch: () => renderSwitch(fieldProps, labelText),
+      checkbox: () => renderCheckbox(fieldProps, labelText),
+      radio: () => renderRadioGroup(fieldProps, labelText, options),
     };
 
     const renderer = renderers[type as keyof typeof renderers];
     if (renderer) return renderer();
 
-    return <TextInput {...fieldProps} label={label} />;
+    return <TextInput {...fieldProps} label={labelText} />;
   };
 
   return renderField();
