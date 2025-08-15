@@ -20,8 +20,7 @@ interface SmartDataTableProps<T = any> {
   showPagination?: boolean;
   showPageSize?: boolean;
   emptyMessage?: string;
-  keyExtractor?: (record: T) => string;
-  
+
   // Virtual scrolling options
   virtualizationThreshold?: number;
   forceVirtualization?: boolean;
@@ -29,6 +28,54 @@ interface SmartDataTableProps<T = any> {
   virtualItemHeight?: number;
   allowToggle?: boolean;
 }
+
+// Utility functions
+const getPerformanceInfo = (dataLength: number) => {
+  if (dataLength < 50) {
+    return { level: 'optimal', message: 'Rendimiento óptimo', color: 'green' };
+  } else if (dataLength < 100) {
+    return { level: 'good', message: 'Buen rendimiento', color: 'blue' };
+  } else if (dataLength < 500) {
+    return { level: 'warning', message: 'Considere virtual scrolling', color: 'yellow' };
+  } else {
+    return { level: 'critical', message: 'Recomendado virtual scrolling', color: 'orange' };
+  }
+};
+
+const shouldUseVirtualization = (dataLength: number, threshold: number, forced: boolean) => {
+  if (forced) return true;
+  return dataLength >= threshold;
+};
+
+const renderPerformanceAlert = (performanceInfo: any, dataLength: number) => (
+  <Alert color={performanceInfo.color} variant="light" style={{ padding: '4px 8px' }}>
+    <Text size="xs">
+      {dataLength} elementos - {performanceInfo.message}
+    </Text>
+  </Alert>
+);
+
+const renderVirtualToggle = (isVirtualActive: boolean, onToggle: (checked: boolean) => void) => (
+  <Group gap="xs">
+    <IconTable
+      size="1rem"
+      color={!isVirtualActive ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-gray-5)'}
+    />
+    <Switch
+      size="sm"
+      checked={isVirtualActive}
+      onChange={(event) => onToggle(event.currentTarget.checked)}
+      label=""
+    />
+    <IconList
+      size="1rem"
+      color={isVirtualActive ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-gray-5)'}
+    />
+    <Text size="xs" c="dimmed">
+      {isVirtualActive ? 'Virtual' : 'Paginado'}
+    </Text>
+  </Group>
+);
 
 function SmartDataTable<T = any>({
   columns,
@@ -45,22 +92,21 @@ function SmartDataTable<T = any>({
   showPagination = true,
   showPageSize = true,
   emptyMessage = 'No hay datos para mostrar',
-  keyExtractor = (record: any) => record._id || record.id,
-  
+
   // Virtual scrolling options
   virtualizationThreshold = 100,
   forceVirtualization = false,
   virtualHeight = 500,
   virtualItemHeight = 48,
-  allowToggle = true
+  allowToggle = true,
 }: SmartDataTableProps<T>) {
   const [useVirtual, setUseVirtual] = React.useState<boolean>(false);
 
   // Determinar automáticamente si usar virtualización
-  const shouldUseVirtual = useMemo(() => {
-    if (forceVirtualization) return true;
-    return data.length >= virtualizationThreshold;
-  }, [data.length, virtualizationThreshold, forceVirtualization]);
+  const shouldUseVirtual = useMemo(
+    () => shouldUseVirtualization(data.length, virtualizationThreshold, forceVirtualization),
+    [data.length, virtualizationThreshold, forceVirtualization]
+  );
 
   // Actualizar estado cuando cambie la recomendación
   React.useEffect(() => {
@@ -70,19 +116,7 @@ function SmartDataTable<T = any>({
   }, [shouldUseVirtual, allowToggle]);
 
   const isVirtualActive = allowToggle ? useVirtual : shouldUseVirtual;
-
-  const performanceInfo = useMemo(() => {
-    const itemCount = data.length;
-    if (itemCount < 50) {
-      return { level: 'optimal', message: 'Rendimiento óptimo', color: 'green' };
-    } else if (itemCount < 100) {
-      return { level: 'good', message: 'Buen rendimiento', color: 'blue' };
-    } else if (itemCount < 500) {
-      return { level: 'warning', message: 'Considere virtual scrolling', color: 'yellow' };
-    } else {
-      return { level: 'critical', message: 'Recomendado virtual scrolling', color: 'orange' };
-    }
-  }, [data.length]);
+  const performanceInfo = useMemo(() => getPerformanceInfo(data.length), [data.length]);
 
   return (
     <>
@@ -90,34 +124,11 @@ function SmartDataTable<T = any>({
       {(allowToggle || data.length >= virtualizationThreshold) && (
         <Group justify="space-between" mb="sm">
           <Group gap="xs">
-            {data.length >= virtualizationThreshold && (
-              <Alert 
-                color={performanceInfo.color} 
-                variant="light"
-                style={{ padding: '4px 8px' }}
-              >
-                <Text size="xs">
-                  {data.length} elementos - {performanceInfo.message}
-                </Text>
-              </Alert>
-            )}
+            {data.length >= virtualizationThreshold &&
+              renderPerformanceAlert(performanceInfo, data.length)}
           </Group>
-          
-          {allowToggle && (
-            <Group gap="xs">
-              <IconTable size="1rem" color={!isVirtualActive ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-gray-5)'} />
-              <Switch
-                size="sm"
-                checked={isVirtualActive}
-                onChange={(event) => setUseVirtual(event.currentTarget.checked)}
-                label=""
-              />
-              <IconList size="1rem" color={isVirtualActive ? 'var(--mantine-color-blue-6)' : 'var(--mantine-color-gray-5)'} />
-              <Text size="xs" c="dimmed">
-                {isVirtualActive ? 'Virtual' : 'Paginado'}
-              </Text>
-            </Group>
-          )}
+
+          {allowToggle && renderVirtualToggle(isVirtualActive, setUseVirtual)}
         </Group>
       )}
 
@@ -157,44 +168,52 @@ function SmartDataTable<T = any>({
   );
 }
 
-// Comparador personalizado para React.memo
-const areSmartPropsEqual = <T,>(
-  prevProps: SmartDataTableProps<T>, 
+// Helper functions for prop comparison
+const compareSimpleProps = <T,>(
+  prevProps: SmartDataTableProps<T>,
   nextProps: SmartDataTableProps<T>
 ): boolean => {
-  // Comparar propiedades simples
-  if (
-    prevProps.loading !== nextProps.loading ||
-    prevProps.totalItems !== nextProps.totalItems ||
-    prevProps.currentPage !== nextProps.currentPage ||
-    prevProps.pageSize !== nextProps.pageSize ||
-    prevProps.virtualizationThreshold !== nextProps.virtualizationThreshold ||
-    prevProps.forceVirtualization !== nextProps.forceVirtualization ||
-    prevProps.virtualHeight !== nextProps.virtualHeight ||
-    prevProps.virtualItemHeight !== nextProps.virtualItemHeight ||
-    prevProps.allowToggle !== nextProps.allowToggle
-  ) {
-    return false;
-  }
+  return (
+    prevProps.loading === nextProps.loading &&
+    prevProps.totalItems === nextProps.totalItems &&
+    prevProps.currentPage === nextProps.currentPage &&
+    prevProps.pageSize === nextProps.pageSize &&
+    prevProps.virtualizationThreshold === nextProps.virtualizationThreshold &&
+    prevProps.forceVirtualization === nextProps.forceVirtualization &&
+    prevProps.virtualHeight === nextProps.virtualHeight &&
+    prevProps.virtualItemHeight === nextProps.virtualItemHeight &&
+    prevProps.allowToggle === nextProps.allowToggle
+  );
+};
 
-  // Comparar arrays de datos
-  if (prevProps.data?.length !== nextProps.data?.length) {
-    return false;
-  }
-  
-  if (prevProps.columns?.length !== nextProps.columns?.length) {
-    return false;
-  }
+const compareArrayLengths = <T,>(
+  prevProps: SmartDataTableProps<T>,
+  nextProps: SmartDataTableProps<T>
+): boolean => {
+  return (
+    prevProps.data?.length === nextProps.data?.length &&
+    prevProps.columns?.length === nextProps.columns?.length
+  );
+};
 
-  // Comparación optimizada para arrays grandes
+const compareDataSample = <T,>(prevData: T[], nextData: T[]): boolean => {
+  const compareLimit = Math.min(prevData.length, 20);
+  for (let i = 0; i < compareLimit; i++) {
+    if (prevData[i] !== nextData[i]) return false;
+  }
+  return true;
+};
+
+// Comparador personalizado para React.memo
+const areSmartPropsEqual = <T,>(
+  prevProps: SmartDataTableProps<T>,
+  nextProps: SmartDataTableProps<T>
+): boolean => {
+  if (!compareSimpleProps(prevProps, nextProps)) return false;
+  if (!compareArrayLengths(prevProps, nextProps)) return false;
+
   if (prevProps.data && nextProps.data) {
-    // Solo comparar los primeros elementos para evitar impacto en rendimiento
-    const compareLimit = Math.min(prevProps.data.length, 20);
-    for (let i = 0; i < compareLimit; i++) {
-      if (prevProps.data[i] !== nextProps.data[i]) {
-        return false;
-      }
-    }
+    return compareDataSample(prevProps.data, nextProps.data);
   }
 
   return true;

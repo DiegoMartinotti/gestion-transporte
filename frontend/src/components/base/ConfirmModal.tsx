@@ -1,5 +1,5 @@
 import { Modal, Text, Group, Button, Stack, ThemeIcon } from '@mantine/core';
-import { IconAlertTriangle, IconTrash, IconCheck, IconX } from '@tabler/icons-react';
+import { IconAlertTriangle, IconTrash, IconCheck } from '@tabler/icons-react';
 
 export type ConfirmModalType = 'delete' | 'confirm' | 'warning' | 'info';
 
@@ -21,26 +21,26 @@ const TYPE_CONFIG = {
     color: 'red',
     icon: IconTrash,
     confirmColor: 'red',
-    confirmVariant: 'filled' as const
+    confirmVariant: 'filled' as const,
   },
   warning: {
     color: 'yellow',
     icon: IconAlertTriangle,
     confirmColor: 'yellow',
-    confirmVariant: 'filled' as const
+    confirmVariant: 'filled' as const,
   },
   confirm: {
     color: 'blue',
     icon: IconCheck,
     confirmColor: 'blue',
-    confirmVariant: 'filled' as const
+    confirmVariant: 'filled' as const,
   },
   info: {
     color: 'blue',
     icon: IconCheck,
     confirmColor: 'blue',
-    confirmVariant: 'filled' as const
-  }
+    confirmVariant: 'filled' as const,
+  },
 };
 
 export default function ConfirmModal({
@@ -53,7 +53,7 @@ export default function ConfirmModal({
   confirmLabel,
   cancelLabel = 'Cancelar',
   loading = false,
-  children
+  children,
 }: ConfirmModalProps) {
   const config = TYPE_CONFIG[type];
   const IconComponent = config.icon;
@@ -62,7 +62,7 @@ export default function ConfirmModal({
     delete: 'Eliminar',
     warning: 'Continuar',
     confirm: 'Confirmar',
-    info: 'Aceptar'
+    info: 'Aceptar',
   }[type];
 
   const handleConfirm = () => {
@@ -78,11 +78,7 @@ export default function ConfirmModal({
       onClose={onClose}
       title={
         <Group gap="xs">
-          <ThemeIcon
-            color={config.color}
-            variant="light"
-            size="lg"
-          >
+          <ThemeIcon color={config.color} variant="light" size="lg">
             <IconComponent size="1.2rem" />
           </ThemeIcon>
           <Text fw={600}>{title}</Text>
@@ -102,15 +98,10 @@ export default function ConfirmModal({
         {children}
 
         <Group justify="flex-end" gap="sm">
-          <Button
-            variant="subtle"
-            color="gray"
-            onClick={onClose}
-            disabled={loading}
-          >
+          <Button variant="subtle" color="gray" onClick={onClose} disabled={loading}>
             {cancelLabel}
           </Button>
-          
+
           <Button
             color={config.confirmColor}
             variant={config.confirmVariant}
