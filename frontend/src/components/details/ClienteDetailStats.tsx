@@ -32,7 +32,7 @@ const StatCard = ({
   description,
   onView,
   onCreate,
-  _color,
+  color: _color,
 }: StatCardProps) => (
   <Card p="lg" withBorder>
     <Group justify="space-between" align="flex-start">
