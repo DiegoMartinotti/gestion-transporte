@@ -21,7 +21,6 @@ import {
   IconStethoscope,
   IconEye,
   IconEdit,
-  IconDownload,
   IconFilter,
 } from '@tabler/icons-react';
 import type { Personal } from '../../types';
@@ -50,6 +49,8 @@ interface DocumentacionTableProps {
   maxExpireDays?: number;
 }
 
+const SIN_EMPRESA = 'Sin empresa';
+
 export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
   personal,
   onViewPersonal,
@@ -60,105 +61,132 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [tipoFilter, setTipoFilter] = React.useState<string>('all');
 
+  const createBaseDocument = (person: Personal, empresaInfo: any) => ({
+    personalId: person._id,
+    personalNombre: `${person.nombre} ${person.apellido}`,
+    dni: person.dni,
+    empresa: empresaInfo?.nombre || SIN_EMPRESA,
+    tipo: person.tipo,
+  });
+
+  const calculateDaysUntilExpiry = (vencimiento: any, now: Date) => {
+    return vencimiento
+      ? Math.ceil((new Date(vencimiento).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      : Infinity;
+  };
+
+  const procesarLicenciaConducir = (
+    person: Personal,
+    empresaInfo: any,
+    now: Date
+  ): DocumentoInfo[] => {
+    const docs: DocumentoInfo[] = [];
+    const { documentacion } = person;
+
+    if (documentacion?.licenciaConducir?.numero) {
+      const vencimiento = documentacion.licenciaConducir.vencimiento;
+      const daysUntilExpiry = calculateDaysUntilExpiry(vencimiento, now);
+
+      docs.push({
+        ...createBaseDocument(person, empresaInfo),
+        tipoDocumento: 'Licencia de Conducir',
+        numero: documentacion.licenciaConducir.numero,
+        categoria: documentacion.licenciaConducir.categoria,
+        fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
+        daysUntilExpiry,
+        status: getDocumentStatus(daysUntilExpiry),
+      });
+    }
+    return docs;
+  };
+
+  const procesarCarnetProfesional = (
+    person: Personal,
+    empresaInfo: any,
+    now: Date
+  ): DocumentoInfo[] => {
+    const docs: DocumentoInfo[] = [];
+    const { documentacion } = person;
+
+    if (documentacion?.carnetProfesional?.numero) {
+      const vencimiento = documentacion.carnetProfesional.vencimiento;
+      const daysUntilExpiry = calculateDaysUntilExpiry(vencimiento, now);
+
+      docs.push({
+        ...createBaseDocument(person, empresaInfo),
+        tipoDocumento: 'Carnet Profesional',
+        numero: documentacion.carnetProfesional.numero,
+        fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
+        daysUntilExpiry,
+        status: getDocumentStatus(daysUntilExpiry),
+      });
+    }
+    return docs;
+  };
+
+  const procesarEvaluacionMedica = (
+    person: Personal,
+    empresaInfo: any,
+    now: Date
+  ): DocumentoInfo[] => {
+    const docs: DocumentoInfo[] = [];
+    const { documentacion } = person;
+
+    if (documentacion?.evaluacionMedica?.fecha) {
+      const fecha = documentacion.evaluacionMedica.fecha;
+      const vencimiento = documentacion.evaluacionMedica.vencimiento;
+      const daysUntilExpiry = calculateDaysUntilExpiry(vencimiento, now);
+
+      docs.push({
+        ...createBaseDocument(person, empresaInfo),
+        tipoDocumento: 'Evaluación Médica',
+        fechaEmision: fecha ? new Date(fecha) : undefined,
+        fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
+        resultado: documentacion.evaluacionMedica.resultado,
+        daysUntilExpiry,
+        status: getDocumentStatus(daysUntilExpiry),
+      });
+    }
+    return docs;
+  };
+
+  const procesarPsicofisico = (person: Personal, empresaInfo: any, now: Date): DocumentoInfo[] => {
+    const docs: DocumentoInfo[] = [];
+    const { documentacion } = person;
+
+    if (documentacion?.psicofisico?.fecha) {
+      const fecha = documentacion.psicofisico.fecha;
+      const vencimiento = documentacion.psicofisico.vencimiento;
+      const daysUntilExpiry = calculateDaysUntilExpiry(vencimiento, now);
+
+      docs.push({
+        ...createBaseDocument(person, empresaInfo),
+        tipoDocumento: 'Psicofísico',
+        fechaEmision: fecha ? new Date(fecha) : undefined,
+        fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
+        resultado: documentacion.psicofisico.resultado,
+        daysUntilExpiry,
+        status: getDocumentStatus(daysUntilExpiry),
+      });
+    }
+    return docs;
+  };
+
   // Extract all documents from personal data
   const documentos = useMemo(() => {
     const docs: DocumentoInfo[] = [];
     const now = new Date();
 
-    personal.forEach(person => {
+    personal.forEach((person) => {
       const empresaInfo = typeof person.empresa === 'object' ? person.empresa : null;
-      
+
       if (person.documentacion) {
-        const { documentacion } = person;
-
-        // Licencia de Conducir
-        if (documentacion.licenciaConducir?.numero) {
-          const vencimiento = documentacion.licenciaConducir.vencimiento;
-          const daysUntilExpiry = vencimiento ? 
-            Math.ceil((new Date(vencimiento).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 
-            Infinity;
-
-          docs.push({
-            personalId: person._id,
-            personalNombre: `${person.nombre} ${person.apellido}`,
-            dni: person.dni,
-            empresa: empresaInfo?.nombre || 'Sin empresa',
-            tipo: person.tipo,
-            tipoDocumento: 'Licencia de Conducir',
-            numero: documentacion.licenciaConducir.numero,
-            categoria: documentacion.licenciaConducir.categoria,
-            fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
-            daysUntilExpiry,
-            status: getDocumentStatus(daysUntilExpiry),
-          });
-        }
-
-        // Carnet Profesional
-        if (documentacion.carnetProfesional?.numero) {
-          const vencimiento = documentacion.carnetProfesional.vencimiento;
-          const daysUntilExpiry = vencimiento ? 
-            Math.ceil((new Date(vencimiento).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 
-            Infinity;
-
-          docs.push({
-            personalId: person._id,
-            personalNombre: `${person.nombre} ${person.apellido}`,
-            dni: person.dni,
-            empresa: empresaInfo?.nombre || 'Sin empresa',
-            tipo: person.tipo,
-            tipoDocumento: 'Carnet Profesional',
-            numero: documentacion.carnetProfesional.numero,
-            fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
-            daysUntilExpiry,
-            status: getDocumentStatus(daysUntilExpiry),
-          });
-        }
-
-        // Evaluación Médica
-        if (documentacion.evaluacionMedica?.fecha) {
-          const fecha = documentacion.evaluacionMedica.fecha;
-          const vencimiento = documentacion.evaluacionMedica.vencimiento;
-          const daysUntilExpiry = vencimiento ? 
-            Math.ceil((new Date(vencimiento).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 
-            Infinity;
-
-          docs.push({
-            personalId: person._id,
-            personalNombre: `${person.nombre} ${person.apellido}`,
-            dni: person.dni,
-            empresa: empresaInfo?.nombre || 'Sin empresa',
-            tipo: person.tipo,
-            tipoDocumento: 'Evaluación Médica',
-            fechaEmision: fecha ? new Date(fecha) : undefined,
-            fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
-            resultado: documentacion.evaluacionMedica.resultado,
-            daysUntilExpiry,
-            status: getDocumentStatus(daysUntilExpiry),
-          });
-        }
-
-        // Psicofísico
-        if (documentacion.psicofisico?.fecha) {
-          const fecha = documentacion.psicofisico.fecha;
-          const vencimiento = documentacion.psicofisico.vencimiento;
-          const daysUntilExpiry = vencimiento ? 
-            Math.ceil((new Date(vencimiento).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 
-            Infinity;
-
-          docs.push({
-            personalId: person._id,
-            personalNombre: `${person.nombre} ${person.apellido}`,
-            dni: person.dni,
-            empresa: empresaInfo?.nombre || 'Sin empresa',
-            tipo: person.tipo,
-            tipoDocumento: 'Psicofísico',
-            fechaEmision: fecha ? new Date(fecha) : undefined,
-            fechaVencimiento: vencimiento ? new Date(vencimiento) : undefined,
-            resultado: documentacion.psicofisico.resultado,
-            daysUntilExpiry,
-            status: getDocumentStatus(daysUntilExpiry),
-          });
-        }
+        docs.push(
+          ...procesarLicenciaConducir(person, empresaInfo, now),
+          ...procesarCarnetProfesional(person, empresaInfo, now),
+          ...procesarEvaluacionMedica(person, empresaInfo, now),
+          ...procesarPsicofisico(person, empresaInfo, now)
+        );
       }
     });
 
@@ -167,16 +195,16 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
 
   // Filter documents
   const filteredDocumentos = useMemo(() => {
-    return documentos.filter(doc => {
+    return documentos.filter((doc) => {
       // Filter by status
       if (statusFilter !== 'all' && doc.status !== statusFilter) return false;
-      
+
       // Filter by tipo
       if (tipoFilter !== 'all' && doc.tipo !== tipoFilter) return false;
-      
+
       // Only show documents that expire within the specified days
       if (doc.daysUntilExpiry > maxExpireDays && doc.status !== 'expired') return false;
-      
+
       return true;
     });
   }, [documentos, statusFilter, tipoFilter, maxExpireDays]);
@@ -184,14 +212,16 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
   // Calculate statistics
   const stats = useMemo(() => {
     const total = documentos.length;
-    const expired = documentos.filter(d => d.status === 'expired').length;
-    const expiring = documentos.filter(d => d.status === 'expiring').length;
-    const valid = documentos.filter(d => d.status === 'valid').length;
-    
+    const expired = documentos.filter((d) => d.status === 'expired').length;
+    const expiring = documentos.filter((d) => d.status === 'expiring').length;
+    const valid = documentos.filter((d) => d.status === 'valid').length;
+
     return { total, expired, expiring, valid };
   }, [documentos]);
 
-  function getDocumentStatus(daysUntilExpiry: number): 'expired' | 'expiring' | 'valid' | 'missing' {
+  function getDocumentStatus(
+    daysUntilExpiry: number
+  ): 'expired' | 'expiring' | 'valid' | 'missing' {
     if (daysUntilExpiry === Infinity) return 'missing';
     if (daysUntilExpiry < 0) return 'expired';
     if (daysUntilExpiry <= 30) return 'expiring';
@@ -200,19 +230,27 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
 
   function getStatusColor(status: string) {
     switch (status) {
-      case 'expired': return 'red';
-      case 'expiring': return 'yellow';
-      case 'valid': return 'green';
-      default: return 'gray';
+      case 'expired':
+        return 'red';
+      case 'expiring':
+        return 'yellow';
+      case 'valid':
+        return 'green';
+      default:
+        return 'gray';
     }
   }
 
   function getStatusLabel(status: string) {
     switch (status) {
-      case 'expired': return 'Vencido';
-      case 'expiring': return 'Por Vencer';
-      case 'valid': return 'Vigente';
-      default: return 'Sin Datos';
+      case 'expired':
+        return 'Vencido';
+      case 'expiring':
+        return 'Por Vencer';
+      case 'valid':
+        return 'Vigente';
+      default:
+        return 'Sin Datos';
     }
   }
 
@@ -242,7 +280,7 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
   }
 
   const findPersonalById = (id: string) => {
-    return personal.find(p => p._id === id);
+    return personal.find((p) => p._id === id);
   };
 
   return (
@@ -255,14 +293,10 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
             {filteredDocumentos.length} de {documentos.length} documentos
           </Text>
         </Group>
-        
+
         {/* Progress component no longer supports sections in Mantine 7 */}
-        <Progress
-          size="lg"
-          value={(stats.valid / stats.total) * 100}
-          color="green"
-        />
-        
+        <Progress size="lg" value={(stats.valid / stats.total) * 100} color="green" />
+
         <Group gap="xl" mt="md">
           <Group gap="xs">
             <ThemeIcon size="sm" color="green" variant="light">
@@ -321,22 +355,16 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
 
       {/* Alerts for critical issues */}
       {stats.expired > 0 && (
-        <Alert
-          icon={<IconAlertTriangle size={16} />}
-          title="Documentos Vencidos"
-          color="red"
-        >
-          Hay {stats.expired} documento{stats.expired > 1 ? 's' : ''} vencido{stats.expired > 1 ? 's' : ''} que requieren atención inmediata.
+        <Alert icon={<IconAlertTriangle size={16} />} title="Documentos Vencidos" color="red">
+          Hay {stats.expired} documento{stats.expired > 1 ? 's' : ''} vencido
+          {stats.expired > 1 ? 's' : ''} que requieren atención inmediata.
         </Alert>
       )}
 
       {stats.expiring > 0 && (
-        <Alert
-          icon={<IconAlertTriangle size={16} />}
-          title="Documentos Por Vencer"
-          color="yellow"
-        >
-          Hay {stats.expiring} documento{stats.expiring > 1 ? 's' : ''} que vence{stats.expiring > 1 ? 'n' : ''} en los próximos 30 días.
+        <Alert icon={<IconAlertTriangle size={16} />} title="Documentos Por Vencer" color="yellow">
+          Hay {stats.expiring} documento{stats.expiring > 1 ? 's' : ''} que vence
+          {stats.expiring > 1 ? 'n' : ''} en los próximos 30 días.
         </Alert>
       )}
 
@@ -398,19 +426,20 @@ export const DocumentacionTable: React.FC<DocumentacionTableProps> = ({
                   <Text size="sm">{formatDate(doc.fechaVencimiento)}</Text>
                 </td>
                 <td>
-                  <Badge
-                    color={getStatusColor(doc.status)}
-                    variant="light"
-                    size="sm"
-                  >
+                  <Badge color={getStatusColor(doc.status)} variant="light" size="sm">
                     {getStatusLabel(doc.status)}
                   </Badge>
                 </td>
                 <td>
-                  <Text 
-                    size="xs" 
-                    color={doc.status === 'expired' ? 'red' : 
-                           doc.status === 'expiring' ? 'orange' : 'dimmed'}
+                  <Text
+                    size="xs"
+                    color={
+                      doc.status === 'expired'
+                        ? 'red'
+                        : doc.status === 'expiring'
+                          ? 'orange'
+                          : 'dimmed'
+                    }
                   >
                     {getDaysUntilText(doc.daysUntilExpiry, doc.status)}
                   </Text>
