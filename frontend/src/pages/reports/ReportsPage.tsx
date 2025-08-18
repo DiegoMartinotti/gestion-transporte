@@ -15,7 +15,7 @@ import {
   Modal,
   Alert,
   Loader,
-  Menu
+  Menu,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -30,7 +30,7 @@ import {
   IconTrash,
   IconDots,
   IconSettings,
-  IconRefresh
+  IconRefresh,
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -42,13 +42,21 @@ import {
   ReportData,
   ReportTemplate,
   ExportConfig,
-  ReportExecution
+  ReportExecution,
 } from '../../types/reports';
 import { reportService } from '../../services/reportService';
 
 // Lazy load de componentes complejos de reportes
-const ReportBuilder = lazy(() => import('../../components/reports/ReportBuilder').then(module => ({ default: module.ReportBuilder })));
-const ReportViewer = lazy(() => import('../../components/reports/ReportViewer').then(module => ({ default: module.ReportViewer })));
+const ReportBuilder = lazy(() =>
+  import('../../components/reports/ReportBuilder').then((module) => ({
+    default: module.ReportBuilder,
+  }))
+);
+const ReportViewer = lazy(() =>
+  import('../../components/reports/ReportViewer').then((module) => ({
+    default: module.ReportViewer,
+  }))
+);
 
 interface ReportTemplateCardProps {
   template: ReportTemplate;
@@ -59,16 +67,24 @@ const ReportTemplateCard: React.FC<ReportTemplateCardProps> = ({ template, onUse
   <Card withBorder p="md" style={{ cursor: 'pointer' }} onClick={() => onUse(template)}>
     <Stack gap="sm">
       <Group justify="space-between">
-        <Badge variant="light" size="sm">{template.category}</Badge>
-        {template.isPopular && <Badge color="yellow" size="sm">Popular</Badge>}
+        <Badge variant="light" size="sm">
+          {template.category}
+        </Badge>
+        {template.isPopular && (
+          <Badge color="yellow" size="sm">
+            Popular
+          </Badge>
+        )}
       </Group>
       <Title order={5}>{template.name}</Title>
       <Text size="sm" c="dimmed" lineClamp={2}>
         {template.description}
       </Text>
       <Group gap="xs">
-        {template.tags.map(tag => (
-          <Badge key={tag} variant="outline" size="xs">{tag}</Badge>
+        {template.tags.map((tag) => (
+          <Badge key={tag} variant="outline" size="xs">
+            {tag}
+          </Badge>
         ))}
       </Group>
     </Stack>
@@ -85,7 +101,8 @@ export const ReportsPage: React.FC = () => {
   const [reportLoading, setReportLoading] = useState(false);
 
   // Modals
-  const [templatesModalOpened, { open: openTemplatesModal, close: closeTemplatesModal }] = useDisclosure(false);
+  const [templatesModalOpened, { open: openTemplatesModal, close: closeTemplatesModal }] =
+    useDisclosure(false);
 
   // Load data
   const loadReportDefinitions = useCallback(async () => {
@@ -97,7 +114,7 @@ export const ReportsPage: React.FC = () => {
       notifications.show({
         title: 'Error',
         message: 'No se pudieron cargar las definiciones de reportes',
-        color: 'red'
+        color: 'red',
       });
     } finally {
       setLoading(false);
@@ -112,7 +129,7 @@ export const ReportsPage: React.FC = () => {
       notifications.show({
         title: 'Error',
         message: 'No se pudieron cargar las plantillas',
-        color: 'red'
+        color: 'red',
       });
     }
   }, []);
@@ -127,21 +144,21 @@ export const ReportsPage: React.FC = () => {
     try {
       setReportLoading(true);
       setSelectedReport(definition);
-      
+
       const data = await reportService.executeReport(definition.id);
       setReportData(data);
       setActiveTab('viewer');
-      
+
       notifications.show({
         title: 'Reporte generado',
         message: `Reporte "${definition.name}" ejecutado correctamente`,
-        color: 'green'
+        color: 'green',
       });
     } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'No se pudo ejecutar el reporte',
-        color: 'red'
+        color: 'red',
       });
     } finally {
       setReportLoading(false);
@@ -157,17 +174,17 @@ export const ReportsPage: React.FC = () => {
     try {
       await reportService.deleteReportDefinition(definition.id);
       await loadReportDefinitions();
-      
+
       notifications.show({
         title: 'Eliminado',
         message: `Reporte "${definition.name}" eliminado correctamente`,
-        color: 'green'
+        color: 'green',
       });
     } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'No se pudo eliminar el reporte',
-        color: 'red'
+        color: 'red',
       });
     }
   };
@@ -179,17 +196,17 @@ export const ReportsPage: React.FC = () => {
       setSelectedReport(newReport);
       setActiveTab('builder');
       closeTemplatesModal();
-      
+
       notifications.show({
         title: 'Plantilla aplicada',
         message: `Reporte creado desde la plantilla "${template.name}"`,
-        color: 'green'
+        color: 'green',
       });
     } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'No se pudo crear el reporte desde la plantilla',
-        color: 'red'
+        color: 'red',
       });
     }
   };
@@ -202,60 +219,61 @@ export const ReportsPage: React.FC = () => {
   const handleReportSaved = (report: ReportDefinition) => {
     loadReportDefinitions();
     setActiveTab('dashboard');
-    
+
     notifications.show({
       title: 'Guardado',
       message: `Reporte "${report.name}" guardado correctamente`,
-      color: 'green'
+      color: 'green',
     });
   };
 
   const handleExport = async (config: ExportConfig) => {
     if (!selectedReport || !reportData) return;
-    
+
     try {
       const blob = await reportService.exportReportData(reportData, config);
-      const fileName = config.fileName || reportService.generateFileName(selectedReport.name, config.format);
+      const fileName =
+        config.fileName || reportService.generateFileName(selectedReport.name, config.format);
       reportService.downloadBlob(blob, fileName);
-      
+
       notifications.show({
         title: 'Exportación exitosa',
         message: `Archivo descargado: ${fileName}`,
-        color: 'green'
+        color: 'green',
       });
     } catch (error) {
       notifications.show({
         title: 'Error de exportación',
         message: 'No se pudo exportar el reporte',
-        color: 'red'
+        color: 'red',
       });
     }
   };
 
   const getReportTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      'financial': 'green',
-      'operations': 'blue',
-      'vehicle': 'orange',
-      'client': 'purple',
-      'partidas': 'red',
-      'trips': 'cyan',
-      'routes': 'yellow',
-      'custom': 'gray'
+      financial: 'green',
+      operations: 'blue',
+      vehicle: 'orange',
+      client: 'purple',
+      partidas: 'red',
+      trips: 'cyan',
+      routes: 'yellow',
+      custom: 'gray',
     };
     return colors[type] || 'gray';
   };
 
   const getReportTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      'financial': 'Financiero',
-      'operations': 'Operaciones',
-      'vehicle': 'Vehículos',
-      'client': 'Clientes',
-      'partidas': 'Partidas',
-      'trips': 'Viajes',
-      'routes': 'Rutas',
-      'custom': 'Personalizado'
+      financial: 'Financiero',
+      operations: 'Operaciones',
+      vehicle: 'Vehículos',
+      client: 'Clientes',
+      partidas: 'Partidas',
+      trips: 'Viajes',
+      routes: 'Rutas',
+      custom: 'Personalizado',
     };
     return labels[type] || type;
   };
@@ -275,10 +293,7 @@ export const ReportsPage: React.FC = () => {
           >
             Plantillas
           </Button>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={handleCreateNew}
-          >
+          <Button leftSection={<IconPlus size={16} />} onClick={handleCreateNew}>
             Nuevo Reporte
           </Button>
         </Group>
@@ -334,7 +349,7 @@ export const ReportsPage: React.FC = () => {
                     Reportes Activos
                   </Text>
                   <Text size="xl" fw={700} c="green">
-                    {reportDefinitions.filter(r => !r.isTemplate).length}
+                    {reportDefinitions.filter((r) => !r.isTemplate).length}
                   </Text>
                 </Card>
               </Grid.Col>
@@ -344,7 +359,7 @@ export const ReportsPage: React.FC = () => {
                     Tipos Únicos
                   </Text>
                   <Text size="xl" fw={700} c="orange">
-                    {new Set(reportDefinitions.map(r => r.type)).size}
+                    {new Set(reportDefinitions.map((r) => r.type)).size}
                   </Text>
                 </Card>
               </Grid.Col>
@@ -373,7 +388,8 @@ export const ReportsPage: React.FC = () => {
                 </Group>
               ) : reportDefinitions.length === 0 ? (
                 <Alert color="blue" title="Sin reportes">
-                  No hay reportes creados. Haga clic en "Nuevo Reporte" o use una plantilla para comenzar.
+                  No hay reportes creados. Haga clic en &quot;Nuevo Reporte&quot; o use una
+                  plantilla para comenzar.
                 </Alert>
               ) : (
                 <Grid>
@@ -432,7 +448,7 @@ export const ReportsPage: React.FC = () => {
                           </Group>
 
                           <Group gap="xs">
-                            {report.tags?.map(tag => (
+                            {report.tags?.map((tag) => (
                               <Badge key={tag} variant="outline" size="xs">
                                 {tag}
                               </Badge>
@@ -469,11 +485,14 @@ export const ReportsPage: React.FC = () => {
 
         {/* Builder Tab */}
         <Tabs.Panel value="builder" pt="md">
-          <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando constructor de reportes...</div>}>
-            <ReportBuilder
-              reportId={selectedReport?.id}
-              onSave={handleReportSaved}
-            />
+          <Suspense
+            fallback={
+              <div style={{ padding: '40px', textAlign: 'center' }}>
+                Cargando constructor de reportes...
+              </div>
+            }
+          >
+            <ReportBuilder reportId={selectedReport?.id} onSave={handleReportSaved} />
           </Suspense>
         </Tabs.Panel>
 
@@ -481,7 +500,13 @@ export const ReportsPage: React.FC = () => {
         <Tabs.Panel value="viewer" pt="md">
           {selectedReport && reportData ? (
             <Stack gap="md">
-              <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando visualizador de reportes...</div>}>
+              <Suspense
+                fallback={
+                  <div style={{ padding: '40px', textAlign: 'center' }}>
+                    Cargando visualizador de reportes...
+                  </div>
+                }
+              >
                 <ReportViewer
                   reportDefinition={selectedReport}
                   data={reportData}
@@ -490,7 +515,7 @@ export const ReportsPage: React.FC = () => {
                   onExport={handleExport}
                 />
               </Suspense>
-              
+
               <ExportOptions
                 reportDefinition={selectedReport}
                 reportData={reportData}
@@ -498,7 +523,7 @@ export const ReportsPage: React.FC = () => {
                   notifications.show({
                     title: 'Exportación completada',
                     message: `Archivo ${filename} descargado correctamente`,
-                    color: 'green'
+                    color: 'green',
                   });
                 }}
               />
@@ -518,7 +543,7 @@ export const ReportsPage: React.FC = () => {
               notifications.show({
                 title: 'Programación creada',
                 message: `Reporte "${schedule.name}" programado correctamente`,
-                color: 'green'
+                color: 'green',
               });
             }}
           />
@@ -532,7 +557,7 @@ export const ReportsPage: React.FC = () => {
               notifications.show({
                 title: 'Descarga iniciada',
                 message: `Descargando reporte: ${execution.reportDefinitionId}`,
-                color: 'blue'
+                color: 'blue',
               });
             }}
           />
@@ -548,21 +573,17 @@ export const ReportsPage: React.FC = () => {
       >
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Seleccione una plantilla para crear un nuevo reporte basado en configuraciones predefinidas.
+            Seleccione una plantilla para crear un nuevo reporte basado en configuraciones
+            predefinidas.
           </Text>
-          
+
           {templates.length === 0 ? (
-            <Alert color="blue">
-              No hay plantillas disponibles en este momento.
-            </Alert>
+            <Alert color="blue">No hay plantillas disponibles en este momento.</Alert>
           ) : (
             <Grid>
               {templates.map((template) => (
                 <Grid.Col key={template.id} span={6}>
-                  <ReportTemplateCard
-                    template={template}
-                    onUse={handleUseTemplate}
-                  />
+                  <ReportTemplateCard template={template} onUse={handleUseTemplate} />
                 </Grid.Col>
               ))}
             </Grid>
