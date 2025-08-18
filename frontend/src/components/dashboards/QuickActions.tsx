@@ -1,15 +1,22 @@
-import { Paper, SimpleGrid, UnstyledButton, Text, Group, ThemeIcon, Stack, Badge } from '@mantine/core';
-import { 
-  IconPlus, 
-  IconTruck, 
-  IconUsers, 
-  IconMapPin, 
-  IconRoute, 
+import {
+  Paper,
+  SimpleGrid,
+  UnstyledButton,
+  Text,
+  Group,
+  ThemeIcon,
+  Stack,
+  Badge,
+} from '@mantine/core';
+import {
+  IconTruck,
+  IconMapPin,
+  IconRoute,
   IconFileInvoice,
   IconUserPlus,
   IconTruckDelivery,
   IconReportAnalytics,
-  IconSettings
+  IconSettings,
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,7 +45,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       description: 'Crear un nuevo viaje',
       icon: IconTruckDelivery,
       color: 'blue',
-      path: '/viajes/nuevo'
+      path: '/viajes/nuevo',
     },
     {
       id: 'nuevo-cliente',
@@ -46,7 +53,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       description: 'Registrar cliente',
       icon: IconUserPlus,
       color: 'green',
-      path: '/clientes/nuevo'
+      path: '/clientes/nuevo',
     },
     {
       id: 'nuevo-vehiculo',
@@ -54,7 +61,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       description: 'Agregar vehículo',
       icon: IconTruck,
       color: 'orange',
-      path: '/vehiculos/nuevo'
+      path: '/vehiculos/nuevo',
     },
     {
       id: 'nuevo-site',
@@ -62,7 +69,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       description: 'Agregar ubicación',
       icon: IconMapPin,
       color: 'cyan',
-      path: '/sites/nuevo'
+      path: '/sites/nuevo',
     },
     {
       id: 'nuevo-tramo',
@@ -70,7 +77,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       description: 'Definir ruta',
       icon: IconRoute,
       color: 'violet',
-      path: '/tramos/nuevo'
+      path: '/tramos/nuevo',
     },
     {
       id: 'facturacion',
@@ -79,7 +86,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       icon: IconFileInvoice,
       color: 'indigo',
       path: '/facturacion',
-      badge: '12 pendientes'
+      badge: '12 pendientes',
     },
     {
       id: 'reportes',
@@ -87,7 +94,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       description: 'Ver informes',
       icon: IconReportAnalytics,
       color: 'teal',
-      path: '/reportes'
+      path: '/reportes',
     },
     {
       id: 'configuracion',
@@ -95,8 +102,8 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
       description: 'Ajustes del sistema',
       icon: IconSettings,
       color: 'gray',
-      path: '/configuracion'
-    }
+      path: '/configuracion',
+    },
   ];
 
   const handleActionClick = (action: QuickAction) => {
@@ -115,10 +122,10 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
           p="md"
           radius="md"
           withBorder
-          style={{ 
+          style={{
             cursor: action.disabled ? 'not-allowed' : 'pointer',
             opacity: action.disabled ? 0.6 : 1,
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
           }}
           className="hover:shadow-md"
         >
@@ -129,12 +136,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
           >
             <Stack gap="sm" align="center" ta="center">
               <Group justify="center" pos="relative">
-                <ThemeIcon
-                  size="xl"
-                  radius="md"
-                  color={action.color}
-                  variant="light"
-                >
+                <ThemeIcon size="xl" radius="md" color={action.color} variant="light">
                   <action.icon size={24} />
                 </ThemeIcon>
                 {action.badge && (
@@ -150,7 +152,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
                   </Badge>
                 )}
               </Group>
-              
+
               <div>
                 <Text fw={600} size="sm" lineClamp={1}>
                   {action.title}
