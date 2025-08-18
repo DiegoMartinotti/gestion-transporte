@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  Card,
-  Title,
-  Group,
-  Button,
-  Stack,
-  Paper,
-  Text,
-  ActionIcon,
-} from '@mantine/core';
+import { Card, Title, Group, Button, Stack, Paper, Text, ActionIcon } from '@mantine/core';
 import { UseFormReturnType } from '@mantine/form';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 
@@ -23,7 +14,7 @@ interface DynamicListFieldProps<T = any> {
   canRemove?: (index: number) => boolean;
   itemLabel?: (index: number) => string;
   addButtonText?: string;
-  validation?: Record<string, (value: any) => string | null>;
+  _validation?: Record<string, (value: any) => string | null>;
 }
 
 export default function DynamicListField<T = any>({
@@ -37,9 +28,9 @@ export default function DynamicListField<T = any>({
   canRemove,
   itemLabel,
   addButtonText,
-  validation
+  _validation,
 }: DynamicListFieldProps<T>) {
-  const items = form.getValues()[path] as T[] || [];
+  const items = (form.getValues()[path] as T[]) || [];
 
   const addItem = () => {
     if (maxItems && items.length >= maxItems) return;
@@ -74,27 +65,21 @@ export default function DynamicListField<T = any>({
       <Group justify="space-between" mb="md">
         <Title order={4}>{title}</Title>
         {canAddMore && (
-          <Button
-            size="xs"
-            leftSection={<IconPlus size={14} />}
-            onClick={addItem}
-          >
+          <Button size="xs" leftSection={<IconPlus size={14} />} onClick={addItem}>
             {getAddButtonText()}
           </Button>
         )}
       </Group>
-      
+
       <Stack gap="sm">
         {items.map((item, index) => (
           <Paper key={index} p="sm" withBorder>
             <Group justify="space-between" mb="xs">
-              <Text size="sm" fw={500}>{getItemLabel(index)}</Text>
+              <Text size="sm" fw={500}>
+                {getItemLabel(index)}
+              </Text>
               {canRemoveItem(index) && (
-                <ActionIcon
-                  color="red"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                >
+                <ActionIcon color="red" size="sm" onClick={() => removeItem(index)}>
                   <IconTrash size={14} />
                 </ActionIcon>
               )}
@@ -102,7 +87,7 @@ export default function DynamicListField<T = any>({
             {renderFields(item, index, form)}
           </Paper>
         ))}
-        
+
         {items.length === 0 && (
           <Text c="dimmed" ta="center" py="md">
             No hay {title.toLowerCase()} agregados
