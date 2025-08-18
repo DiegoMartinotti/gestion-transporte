@@ -17,7 +17,7 @@ import {
   NumberInput,
   Select,
   Modal,
-  LoadingOverlay
+  LoadingOverlay,
 } from '@mantine/core';
 import {
   IconRoute,
@@ -28,7 +28,7 @@ import {
   IconEdit,
   IconMap,
   IconTarget,
-  IconClock
+  IconClock,
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -78,14 +78,10 @@ interface Tramo {
 interface TramoDetailProps {
   tramo: Tramo;
   onEdit: () => void;
-  onClose: () => void;
+  _onClose: () => void;
 }
 
-const TramoDetail: React.FC<TramoDetailProps> = ({
-  tramo,
-  onEdit,
-  onClose
-}) => {
+const TramoDetail: React.FC<TramoDetailProps> = ({ tramo, onEdit, _onClose }) => {
   const [calculatorOpened, { open: openCalculator, close: closeCalculator }] = useDisclosure();
   const [calculating, setCalculating] = useState(false);
   const [calculationResult, setCalculationResult] = useState<any>(null);
@@ -93,7 +89,7 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
     fecha: new Date().toISOString().split('T')[0],
     tipo: 'TRMC' as 'TRMC' | 'TRMI',
     cantidad: 1,
-    unidades: 1
+    unidades: 1,
   });
 
   const calculateCost = async () => {
@@ -104,13 +100,13 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
       notifications.show({
         title: 'Cálculo completado',
         message: `Costo calculado: $${result.costo}`,
-        color: 'green'
+        color: 'green',
       });
     } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'Error al calcular costo',
-        color: 'red'
+        color: 'red',
       });
     } finally {
       setCalculating(false);
@@ -123,13 +119,13 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
       notifications.show({
         title: 'Éxito',
         message: 'Distancia recalculada correctamente',
-        color: 'green'
+        color: 'green',
       });
     } catch (error) {
       notifications.show({
         title: 'Error',
         message: 'Error al recalcular distancia',
-        color: 'red'
+        color: 'red',
       });
     }
   };
@@ -143,24 +139,24 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
     return {
       vigente,
       color: vigente ? 'green' : 'gray',
-      label: vigente ? 'Vigente' : 'No vigente'
+      label: vigente ? 'Vigente' : 'No vigente',
     };
   };
 
-  const tarifasVigentes = tramo.tarifasHistoricas.filter(tarifa => {
+  const tarifasVigentes = tramo.tarifasHistoricas.filter((tarifa) => {
     const now = new Date();
     const desde = new Date(tarifa.vigenciaDesde);
     const hasta = new Date(tarifa.vigenciaHasta);
     return desde <= now && hasta >= now;
   });
 
-  const tarifasPasadas = tramo.tarifasHistoricas.filter(tarifa => {
+  const tarifasPasadas = tramo.tarifasHistoricas.filter((tarifa) => {
     const now = new Date();
     const hasta = new Date(tarifa.vigenciaHasta);
     return hasta < now;
   });
 
-  const tarifasFuturas = tramo.tarifasHistoricas.filter(tarifa => {
+  const tarifasFuturas = tramo.tarifasHistoricas.filter((tarifa) => {
     const now = new Date();
     const desde = new Date(tarifa.vigenciaDesde);
     return desde > now;
@@ -186,14 +182,13 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
             <Button
               variant="light"
               leftSection={<IconMap size={16} />}
-              onClick={() => {/* TODO: Abrir en mapa */}}
+              onClick={() => {
+                /* TODO: Abrir en mapa */
+              }}
             >
               Ver en Mapa
             </Button>
-            <Button
-              leftSection={<IconEdit size={16} />}
-              onClick={onEdit}
-            >
+            <Button leftSection={<IconEdit size={16} />} onClick={onEdit}>
               Editar
             </Button>
           </Group>
@@ -204,7 +199,9 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
             <Card withBorder p="md">
               <Stack gap="md">
                 <Group justify="space-between">
-                  <Text size="sm" c="dimmed">Cliente</Text>
+                  <Text size="sm" c="dimmed">
+                    Cliente
+                  </Text>
                   <Text fw={500}>{tramo.cliente.nombre}</Text>
                 </Group>
 
@@ -213,11 +210,15 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                 <Group justify="space-between">
                   <Group>
                     <IconMapPin size={16} color="green" />
-                    <Text size="sm" c="dimmed">Origen</Text>
+                    <Text size="sm" c="dimmed">
+                      Origen
+                    </Text>
                   </Group>
                   <Stack gap={0} align="flex-end">
                     <Text fw={500}>{tramo.origen.nombre}</Text>
-                    <Text size="xs" c="dimmed">{tramo.origen.direccion}</Text>
+                    <Text size="xs" c="dimmed">
+                      {tramo.origen.direccion}
+                    </Text>
                   </Stack>
                 </Group>
 
@@ -239,11 +240,15 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                 <Group justify="space-between">
                   <Group>
                     <IconMapPin size={16} color="red" />
-                    <Text size="sm" c="dimmed">Destino</Text>
+                    <Text size="sm" c="dimmed">
+                      Destino
+                    </Text>
                   </Group>
                   <Stack gap={0} align="flex-end">
                     <Text fw={500}>{tramo.destino.nombre}</Text>
-                    <Text size="xs" c="dimmed">{tramo.destino.direccion}</Text>
+                    <Text size="xs" c="dimmed">
+                      {tramo.destino.direccion}
+                    </Text>
                   </Stack>
                 </Group>
               </Stack>
@@ -255,12 +260,14 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
               <Card withBorder p="md">
                 <Stack gap="xs">
                   <Group justify="space-between">
-                    <Text size="sm" c="dimmed">Tarifas Vigentes</Text>
+                    <Text size="sm" c="dimmed">
+                      Tarifas Vigentes
+                    </Text>
                     <Badge color={tarifasVigentes.length > 0 ? 'green' : 'red'}>
                       {tarifasVigentes.length}
                     </Badge>
                   </Group>
-                  {tarifasVigentes.map(tarifa => (
+                  {tarifasVigentes.map((tarifa) => (
                     <Group key={tarifa._id} justify="space-between">
                       <Group gap="xs">
                         <Badge size="sm" color={tarifa.tipo === 'TRMC' ? 'blue' : 'green'}>
@@ -268,7 +275,9 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                         </Badge>
                         <Text size="sm">{tarifa.metodoCalculo}</Text>
                       </Group>
-                      <Text size="sm" fw={500}>${tarifa.valor}</Text>
+                      <Text size="sm" fw={500}>
+                        ${tarifa.valor}
+                      </Text>
                     </Group>
                   ))}
                 </Stack>
@@ -276,7 +285,9 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
 
               <Card withBorder p="md">
                 <Stack gap="xs">
-                  <Text size="sm" c="dimmed">Información</Text>
+                  <Text size="sm" c="dimmed">
+                    Información
+                  </Text>
                   <Group justify="space-between">
                     <Text size="xs">Creado</Text>
                     <Text size="xs">{new Date(tramo.createdAt).toLocaleDateString()}</Text>
@@ -299,46 +310,37 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
       {/* Tabs con información detallada */}
       <Tabs defaultValue="tarifas">
         <Tabs.List>
-          <Tabs.Tab value="tarifas">
-            Tarifas ({tramo.tarifasHistoricas.length})
-          </Tabs.Tab>
-          <Tabs.Tab value="historial">
-            Historial
-          </Tabs.Tab>
-          <Tabs.Tab value="estadisticas">
-            Estadísticas
-          </Tabs.Tab>
+          <Tabs.Tab value="tarifas">Tarifas ({tramo.tarifasHistoricas.length})</Tabs.Tab>
+          <Tabs.Tab value="historial">Historial</Tabs.Tab>
+          <Tabs.Tab value="estadisticas">Estadísticas</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="tarifas">
           <Stack gap="md">
             {tarifasVigentes.length > 0 && (
               <Paper p="md" withBorder>
-                <Title order={5} mb="md">Tarifas Vigentes</Title>
-                <TarifaHistorial 
-                  tarifas={tarifasVigentes}
-                  readonly={true}
-                />
+                <Title order={5} mb="md">
+                  Tarifas Vigentes
+                </Title>
+                <TarifaHistorial tarifas={tarifasVigentes} readonly={true} />
               </Paper>
             )}
 
             {tarifasFuturas.length > 0 && (
               <Paper p="md" withBorder>
-                <Title order={5} mb="md">Tarifas Futuras</Title>
-                <TarifaHistorial 
-                  tarifas={tarifasFuturas}
-                  readonly={true}
-                />
+                <Title order={5} mb="md">
+                  Tarifas Futuras
+                </Title>
+                <TarifaHistorial tarifas={tarifasFuturas} readonly={true} />
               </Paper>
             )}
 
             {tarifasPasadas.length > 0 && (
               <Paper p="md" withBorder>
-                <Title order={5} mb="md">Tarifas Históricas</Title>
-                <TarifaHistorial 
-                  tarifas={tarifasPasadas}
-                  readonly={true}
-                />
+                <Title order={5} mb="md">
+                  Tarifas Históricas
+                </Title>
+                <TarifaHistorial tarifas={tarifasPasadas} readonly={true} />
               </Paper>
             )}
 
@@ -352,10 +354,15 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
 
         <Tabs.Panel value="historial">
           <Paper p="md" withBorder>
-            <Title order={5} mb="md">Timeline de Tarifas</Title>
+            <Title order={5} mb="md">
+              Timeline de Tarifas
+            </Title>
             <Timeline active={-1}>
               {tramo.tarifasHistoricas
-                .sort((a, b) => new Date(b.vigenciaDesde).getTime() - new Date(a.vigenciaDesde).getTime())
+                .sort(
+                  (a, b) =>
+                    new Date(b.vigenciaDesde).getTime() - new Date(a.vigenciaDesde).getTime()
+                )
                 .map((tarifa) => {
                   const status = getTarifaStatus(tarifa);
                   return (
@@ -378,7 +385,8 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                           <Text size="sm">Peaje: ${tarifa.valorPeaje}</Text>
                         </Group>
                         <Text size="xs" c="dimmed">
-                          Vigente del {new Date(tarifa.vigenciaDesde).toLocaleDateString()} al {new Date(tarifa.vigenciaHasta).toLocaleDateString()}
+                          Vigente del {new Date(tarifa.vigenciaDesde).toLocaleDateString()} al{' '}
+                          {new Date(tarifa.vigenciaHasta).toLocaleDateString()}
                         </Text>
                       </Stack>
                     </Timeline.Item>
@@ -433,7 +441,11 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                           <Text size="sm">Primera tarifa</Text>
                           <Text size="sm">
                             {new Date(
-                              Math.min(...tramo.tarifasHistoricas.map(t => new Date(t.vigenciaDesde).getTime()))
+                              Math.min(
+                                ...tramo.tarifasHistoricas.map((t) =>
+                                  new Date(t.vigenciaDesde).getTime()
+                                )
+                              )
                             ).toLocaleDateString()}
                           </Text>
                         </Group>
@@ -441,7 +453,11 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                           <Text size="sm">Última vigencia</Text>
                           <Text size="sm">
                             {new Date(
-                              Math.max(...tramo.tarifasHistoricas.map(t => new Date(t.vigenciaHasta).getTime()))
+                              Math.max(
+                                ...tramo.tarifasHistoricas.map((t) =>
+                                  new Date(t.vigenciaHasta).getTime()
+                                )
+                              )
                             ).toLocaleDateString()}
                           </Text>
                         </Group>
@@ -474,13 +490,15 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                 label="Tipo de Tarifa"
                 data={[
                   { value: 'TRMC', label: 'TRMC' },
-                  { value: 'TRMI', label: 'TRMI' }
+                  { value: 'TRMI', label: 'TRMI' },
                 ]}
                 value={calculationParams.tipo}
-                onChange={(value) => setCalculationParams(prev => ({ 
-                  ...prev, 
-                  tipo: value as 'TRMC' | 'TRMI' 
-                }))}
+                onChange={(value) =>
+                  setCalculationParams((prev) => ({
+                    ...prev,
+                    tipo: value as 'TRMC' | 'TRMI',
+                  }))
+                }
               />
             </Grid.Col>
             <Grid.Col span={6}>
@@ -488,10 +506,12 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                 type="date"
                 style={{ width: '100%', padding: '8px' }}
                 value={calculationParams.fecha}
-                onChange={(e) => setCalculationParams(prev => ({ 
-                  ...prev, 
-                  fecha: e.target.value 
-                }))}
+                onChange={(e) =>
+                  setCalculationParams((prev) => ({
+                    ...prev,
+                    fecha: e.target.value,
+                  }))
+                }
               />
             </Grid.Col>
             <Grid.Col span={6}>
@@ -499,10 +519,12 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                 label="Cantidad"
                 min={1}
                 value={calculationParams.cantidad}
-                onChange={(value) => setCalculationParams(prev => ({ 
-                  ...prev, 
-                  cantidad: Number(value) || 1 
-                }))}
+                onChange={(value) =>
+                  setCalculationParams((prev) => ({
+                    ...prev,
+                    cantidad: Number(value) || 1,
+                  }))
+                }
               />
             </Grid.Col>
             <Grid.Col span={6}>
@@ -510,10 +532,12 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                 label="Unidades"
                 min={1}
                 value={calculationParams.unidades}
-                onChange={(value) => setCalculationParams(prev => ({ 
-                  ...prev, 
-                  unidades: Number(value) || 1 
-                }))}
+                onChange={(value) =>
+                  setCalculationParams((prev) => ({
+                    ...prev,
+                    unidades: Number(value) || 1,
+                  }))
+                }
               />
             </Grid.Col>
           </Grid>
@@ -537,7 +561,9 @@ const TramoDetail: React.FC<TramoDetailProps> = ({
                 <Divider />
                 <Group justify="space-between">
                   <Text fw={500}>Total:</Text>
-                  <Text fw={700} size="lg">${calculationResult.desglose.total}</Text>
+                  <Text fw={700} size="lg">
+                    ${calculationResult.desglose.total}
+                  </Text>
                 </Group>
               </Stack>
             </Paper>
