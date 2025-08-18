@@ -1,20 +1,19 @@
-import { 
-  Container, 
-  Title, 
-  Group, 
-  Button, 
+import {
+  Container,
+  Title,
+  Group,
+  Button,
   Stack,
   Paper,
   Badge,
   ActionIcon,
   Menu,
-  Text
+  Text,
 } from '@mantine/core';
-import { 
-  IconPlus, 
-  IconDownload, 
-  IconUpload, 
-  IconFileText,
+import {
+  IconPlus,
+  IconDownload,
+  IconUpload,
   IconEdit,
   IconTrash,
   IconDots,
@@ -22,7 +21,7 @@ import {
   IconPhone,
   IconMapPin,
   IconRoute,
-  IconEye
+  IconEye,
 } from '@tabler/icons-react';
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -36,7 +35,6 @@ import VirtualizedDataTable from '../../components/base/VirtualizedDataTable';
 import { ExcelImportModal } from '../../components/modals';
 import { Cliente, ClienteFilters } from '../../types';
 import { clienteService } from '../../services/clienteService';
-import { DEFAULT_PAGE_SIZE } from '../../constants';
 import { useVirtualizedTable } from '../../hooks/useVirtualizedTable';
 
 export default function ClientesPage() {
@@ -56,23 +54,27 @@ export default function ClientesPage() {
     setCurrentPage,
     itemsPerPage: pageSize,
     setItemsPerPage,
-    refresh: loadClientes
+    refresh: loadClientes,
   } = useDataLoader({
-    fetchFunction: useCallback((params) => clienteService.getAll({
-      ...filters,
-      ...(params || {})
-    }), [filters]),
+    fetchFunction: useCallback(
+      (params) =>
+        clienteService.getAll({
+          ...filters,
+          ...(params || {}),
+        }),
+      [filters]
+    ),
     dependencies: [filters],
     enablePagination: true,
-    errorMessage: 'Error al cargar clientes'
+    errorMessage: 'Error al cargar clientes',
   });
 
   // Hook para tabla virtualizada
-  const {} = useVirtualizedTable({
+  useVirtualizedTable({
     data: clientes,
     initialPageSize: 500,
     enableLocalFiltering: true,
-    enableLocalSorting: true
+    enableLocalSorting: true,
   });
 
   // Detectar si usar virtual scrolling basado en cantidad de datos
@@ -85,20 +87,19 @@ export default function ClientesPage() {
     setCurrentPage(1);
   };
 
-
   const handleDelete = async () => {
     if (!deleteModal.selectedItem) return;
-    
+
     try {
       setDeleteLoading(true);
       await clienteService.delete(deleteModal.selectedItem._id);
-      
+
       notifications.show({
         title: 'Cliente eliminado',
         message: `El cliente "${deleteModal.selectedItem.nombre}" ha sido eliminado correctamente`,
-        color: 'green'
+        color: 'green',
       });
-      
+
       deleteModal.close();
       await loadClientes();
     } catch (error) {
@@ -131,55 +132,59 @@ export default function ClientesPage() {
         <Stack gap={2}>
           <Text fw={500}>{record.nombre}</Text>
           {record.contacto && (
-            <Text size="xs" c="dimmed">{record.contacto}</Text>
+            <Text size="xs" c="dimmed">
+              {record.contacto}
+            </Text>
           )}
         </Stack>
-      )
+      ),
     },
     {
       key: 'email',
       label: 'Email',
-      render: (record: Cliente) => record.email ? (
-        <Group gap="xs">
-          <IconMail size="0.9rem" />
-          <Text size="sm">{record.email}</Text>
-        </Group>
-      ) : '-'
+      render: (record: Cliente) =>
+        record.email ? (
+          <Group gap="xs">
+            <IconMail size="0.9rem" />
+            <Text size="sm">{record.email}</Text>
+          </Group>
+        ) : (
+          '-'
+        ),
     },
     {
       key: 'telefono',
       label: 'Teléfono',
-      render: (record: Cliente) => record.telefono ? (
-        <Group gap="xs">
-          <IconPhone size="0.9rem" />
-          <Text size="sm">{record.telefono}</Text>
-        </Group>
-      ) : '-'
+      render: (record: Cliente) =>
+        record.telefono ? (
+          <Group gap="xs">
+            <IconPhone size="0.9rem" />
+            <Text size="sm">{record.telefono}</Text>
+          </Group>
+        ) : (
+          '-'
+        ),
     },
     {
       key: 'direccion',
       label: 'Dirección',
-      render: (record: Cliente) => record.direccion || '-'
+      render: (record: Cliente) => record.direccion || '-',
     },
     {
       key: 'activo',
       label: 'Estado',
       align: 'center',
       render: (record: Cliente) => (
-        <Badge 
-          color={record.activo ? 'green' : 'red'} 
-          variant="light" 
-          size="sm"
-        >
+        <Badge color={record.activo ? 'green' : 'red'} variant="light" size="sm">
           {record.activo ? 'Activo' : 'Inactivo'}
         </Badge>
-      )
+      ),
     },
     {
       key: 'createdAt',
       label: 'Fecha Creación',
       sortable: true,
-      render: (record: Cliente) => new Date(record.createdAt).toLocaleDateString('es-AR')
+      render: (record: Cliente) => new Date(record.createdAt).toLocaleDateString('es-AR'),
     },
     {
       key: 'actions',
@@ -195,34 +200,34 @@ export default function ClientesPage() {
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconEye size="0.9rem" />}
               onClick={() => navigate(`/clientes/${record._id}`)}
             >
               Ver Detalles
             </Menu.Item>
-            
-            <Menu.Item 
+
+            <Menu.Item
               leftSection={<IconEdit size="0.9rem" />}
               onClick={() => navigate(`/clientes/${record._id}/edit`)}
             >
               Editar
             </Menu.Item>
             <Menu.Divider />
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconMapPin size="0.9rem" />}
               onClick={() => navigate(`/clientes/${record._id}/sites`)}
             >
               Ver Sites
             </Menu.Item>
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconRoute size="0.9rem" />}
               onClick={() => navigate(`/clientes/${record._id}/tramos`)}
             >
               Ver Tramos
             </Menu.Item>
             <Menu.Divider />
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconTrash size="0.9rem" />}
               color="red"
               onClick={() => deleteModal.openDelete(record)}
@@ -231,8 +236,8 @@ export default function ClientesPage() {
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -241,7 +246,7 @@ export default function ClientesPage() {
         <Stack gap="lg">
           <Group justify="space-between">
             <Title order={1}>Gestión de Clientes</Title>
-            
+
             <Group gap="sm">
               <Button
                 variant="outline"
@@ -250,7 +255,7 @@ export default function ClientesPage() {
               >
                 Importar
               </Button>
-              
+
               <Button
                 variant="outline"
                 leftSection={<IconDownload size="1rem" />}
@@ -259,7 +264,7 @@ export default function ClientesPage() {
               >
                 Exportar
               </Button>
-              
+
               <Button
                 leftSection={<IconPlus size="1rem" />}
                 onClick={() => navigate('/clientes/new')}
