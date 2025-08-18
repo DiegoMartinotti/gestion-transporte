@@ -1,21 +1,43 @@
 import { useState, useEffect } from 'react';
 import { useForm } from '@mantine/form';
-import { 
-  Card, Group, Button, Stack, Title, Text, Grid, Select, NumberInput, 
-  TextInput, Textarea, Badge, Alert, Divider, Paper, ActionIcon,
-  Stepper, Switch, Modal, Table, Tooltip, Progress
+import {
+  Card,
+  Group,
+  Button,
+  Stack,
+  Title,
+  Text,
+  Grid,
+  Select,
+  NumberInput,
+  TextInput,
+  Textarea,
+  Badge,
+  Alert,
+  Divider,
+  Paper,
+  ActionIcon,
+  Stepper,
+  Switch,
+  Modal,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
-import { 
-  IconPlus, IconTrash, IconCalculator, IconDeviceFloppy, IconX, 
-  IconMapPin, IconTruck, IconUser, IconClock, IconCurrencyDollar,
-  IconAlertCircle, IconInfoCircle, IconCheck, IconArrowRight
+import {
+  IconPlus,
+  IconTrash,
+  IconCalculator,
+  IconDeviceFloppy,
+  IconMapPin,
+  IconTruck,
+  IconClock,
+  IconCurrencyDollar,
+  IconInfoCircle,
+  IconCheck,
 } from '@tabler/icons-react';
 import { ClienteSelector } from '../../components/selectors/ClienteSelector';
 import { TramoSelector } from '../../components/selectors/TramoSelector';
 import { VehiculoSelector } from '../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../components/selectors/PersonalSelector';
-import { VariableHelper } from '../../components/base/VariableHelper';
 import { TarifaCalculator } from '../../components/calculation/TarifaCalculator';
 import { useClientes } from '../../hooks/useClientes';
 import { useTramos } from '../../hooks/useTramos';
@@ -29,83 +51,182 @@ interface ViajeFormProps {
   onCancel: () => void;
 }
 
-export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
+// Helper functions for form validation
+const validateBasicInfo = (values: ViajeFormData) => {
+  const errors: any = {};
+  if (!values.fecha) errors.fecha = 'Fecha requerida';
+  if (!values.cliente) errors.cliente = 'Cliente requerido';
+  if (!values.tramo) errors.tramo = 'Tramo requerido';
+  return errors;
+};
+
+const validateVehicleInfo = (values: ViajeFormData) => {
+  const errors: any = {};
+  if (!values.vehiculos.length) errors.vehiculos = 'Al menos un vehículo requerido';
+  if (!values.choferes.length) errors.choferes = 'Al menos un chofer requerido';
+  return errors;
+};
+
+const validateCargoInfo = (values: ViajeFormData) => {
+  const errors: any = {};
+  if (!values.carga.peso || values.carga.peso <= 0) {
+    errors['carga.peso'] = 'Peso de carga requerido';
+  }
+  if (!values.distanciaKm || values.distanciaKm <= 0) {
+    errors.distanciaKm = 'Distancia requerida';
+  }
+  return errors;
+};
+
+// Helper function for initial vehicle mapping
+const getInitialVehiculos = (viaje?: Viaje) => {
+  return (
+    viaje?.vehiculos?.map((v) => (typeof v.vehiculo === 'object' ? v.vehiculo._id : v.vehiculo)) ||
+    []
+  );
+};
+
+// Helper function for calculation simulation
+const simulateCalculation = (formValues: ViajeFormData) => {
+  const result = {
+    montoBase: 15000,
+    desglose: {
+      tarifaBase: 12000,
+      incrementoPeso: 2000,
+      incrementoDistancia: 1000,
+    },
+    formula: 'tarifaBase + (peso * 0.5) + (distancia * 10)',
+    montoExtras: formValues.extras.reduce((sum, extra) => sum + (extra.monto || 0), 0),
+    montoTotal: 0,
+  };
+
+  result.montoTotal = result.montoBase + result.montoExtras;
+  return result;
+};
+
+// Helper function for showing notifications
+const showNotification = (type: 'success' | 'error', title: string, message: string) => {
+  notifications.show({
+    title,
+    message,
+    color: type === 'success' ? 'green' : 'red',
+  });
+};
+
+// Helper function for form submission
+const submitViaje = async (
+  viaje: Viaje | undefined,
+  values: ViajeFormData,
+  updateViaje: (id: string, data: ViajeFormData) => Promise<void>,
+  createViaje: (data: ViajeFormData) => Promise<void>
+) => {
+  if (viaje) {
+    await updateViaje(viaje._id, values);
+    showNotification('success', 'Viaje actualizado', 'Los cambios se guardaron correctamente');
+  } else {
+    await createViaje(values);
+    showNotification('success', 'Viaje creado', 'El viaje se registró correctamente');
+  }
+};
+
+// Hook personalizado para manejo de stepper
+const useStepper = (maxSteps: number) => {
   const [activeStep, setActiveStep] = useState(0);
+
+  const nextStep = () =>
+    setActiveStep((current) => (current < maxSteps - 1 ? current + 1 : current));
+  const prevStep = () => setActiveStep((current) => (current > 0 ? current - 1 : current));
+
+  return { activeStep, setActiveStep, nextStep, prevStep };
+};
+
+// Hook personalizado para manejo de cálculos
+const useViajeCalculation = () => {
   const [calculating, setCalculating] = useState(false);
-  const [showTarifaDetails, setShowTarifaDetails] = useState(false);
   const [calculationResult, setCalculationResult] = useState<any>(null);
+
+  return { calculating, setCalculating, calculationResult, setCalculationResult };
+};
+
+// Helper para datos básicos del viaje
+const getBasicData = (viaje?: Viaje) => ({
+  fecha: viaje?.fecha ? new Date(viaje.fecha) : new Date(),
+  cliente: typeof viaje?.cliente === 'string' ? viaje.cliente : viaje?.cliente?._id || '',
+  tramo: viaje?.tramo?._id || '',
+  numeroViaje: parseInt(viaje?.numeroViaje || '0'),
+});
+
+// Helper para datos de carga
+const getCargoData = (viaje?: Viaje) => ({
+  peso: viaje?.carga?.peso || 0,
+  volumen: viaje?.carga?.volumen || 0,
+  descripcion: viaje?.carga?.descripcion || '',
+  peligrosa: viaje?.carga?.peligrosa || false,
+  refrigerada: viaje?.carga?.refrigerada || false,
+});
+
+// Helper para datos adicionales
+const getAdditionalData = (viaje?: Viaje) => ({
+  distanciaKm: viaje?.distanciaKm || 0,
+  tiempoEstimadoHoras: viaje?.tiempoEstimadoHoras || 0,
+  ordenCompra: viaje?.ordenCompra || '',
+  observaciones: viaje?.observaciones || '',
+  extras: viaje?.extras || [],
+  estado: viaje?.estado || 'PENDIENTE',
+});
+
+// Helper para datos monetarios
+const getMonetaryData = (viaje?: Viaje) => ({
+  montoBase: viaje?.montoBase || 0,
+  montoExtras: viaje?.montoExtras || 0,
+  montoTotal: viaje?.montoTotal || 0,
+});
+
+// Helper para valores iniciales del formulario
+const getInitialFormValues = (viaje?: Viaje): ViajeFormData => ({
+  ...getBasicData(viaje),
+  vehiculos: getInitialVehiculos(viaje),
+  choferes: viaje?.choferes?.map((c) => c._id) || [],
+  ayudantes: viaje?.ayudantes?.map((a) => a._id) || [],
+  carga: getCargoData(viaje),
+  ...getAdditionalData(viaje),
+  ...getMonetaryData(viaje),
+});
+
+// Hook para la lógica del formulario
+const useViajeForm = (viaje: Viaje | undefined, activeStep: number) => {
+  return useForm<ViajeFormData>({
+    initialValues: getInitialFormValues(viaje),
+    validate: (values) => {
+      switch (activeStep) {
+        case 0:
+          return validateBasicInfo(values);
+        case 1:
+          return validateVehicleInfo(values);
+        case 2:
+          return validateCargoInfo(values);
+        default:
+          return {};
+      }
+    },
+  });
+};
+
+// Hook para el estado de selección
+const useSelectedEntities = (form: any, clientes: any[], tramos: any[]) => {
   const [selectedTramo, setSelectedTramo] = useState<any>(null);
   const [selectedCliente, setSelectedCliente] = useState<any>(null);
 
-  const { clientes } = useClientes();
-  const { tramos } = useTramos();
-  const { createViaje, updateViaje } = useViajes();
-
-  const form = useForm<ViajeFormData>({
-    initialValues: {
-      fecha: viaje?.fecha ? new Date(viaje.fecha) : new Date(),
-      cliente: typeof viaje?.cliente === 'string' ? viaje.cliente : viaje?.cliente?._id || '',
-      tramo: viaje?.tramo?._id || '',
-      numeroViaje: parseInt(viaje?.numeroViaje || '0'),
-      vehiculos: viaje?.vehiculos?.map(v => 
-        typeof v.vehiculo === 'object' ? v.vehiculo._id : v.vehiculo
-      ) || [],
-      choferes: viaje?.choferes?.map(c => c._id) || [],
-      ayudantes: viaje?.ayudantes?.map(a => a._id) || [],
-      carga: {
-        peso: viaje?.carga?.peso || 0,
-        volumen: viaje?.carga?.volumen || 0,
-        descripcion: viaje?.carga?.descripcion || '',
-        peligrosa: viaje?.carga?.peligrosa || false,
-        refrigerada: viaje?.carga?.refrigerada || false
-      },
-      distanciaKm: viaje?.distanciaKm || 0,
-      tiempoEstimadoHoras: viaje?.tiempoEstimadoHoras || 0,
-      ordenCompra: viaje?.ordenCompra || '',
-      observaciones: viaje?.observaciones || '',
-      extras: viaje?.extras || [],
-      estado: viaje?.estado || 'PENDIENTE',
-      montoBase: viaje?.montoBase || 0,
-      montoExtras: viaje?.montoExtras || 0,
-      montoTotal: viaje?.montoTotal || 0
-    },
-    validate: (values) => {
-      const errors: any = {};
-      
-      if (activeStep === 0) {
-        if (!values.fecha) errors.fecha = 'Fecha requerida';
-        if (!values.cliente) errors.cliente = 'Cliente requerido';
-        if (!values.tramo) errors.tramo = 'Tramo requerido';
-      }
-      
-      if (activeStep === 1) {
-        if (!values.vehiculos.length) errors.vehiculos = 'Al menos un vehículo requerido';
-        if (!values.choferes.length) errors.choferes = 'Al menos un chofer requerido';
-      }
-      
-      if (activeStep === 2) {
-        if (!values.carga.peso || values.carga.peso <= 0) {
-          errors['carga.peso'] = 'Peso de carga requerido';
-        }
-        if (!values.distanciaKm || values.distanciaKm <= 0) {
-          errors.distanciaKm = 'Distancia requerida';
-        }
-      }
-      
-      return errors;
-    }
-  });
-
   useEffect(() => {
     if (form.values.cliente) {
-      const cliente = clientes.find(c => c._id === form.values.cliente);
+      const cliente = clientes.find((c) => c._id === form.values.cliente);
       setSelectedCliente(cliente);
     }
   }, [form.values.cliente, clientes]);
 
   useEffect(() => {
     if (form.values.tramo) {
-      const tramo = tramos.find(t => t._id === form.values.tramo);
+      const tramo = tramos.find((t) => t._id === form.values.tramo);
       setSelectedTramo(tramo);
       if (tramo?.distanciaKm) {
         form.setFieldValue('distanciaKm', tramo.distanciaKm);
@@ -114,63 +235,43 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
         form.setFieldValue('tiempoEstimadoHoras', tramo.tiempoEstimadoHoras);
       }
     }
-  }, [form.values.tramo, tramos]);
+  }, [form.values.tramo, tramos, form]);
 
+  return { selectedTramo, selectedCliente };
+};
+
+// Hook para handlers del formulario
+const useViajeHandlers = (
+  viaje: Viaje | undefined,
+  form: any,
+  selectedCliente: any,
+  selectedTramo: any,
+  setCalculating: (value: boolean) => void,
+  setCalculationResult: (value: any) => void,
+  createViaje: any,
+  updateViaje: any,
+  onSave: (values: ViajeFormData) => void
+) => {
   const handleCalculateTarifa = async () => {
     if (!selectedCliente || !selectedTramo) {
-      notifications.show({
-        title: 'Error',
-        message: 'Selecciona cliente y tramo antes de calcular',
-        color: 'red'
-      });
+      showNotification('error', 'Error', 'Selecciona cliente y tramo antes de calcular');
       return;
     }
 
     setCalculating(true);
     try {
-      const calculationData = {
-        clienteId: form.values.cliente,
-        tramoId: form.values.tramo,
-        peso: form.values.carga.peso,
-        volumen: form.values.carga.volumen,
-        distancia: form.values.distanciaKm,
-        tiempo: form.values.tiempoEstimadoHoras,
-        vehiculos: form.values.vehiculos.length,
-        fecha: form.values.fecha,
-        extras: form.values.extras
-      };
-
-      // Simulación del cálculo
-      const result = {
-        montoBase: 15000,
-        desglose: {
-          tarifaBase: 12000,
-          incrementoPeso: 2000,
-          incrementoDistancia: 1000
-        },
-        formula: 'tarifaBase + (peso * 0.5) + (distancia * 10)',
-        montoExtras: form.values.extras.reduce((sum, extra) => sum + (extra.monto || 0), 0),
-        montoTotal: 0
-      };
-
-      result.montoTotal = result.montoBase + result.montoExtras;
-
+      const result = simulateCalculation(form.values);
       setCalculationResult(result);
       form.setFieldValue('montoBase', result.montoBase);
       form.setFieldValue('montoExtras', result.montoExtras);
       form.setFieldValue('montoTotal', result.montoTotal);
-
-      notifications.show({
-        title: 'Cálculo completado',
-        message: `Monto total: $${result.montoTotal.toLocaleString()}`,
-        color: 'green'
-      });
+      showNotification(
+        'success',
+        'Cálculo completado',
+        `Monto total: $${result.montoTotal.toLocaleString()}`
+      );
     } catch (error) {
-      notifications.show({
-        title: 'Error en cálculo',
-        message: 'No se pudo calcular la tarifa',
-        color: 'red'
-      });
+      showNotification('error', 'Error en cálculo', 'No se pudo calcular la tarifa');
     } finally {
       setCalculating(false);
     }
@@ -181,70 +282,80 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
       id: Date.now().toString(),
       concepto: '',
       monto: 0,
-      descripcion: ''
+      descripcion: '',
     };
     form.setFieldValue('extras', [...form.values.extras, newExtra]);
   };
 
   const handleRemoveExtra = (index: number) => {
-    const newExtras = form.values.extras.filter((_, i) => i !== index);
+    const newExtras = form.values.extras.filter((_: any, i: number) => i !== index);
     form.setFieldValue('extras', newExtras);
   };
 
   const handleSubmit = async (values: ViajeFormData) => {
     try {
-      if (viaje) {
-        await updateViaje(viaje._id, values);
-        notifications.show({
-          title: 'Viaje actualizado',
-          message: 'Los cambios se guardaron correctamente',
-          color: 'green'
-        });
-      } else {
-        await createViaje(values);
-        notifications.show({
-          title: 'Viaje creado',
-          message: 'El viaje se registró correctamente',
-          color: 'green'
-        });
-      }
+      await submitViaje(viaje, values, updateViaje, createViaje);
       onSave(values);
     } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo guardar el viaje',
-        color: 'red'
-      });
+      showNotification('error', 'Error', 'No se pudo guardar el viaje');
     }
   };
 
-  const nextStep = () => {
+  return { handleCalculateTarifa, handleAddExtra, handleRemoveExtra, handleSubmit };
+};
+
+export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
+  const { activeStep, setActiveStep, nextStep, prevStep } = useStepper(4);
+  const { calculating, setCalculating, calculationResult, setCalculationResult } =
+    useViajeCalculation();
+  const [showTarifaDetails, setShowTarifaDetails] = useState(false);
+
+  const { clientes } = useClientes();
+  const { tramos } = useTramos();
+  const { createViaje, updateViaje } = useViajes();
+
+  const form = useViajeForm(viaje, activeStep);
+  const { selectedTramo, selectedCliente } = useSelectedEntities(form, clientes, tramos);
+  const { handleCalculateTarifa, handleAddExtra, handleRemoveExtra, handleSubmit } =
+    useViajeHandlers(
+      viaje,
+      form,
+      selectedCliente,
+      selectedTramo,
+      setCalculating,
+      setCalculationResult,
+      createViaje,
+      updateViaje,
+      onSave
+    );
+
+  const handleNextStep = () => {
     const errors = form.validate();
     if (Object.keys(errors.errors).length === 0) {
-      setActiveStep((current) => (current < 3 ? current + 1 : current));
+      nextStep();
     }
   };
-
-  const prevStep = () => setActiveStep((current) => (current > 0 ? current - 1 : current));
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'ARS'
+      currency: 'ARS',
     }).format(value);
   };
+
+  const getFormErrorAsString = (error: any) => (typeof error === 'string' ? error : undefined);
+  const isArrayValue = (value: any) => (Array.isArray(value) ? value : []);
+  const getNumberValue = (value: any) => (typeof value === 'number' ? value : 0);
 
   return (
     <Stack>
       <Group justify="apart">
-        <Title order={2}>
-          {viaje ? `Editar Viaje #${viaje.numeroViaje}` : 'Nuevo Viaje'}
-        </Title>
+        <Title order={2}>{viaje ? `Editar Viaje #${viaje.numeroViaje}` : 'Nuevo Viaje'}</Title>
         <Group>
           <Button variant="light" color="gray" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button 
+          <Button
             leftSection={<IconDeviceFloppy />}
             onClick={() => handleSubmit(form.values)}
             disabled={activeStep < 3}
@@ -256,8 +367,8 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
 
       <Card>
         <Stepper active={activeStep} onStepClick={setActiveStep}>
-          <Stepper.Step 
-            label="Información Básica" 
+          <Stepper.Step
+            label="Información Básica"
             description="Cliente, ruta y fecha"
             icon={<IconInfoCircle />}
           >
@@ -288,7 +399,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                     placeholder="Selecciona el cliente"
                     value={form.values.cliente}
                     onChange={(value) => form.setFieldValue('cliente', value || '')}
-                    error={typeof form.errors.cliente === 'string' ? form.errors.cliente : undefined}
+                    error={getFormErrorAsString(form.errors.cliente)}
                     required
                   />
                 </Grid.Col>
@@ -298,8 +409,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                     placeholder="Selecciona el tramo"
                     value={form.values.tramo}
                     onChange={(value) => form.setFieldValue('tramo', value || '')}
-                    clienteId={form.values.cliente}
-                    error={typeof form.errors.tramo === 'string' ? form.errors.tramo : undefined}
+                    error={getFormErrorAsString(form.errors.tramo)}
                     required
                   />
                 </Grid.Col>
@@ -314,9 +424,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                         {selectedTramo.origen?.denominacion} → {selectedTramo.destino?.denominacion}
                       </Text>
                     </div>
-                    <Badge color="blue">
-                      {selectedTramo.distanciaKm} km
-                    </Badge>
+                    <Badge color="blue">{selectedTramo.distanciaKm} km</Badge>
                   </Group>
                 </Alert>
               )}
@@ -329,8 +437,8 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
             </Stack>
           </Stepper.Step>
 
-          <Stepper.Step 
-            label="Vehículos y Personal" 
+          <Stepper.Step
+            label="Vehículos y Personal"
             description="Asignación de recursos"
             icon={<IconTruck />}
           >
@@ -339,9 +447,9 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                 label="Vehículos"
                 placeholder="Selecciona los vehículos"
                 value={form.values.vehiculos}
-                onChange={(value) => form.setFieldValue('vehiculos', Array.isArray(value) ? value : [])}
+                onChange={(value) => form.setFieldValue('vehiculos', isArrayValue(value))}
                 multiple
-                error={typeof form.errors.vehiculos === 'string' ? form.errors.vehiculos : undefined}
+                error={getFormErrorAsString(form.errors.vehiculos)}
                 required
               />
 
@@ -351,10 +459,10 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                     label="Choferes"
                     placeholder="Selecciona los choferes"
                     value={form.values.choferes}
-                    onChange={(value) => form.setFieldValue('choferes', Array.isArray(value) ? value : [])}
+                    onChange={(value) => form.setFieldValue('choferes', isArrayValue(value))}
                     tipo="Conductor"
                     multiple
-                    error={typeof form.errors.choferes === 'string' ? form.errors.choferes : undefined}
+                    error={getFormErrorAsString(form.errors.choferes)}
                     required
                   />
                 </Grid.Col>
@@ -363,7 +471,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                     label="Ayudantes"
                     placeholder="Selecciona los ayudantes"
                     value={form.values.ayudantes}
-                    onChange={(value) => form.setFieldValue('ayudantes', Array.isArray(value) ? value : [])}
+                    onChange={(value) => form.setFieldValue('ayudantes', isArrayValue(value))}
                     tipo="Ayudante"
                     multiple
                   />
@@ -372,8 +480,8 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
             </Stack>
           </Stepper.Step>
 
-          <Stepper.Step 
-            label="Detalles de Carga" 
+          <Stepper.Step
+            label="Detalles de Carga"
             description="Información del transporte"
             icon={<IconClock />}
           >
@@ -429,7 +537,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                       { value: 'EN_PROGRESO', label: 'En Progreso' },
                       { value: 'COMPLETADO', label: 'Completado' },
                       { value: 'CANCELADO', label: 'Cancelado' },
-                      { value: 'FACTURADO', label: 'Facturado' }
+                      { value: 'FACTURADO', label: 'Facturado' },
                     ]}
                     {...form.getInputProps('estado')}
                   />
@@ -463,8 +571,8 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
             </Stack>
           </Stepper.Step>
 
-          <Stepper.Step 
-            label="Cálculo y Facturación" 
+          <Stepper.Step
+            label="Cálculo y Facturación"
             description="Tarifas y costos"
             icon={<IconCurrencyDollar />}
           >
@@ -527,11 +635,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
 
               <Group justify="apart">
                 <Text fw={500}>Cargos Adicionales</Text>
-                <Button
-                  leftSection={<IconPlus />}
-                  variant="light"
-                  onClick={handleAddExtra}
-                >
+                <Button leftSection={<IconPlus />} variant="light" onClick={handleAddExtra}>
                   Agregar Extra
                 </Button>
               </Group>
@@ -558,7 +662,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                         value={extra.monto}
                         onChange={(value) => {
                           const newExtras = [...form.values.extras];
-                          newExtras[index].monto = typeof value === 'number' ? value : 0;
+                          newExtras[index].monto = getNumberValue(value);
                           form.setFieldValue('extras', newExtras);
                         }}
                         decimalScale={2}
@@ -613,7 +717,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
           <Button variant="default" onClick={prevStep} disabled={activeStep === 0}>
             Anterior
           </Button>
-          <Button onClick={nextStep} disabled={activeStep === 3}>
+          <Button onClick={handleNextStep} disabled={activeStep === 3}>
             Siguiente
           </Button>
         </Group>
@@ -634,7 +738,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
                 peso: form.values.carga.peso,
                 volumen: form.values.carga.volumen,
                 distancia: form.values.distanciaKm,
-                vehiculos: form.values.vehiculos.length
+                vehiculos: form.values.vehiculos.length,
               }}
               resultado={calculationResult}
             />
