@@ -12,7 +12,7 @@ import {
   ActionIcon,
   Tooltip,
   Stack,
-  Paper
+  Paper,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -22,7 +22,7 @@ import {
   IconFileText,
   IconCalendar,
   IconUser,
-  IconCurrencyDollar
+  IconCurrencyDollar,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
@@ -40,7 +40,7 @@ const ESTADOS_OPTIONS = [
   { value: '', label: 'Todos los estados' },
   { value: 'Pendiente', label: 'Pendiente' },
   { value: 'Facturada', label: 'Facturada' },
-  { value: 'Cancelada', label: 'Cancelada' }
+  { value: 'Cancelada', label: 'Cancelada' },
 ];
 
 export function OrdenesCompraPage() {
@@ -56,13 +56,13 @@ export function OrdenesCompraPage() {
           currentPage: response.page,
           totalPages: response.totalPages,
           totalItems: response.total,
-          itemsPerPage: response.data.length
-        }
+          itemsPerPage: response.data.length,
+        },
       };
     },
     dependencies: [filters],
     enablePagination: true,
-    errorMessage: 'No se pudieron cargar las órdenes de compra'
+    errorMessage: 'No se pudieron cargar las órdenes de compra',
   });
 
   // Hook para cargar clientes (solo una vez)
@@ -71,10 +71,15 @@ export function OrdenesCompraPage() {
       const response = await ClienteService.getAll();
       return {
         data: response.data,
-        pagination: { currentPage: 1, totalPages: 1, totalItems: response.data.length, itemsPerPage: response.data.length }
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: response.data.length,
+          itemsPerPage: response.data.length,
+        },
       };
     },
-    errorMessage: 'Error cargando clientes'
+    errorMessage: 'Error cargando clientes',
   });
 
   // Datos y estados
@@ -84,18 +89,16 @@ export function OrdenesCompraPage() {
   const pagination = {
     page: ordenesLoader.currentPage,
     totalPages: ordenesLoader.totalPages,
-    total: ordenesLoader.totalItems
+    total: ordenesLoader.totalItems,
   };
-
-  const loadOrdenes = ordenesLoader.refresh;
 
   const handleDelete = async (orden: OrdenCompra) => {
     modals.openConfirmModal({
       title: 'Eliminar Orden de Compra',
       children: (
         <Text size="sm">
-          ¿Estás seguro de que deseas eliminar la orden de compra {orden.numero}?
-          Esta acción no se puede deshacer.
+          ¿Estás seguro de que deseas eliminar la orden de compra {orden.numero}? Esta acción no se
+          puede deshacer.
         </Text>
       ),
       labels: { confirm: 'Eliminar', cancel: 'Cancelar' },
@@ -106,33 +109,37 @@ export function OrdenesCompraPage() {
           notifications.show({
             title: 'Éxito',
             message: 'Orden de compra eliminada correctamente',
-            color: 'green'
+            color: 'green',
           });
           ordenesLoader.refresh();
         } catch (error) {
           notifications.show({
             title: 'Error',
             message: 'No se pudo eliminar la orden de compra',
-            color: 'red'
+            color: 'red',
           });
         }
-      }
+      },
     });
   };
 
   const getEstadoBadgeColor = (estado: string) => {
     switch (estado) {
-      case 'Pendiente': return 'yellow';
-      case 'Facturada': return 'green';
-      case 'Cancelada': return 'red';
-      default: return 'gray';
+      case 'Pendiente':
+        return 'yellow';
+      case 'Facturada':
+        return 'green';
+      case 'Cancelada':
+        return 'red';
+      default:
+        return 'gray';
     }
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'ARS'
+      currency: 'ARS',
     }).format(amount);
   };
 
@@ -141,7 +148,7 @@ export function OrdenesCompraPage() {
   };
 
   const getClienteNombre = (clienteId: string) => {
-    const cliente = clientes.find(c => c._id === clienteId);
+    const cliente = clientes.find((c) => c._id === clienteId);
     return cliente ? cliente.nombre : 'Cliente no encontrado';
   };
 
@@ -155,7 +162,7 @@ export function OrdenesCompraPage() {
           <IconFileText size={16} />
           <Text fw={500}>{orden.numero}</Text>
         </Group>
-      )
+      ),
     },
     {
       key: 'fecha',
@@ -167,7 +174,7 @@ export function OrdenesCompraPage() {
           <IconCalendar size={16} />
           <Text>{formatDate(orden.fecha)}</Text>
         </Group>
-      )
+      ),
     },
     {
       key: 'cliente',
@@ -178,7 +185,7 @@ export function OrdenesCompraPage() {
           <IconUser size={16} />
           <Text>{getClienteNombre(orden.cliente)}</Text>
         </Group>
-      )
+      ),
     },
     {
       key: 'viajes',
@@ -188,7 +195,7 @@ export function OrdenesCompraPage() {
         <Badge size="sm" variant="light">
           {orden.viajes.length}
         </Badge>
-      )
+      ),
     },
     {
       key: 'importe',
@@ -200,17 +207,15 @@ export function OrdenesCompraPage() {
           <IconCurrencyDollar size={16} />
           <Text fw={500}>{formatCurrency(orden.importe)}</Text>
         </Group>
-      )
+      ),
     },
     {
       key: 'estado',
       label: 'Estado',
       align: 'center' as const,
       render: (orden: OrdenCompra) => (
-        <Badge color={getEstadoBadgeColor(orden.estado)}>
-          {orden.estado}
-        </Badge>
-      )
+        <Badge color={getEstadoBadgeColor(orden.estado)}>{orden.estado}</Badge>
+      ),
     },
     {
       key: 'actions',
@@ -229,18 +234,13 @@ export function OrdenesCompraPage() {
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Eliminar">
-            <ActionIcon
-              variant="light"
-              color="red"
-              size="sm"
-              onClick={() => handleDelete(orden)}
-            >
+            <ActionIcon variant="light" color="red" size="sm" onClick={() => handleDelete(orden)}>
               <IconTrash size={16} />
             </ActionIcon>
           </Tooltip>
         </Group>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -249,9 +249,7 @@ export function OrdenesCompraPage() {
         {/* Header */}
         <Group justify="space-between">
           <Title order={2}>Órdenes de Compra</Title>
-          <Button leftSection={<IconPlus size={16} />}>
-            Nueva Orden de Compra
-          </Button>
+          <Button leftSection={<IconPlus size={16} />}>Nueva Orden de Compra</Button>
         </Group>
 
         {/* Filters */}
@@ -261,22 +259,24 @@ export function OrdenesCompraPage() {
               <SearchInput
                 placeholder="Buscar por número..."
                 value={filters.numero || ''}
-                onChange={(value: string) => setFilters(prev => ({ ...prev, numero: value }))}
+                onChange={(value: string) => setFilters((prev) => ({ ...prev, numero: value }))}
               />
             </Grid.Col>
-            
+
             <Grid.Col span={{ base: 12, md: 3 }}>
               <Select
                 label="Cliente"
                 placeholder="Seleccionar cliente"
                 value={filters.cliente || ''}
-                onChange={(value) => setFilters(prev => ({ ...prev, cliente: value || undefined }))}
+                onChange={(value) =>
+                  setFilters((prev) => ({ ...prev, cliente: value || undefined }))
+                }
                 data={[
                   { value: '', label: 'Todos los clientes' },
-                  ...clientes.map(cliente => ({
+                  ...clientes.map((cliente) => ({
                     value: cliente._id,
-                    label: cliente.nombre
-                  }))
+                    label: cliente.nombre,
+                  })),
                 ]}
                 searchable
                 clearable
@@ -288,7 +288,9 @@ export function OrdenesCompraPage() {
                 label="Estado"
                 placeholder="Estado"
                 value={filters.estado || ''}
-                onChange={(value) => setFilters(prev => ({ ...prev, estado: value || undefined }))}
+                onChange={(value) =>
+                  setFilters((prev) => ({ ...prev, estado: value || undefined }))
+                }
                 data={ESTADOS_OPTIONS}
               />
             </Grid.Col>
@@ -300,15 +302,15 @@ export function OrdenesCompraPage() {
                 startDate={filters.fechaDesde ? new Date(filters.fechaDesde) : null}
                 endDate={filters.fechaHasta ? new Date(filters.fechaHasta) : null}
                 onStartDateChange={(date) => {
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
-                    fechaDesde: date?.toISOString().split('T')[0]
+                    fechaDesde: date?.toISOString().split('T')[0],
                   }));
                 }}
                 onEndDateChange={(date) => {
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
-                    fechaHasta: date?.toISOString().split('T')[0]
+                    fechaHasta: date?.toISOString().split('T')[0],
                   }));
                 }}
               />
@@ -342,7 +344,7 @@ export function OrdenesCompraPage() {
                     Pendientes
                   </Text>
                   <Text fw={700} size="xl" c="yellow">
-                    {ordenes.filter(o => o.estado === 'Pendiente').length}
+                    {ordenes.filter((o) => o.estado === 'Pendiente').length}
                   </Text>
                 </div>
                 <Badge color="yellow" size="lg" circle>
@@ -360,7 +362,7 @@ export function OrdenesCompraPage() {
                     Facturadas
                   </Text>
                   <Text fw={700} size="xl" c="green">
-                    {ordenes.filter(o => o.estado === 'Facturada').length}
+                    {ordenes.filter((o) => o.estado === 'Facturada').length}
                   </Text>
                 </div>
                 <Badge color="green" size="lg" circle>
@@ -401,7 +403,9 @@ export function OrdenesCompraPage() {
         </Card>
       </Stack>
 
-      <LoadingOverlay loading={loading}><div /></LoadingOverlay>
+      <LoadingOverlay loading={loading}>
+        <div />
+      </LoadingOverlay>
     </Container>
   );
 }

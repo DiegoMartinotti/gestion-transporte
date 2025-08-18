@@ -10,20 +10,18 @@ import {
   Text,
   ActionIcon,
   Menu,
-  TextInput,
   Select,
-  Box
+  Box,
 } from '@mantine/core';
-import { 
-  IconPlus, 
-  IconSearch, 
+import {
+  IconPlus,
   IconFilter,
   IconDots,
   IconEdit,
   IconTrash,
   IconCoin,
   IconCalendar,
-  IconExclamationCircle
+  IconExclamationCircle,
 } from '@tabler/icons-react';
 import { useDataLoader } from '../../hooks/useDataLoader';
 import DataTable from '../../components/base/DataTable';
@@ -36,14 +34,7 @@ import { Cliente } from '../../types';
 import { showNotification } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
 
-const TIPOS_EXTRA = [
-  'PEAJE',
-  'COMBUSTIBLE',
-  'ESTADIA',
-  'CARGA_DESCARGA',
-  'SEGURO',
-  'OTROS'
-];
+const TIPOS_EXTRA = ['PEAJE', 'COMBUSTIBLE', 'ESTADIA', 'CARGA_DESCARGA', 'SEGURO', 'OTROS'];
 
 export function ExtrasPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,11 +55,16 @@ export function ExtrasPage() {
       const data = Array.isArray(response) ? response : [];
       return {
         data,
-        pagination: { currentPage: 1, totalPages: 1, totalItems: data.length, itemsPerPage: data.length }
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: data.length,
+          itemsPerPage: data.length,
+        },
       };
     }, [selectedCliente, selectedTipo, activeTab]),
     dependencies: [selectedCliente, selectedTipo, activeTab],
-    errorMessage: 'Error al cargar extras'
+    errorMessage: 'Error al cargar extras',
   });
 
   // Hook para cargar clientes (solo una vez)
@@ -79,15 +75,19 @@ export function ExtrasPage() {
       const data = response.data || response;
       return {
         data: Array.isArray(data) ? data : [],
-        pagination: { currentPage: 1, totalPages: 1, totalItems: Array.isArray(data) ? data.length : 0, itemsPerPage: Array.isArray(data) ? data.length : 0 }
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: Array.isArray(data) ? data.length : 0,
+          itemsPerPage: Array.isArray(data) ? data.length : 0,
+        },
       };
     }, []),
-    errorMessage: 'Error cargando clientes'
+    errorMessage: 'Error cargando clientes',
   });
 
   // Datos y estados
   const extras = extrasLoader.data;
-  const clientes = clientesLoader.data;
   const loading = extrasLoader.loading || clientesLoader.loading;
   const loadData = extrasLoader.refresh;
 
@@ -101,7 +101,7 @@ export function ExtrasPage() {
       title: 'Eliminar Extra',
       children: (
         <Text size="sm">
-          ¿Estás seguro de que deseas eliminar el extra "{extra.tipo}" 
+          ¿Estás seguro de que deseas eliminar el extra &quot;{extra.tipo}&quot;
           {extra.descripcion && ` - ${extra.descripcion}`}?
         </Text>
       ),
@@ -113,17 +113,17 @@ export function ExtrasPage() {
           showNotification({
             title: 'Éxito',
             message: 'Extra eliminado correctamente',
-            color: 'green'
+            color: 'green',
           });
           loadData();
         } catch (error) {
           showNotification({
             title: 'Error',
             message: 'No se pudo eliminar el extra',
-            color: 'red'
+            color: 'red',
           });
         }
-      }
+      },
     });
   };
 
@@ -131,7 +131,7 @@ export function ExtrasPage() {
     const now = new Date();
     const desde = new Date(extra.vigenciaDesde);
     const hasta = new Date(extra.vigenciaHasta);
-    
+
     if (now < desde) {
       return { status: 'pendiente', color: 'blue', text: 'Pendiente' };
     } else if (now > hasta) {
@@ -141,10 +141,11 @@ export function ExtrasPage() {
     }
   };
 
-  const filteredExtras = extras.filter(extra =>
-    extra.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    extra.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ''
+  const filteredExtras = extras.filter(
+    (extra) =>
+      extra.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      extra.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ''
   );
 
   const columns = [
@@ -156,7 +157,7 @@ export function ExtrasPage() {
           <IconCoin size={16} />
           <Text fw={500}>{extra.tipo}</Text>
         </Group>
-      )
+      ),
     },
     {
       key: 'descripcion',
@@ -165,7 +166,7 @@ export function ExtrasPage() {
         <Text size="sm" c="dimmed">
           {extra.descripcion || '-'}
         </Text>
-      )
+      ),
     },
     {
       key: 'valor',
@@ -174,7 +175,7 @@ export function ExtrasPage() {
         <Text fw={500} c="blue">
           ${extra.valor.toLocaleString()}
         </Text>
-      )
+      ),
     },
     {
       key: 'vigencia',
@@ -187,11 +188,12 @@ export function ExtrasPage() {
               {status.text}
             </Badge>
             <Text size="xs" c="dimmed">
-              {new Date(extra.vigenciaDesde).toLocaleDateString()} - {new Date(extra.vigenciaHasta).toLocaleDateString()}
+              {new Date(extra.vigenciaDesde).toLocaleDateString()} -{' '}
+              {new Date(extra.vigenciaHasta).toLocaleDateString()}
             </Text>
           </Stack>
         );
-      }
+      },
     },
     {
       key: 'actions',
@@ -204,10 +206,7 @@ export function ExtrasPage() {
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item
-              leftSection={<IconEdit size={14} />}
-              onClick={() => handleEdit(extra)}
-            >
+            <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleEdit(extra)}>
               Editar
             </Menu.Item>
             <Menu.Item
@@ -219,21 +218,18 @@ export function ExtrasPage() {
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      )
-    }
+      ),
+    },
   ];
 
-  const vigenteCount = extras.filter(e => getVigenciaStatus(e).status === 'vigente').length;
-  const vencidoCount = extras.filter(e => getVigenciaStatus(e).status === 'vencido').length;
-  const pendienteCount = extras.filter(e => getVigenciaStatus(e).status === 'pendiente').length;
+  const vigenteCount = extras.filter((e) => getVigenciaStatus(e).status === 'vigente').length;
+  const vencidoCount = extras.filter((e) => getVigenciaStatus(e).status === 'vencido').length;
 
   return (
     <Stack gap="md">
       <Group justify="space-between">
         <Title order={2}>Gestión de Extras</Title>
-        <Button leftSection={<IconPlus size={16} />}>
-          Nuevo Extra
-        </Button>
+        <Button leftSection={<IconPlus size={16} />}>Nuevo Extra</Button>
       </Group>
 
       <Paper p="md" withBorder>
@@ -265,20 +261,14 @@ export function ExtrasPage() {
               <Tabs.Tab value="vigentes" leftSection={<IconCalendar size={16} />}>
                 Vigentes ({vigenteCount})
               </Tabs.Tab>
-              <Tabs.Tab value="todos">
-                Todos ({extras.length})
-              </Tabs.Tab>
+              <Tabs.Tab value="todos">Todos ({extras.length})</Tabs.Tab>
               <Tabs.Tab value="vencidos" leftSection={<IconExclamationCircle size={16} />}>
                 Vencidos ({vencidoCount})
               </Tabs.Tab>
             </Tabs.List>
 
             <Box mt="md">
-              <DataTable
-                data={filteredExtras}
-                columns={columns}
-                loading={loading}
-              />
+              <DataTable data={filteredExtras} columns={columns} loading={loading} />
             </Box>
           </Tabs>
         </Stack>
