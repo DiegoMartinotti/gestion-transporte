@@ -1,6 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import {
-  Table,
   ActionIcon,
   Group,
   Badge,
@@ -13,7 +12,7 @@ import {
   Modal,
   Timeline,
   Paper,
-  Tooltip
+  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -26,14 +25,16 @@ import {
   IconCalendar,
   IconCopy,
   IconCheck,
-  IconX
+  IconX,
 } from '@tabler/icons-react';
 import { formulaService, Formula } from '../../services/formulaService';
 import { FormulaPreview } from '../preview/FormulaPreview';
 import DataTable from '../base/DataTable';
 
 // Lazy load del formulario complejo de fórmulas
-const FormulaForm = lazy(() => import('../forms/FormulaForm').then(module => ({ default: module.FormulaForm })));
+const FormulaForm = lazy(() =>
+  import('../forms/FormulaForm').then((module) => ({ default: module.FormulaForm }))
+);
 
 interface FormulaHistorialTableProps {
   clienteId: string;
@@ -46,16 +47,18 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
   clienteId,
   clienteNombre,
   tipoUnidad,
-  onFormulaChange
+  onFormulaChange,
 }) => {
   const [formulas, setFormulas] = useState<Formula[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFormula, setSelectedFormula] = useState<Formula | null>(null);
   const [editingFormulaId, setEditingFormulaId] = useState<string | null>(null);
-  
+
   const [formModalOpened, { open: openFormModal, close: closeFormModal }] = useDisclosure(false);
-  const [previewModalOpened, { open: openPreviewModal, close: closePreviewModal }] = useDisclosure(false);
-  const [timelineModalOpened, { open: openTimelineModal, close: closeTimelineModal }] = useDisclosure(false);
+  const [previewModalOpened, { open: openPreviewModal, close: closePreviewModal }] =
+    useDisclosure(false);
+  const [timelineModalOpened, { open: openTimelineModal, close: closeTimelineModal }] =
+    useDisclosure(false);
 
   useEffect(() => {
     loadFormulas();
@@ -71,7 +74,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
       notifications.show({
         title: 'Error',
         message: 'No se pudieron cargar las fórmulas',
-        color: 'red'
+        color: 'red',
       });
     } finally {
       setLoading(false);
@@ -89,7 +92,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
       notifications.show({
         title: 'Éxito',
         message: 'Fórmula eliminada correctamente',
-        color: 'green'
+        color: 'green',
       });
       loadFormulas();
       onFormulaChange?.();
@@ -97,7 +100,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
       notifications.show({
         title: 'Error',
         message: error.response?.data?.message || 'Error al eliminar la fórmula',
-        color: 'red'
+        color: 'red',
       });
     }
   };
@@ -112,7 +115,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
     notifications.show({
       title: 'Copiado',
       message: 'Fórmula copiada al portapapeles',
-      color: 'green'
+      color: 'green',
     });
   };
 
@@ -149,13 +152,10 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
       key: 'tipoUnidad',
       label: 'Tipo',
       render: (formula: Formula) => (
-        <Badge 
-          variant="light" 
-          color={formula.tipoUnidad === 'General' ? 'gray' : 'blue'}
-        >
+        <Badge variant="light" color={formula.tipoUnidad === 'General' ? 'gray' : 'blue'}>
           {formula.tipoUnidad}
         </Badge>
-      )
+      ),
     },
     {
       key: 'formula',
@@ -165,15 +165,11 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
           <Code fz="sm" style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {formula.formula}
           </Code>
-          <ActionIcon
-            size="xs"
-            variant="light"
-            onClick={() => handleCopyFormula(formula.formula)}
-          >
+          <ActionIcon size="xs" variant="light" onClick={() => handleCopyFormula(formula.formula)}>
             <IconCopy size={12} />
           </ActionIcon>
         </Group>
-      )
+      ),
     },
     {
       key: 'vigencia',
@@ -186,15 +182,14 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
               {estado.label}
             </Badge>
             <Text size="xs" c="dimmed">
-              {new Date(formula.vigenciaDesde).toLocaleDateString()} - {' '}
-              {formula.vigenciaHasta 
+              {new Date(formula.vigenciaDesde).toLocaleDateString()} -{' '}
+              {formula.vigenciaHasta
                 ? new Date(formula.vigenciaHasta).toLocaleDateString()
-                : 'Sin límite'
-              }
+                : 'Sin límite'}
             </Text>
           </Stack>
         );
-      }
+      },
     },
     {
       key: 'createdAt',
@@ -203,7 +198,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
         <Text size="sm" c="dimmed">
           {new Date(formula.createdAt).toLocaleDateString()}
         </Text>
-      )
+      ),
     },
     {
       key: 'actions',
@@ -212,11 +207,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
       render: (formula: Formula) => (
         <Group gap="xs" justify="center">
           <Tooltip label="Vista previa">
-            <ActionIcon
-              variant="light"
-              color="blue"
-              onClick={() => handlePreview(formula)}
-            >
+            <ActionIcon variant="light" color="blue" onClick={() => handlePreview(formula)}>
               <IconEye size={16} />
             </ActionIcon>
           </Tooltip>
@@ -229,10 +220,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
             </Menu.Target>
 
             <Menu.Dropdown>
-              <Menu.Item
-                leftSection={<IconEdit size={14} />}
-                onClick={() => handleEdit(formula)}
-              >
+              <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => handleEdit(formula)}>
                 Editar
               </Menu.Item>
               <Menu.Item
@@ -252,8 +240,8 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
             </Menu.Dropdown>
           </Menu>
         </Group>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -261,7 +249,9 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
       <Stack gap="md">
         <Group justify="space-between">
           <div>
-            <Text fw={500} size="lg">Historial de Fórmulas</Text>
+            <Text fw={500} size="lg">
+              Historial de Fórmulas
+            </Text>
             <Text size="sm" c="dimmed">
               {clienteNombre} {tipoUnidad ? `• ${tipoUnidad}` : ''}
             </Text>
@@ -295,11 +285,7 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
             </Text>
           </Alert>
         ) : (
-          <DataTable
-            data={formulas}
-            columns={columns}
-            loading={loading}
-          />
+          <DataTable data={formulas} columns={columns} loading={loading} />
         )}
       </Stack>
 
@@ -310,7 +296,11 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
         title={editingFormulaId ? 'Editar Fórmula' : 'Nueva Fórmula'}
         size="xl"
       >
-        <Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Cargando formulario...</div>}>
+        <Suspense
+          fallback={
+            <div style={{ padding: '20px', textAlign: 'center' }}>Cargando formulario...</div>
+          }
+        >
           <FormulaForm
             clienteId={clienteId}
             formulaId={editingFormulaId || undefined}
@@ -345,13 +335,17 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
       >
         <Timeline active={formulas.length - 1} bulletSize={24} lineWidth={2}>
           {formulas
-            .sort((a, b) => new Date(a.vigenciaDesde).getTime() - new Date(b.vigenciaDesde).getTime())
-            .map((formula, index) => {
+            .sort(
+              (a, b) => new Date(a.vigenciaDesde).getTime() - new Date(b.vigenciaDesde).getTime()
+            )
+            .map((formula, _index) => {
               const estado = getEstadoVigencia(formula);
               return (
                 <Timeline.Item
                   key={formula._id}
-                  bullet={estado.status === 'active' ? <IconCheck size={12} /> : <IconX size={12} />}
+                  bullet={
+                    estado.status === 'active' ? <IconCheck size={12} /> : <IconX size={12} />
+                  }
                   title={
                     <Group gap="xs">
                       <Text fw={500}>{formula.tipoUnidad}</Text>
@@ -366,11 +360,10 @@ export const FormulaHistorialTable: React.FC<FormulaHistorialTableProps> = ({
                       {formula.formula}
                     </Code>
                     <Text size="xs" c="dimmed">
-                      {new Date(formula.vigenciaDesde).toLocaleDateString()} - {' '}
-                      {formula.vigenciaHasta 
+                      {new Date(formula.vigenciaDesde).toLocaleDateString()} -{' '}
+                      {formula.vigenciaHasta
                         ? new Date(formula.vigenciaHasta).toLocaleDateString()
-                        : 'Sin límite'
-                      }
+                        : 'Sin límite'}
                     </Text>
                   </Paper>
                 </Timeline.Item>
