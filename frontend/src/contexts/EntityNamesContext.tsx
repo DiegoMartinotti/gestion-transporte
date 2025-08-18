@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useCallback, ReactNode } from 'react';
 import { clienteService } from '../services/clienteService';
 import { empresaService } from '../services/empresaService';
 
