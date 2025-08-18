@@ -14,7 +14,7 @@ import {
   Grid,
   Card,
   Menu,
-  LoadingOverlay
+  LoadingOverlay,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -30,9 +30,7 @@ import {
   IconMap,
   IconDownload,
   IconUpload,
-  IconFileText
 } from '@tabler/icons-react';
-import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useDataLoader } from '../../hooks/useDataLoader';
 import { useExcelOperations } from '../../hooks/useExcelOperations';
@@ -60,26 +58,139 @@ interface LocalSite {
   cliente: string;
 }
 
-const TramosPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCliente, setSelectedCliente] = useState<string>('');
-  const [selectedOrigen, setSelectedOrigen] = useState<string>('');
-  const [selectedDestino, setSelectedDestino] = useState<string>('');
-  const [activeTab, setActiveTab] = useState('todos');
-  const [viewMode] = useState<'list' | 'cards'>('list');
+// Funciones auxiliares para reducir complejidad
+const extractTramosData = async () => {
+  const response = await tramoService.getAll();
+  const tramosData = Array.isArray(response) ? response : (response as any)?.data || [];
+  return {
+    data: tramosData,
+    pagination: {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: tramosData.length,
+      itemsPerPage: tramosData.length,
+    },
+  };
+};
 
-  // Hooks centralizados para carga de datos
+const isValidTramo = (tramo: Tramo): boolean => {
+  return !!(tramo && tramo.origen && tramo.destino && tramo.cliente);
+};
+
+const matchesSearch = (tramo: Tramo, searchTerm: string): boolean => {
+  if (searchTerm === '') return true;
+  const term = searchTerm.toLowerCase();
+  return !!(
+    (tramo.origen.nombre && tramo.origen.nombre.toLowerCase().includes(term)) ||
+    (tramo.destino.nombre && tramo.destino.nombre.toLowerCase().includes(term)) ||
+    (tramo.cliente.nombre && tramo.cliente.nombre.toLowerCase().includes(term))
+  );
+};
+
+const matchesClienteFilter = (tramo: Tramo, selectedCliente: string): boolean => {
+  return selectedCliente === '' || !!(tramo.cliente._id && tramo.cliente._id === selectedCliente);
+};
+
+const matchesOrigenFilter = (tramo: Tramo, selectedOrigen: string): boolean => {
+  return selectedOrigen === '' || !!(tramo.origen._id && tramo.origen._id === selectedOrigen);
+};
+
+const matchesDestinoFilter = (tramo: Tramo, selectedDestino: string): boolean => {
+  return selectedDestino === '' || !!(tramo.destino._id && tramo.destino._id === selectedDestino);
+};
+
+const matchesTabFilter = (tramo: Tramo, activeTab: string): boolean => {
+  if (activeTab === 'con-tarifa') {
+    return !!(tramo.tipo || tramo.tarifaVigente);
+  } else if (activeTab === 'sin-tarifa') {
+    return !(tramo.tipo || tramo.tarifaVigente);
+  }
+  return true;
+};
+
+const formatTarifaDate = (dateString: string | undefined): string => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
+const isDateExpired = (dateString: string | undefined): boolean => {
+  return !!(dateString && new Date(dateString) < new Date());
+};
+
+const isDateExpiringSoon = (dateString: string | undefined): boolean => {
+  if (!dateString) return false;
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  return new Date(dateString) < thirtyDaysFromNow;
+};
+
+const getTarifaValues = (tramo: Tramo) => ({
+  tipo: tramo.tipo || tramo.tarifaVigente?.tipo,
+  metodoCalculo: tramo.metodoCalculo || tramo.tarifaVigente?.metodoCalculo,
+  valor: tramo.valor || tramo.tarifaVigente?.valor,
+  valorPeaje: tramo.valorPeaje || tramo.tarifaVigente?.valorPeaje,
+  vigenciaDesde: tramo.vigenciaDesde || tramo.tarifaVigente?.vigenciaDesde,
+  vigenciaHasta: tramo.vigenciaHasta || tramo.tarifaVigente?.vigenciaHasta,
+});
+
+const renderTarifaBadges = (
+  tipo: string,
+  metodoCalculo: string,
+  valor: number,
+  valorPeaje?: number
+) => (
+  <Group gap="xs">
+    <Badge color="blue" size="sm">
+      {tipo}
+    </Badge>
+    <Badge color="green" size="sm">
+      {metodoCalculo}
+    </Badge>
+    <Text size="sm" fw={500}>
+      ${valor}
+    </Text>
+    {valorPeaje && valorPeaje > 0 && (
+      <Text size="sm" fw={500} c="orange">
+        Peaje: ${valorPeaje}
+      </Text>
+    )}
+  </Group>
+);
+
+const renderDateInfo = (vigenciaDesde: string | undefined, vigenciaHasta: string | undefined) => {
+  const isExpired = isDateExpired(vigenciaHasta);
+  const isExpiringSoon = isDateExpiringSoon(vigenciaHasta);
+
+  return (
+    <Stack gap={2}>
+      <Text size="xs" c="dimmed">
+        Desde: {formatTarifaDate(vigenciaDesde)}
+      </Text>
+      <Text
+        size="xs"
+        c={isExpired ? 'red' : isExpiringSoon ? 'orange' : 'dimmed'}
+        fw={isExpired || isExpiringSoon ? 500 : 400}
+      >
+        Hasta: {formatTarifaDate(vigenciaHasta)}
+        {isExpired && ' (VENCIDA)'}
+        {isExpiringSoon && !isExpired && ' (Próx. vencimiento)'}
+      </Text>
+    </Stack>
+  );
+};
+
+// Hook personalizado para operaciones de tramos
+const useTramosOperations = () => {
   const tramosLoader = useDataLoader<Tramo>({
-    fetchFunction: useCallback(async () => {
-      const response = await tramoService.getAll();
-      const tramosData = Array.isArray(response) ? response : (response as any)?.data || [];
-      return {
-        data: tramosData,
-        pagination: { currentPage: 1, totalPages: 1, totalItems: tramosData.length, itemsPerPage: tramosData.length }
-      };
-    }, []),
+    fetchFunction: useCallback(extractTramosData, []),
     errorMessage: 'Error al cargar tramos',
-    onSuccess: useCallback((data: Tramo[]) => console.log('Datos de tramos recibidos:', data.length, 'tramos'), [])
+    onSuccess: useCallback(
+      (data: Tramo[]) => console.log('Datos de tramos recibidos:', data.length, 'tramos'),
+      []
+    ),
   });
 
   const clientesLoader = useDataLoader<Cliente>({
@@ -88,10 +199,15 @@ const TramosPage: React.FC = () => {
       const clientesData = Array.isArray(response) ? response : response.data;
       return {
         data: clientesData,
-        pagination: { currentPage: 1, totalPages: 1, totalItems: clientesData.length, itemsPerPage: clientesData.length }
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: clientesData.length,
+          itemsPerPage: clientesData.length,
+        },
       };
     }, []),
-    errorMessage: 'Error al cargar clientes'
+    errorMessage: 'Error al cargar clientes',
   });
 
   const sitesLoader = useDataLoader<LocalSite>({
@@ -102,39 +218,217 @@ const TramosPage: React.FC = () => {
         data: sitesData.map((site: any) => ({
           _id: site._id,
           nombre: site.nombre,
-          cliente: typeof site.cliente === 'string' ? site.cliente : site.cliente._id
+          cliente: typeof site.cliente === 'string' ? site.cliente : site.cliente._id,
         })),
-        pagination: { currentPage: 1, totalPages: 1, totalItems: sitesData.length, itemsPerPage: sitesData.length }
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: sitesData.length,
+          itemsPerPage: sitesData.length,
+        },
       };
     }, []),
-    errorMessage: 'Error al cargar sites'
+    errorMessage: 'Error al cargar sites',
   });
+
+  const loadData = async () => {
+    await Promise.all([tramosLoader.refresh(), clientesLoader.refresh(), sitesLoader.refresh()]);
+  };
+
+  return {
+    tramosLoader,
+    clientesLoader,
+    sitesLoader,
+    loadData,
+  };
+};
+
+// Hook para operaciones CRUD de tramos
+const useTramosActions = (loadData: () => Promise<void>, formModal: any, deleteModal: any) => {
+  const handleFormSubmit = async (data: any) => {
+    try {
+      if (formModal.selectedItem) {
+        await tramoService.update(formModal.selectedItem._id, data);
+        notifications.show({
+          title: 'Éxito',
+          message: 'Tramo actualizado correctamente',
+          color: 'green',
+        });
+      } else {
+        await tramoService.create(data);
+        notifications.show({
+          title: 'Éxito',
+          message: 'Tramo creado correctamente',
+          color: 'green',
+        });
+      }
+      loadData();
+      formModal.close();
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Error al guardar tramo',
+        color: 'red',
+      });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal.selectedItem) return;
+
+    try {
+      await tramoService.delete(deleteModal.selectedItem._id);
+      notifications.show({
+        title: 'Éxito',
+        message: 'Tramo eliminado correctamente',
+        color: 'green',
+      });
+      loadData();
+      deleteModal.close();
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Error al eliminar tramo',
+        color: 'red',
+      });
+    }
+  };
+
+  return { handleFormSubmit, confirmDelete };
+};
+
+// Función para generar las columnas de la tabla
+const generateTableColumns = (
+  getTarifaStatus: (tramo: Tramo) => React.ReactElement,
+  handleEdit: (tramo: Tramo) => void,
+  handleView: (tramo: Tramo) => void,
+  handleDelete: (tramo: Tramo) => void
+) => [
+  {
+    key: 'ruta',
+    label: 'Ruta',
+    render: (tramo: Tramo) => {
+      if (!tramo || !tramo.origen || !tramo.destino) {
+        return (
+          <Text size="sm" c="dimmed">
+            Datos incompletos
+          </Text>
+        );
+      }
+      return (
+        <Stack gap="xs">
+          <Group gap="xs">
+            <IconMapPin size={16} color="green" />
+            <Text size="sm" fw={500}>
+              {tramo.origen.nombre}
+            </Text>
+          </Group>
+          <Group gap="xs" ml="md">
+            <IconRoad size={16} color="gray" />
+            <Text size="xs" c="dimmed">
+              {tramo.distancia} km
+            </Text>
+          </Group>
+          <Group gap="xs">
+            <IconMapPin size={16} color="red" />
+            <Text size="sm" fw={500}>
+              {tramo.destino.nombre}
+            </Text>
+          </Group>
+        </Stack>
+      );
+    },
+  },
+  {
+    key: 'cliente',
+    label: 'Cliente',
+    render: (tramo: Tramo) => {
+      if (!tramo || !tramo.cliente) {
+        return (
+          <Text size="sm" c="dimmed">
+            Sin cliente
+          </Text>
+        );
+      }
+      return (
+        <Text size="sm" fw={500}>
+          {tramo.cliente.nombre}
+        </Text>
+      );
+    },
+  },
+  {
+    key: 'tarifa',
+    label: 'Tarifa Vigente',
+    render: getTarifaStatus,
+  },
+  {
+    key: 'acciones',
+    label: 'Acciones',
+    render: (tramo: Tramo) => (
+      <Menu withinPortal>
+        <Menu.Target>
+          <ActionIcon variant="subtle">
+            <IconDots size={16} />
+          </ActionIcon>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item leftSection={<IconEdit size={16} />} onClick={() => handleEdit(tramo)}>
+            Editar
+          </Menu.Item>
+          <Menu.Item leftSection={<IconHistory size={16} />} onClick={() => handleView(tramo)}>
+            Ver detalle
+          </Menu.Item>
+          <Menu.Item
+            leftSection={<IconMap size={16} />}
+            onClick={() => {
+              /* TODO: Ver en mapa */
+            }}
+          >
+            Ver en mapa
+          </Menu.Item>
+          <Menu.Divider />
+          <Menu.Item
+            leftSection={<IconTrash size={16} />}
+            color="red"
+            onClick={() => handleDelete(tramo)}
+          >
+            Eliminar
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    ),
+  },
+];
+
+const TramosPage: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCliente, setSelectedCliente] = useState<string>('');
+  const [selectedOrigen, setSelectedOrigen] = useState<string>('');
+  const [selectedDestino, setSelectedDestino] = useState<string>('');
+  const [activeTab, setActiveTab] = useState('todos');
+  const [viewMode] = useState<'list' | 'cards'>('list');
+
+  // Hooks personalizados
+  const { tramosLoader, clientesLoader, sitesLoader, loadData } = useTramosOperations();
 
   // Datos y estados de carga
   const tramos = tramosLoader.data;
   const clientes = clientesLoader.data;
   const sites = sitesLoader.data;
-  // Solo mostrar loading si realmente no hay datos cargados aún
-  const loading = (tramosLoader.loading && tramos.length === 0) || 
-                  (clientesLoader.loading && clientes.length === 0) || 
-                  (sitesLoader.loading && sites.length === 0);
-  
-
-  // Función de recarga para todos los datos
-  const loadData = async () => {
-    await Promise.all([
-      tramosLoader.refresh(),
-      clientesLoader.refresh(),
-      sitesLoader.refresh()
-    ]);
-  };
+  const loading =
+    (tramosLoader.loading && tramos.length === 0) ||
+    (clientesLoader.loading && clientes.length === 0) ||
+    (sitesLoader.loading && sites.length === 0);
 
   const formModal = useModal<Tramo>({
-    onSuccess: () => loadData()
+    onSuccess: () => loadData(),
   });
   const detailModal = useModal<Tramo>();
   const deleteModal = useModal<Tramo>();
   const importModal = useModal();
+
+  const { handleFormSubmit, confirmDelete } = useTramosActions(loadData, formModal, deleteModal);
 
   // Hook unificado para operaciones Excel
   const excelOperations = useExcelOperations({
@@ -146,35 +440,21 @@ const TramosPage: React.FC = () => {
   });
 
   // Filtrar tramos
-  const filteredTramos = tramos.filter(tramo => {
-    // Validar que el tramo tenga las propiedades necesarias
-    if (!tramo || !tramo.origen || !tramo.destino || !tramo.cliente) {
-      return false;
-    }
-    
-    const matchesSearch = searchTerm === '' || 
-      (tramo.origen.nombre && tramo.origen.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (tramo.destino.nombre && tramo.destino.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (tramo.cliente.nombre && tramo.cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCliente = selectedCliente === '' || (tramo.cliente._id && tramo.cliente._id === selectedCliente);
-    const matchesOrigen = selectedOrigen === '' || (tramo.origen._id && tramo.origen._id === selectedOrigen);
-    const matchesDestino = selectedDestino === '' || (tramo.destino._id && tramo.destino._id === selectedDestino);
-    
-    let matchesTab = true;
-    if (activeTab === 'con-tarifa') {
-      matchesTab = !!(tramo.tipo || tramo.tarifaVigente);
-    } else if (activeTab === 'sin-tarifa') {
-      matchesTab = !(tramo.tipo || tramo.tarifaVigente);
-    }
-    
-    return matchesSearch && matchesCliente && matchesOrigen && matchesDestino && matchesTab;
+  const filteredTramos = tramos.filter((tramo) => {
+    if (!isValidTramo(tramo)) return false;
+
+    return (
+      matchesSearch(tramo, searchTerm) &&
+      matchesClienteFilter(tramo, selectedCliente) &&
+      matchesOrigenFilter(tramo, selectedOrigen) &&
+      matchesDestinoFilter(tramo, selectedDestino) &&
+      matchesTabFilter(tramo, activeTab)
+    );
   });
-  
 
   // Sites filtrados por cliente seleccionado
-  const sitesFiltered = sites.filter(site => 
-    selectedCliente === '' || site.cliente === selectedCliente
+  const sitesFiltered = sites.filter(
+    (site) => selectedCliente === '' || site.cliente === selectedCliente
   );
 
   const handleEdit = (tramo: Tramo) => {
@@ -187,55 +467,6 @@ const TramosPage: React.FC = () => {
 
   const handleDelete = (tramo: Tramo) => {
     deleteModal.openDelete(tramo);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteModal.selectedItem) return;
-    
-    try {
-      await tramoService.delete(deleteModal.selectedItem._id);
-      notifications.show({
-        title: 'Éxito',
-        message: 'Tramo eliminado correctamente',
-        color: 'green'
-      });
-      loadData();
-      deleteModal.close();
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al eliminar tramo',
-        color: 'red'
-      });
-    }
-  };
-
-  const handleFormSubmit = async (data: any) => {
-    try {
-      if (formModal.selectedItem) {
-        await tramoService.update(formModal.selectedItem._id, data);
-        notifications.show({
-          title: 'Éxito',
-          message: 'Tramo actualizado correctamente',
-          color: 'green'
-        });
-      } else {
-        await tramoService.create(data);
-        notifications.show({
-          title: 'Éxito',
-          message: 'Tramo creado correctamente',
-          color: 'green'
-        });
-      }
-      loadData();
-      formModal.close();
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al guardar tramo',
-        color: 'red'
-      });
-    }
   };
 
   const handleImportComplete = async (result: any) => {
@@ -251,142 +482,26 @@ const TramosPage: React.FC = () => {
   };
 
   const getTarifaStatus = (tramo: Tramo) => {
-    // Usar campos del nivel raíz (desde el backend) o del objeto tarifaVigente como fallback
-    const tipo = tramo.tipo || tramo.tarifaVigente?.tipo;
-    const metodoCalculo = tramo.metodoCalculo || tramo.tarifaVigente?.metodoCalculo;
-    const valor = tramo.valor || tramo.tarifaVigente?.valor;
-    const valorPeaje = tramo.valorPeaje || tramo.tarifaVigente?.valorPeaje;
-    const vigenciaDesde = tramo.vigenciaDesde || tramo.tarifaVigente?.vigenciaDesde;
-    const vigenciaHasta = tramo.vigenciaHasta || tramo.tarifaVigente?.vigenciaHasta;
-    
+    const { tipo, metodoCalculo, valor, valorPeaje, vigenciaDesde, vigenciaHasta } =
+      getTarifaValues(tramo);
+
     if (!tipo || !metodoCalculo || valor === undefined) {
-      return <Badge color="red" size="sm">Sin tarifa</Badge>;
+      return (
+        <Badge color="red" size="sm">
+          Sin tarifa
+        </Badge>
+      );
     }
-    
-    const formatDate = (dateString: string | undefined) => {
-      if (!dateString) return 'N/A';
-      return new Date(dateString).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-    };
-    
-    const isExpired = vigenciaHasta && new Date(vigenciaHasta) < new Date();
-    const isExpiringSoon = vigenciaHasta && 
-      new Date(vigenciaHasta) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 días
-    
+
     return (
       <Stack gap="xs">
-        <Group gap="xs">
-          <Badge color="blue" size="sm">{tipo}</Badge>
-          <Badge color="green" size="sm">{metodoCalculo}</Badge>
-          <Text size="sm" fw={500}>${valor}</Text>
-          {valorPeaje && valorPeaje > 0 && (
-            <Text size="sm" fw={500} c="orange">Peaje: ${valorPeaje}</Text>
-          )}
-        </Group>
-        <Stack gap={2}>
-          <Text size="xs" c="dimmed">
-            Desde: {formatDate(vigenciaDesde)}
-          </Text>
-          <Text 
-            size="xs" 
-            c={isExpired ? "red" : isExpiringSoon ? "orange" : "dimmed"}
-            fw={isExpired || isExpiringSoon ? 500 : 400}
-          >
-            Hasta: {formatDate(vigenciaHasta)}
-            {isExpired && ' (VENCIDA)'}
-            {isExpiringSoon && !isExpired && ' (Próx. vencimiento)'}
-          </Text>
-        </Stack>
+        {renderTarifaBadges(tipo, metodoCalculo, valor, valorPeaje)}
+        {renderDateInfo(vigenciaDesde, vigenciaHasta)}
       </Stack>
     );
   };
 
-  const columns = [
-    {
-      key: 'ruta',
-      label: 'Ruta',
-      render: (tramo: Tramo) => {
-        if (!tramo || !tramo.origen || !tramo.destino) {
-          return <Text size="sm" c="dimmed">Datos incompletos</Text>;
-        }
-        return (
-          <Stack gap="xs">
-            <Group gap="xs">
-              <IconMapPin size={16} color="green" />
-              <Text size="sm" fw={500}>{tramo.origen.nombre}</Text>
-            </Group>
-            <Group gap="xs" ml="md">
-              <IconRoad size={16} color="gray" />
-              <Text size="xs" c="dimmed">{tramo.distancia} km</Text>
-            </Group>
-            <Group gap="xs">
-              <IconMapPin size={16} color="red" />
-              <Text size="sm" fw={500}>{tramo.destino.nombre}</Text>
-            </Group>
-          </Stack>
-        );
-      }
-    },
-    {
-      key: 'cliente',
-      label: 'Cliente',
-      render: (tramo: Tramo) => {
-        if (!tramo || !tramo.cliente) {
-          return <Text size="sm" c="dimmed">Sin cliente</Text>;
-        }
-        return <Text size="sm" fw={500}>{tramo.cliente.nombre}</Text>;
-      }
-    },
-    {
-      key: 'tarifa',
-      label: 'Tarifa Vigente',
-      render: getTarifaStatus
-    },
-    {
-      key: 'acciones',
-      label: 'Acciones',
-      render: (tramo: Tramo) => (
-        <Menu withinPortal>
-          <Menu.Target>
-            <ActionIcon variant="subtle">
-              <IconDots size={16} />
-            </ActionIcon>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item 
-              leftSection={<IconEdit size={16} />}
-              onClick={() => handleEdit(tramo)}
-            >
-              Editar
-            </Menu.Item>
-            <Menu.Item 
-              leftSection={<IconHistory size={16} />}
-              onClick={() => handleView(tramo)}
-            >
-              Ver detalle
-            </Menu.Item>
-            <Menu.Item 
-              leftSection={<IconMap size={16} />}
-              onClick={() => {/* TODO: Ver en mapa */}}
-            >
-              Ver en mapa
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item 
-              leftSection={<IconTrash size={16} />}
-              color="red"
-              onClick={() => handleDelete(tramo)}
-            >
-              Eliminar
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      )
-    }
-  ];
+  const columns = generateTableColumns(getTarifaStatus, handleEdit, handleView, handleDelete);
 
   const renderTramoCard = (tramo: Tramo) => (
     <Card key={tramo._id} shadow="sm" padding="md" withBorder>
@@ -397,7 +512,7 @@ const TramosPage: React.FC = () => {
         </Group>
         {getTarifaStatus(tramo)}
       </Group>
-      
+
       <Stack gap="xs" mb="md">
         <Group gap="xs">
           <IconMapPin size={16} color="green" />
@@ -405,7 +520,9 @@ const TramosPage: React.FC = () => {
         </Group>
         <Group gap="xs" justify="center">
           <IconRoad size={16} />
-          <Text size="xs" c="dimmed">{tramo.distancia} km</Text>
+          <Text size="xs" c="dimmed">
+            {tramo.distancia} km
+          </Text>
         </Group>
         <Group gap="xs">
           <IconMapPin size={16} color="red" />
@@ -418,17 +535,10 @@ const TramosPage: React.FC = () => {
           Ver detalle
         </Button>
         <Group gap="xs">
-          <ActionIcon 
-            variant="light" 
-            onClick={() => handleEdit(tramo)}
-          >
+          <ActionIcon variant="light" onClick={() => handleEdit(tramo)}>
             <IconEdit size={16} />
           </ActionIcon>
-          <ActionIcon 
-            variant="light" 
-            color="red"
-            onClick={() => handleDelete(tramo)}
-          >
+          <ActionIcon variant="light" color="red" onClick={() => handleDelete(tramo)}>
             <IconTrash size={16} />
           </ActionIcon>
         </Group>
@@ -438,9 +548,60 @@ const TramosPage: React.FC = () => {
 
   const tramosStats = {
     total: tramos.length,
-    conTarifa: tramos.filter(t => t.tipo || t.tarifaVigente).length,
-    sinTarifa: tramos.filter(t => !(t.tipo || t.tarifaVigente)).length
+    conTarifa: tramos.filter((t) => t.tipo || t.tarifaVigente).length,
+    sinTarifa: tramos.filter((t) => !(t.tipo || t.tarifaVigente)).length,
   };
+
+  const renderCalculadoraTab = () => (
+    <Stack gap="md">
+      <TramosSelector
+        onTramoSelect={(tramo) => tramo && formModal.openEdit(tramo)}
+        selectedTramo={formModal.selectedItem}
+      />
+
+      {formModal.selectedItem && (
+        <>
+          <TarifaCalculator
+            tramoId={formModal.selectedItem._id}
+            tramo={formModal.selectedItem}
+            onCalculationChange={(result: any) => {
+              console.log('Resultado cálculo:', result);
+            }}
+          />
+
+          <TarifaVersioning
+            tramoId={formModal.selectedItem._id}
+            onVersionSelect={(version) => {
+              console.log('Versión seleccionada:', version);
+            }}
+          />
+        </>
+      )}
+    </Stack>
+  );
+
+  const renderDataTab = () => (
+    <Paper p="md" withBorder>
+      <LoadingOverlay visible={loading} />
+
+      {viewMode === 'list' ? (
+        <DataTable
+          data={filteredTramos}
+          columns={columns}
+          loading={loading}
+          emptyMessage="No se encontraron tramos"
+        />
+      ) : (
+        <Grid>
+          {filteredTramos.map((tramo) => (
+            <Grid.Col key={tramo._id} span={{ base: 12, sm: 6, md: 4 }}>
+              {renderTramoCard(tramo)}
+            </Grid.Col>
+          ))}
+        </Grid>
+      )}
+    </Paper>
+  );
 
   return (
     <Stack gap="md">
@@ -455,7 +616,7 @@ const TramosPage: React.FC = () => {
           >
             Actualizar
           </Button>
-          
+
           <Button
             variant="outline"
             leftSection={<IconUpload size={16} />}
@@ -463,7 +624,7 @@ const TramosPage: React.FC = () => {
           >
             Importar
           </Button>
-          
+
           <Button
             variant="outline"
             leftSection={<IconDownload size={16} />}
@@ -480,11 +641,8 @@ const TramosPage: React.FC = () => {
           >
             Exportar
           </Button>
-          
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={formModal.openCreate}
-          >
+
+          <Button leftSection={<IconPlus size={16} />} onClick={formModal.openCreate}>
             Nuevo Tramo
           </Button>
         </Group>
@@ -507,7 +665,7 @@ const TramosPage: React.FC = () => {
               onChange={(value) => setSelectedCliente(value || '')}
               data={[
                 { value: '', label: 'Todos los clientes' },
-                ...clientes.map(c => ({ value: c._id, label: c.nombre }))
+                ...clientes.map((c) => ({ value: c._id, label: c.nombre })),
               ]}
             />
           </Grid.Col>
@@ -518,7 +676,7 @@ const TramosPage: React.FC = () => {
               onChange={(value) => setSelectedOrigen(value || '')}
               data={[
                 { value: '', label: 'Cualquier origen' },
-                ...sitesFiltered.map(s => ({ value: s._id, label: s.nombre }))
+                ...sitesFiltered.map((s) => ({ value: s._id, label: s.nombre })),
               ]}
             />
           </Grid.Col>
@@ -529,7 +687,7 @@ const TramosPage: React.FC = () => {
               onChange={(value) => setSelectedDestino(value || '')}
               data={[
                 { value: '', label: 'Cualquier destino' },
-                ...sitesFiltered.map(s => ({ value: s._id, label: s.nombre }))
+                ...sitesFiltered.map((s) => ({ value: s._id, label: s.nombre })),
               ]}
             />
           </Grid.Col>
@@ -550,12 +708,8 @@ const TramosPage: React.FC = () => {
       {/* Tabs con estadísticas */}
       <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'todos')}>
         <Tabs.List>
-          <Tabs.Tab value="todos">
-            Todos ({tramosStats.total})
-          </Tabs.Tab>
-          <Tabs.Tab value="con-tarifa">
-            Con Tarifa ({tramosStats.conTarifa})
-          </Tabs.Tab>
+          <Tabs.Tab value="todos">Todos ({tramosStats.total})</Tabs.Tab>
+          <Tabs.Tab value="con-tarifa">Con Tarifa ({tramosStats.conTarifa})</Tabs.Tab>
           <Tabs.Tab value="sin-tarifa" color="red">
             Sin Tarifa ({tramosStats.sinTarifa})
           </Tabs.Tab>
@@ -565,58 +719,7 @@ const TramosPage: React.FC = () => {
         </Tabs.List>
 
         <Tabs.Panel value={activeTab}>
-          {activeTab === 'calculadora' ? (
-            <Stack gap="md">
-              <TramosSelector
-                onTramoSelect={(tramo) => tramo && formModal.openEdit(tramo)}
-                selectedTramo={formModal.selectedItem}
-              />
-              
-              {formModal.selectedItem && (
-                <>
-                  <TarifaCalculator 
-                    tramoId={formModal.selectedItem._id}
-                    tramo={formModal.selectedItem}
-                    onCalculationChange={(result: any) => {
-                      // Manejar resultado del cálculo
-                      console.log('Resultado cálculo:', result);
-                    }}
-                  />
-                  
-                  <TarifaVersioning
-                    tramoId={formModal.selectedItem._id}
-                    onVersionSelect={(version) => {
-                      // Manejar selección de versión
-                      console.log('Versión seleccionada:', version);
-                    }}
-                  />
-                </>
-              )}
-            </Stack>
-          ) : (
-            <Paper p="md" withBorder>
-              <LoadingOverlay visible={loading} />
-              
-              {viewMode === 'list' ? (
-                <>
-                  <DataTable
-                    data={filteredTramos}
-                    columns={columns}
-                    loading={loading}
-                    emptyMessage="No se encontraron tramos"
-                  />
-                </>
-              ) : (
-                <Grid>
-                  {filteredTramos.map(tramo => (
-                    <Grid.Col key={tramo._id} span={{ base: 12, sm: 6, md: 4 }}>
-                      {renderTramoCard(tramo)}
-                    </Grid.Col>
-                  ))}
-                </Grid>
-              )}
-            </Paper>
-          )}
+          {activeTab === 'calculadora' ? renderCalculadoraTab() : renderDataTab()}
         </Tabs.Panel>
       </Tabs>
 
@@ -627,7 +730,11 @@ const TramosPage: React.FC = () => {
         title={formModal.selectedItem ? 'Editar Tramo' : 'Nuevo Tramo'}
         size="xl"
       >
-        <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>}>
+        <Suspense
+          fallback={
+            <div style={{ padding: '40px', textAlign: 'center' }}>Cargando formulario...</div>
+          }
+        >
           <TramoForm
             tramo={formModal.selectedItem as any}
             clientes={clientes}
@@ -652,7 +759,7 @@ const TramosPage: React.FC = () => {
               detailModal.close();
               formModal.openEdit(detailModal.selectedItem!);
             }}
-            onClose={detailModal.close}
+            _onClose={detailModal.close}
           />
         )}
       </Modal>
@@ -668,13 +775,21 @@ const TramosPage: React.FC = () => {
           // Usar el sistema base de importación
           return await tramoExcelService.importFromExcel(file);
         }}
-        validateExcelFile={async () => {
+        validateExcelFile={async (_file: File) => {
           // Validación básica de archivo
-          return { valid: true };
+          return {
+            valid: true,
+            validationResult: { errors: [], warnings: [] },
+            processedData: [],
+          };
         }}
-        previewExcelFile={async () => {
+        previewExcelFile={async (_file: File, _sampleSize?: number) => {
           // Preview básico de archivo
-          return { preview: [], headers: [] };
+          return {
+            samples: [],
+            headers: [],
+            totalRows: 0,
+          };
         }}
         getTemplate={async () => {
           const blob = await tramoExcelService.getTemplate();
@@ -695,7 +810,7 @@ const TramosPage: React.FC = () => {
         onConfirm={confirmDelete}
         title="Eliminar Tramo"
         message={
-          deleteModal.selectedItem 
+          deleteModal.selectedItem
             ? `¿Estás seguro de que deseas eliminar el tramo ${deleteModal.selectedItem.origen.nombre} → ${deleteModal.selectedItem.destino.nombre}?`
             : ''
         }
