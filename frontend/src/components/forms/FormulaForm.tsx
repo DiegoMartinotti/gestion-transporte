@@ -4,23 +4,21 @@ import {
   Button,
   Group,
   Select,
-  TextInput,
   Textarea,
   Text,
   Alert,
   Card,
   Stack,
-  Divider,
   Badge,
   ActionIcon,
   Code,
   Paper,
-  Grid
+  Grid,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconX, IconInfoCircle, IconCalculator, IconHelp } from '@tabler/icons-react';
+import { IconCheck, IconX, IconHelp } from '@tabler/icons-react';
 import { formulaService } from '../../services/formulaService';
 import { clienteService } from '../../services/clienteService';
 import { FormulaValidator } from '../validators/FormulaValidator';
@@ -45,37 +43,37 @@ interface FormValues {
 const TIPOS_UNIDAD = [
   { value: 'General', label: 'General (Aplica a todos)' },
   { value: 'Sider', label: 'Sider' },
-  { value: 'Bitren', label: 'Bitren' }
+  { value: 'Bitren', label: 'Bitren' },
 ];
 
 const FORMULAS_EJEMPLO = [
   {
     name: 'Estándar',
     formula: 'Valor * Palets + Peaje',
-    description: 'Fórmula básica del sistema'
+    description: 'Fórmula básica del sistema',
   },
   {
     name: 'Descuento por volumen',
     formula: 'SI(Palets > 20; Valor * Palets * 0.85; Valor * Palets) + Peaje',
-    description: '15% descuento para más de 20 palets'
+    description: '15% descuento para más de 20 palets',
   },
   {
     name: 'Tarifa mínima',
     formula: 'max(Valor * Palets, 5000) + Peaje',
-    description: 'Garantiza un mínimo de $5000'
+    description: 'Garantiza un mínimo de $5000',
   },
   {
     name: 'Recargo por pocos palets',
     formula: 'SI(Palets < 5; Valor * Palets * 1.2; Valor * Palets) + Peaje',
-    description: '20% recargo para menos de 5 palets'
-  }
+    description: '20% recargo para menos de 5 palets',
+  },
 ];
 
 export const FormulaForm: React.FC<FormulaFormProps> = ({
   clienteId,
   formulaId,
   onSave,
-  onCancel
+  onCancel,
 }) => {
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,7 +87,7 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
       tipoUnidad: 'General',
       formula: 'Valor * Palets + Peaje',
       vigenciaDesde: new Date(),
-      vigenciaHasta: null
+      vigenciaHasta: null,
     },
     validate: {
       clienteId: (value) => (!value ? 'Cliente es requerido' : null),
@@ -100,8 +98,8 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
           return 'Fecha de fin debe ser posterior a la fecha de inicio';
         }
         return null;
-      }
-    }
+      },
+    },
   });
 
   useEffect(() => {
@@ -121,7 +119,12 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
     if (form.values.clienteId && form.values.tipoUnidad && form.values.vigenciaDesde) {
       checkConflictos();
     }
-  }, [form.values.clienteId, form.values.tipoUnidad, form.values.vigenciaDesde, form.values.vigenciaHasta]);
+  }, [
+    form.values.clienteId,
+    form.values.tipoUnidad,
+    form.values.vigenciaDesde,
+    form.values.vigenciaHasta,
+  ]);
 
   const loadClientes = async () => {
     try {
@@ -135,19 +138,19 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
 
   const loadFormula = async () => {
     if (!formulaId) return;
-    
+
     try {
       setLoading(true);
       const response = await formulaService.getById(formulaId);
       const formula = response.data;
-      
+
       if (formula) {
         form.setValues({
           clienteId: formula.clienteId,
           tipoUnidad: formula.tipoUnidad,
           formula: formula.formula,
           vigenciaDesde: new Date(formula.vigenciaDesde),
-          vigenciaHasta: formula.vigenciaHasta ? new Date(formula.vigenciaHasta) : null
+          vigenciaHasta: formula.vigenciaHasta ? new Date(formula.vigenciaHasta) : null,
         });
       }
     } catch (error) {
@@ -155,7 +158,7 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
       notifications.show({
         title: 'Error',
         message: 'No se pudo cargar la fórmula',
-        color: 'red'
+        color: 'red',
       });
     } finally {
       setLoading(false);
@@ -169,7 +172,7 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
     } catch (error) {
       setValidationResult({
         isValid: false,
-        errors: ['Error al validar la fórmula']
+        errors: ['Error al validar la fórmula'],
       });
     }
   };
@@ -181,7 +184,7 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
         tipoUnidad: form.values.tipoUnidad,
         vigenciaDesde: form.values.vigenciaDesde,
         vigenciaHasta: form.values.vigenciaHasta,
-        excludeId: formulaId
+        excludeId: formulaId,
       });
       setConflictos(response.data || []);
     } catch (error) {
@@ -194,7 +197,7 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
       notifications.show({
         title: 'Error',
         message: 'La fórmula contiene errores. Por favor corrígela antes de guardar.',
-        color: 'red'
+        color: 'red',
       });
       return;
     }
@@ -203,18 +206,18 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
       notifications.show({
         title: 'Conflicto de vigencias',
         message: 'Existen fórmulas que se superponen en las fechas seleccionadas',
-        color: 'red'
+        color: 'red',
       });
       return;
     }
 
     try {
       setLoading(true);
-      
+
       const data = {
         ...values,
         vigenciaDesde: values.vigenciaDesde.toISOString(),
-        vigenciaHasta: values.vigenciaHasta?.toISOString() || null
+        vigenciaHasta: values.vigenciaHasta?.toISOString() || null,
       };
 
       if (formulaId) {
@@ -222,23 +225,23 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
         notifications.show({
           title: 'Éxito',
           message: 'Fórmula actualizada correctamente',
-          color: 'green'
+          color: 'green',
         });
       } else {
         await formulaService.create(data);
         notifications.show({
           title: 'Éxito',
           message: 'Fórmula creada correctamente',
-          color: 'green'
+          color: 'green',
         });
       }
-      
+
       onSave();
     } catch (error: any) {
       notifications.show({
         title: 'Error',
         message: error.response?.data?.message || 'Error al guardar la fórmula',
-        color: 'red'
+        color: 'red',
       });
     } finally {
       setLoading(false);
@@ -249,7 +252,7 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
     form.setFieldValue('formula', formula);
   };
 
-  const selectedCliente = clientes.find(c => c._id === form.values.clienteId);
+  const selectedCliente = clientes.find((c) => c._id === form.values.clienteId);
 
   return (
     <Box>
@@ -262,7 +265,10 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
                 label="Cliente"
                 placeholder="Seleccionar cliente"
                 required
-                data={clientes.map(c => ({ value: c._id, label: c.nombre || c.razonSocial || 'Sin nombre' }))}
+                data={clientes.map((c) => ({
+                  value: c._id,
+                  label: c.nombre || c.razonSocial || 'Sin nombre',
+                }))}
                 searchable
                 disabled={!!clienteId}
                 {...form.getInputProps('clienteId')}
@@ -302,11 +308,17 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
           {conflictos.length > 0 && (
             <Alert icon={<IconX size={16} />} title="Conflictos detectados" color="red">
               <Text size="sm">
-                Existen {conflictos.length} fórmula(s) que se superponen con las fechas seleccionadas:
+                Existen {conflictos.length} fórmula(s) que se superponen con las fechas
+                seleccionadas:
               </Text>
               {conflictos.map((conflicto, index) => (
                 <Text key={index} size="xs" c="dimmed">
-                  • {conflicto.tipoUnidad} ({new Date(conflicto.vigenciaDesde).toLocaleDateString()} - {conflicto.vigenciaHasta ? new Date(conflicto.vigenciaHasta).toLocaleDateString() : 'Sin límite'})
+                  • {conflicto.tipoUnidad} ({new Date(conflicto.vigenciaDesde).toLocaleDateString()}{' '}
+                  -{' '}
+                  {conflicto.vigenciaHasta
+                    ? new Date(conflicto.vigenciaHasta).toLocaleDateString()
+                    : 'Sin límite'}
+                  )
                 </Text>
               ))}
             </Alert>
@@ -345,17 +357,25 @@ export const FormulaForm: React.FC<FormulaFormProps> = ({
 
           {/* Fórmulas de ejemplo */}
           <Card withBorder>
-            <Text fw={500} mb="sm">Fórmulas de Ejemplo</Text>
+            <Text fw={500} mb="sm">
+              Fórmulas de Ejemplo
+            </Text>
             <Stack gap="xs">
               {FORMULAS_EJEMPLO.map((ejemplo, index) => (
                 <Paper key={index} p="xs" withBorder>
                   <Group justify="apart" align="flex-start">
                     <Box style={{ flex: 1 }}>
                       <Group gap="xs" mb={4}>
-                        <Badge size="sm" variant="light">{ejemplo.name}</Badge>
+                        <Badge size="sm" variant="light">
+                          {ejemplo.name}
+                        </Badge>
                       </Group>
-                      <Code block fz="sm" mb={4}>{ejemplo.formula}</Code>
-                      <Text size="xs" c="dimmed">{ejemplo.description}</Text>
+                      <Code block fz="sm" mb={4}>
+                        {ejemplo.formula}
+                      </Code>
+                      <Text size="xs" c="dimmed">
+                        {ejemplo.description}
+                      </Text>
                     </Box>
                     <Button
                       size="xs"
