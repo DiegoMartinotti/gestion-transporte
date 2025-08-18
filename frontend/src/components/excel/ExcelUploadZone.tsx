@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   Group,
   Text,
-  useMantineTheme,
   rem,
   Stack,
   Button,
@@ -55,7 +54,6 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
   showTemplate = true,
   ...dropzoneProps
 }) => {
-  const theme = useMantineTheme();
   const [uploadedFile, setUploadedFile] = useState<FileWithPath | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -65,7 +63,7 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
         const file = files[0];
         setUploadedFile(file);
         setUploadStatus('success');
-        
+
         notifications.show({
           title: 'Archivo cargado',
           message: `${file.name} se cargó correctamente`,
@@ -82,7 +80,7 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
   const handleReject = useCallback(
     (files: FileRejection[]) => {
       setUploadStatus('error');
-      
+
       notifications.show({
         title: 'Error al cargar archivo',
         message: 'El archivo no cumple con los requisitos',
@@ -201,7 +199,8 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
               Arrastra tu archivo Excel aquí o haz clic para seleccionar
             </Text>
             <Text size="sm" c="dimmed" inline mt={7}>
-              Formatos soportados: {supportedFormats.join(', ')} • Tamaño máximo: {formatFileSize(maxFileSize)}
+              Formatos soportados: {supportedFormats.join(', ')} • Tamaño máximo:{' '}
+              {formatFileSize(maxFileSize)}
             </Text>
           </div>
         </Group>
@@ -224,14 +223,13 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
                 </Text>
               </Box>
               <Badge color={getStatusColor()} variant="light" size="sm">
-                {validationErrors.length > 0 
-                  ? 'Con errores' 
-                  : validationWarnings.length > 0 
-                  ? 'Con advertencias' 
-                  : uploadStatus === 'success' 
-                  ? 'Listo' 
-                  : 'Procesando'
-                }
+                {validationErrors.length > 0
+                  ? 'Con errores'
+                  : validationWarnings.length > 0
+                    ? 'Con advertencias'
+                    : uploadStatus === 'success'
+                      ? 'Listo'
+                      : 'Procesando'}
               </Badge>
             </Group>
             <ActionIcon
