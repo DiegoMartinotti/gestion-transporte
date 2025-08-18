@@ -14,26 +14,10 @@ import {
   Divider,
   Table,
   Alert,
-  Progress,
   SimpleGrid,
-  ActionIcon,
-  Tooltip,
-  Code,
-  TextInput
+  TextInput,
 } from '@mantine/core';
-import {
-  IconEye,
-  IconCalculator,
-  IconRefresh,
-  IconDownload,
-  IconShare,
-  IconTruck,
-  IconWeight,
-  IconRuler,
-  IconClock,
-  IconCurrency,
-  IconChartBar
-} from '@tabler/icons-react';
+import { IconEye, IconCalculator, IconRefresh } from '@tabler/icons-react';
 import { DateInput } from '@mantine/dates';
 import { useMutation } from '@tanstack/react-query';
 import { previewCalculation, TarifaVersion } from '../../services/tarifaService';
@@ -78,62 +62,66 @@ interface PreviewScenario {
   result?: CalculationResult;
 }
 
+const TEST_CLIENT = 'Cliente Test';
+const TEST_ORIGIN = 'Origen Test';
+const TEST_DESTINATION = 'Destino Test';
+
 const DEFAULT_SCENARIOS: PreviewScenario[] = [
   {
     id: 'ligero',
     name: 'Carga Ligera',
     params: {
-      cliente: 'Cliente Test',
-      origen: 'Origen Test',
-      destino: 'Destino Test',
+      cliente: TEST_CLIENT,
+      origen: TEST_ORIGIN,
+      destino: TEST_DESTINATION,
       fecha: new Date().toISOString().split('T')[0],
       palets: 1,
-      tipoTramo: 'Sider'
-    }
+      tipoTramo: 'Sider',
+    },
   },
   {
     id: 'medio',
     name: 'Carga Media',
     params: {
-      cliente: 'Cliente Test',
-      origen: 'Origen Test',
-      destino: 'Destino Test',
+      cliente: TEST_CLIENT,
+      origen: TEST_ORIGIN,
+      destino: TEST_DESTINATION,
       fecha: new Date().toISOString().split('T')[0],
       palets: 5,
-      tipoTramo: 'Sider'
-    }
+      tipoTramo: 'Sider',
+    },
   },
   {
     id: 'pesado',
     name: 'Carga Pesada',
     params: {
-      cliente: 'Cliente Test',
-      origen: 'Origen Test',
-      destino: 'Destino Test',
+      cliente: TEST_CLIENT,
+      origen: TEST_ORIGIN,
+      destino: TEST_DESTINATION,
       fecha: new Date().toISOString().split('T')[0],
       palets: 10,
-      tipoTramo: 'Bitren'
-    }
+      tipoTramo: 'Bitren',
+    },
   },
   {
     id: 'extra',
     name: 'Carga Extra',
     params: {
-      cliente: 'Cliente Test',
-      origen: 'Origen Test',
-      destino: 'Destino Test',
+      cliente: TEST_CLIENT,
+      origen: TEST_ORIGIN,
+      destino: TEST_DESTINATION,
       fecha: new Date().toISOString().split('T')[0],
       palets: 20,
-      tipoTramo: 'Bitren'
-    }
-  }
+      tipoTramo: 'Bitren',
+    },
+  },
 ];
 
 export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
   tramoId,
   version,
   onResultChange,
-  compact = false
+  compact = false,
 }) => {
   const [params, setParams] = useState<CalculationParams>({
     cliente: '',
@@ -142,7 +130,7 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
     fecha: new Date().toISOString().split('T')[0],
     palets: 1,
     tipoTramo: 'Sider',
-    tramoId: tramoId
+    tramoId: tramoId,
   });
 
   const [scenarios, setScenarios] = useState<PreviewScenario[]>(DEFAULT_SCENARIOS);
@@ -150,32 +138,33 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
   const [showCustomForm, setShowCustomForm] = useState(false);
 
   const previewMutation = useMutation({
-    mutationFn: (data: { tramoId: string; version: Partial<TarifaVersion>; params: CalculationParams }) =>
-      previewCalculation(data.tramoId, data.version, data.params),
+    mutationFn: (data: {
+      tramoId: string;
+      version: Partial<TarifaVersion>;
+      params: CalculationParams;
+    }) => previewCalculation(data.tramoId, data.version, data.params),
     onSuccess: (result) => {
       updateScenarioResult(selectedScenario, result);
       onResultChange?.(result);
-    }
+    },
   });
 
   const updateScenarioResult = (scenarioId: string, result: CalculationResult) => {
-    setScenarios(prev => prev.map(scenario => 
-      scenario.id === scenarioId 
-        ? { ...scenario, result }
-        : scenario
-    ));
+    setScenarios((prev) =>
+      prev.map((scenario) => (scenario.id === scenarioId ? { ...scenario, result } : scenario))
+    );
   };
 
   const handleScenarioChange = (scenarioId: string) => {
     setSelectedScenario(scenarioId);
-    const scenario = scenarios.find(s => s.id === scenarioId);
+    const scenario = scenarios.find((s) => s.id === scenarioId);
     if (scenario) {
       setParams({ ...scenario.params, tramoId });
     }
   };
 
   const handleCustomParamChange = (field: keyof CalculationParams, value: any) => {
-    setParams(prev => ({ ...prev, [field]: value }));
+    setParams((prev) => ({ ...prev, [field]: value }));
   };
 
   const runPreview = () => {
@@ -183,11 +172,11 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
   };
 
   const runAllScenarios = () => {
-    scenarios.forEach(scenario => {
-      previewMutation.mutate({ 
-        tramoId, 
-        version, 
-        params: { ...scenario.params, tramoId } 
+    scenarios.forEach((scenario) => {
+      previewMutation.mutate({
+        tramoId,
+        version,
+        params: { ...scenario.params, tramoId },
       });
     });
   };
@@ -195,52 +184,56 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
-      currency: 'ARS'
+      currency: 'ARS',
     }).format(amount);
   };
 
   const getScenarioColor = (scenarioId: string) => {
     const colors = {
       ligero: 'green',
-      medio: 'blue', 
+      medio: 'blue',
       pesado: 'orange',
-      extra: 'red'
+      extra: 'red',
     };
     return colors[scenarioId as keyof typeof colors] || 'gray';
   };
 
   useEffect(() => {
     if (tramoId && version) {
-      const currentScenario = scenarios.find(s => s.id === selectedScenario);
+      const currentScenario = scenarios.find((s) => s.id === selectedScenario);
       if (currentScenario) {
-        previewMutation.mutate({ 
-          tramoId, 
-          version, 
-          params: { ...currentScenario.params, tramoId } 
+        previewMutation.mutate({
+          tramoId,
+          version,
+          params: { ...currentScenario.params, tramoId },
         });
       }
     }
   }, [tramoId, version, selectedScenario]);
 
   if (compact) {
-    const selectedResult = scenarios.find(s => s.id === selectedScenario)?.result;
-    
+    const selectedResult = scenarios.find((s) => s.id === selectedScenario)?.result;
+
     return (
       <Card withBorder>
         <Group justify="space-between" mb="sm">
           <Text fw={500}>Vista Previa</Text>
           <Badge color={getScenarioColor(selectedScenario)}>
-            {scenarios.find(s => s.id === selectedScenario)?.name}
+            {scenarios.find((s) => s.id === selectedScenario)?.name}
           </Badge>
         </Group>
-        
+
         {selectedResult ? (
           <Group justify="space-between">
             <Text size="sm">Total estimado:</Text>
-            <Text fw={700} c="green">{formatCurrency(selectedResult.total)}</Text>
+            <Text fw={700} c="green">
+              {formatCurrency(selectedResult.total)}
+            </Text>
           </Group>
         ) : (
-          <Text size="sm" c="dimmed">Calculando...</Text>
+          <Text size="sm" c="dimmed">
+            Calculando...
+          </Text>
         )}
       </Card>
     );
@@ -255,7 +248,7 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
             Vista Previa de Cálculo
           </Group>
         </Title>
-        
+
         <Group gap="xs">
           <Button
             size="xs"
@@ -266,11 +259,8 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
           >
             Ejecutar Todos
           </Button>
-          
-          <Button
-            size="xs"
-            onClick={() => setShowCustomForm(!showCustomForm)}
-          >
+
+          <Button size="xs" onClick={() => setShowCustomForm(!showCustomForm)}>
             {showCustomForm ? 'Ocultar' : 'Personalizar'}
           </Button>
         </Group>
@@ -284,42 +274,49 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
               label="Escenario de Prueba"
               value={selectedScenario}
               onChange={(value) => value && handleScenarioChange(value)}
-              data={scenarios.map(s => ({
+              data={scenarios.map((s) => ({
                 value: s.id,
-                label: s.name
+                label: s.name,
               }))}
             />
 
             {/* Resultados de escenarios */}
             <SimpleGrid cols={2}>
-              {scenarios.map(scenario => (
+              {scenarios.map((scenario) => (
                 <Card
                   key={scenario.id}
                   withBorder
                   p="xs"
                   style={{
-                    borderColor: scenario.id === selectedScenario ? 
-                      `var(--mantine-color-${getScenarioColor(scenario.id)}-5)` : 
-                      undefined,
-                    borderWidth: scenario.id === selectedScenario ? 2 : 1
+                    borderColor:
+                      scenario.id === selectedScenario
+                        ? `var(--mantine-color-${getScenarioColor(scenario.id)}-5)`
+                        : undefined,
+                    borderWidth: scenario.id === selectedScenario ? 2 : 1,
                   }}
                 >
                   <Group justify="space-between" mb="xs">
-                    <Text size="sm" fw={500}>{scenario.name}</Text>
+                    <Text size="sm" fw={500}>
+                      {scenario.name}
+                    </Text>
                     <Badge size="xs" color={getScenarioColor(scenario.id)}>
                       {scenario.params.palets} palets
                     </Badge>
                   </Group>
-                  
+
                   {scenario.result ? (
                     <Group justify="space-between">
-                      <Text size="xs" c="dimmed">Total:</Text>
+                      <Text size="xs" c="dimmed">
+                        Total:
+                      </Text>
                       <Text size="sm" fw={600}>
                         {formatCurrency(scenario.result.total)}
                       </Text>
                     </Group>
                   ) : (
-                    <Text size="xs" c="dimmed">Sin calcular</Text>
+                    <Text size="xs" c="dimmed">
+                      Sin calcular
+                    </Text>
                   )}
                 </Card>
               ))}
@@ -331,8 +328,10 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
         {showCustomForm && (
           <Grid.Col span={6}>
             <Card withBorder>
-              <Title order={6} mb="md">Parámetros Personalizados</Title>
-              
+              <Title order={6} mb="md">
+                Parámetros Personalizados
+              </Title>
+
               <Stack gap="sm">
                 <SimpleGrid cols={2}>
                   <TextInput
@@ -340,11 +339,16 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
                     value={params.cliente}
                     onChange={(e) => handleCustomParamChange('cliente', e.currentTarget.value)}
                   />
-                  
+
                   <DateInput
                     label="Fecha"
                     value={new Date(params.fecha)}
-                    onChange={(value) => handleCustomParamChange('fecha', value ? new Date(value).toISOString().split('T')[0] : params.fecha)}
+                    onChange={(value) =>
+                      handleCustomParamChange(
+                        'fecha',
+                        value ? new Date(value).toISOString().split('T')[0] : params.fecha
+                      )
+                    }
                   />
                 </SimpleGrid>
 
@@ -354,7 +358,7 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
                     value={params.origen}
                     onChange={(e) => handleCustomParamChange('origen', e.currentTarget.value)}
                   />
-                  
+
                   <TextInput
                     label="Destino"
                     value={params.destino}
@@ -369,7 +373,7 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
                     onChange={(value) => handleCustomParamChange('palets', value)}
                     min={1}
                   />
-                  
+
                   <Select
                     label="Tipo Tramo"
                     value={params.tipoTramo}
@@ -377,7 +381,7 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
                     data={[
                       { value: 'Sider', label: 'Sider' },
                       { value: 'Bitren', label: 'Bitrén' },
-                      { value: 'General', label: 'General' }
+                      { value: 'General', label: 'General' },
                     ]}
                   />
                 </SimpleGrid>
@@ -397,12 +401,15 @@ export const TarifaPreview: React.FC<TarifaPreviewProps> = ({
       </Grid>
 
       {/* Detalle del resultado seleccionado */}
-      {scenarios.find(s => s.id === selectedScenario)?.result && (
+      {scenarios.find((s) => s.id === selectedScenario)?.result && (
         <Card withBorder mt="md">
-          <Title order={6} mb="md">Detalle del Cálculo</Title>
-          
+          <Title order={6} mb="md">
+            Detalle del Cálculo
+          </Title>
+
           {(() => {
-            const result = scenarios.find(s => s.id === selectedScenario)?.result!;
+            const result = scenarios.find((s) => s.id === selectedScenario)?.result;
+            if (!result) return null;
             return (
               <Stack gap="sm">
                 <Group justify="space-between">
