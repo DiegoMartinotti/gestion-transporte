@@ -10,27 +10,28 @@ interface TramoSelectorProps {
   required?: boolean;
   clearable?: boolean;
   error?: string;
-  clienteId?: string;
+  _clienteId?: string;
 }
 
 export function TramoSelector({
   value,
   onChange,
   label,
-  placeholder = "Selecciona un tramo",
+  placeholder = 'Selecciona un tramo',
   required = false,
   clearable = false,
   error,
-  clienteId
+  _clienteId,
 }: TramoSelectorProps) {
   const { tramos, loading } = useTramos();
 
   // Memoize the data transformation to avoid recreating the array on every render
-  const data = useMemo(() => 
-    tramos.map(tramo => ({
-      value: tramo._id,
-      label: `${tramo.denominacion} (${tramo.distanciaKm} km)`
-    })),
+  const data = useMemo(
+    () =>
+      tramos.map((tramo) => ({
+        value: tramo._id,
+        label: `${tramo.denominacion} (${tramo.distanciaKm} km)`,
+      })),
     [tramos] // Only recalculate when tramos array changes
   );
 
