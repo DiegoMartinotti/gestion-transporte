@@ -7,18 +7,18 @@ interface Cliente {
 }
 
 export function useClientes() {
-  const [clientes, setClientes] = useState<Cliente[]>([
+  const [clientes] = useState<Cliente[]>([
     { _id: '1', nombre: 'Empresa ABC S.A.', email: 'contacto@abc.com' },
     { _id: '2', nombre: 'Distribuidora XYZ', email: 'ventas@xyz.com' },
-    { _id: '3', nombre: 'Logística del Sur', email: 'info@sur.com' }
+    { _id: '3', nombre: 'Logística del Sur', email: 'info@sur.com' },
   ]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   const fetchClientes = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
     } finally {
       setLoading(false);
     }
