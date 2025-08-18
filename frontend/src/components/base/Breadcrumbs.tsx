@@ -16,23 +16,53 @@ interface BreadcrumbsProps {
 // Mapeo de rutas a títulos legibles
 const routeToTitle: Record<string, string> = {
   '': 'Dashboard',
-  'clientes': 'Clientes',
-  'empresas': 'Empresas', 
-  'personal': 'Personal',
-  'sites': 'Ubicaciones',
-  'tramos': 'Tramos',
-  'vehiculos': 'Vehículos',
-  'viajes': 'Viajes',
-  'extras': 'Extras',
+  clientes: 'Clientes',
+  empresas: 'Empresas',
+  personal: 'Personal',
+  sites: 'Ubicaciones',
+  tramos: 'Tramos',
+  vehiculos: 'Vehículos',
+  viajes: 'Viajes',
+  extras: 'Extras',
   'ordenes-compra': 'Órdenes de Compra',
-  'reportes': 'Reportes',
-  'configuracion': 'Configuración',
-  'edit': 'Editar'
+  reportes: 'Reportes',
+  configuracion: 'Configuración',
+  edit: 'Editar',
 };
 
 // Función para detectar si un string es un ID de MongoDB
 const isMongoId = (str: string): boolean => {
   return /^[0-9a-fA-F]{24}$/.test(str);
+};
+
+// Función auxiliar para resolver el título de un segmento
+const resolveSegmentTitle = async (
+  segment: string,
+  previousSegment: string | null,
+  getClienteName: (id: string) => Promise<string>,
+  getEmpresaName: (id: string) => Promise<string>
+): Promise<string> => {
+  let title = routeToTitle[segment];
+
+  if (!title) {
+    if (isMongoId(segment)) {
+      try {
+        if (previousSegment === 'clientes') {
+          title = await getClienteName(segment);
+        } else if (previousSegment === 'empresas') {
+          title = await getEmpresaName(segment);
+        } else {
+          title = segment.charAt(0).toUpperCase() + segment.slice(1);
+        }
+      } catch (error) {
+        title = segment.charAt(0).toUpperCase() + segment.slice(1);
+      }
+    } else {
+      title = segment.charAt(0).toUpperCase() + segment.slice(1);
+    }
+  }
+
+  return title;
 };
 
 const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
@@ -42,8 +72,8 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
   const [loading, setLoading] = useState(false);
 
   // Generar breadcrumbs automáticamente basado en la ruta actual
-  const pathSegments = useMemo(() => 
-    location.pathname.split('/').filter(Boolean), 
+  const pathSegments = useMemo(
+    () => location.pathname.split('/').filter(Boolean),
     [location.pathname]
   );
 
@@ -51,43 +81,27 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
   useEffect(() => {
     const resolveBreadcrumbs = async () => {
       setLoading(true);
-      
-      const breadcrumbItems: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: '/' }
-      ];
+
+      const breadcrumbItems: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/' }];
 
       let currentPath = '';
       for (let index = 0; index < pathSegments.length; index++) {
         const segment = pathSegments[index];
         const previousSegment = index > 0 ? pathSegments[index - 1] : null;
         currentPath += `/${segment}`;
-        
-        let title = routeToTitle[segment];
-        
-        // Si no hay título predefinido, intentar resolver ID a nombre
-        if (!title) {
-          if (isMongoId(segment)) {
-            try {
-              if (previousSegment === 'clientes') {
-                title = await getClienteName(segment);
-              } else if (previousSegment === 'empresas') {
-                title = await getEmpresaName(segment);
-              } else {
-                title = segment.charAt(0).toUpperCase() + segment.slice(1);
-              }
-            } catch (error) {
-              title = segment.charAt(0).toUpperCase() + segment.slice(1);
-            }
-          } else {
-            title = segment.charAt(0).toUpperCase() + segment.slice(1);
-          }
-        }
-        
+
+        const title = await resolveSegmentTitle(
+          segment,
+          previousSegment,
+          getClienteName,
+          getEmpresaName
+        );
+
         // El último item no debe tener href (está activo)
         const isLast = index === pathSegments.length - 1;
         breadcrumbItems.push({
           title,
-          href: isLast ? undefined : currentPath
+          href: isLast ? undefined : currentPath,
         });
       }
 
@@ -104,14 +118,14 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
   // Si se proporcionan items personalizados, usarlos
   if (items) {
     return (
-      <MantineBreadcrumbs 
+      <MantineBreadcrumbs
         separator={<IconChevronRight size={14} stroke={1.5} />}
         separatorMargin="xs"
         mb="md"
       >
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
-          
+
           if (isLast || !item.href) {
             return (
               <Text key={index} c="dimmed" size="sm">
@@ -121,12 +135,7 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
           }
 
           return (
-            <Anchor 
-              key={index} 
-              component={Link} 
-              to={item.href}
-              size="sm"
-            >
+            <Anchor key={index} component={Link} to={item.href} size="sm">
               {item.title}
             </Anchor>
           );
@@ -142,7 +151,7 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
 
   if (loading && resolvedBreadcrumbs.length === 0) {
     return (
-      <MantineBreadcrumbs 
+      <MantineBreadcrumbs
         separator={<IconChevronRight size={14} stroke={1.5} />}
         separatorMargin="xs"
         mb="md"
@@ -154,14 +163,14 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
   }
 
   return (
-    <MantineBreadcrumbs 
+    <MantineBreadcrumbs
       separator={<IconChevronRight size={14} stroke={1.5} />}
       separatorMargin="xs"
       mb="md"
     >
       {resolvedBreadcrumbs.map((item, index) => {
         const isLast = index === resolvedBreadcrumbs.length - 1;
-        
+
         if (isLast || !item.href) {
           return (
             <Text key={index} c="dimmed" size="sm">
@@ -171,12 +180,7 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
         }
 
         return (
-          <Anchor 
-            key={index} 
-            component={Link} 
-            to={item.href}
-            size="sm"
-          >
+          <Anchor key={index} component={Link} to={item.href} size="sm">
             {item.title}
           </Anchor>
         );
