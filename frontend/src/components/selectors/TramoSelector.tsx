@@ -10,7 +10,6 @@ interface TramoSelectorProps {
   required?: boolean;
   clearable?: boolean;
   error?: string;
-  _clienteId?: string;
 }
 
 export function TramoSelector({
@@ -21,7 +20,6 @@ export function TramoSelector({
   required = false,
   clearable = false,
   error,
-  _clienteId,
 }: TramoSelectorProps) {
   const { tramos, loading } = useTramos();
 
