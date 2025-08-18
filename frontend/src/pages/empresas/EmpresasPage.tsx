@@ -1,20 +1,19 @@
-import { 
-  Container, 
-  Title, 
-  Group, 
-  Button, 
+import {
+  Container,
+  Title,
+  Group,
+  Button,
   Stack,
   Paper,
   Badge,
   ActionIcon,
   Menu,
-  Text
+  Text,
 } from '@mantine/core';
-import { 
-  IconPlus, 
-  IconDownload, 
-  IconUpload, 
-  IconFileText,
+import {
+  IconPlus,
+  IconDownload,
+  IconUpload,
   IconEdit,
   IconTrash,
   IconDots,
@@ -23,7 +22,7 @@ import {
   IconUser,
   IconTruck,
   IconEye,
-  IconBuilding
+  IconBuilding,
 } from '@tabler/icons-react';
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -36,7 +35,6 @@ import { DataTable, DataTableColumn, LoadingOverlay, ConfirmModal } from '../../
 import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import { Empresa, EmpresaFilters } from '../../types';
 import { empresaService } from '../../services/empresaService';
-import { DEFAULT_PAGE_SIZE } from '../../constants';
 
 export default function EmpresasPage() {
   const navigate = useNavigate();
@@ -54,15 +52,19 @@ export default function EmpresasPage() {
     setCurrentPage,
     itemsPerPage: pageSize,
     setItemsPerPage,
-    refresh: loadEmpresas
+    refresh: loadEmpresas,
   } = useDataLoader<Empresa>({
-    fetchFunction: useCallback((params) => empresaService.getAll({
-      ...filters,
-      ...(params || {})
-    }), [filters]),
+    fetchFunction: useCallback(
+      (params) =>
+        empresaService.getAll({
+          ...filters,
+          ...(params || {}),
+        }),
+      [filters]
+    ),
     dependencies: [filters],
     enablePagination: true,
-    errorMessage: 'Error al cargar empresas'
+    errorMessage: 'Error al cargar empresas',
   });
 
   const handleFiltersChange = (newFilters: EmpresaFilters) => {
@@ -76,17 +78,17 @@ export default function EmpresasPage() {
 
   const handleDelete = async () => {
     if (!deleteModal.selectedItem) return;
-    
+
     try {
       setDeleteLoading(true);
       await empresaService.delete(deleteModal.selectedItem._id);
-      
+
       notifications.show({
         title: 'Empresa eliminada',
         message: `La empresa "${deleteModal.selectedItem.nombre}" ha sido eliminada correctamente`,
-        color: 'green'
+        color: 'green',
       });
-      
+
       deleteModal.close();
       await loadEmpresas();
     } catch (error) {
@@ -122,68 +124,68 @@ export default function EmpresasPage() {
             <Text fw={500}>{record.nombre}</Text>
           </Group>
           {record.contactoPrincipal && (
-            <Text size="xs" c="dimmed">{record.contactoPrincipal}</Text>
+            <Text size="xs" c="dimmed">
+              {record.contactoPrincipal}
+            </Text>
           )}
         </Stack>
-      )
+      ),
     },
     {
       key: 'tipo',
       label: 'Tipo',
       render: (record: Empresa) => (
-        <Badge 
-          color={record.tipo === 'Propia' ? 'blue' : 'orange'} 
-          variant="light" 
-          size="sm"
-        >
+        <Badge color={record.tipo === 'Propia' ? 'blue' : 'orange'} variant="light" size="sm">
           {record.tipo}
         </Badge>
-      )
+      ),
     },
     {
       key: 'mail',
       label: 'Email',
-      render: (record: Empresa) => record.mail ? (
-        <Group gap="xs">
-          <IconMail size="0.9rem" />
-          <Text size="sm">{record.mail}</Text>
-        </Group>
-      ) : '-'
+      render: (record: Empresa) =>
+        record.mail ? (
+          <Group gap="xs">
+            <IconMail size="0.9rem" />
+            <Text size="sm">{record.mail}</Text>
+          </Group>
+        ) : (
+          '-'
+        ),
     },
     {
       key: 'telefono',
       label: 'Teléfono',
-      render: (record: Empresa) => record.telefono ? (
-        <Group gap="xs">
-          <IconPhone size="0.9rem" />
-          <Text size="sm">{record.telefono}</Text>
-        </Group>
-      ) : '-'
+      render: (record: Empresa) =>
+        record.telefono ? (
+          <Group gap="xs">
+            <IconPhone size="0.9rem" />
+            <Text size="sm">{record.telefono}</Text>
+          </Group>
+        ) : (
+          '-'
+        ),
     },
     {
       key: 'direccion',
       label: 'Dirección',
-      render: (record: Empresa) => record.direccion || '-'
+      render: (record: Empresa) => record.direccion || '-',
     },
     {
       key: 'activa',
       label: 'Estado',
       align: 'center',
       render: (record: Empresa) => (
-        <Badge 
-          color={record.activa ? 'green' : 'red'} 
-          variant="light" 
-          size="sm"
-        >
+        <Badge color={record.activa ? 'green' : 'red'} variant="light" size="sm">
           {record.activa ? 'Activa' : 'Inactiva'}
         </Badge>
-      )
+      ),
     },
     {
       key: 'createdAt',
       label: 'Fecha Creación',
       sortable: true,
-      render: (record: Empresa) => new Date(record.createdAt).toLocaleDateString('es-AR')
+      render: (record: Empresa) => new Date(record.createdAt).toLocaleDateString('es-AR'),
     },
     {
       key: 'actions',
@@ -199,34 +201,34 @@ export default function EmpresasPage() {
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconEye size="0.9rem" />}
               onClick={() => navigate(`/empresas/${record._id}`)}
             >
               Ver Detalles
             </Menu.Item>
-            
-            <Menu.Item 
+
+            <Menu.Item
               leftSection={<IconEdit size="0.9rem" />}
               onClick={() => navigate(`/empresas/${record._id}/edit`)}
             >
               Editar
             </Menu.Item>
             <Menu.Divider />
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconUser size="0.9rem" />}
               onClick={() => navigate(`/empresas/${record._id}/personal`)}
             >
               Ver Personal
             </Menu.Item>
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconTruck size="0.9rem" />}
               onClick={() => navigate(`/empresas/${record._id}/vehiculos`)}
             >
               Ver Vehículos
             </Menu.Item>
             <Menu.Divider />
-            <Menu.Item 
+            <Menu.Item
               leftSection={<IconTrash size="0.9rem" />}
               color="red"
               onClick={() => deleteModal.openDelete(record)}
@@ -235,8 +237,8 @@ export default function EmpresasPage() {
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -245,7 +247,7 @@ export default function EmpresasPage() {
         <Stack gap="lg">
           <Group justify="space-between">
             <Title order={1}>Gestión de Empresas</Title>
-            
+
             <Group gap="sm">
               <Button
                 variant="outline"
@@ -254,7 +256,7 @@ export default function EmpresasPage() {
               >
                 Importar
               </Button>
-              
+
               <Button
                 variant="outline"
                 leftSection={<IconDownload size="1rem" />}
@@ -263,7 +265,7 @@ export default function EmpresasPage() {
               >
                 Exportar
               </Button>
-              
+
               <Button
                 leftSection={<IconPlus size="1rem" />}
                 onClick={() => navigate('/empresas/new')}
