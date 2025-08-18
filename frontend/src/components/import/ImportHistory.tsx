@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Stack,
   Group,
@@ -11,9 +11,7 @@ import {
   TextInput,
   Select,
   ActionIcon,
-  Tooltip,
   Modal,
-  Timeline,
   Card,
   SimpleGrid,
   Title,
@@ -22,8 +20,6 @@ import {
   Center,
   Menu,
   Divider,
-  Alert,
-  Tabs,
   Progress,
 } from '@mantine/core';
 import {
@@ -34,23 +30,18 @@ import {
   IconRefresh,
   IconTrash,
   IconClock,
-  IconCalendar,
   IconFileImport,
   IconCheck,
   IconX,
   IconAlertCircle,
   IconDots,
   IconFileExport,
-  IconChartBar,
-  IconTrendingUp,
   IconHistory,
   IconDatabase,
-  IconFileSpreadsheet,
   IconArrowUp,
   IconArrowDown,
 } from '@tabler/icons-react';
 import DateRangePicker from '../base/DateRangePicker';
-import { formatDistanceToNow } from '../../utils/dateUtils';
 
 interface ImportRecord {
   id: string;
@@ -150,7 +141,7 @@ const MOCK_IMPORTS: ImportRecord[] = [
 
 export const ImportHistory: React.FC<ImportHistoryProps> = ({
   onRetryImport,
-  onViewDetails,
+  onViewDetails: _onViewDetails,
   onExportReport,
 }) => {
   const [imports] = useState<ImportRecord[]>(MOCK_IMPORTS);
@@ -165,68 +156,89 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
 
   // Calcular estadísticas
   const stats: ImportStats = useMemo(() => {
-    const successfulImports = imports.filter(i => i.status === 'completed').length;
-    const failedImports = imports.filter(i => i.status === 'failed').length;
+    const successfulImports = imports.filter((i) => i.status === 'completed').length;
+    const failedImports = imports.filter((i) => i.status === 'failed').length;
     const totalRecordsProcessed = imports.reduce((sum, i) => sum + i.totalRecords, 0);
     const totalSuccessfulRecords = imports.reduce((sum, i) => sum + i.successfulRecords, 0);
-    
-    const entityCounts = imports.reduce((acc, i) => {
-      acc[i.entityType] = (acc[i.entityType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const mostImportedEntity = Object.entries(entityCounts)
-      .sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
-    
+
+    const entityCounts = imports.reduce(
+      (acc, i) => {
+        acc[i.entityType] = (acc[i.entityType] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    const mostImportedEntity =
+      Object.entries(entityCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
+
     return {
       totalImports: imports.length,
       successfulImports,
       failedImports,
       totalRecordsProcessed,
-      averageSuccessRate: totalRecordsProcessed > 0 
-        ? (totalSuccessfulRecords / totalRecordsProcessed) * 100 
-        : 0,
+      averageSuccessRate:
+        totalRecordsProcessed > 0 ? (totalSuccessfulRecords / totalRecordsProcessed) * 100 : 0,
       mostImportedEntity,
       lastImportDate: imports.length > 0 ? imports[0].timestamp : null,
     };
   }, [imports]);
 
+  // Funciones auxiliares para filtrado
+  const matchesSearchTerm = useCallback(
+    (imp: ImportRecord) =>
+      searchTerm === '' ||
+      imp.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      imp.user.toLowerCase().includes(searchTerm.toLowerCase()),
+    [searchTerm]
+  );
+
+  const matchesEntityFilter = useCallback(
+    (imp: ImportRecord) => filterEntity === 'all' || imp.entityType === filterEntity,
+    [filterEntity]
+  );
+
+  const matchesStatusFilter = useCallback(
+    (imp: ImportRecord) => filterStatus === 'all' || imp.status === filterStatus,
+    [filterStatus]
+  );
+
+  const matchesDateRange = useCallback(
+    (imp: ImportRecord) =>
+      !dateRange[0] ||
+      !dateRange[1] ||
+      (imp.timestamp >= dateRange[0] && imp.timestamp <= dateRange[1]),
+    [dateRange]
+  );
+
   // Filtrar importaciones
   const filteredImports = useMemo(() => {
-    return imports.filter(imp => {
-      const matchesSearch = searchTerm === '' || 
-        imp.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        imp.user.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesEntity = filterEntity === 'all' || imp.entityType === filterEntity;
-      const matchesStatus = filterStatus === 'all' || imp.status === filterStatus;
-      
-      const matchesDate = !dateRange[0] || !dateRange[1] || 
-        (imp.timestamp >= dateRange[0] && imp.timestamp <= dateRange[1]);
-      
-      return matchesSearch && matchesEntity && matchesStatus && matchesDate;
-    });
-  }, [imports, searchTerm, filterEntity, filterStatus, dateRange]);
+    return imports.filter(
+      (imp) =>
+        matchesSearchTerm(imp) &&
+        matchesEntityFilter(imp) &&
+        matchesStatusFilter(imp) &&
+        matchesDateRange(imp)
+    );
+  }, [imports, matchesSearchTerm, matchesEntityFilter, matchesStatusFilter, matchesDateRange]);
 
   // Ordenar importaciones
   const sortedImports = useMemo(() => {
-    const sorted = [...filteredImports].sort((a, b) => {
+    return [...filteredImports].sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
-      
+
       if (aValue != null && bValue != null) {
         if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
         if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       }
       return 0;
     });
-    
-    return sorted;
   }, [filteredImports, sortField, sortDirection]);
 
   const handleSort = (field: keyof ImportRecord) => {
     if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortDirection('asc');
@@ -235,29 +247,60 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <IconCheck size={16} />;
-      case 'failed': return <IconX size={16} />;
-      case 'partial': return <IconAlertCircle size={16} />;
-      case 'in_progress': return <IconClock size={16} />;
-      default: return null;
+      case 'completed':
+        return <IconCheck size={16} />;
+      case 'failed':
+        return <IconX size={16} />;
+      case 'partial':
+        return <IconAlertCircle size={16} />;
+      case 'in_progress':
+        return <IconClock size={16} />;
+      default:
+        return null;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'green';
-      case 'failed': return 'red';
-      case 'partial': return 'yellow';
-      case 'in_progress': return 'blue';
-      default: return 'gray';
+      case 'completed':
+        return 'green';
+      case 'failed':
+        return 'red';
+      case 'partial':
+        return 'yellow';
+      case 'in_progress':
+        return 'blue';
+      default:
+        return 'gray';
     }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Completada';
+      case 'partial':
+        return 'Parcial';
+      case 'failed':
+        return 'Fallida';
+      case 'in_progress':
+        return 'En progreso';
+      default:
+        return status;
+    }
+  };
+
+  const getProgressColor = (successRate: number) => {
+    if (successRate === 100) return 'green';
+    if (successRate > 50) return 'yellow';
+    return 'red';
   };
 
   const formatFileSize = (bytes: number) => {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 B';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const formatDuration = (seconds: number) => {
@@ -292,38 +335,50 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             Nueva importación
           </Button>
         </Group>
-        
+
         <SimpleGrid cols={4} spacing="md">
           <Card withBorder>
             <Stack gap={4} align="center">
               <ThemeIcon size="lg" radius="md" c="blue" variant="light">
                 <IconHistory size={20} />
               </ThemeIcon>
-              <Text size="xs" c="dimmed">Total importaciones</Text>
-              <Text size="xl" fw={700}>{stats.totalImports}</Text>
+              <Text size="xs" c="dimmed">
+                Total importaciones
+              </Text>
+              <Text size="xl" fw={700}>
+                {stats.totalImports}
+              </Text>
             </Stack>
           </Card>
-          
+
           <Card withBorder>
             <Stack gap={4} align="center">
               <ThemeIcon size="lg" radius="md" c="green" variant="light">
                 <IconCheck size={20} />
               </ThemeIcon>
-              <Text size="xs" c="dimmed">Exitosas</Text>
-              <Text size="xl" fw={700} c="green">{stats.successfulImports}</Text>
+              <Text size="xs" c="dimmed">
+                Exitosas
+              </Text>
+              <Text size="xl" fw={700} c="green">
+                {stats.successfulImports}
+              </Text>
             </Stack>
           </Card>
-          
+
           <Card withBorder>
             <Stack gap={4} align="center">
               <ThemeIcon size="lg" radius="md" c="blue" variant="light">
                 <IconDatabase size={20} />
               </ThemeIcon>
-              <Text size="xs" c="dimmed">Registros procesados</Text>
-              <Text size="xl" fw={700}>{stats.totalRecordsProcessed.toLocaleString()}</Text>
+              <Text size="xs" c="dimmed">
+                Registros procesados
+              </Text>
+              <Text size="xl" fw={700}>
+                {stats.totalRecordsProcessed.toLocaleString()}
+              </Text>
             </Stack>
           </Card>
-          
+
           <Card withBorder>
             <Center h="100%">
               <RingProgress
@@ -345,7 +400,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
           </Card>
         </SimpleGrid>
       </Card>
-      
+
       {/* Filtros */}
       <Paper p="md" withBorder>
         <Stack gap="sm">
@@ -357,7 +412,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
               onChange={(e) => setSearchTerm(e.currentTarget.value)}
               style={{ flex: 1 }}
             />
-            
+
             <Select
               placeholder="Tipo de entidad"
               leftSection={<IconFilter size={16} />}
@@ -375,7 +430,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
               ]}
               style={{ width: 200 }}
             />
-            
+
             <Select
               placeholder="Estado"
               leftSection={<IconFilter size={16} />}
@@ -391,7 +446,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
               style={{ width: 180 }}
             />
           </Group>
-          
+
           <DateRangePicker
             startDate={dateRange[0]}
             endDate={dateRange[1]}
@@ -401,7 +456,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
           />
         </Stack>
       </Paper>
-      
+
       {/* Tabla de historial */}
       <Paper withBorder>
         <ScrollArea>
@@ -441,10 +496,9 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             </thead>
             <tbody>
               {sortedImports.map((imp) => {
-                const successRate = imp.totalRecords > 0 
-                  ? (imp.successfulRecords / imp.totalRecords) * 100 
-                  : 0;
-                
+                const successRate =
+                  imp.totalRecords > 0 ? (imp.successfulRecords / imp.totalRecords) * 100 : 0;
+
                 return (
                   <tr key={imp.id}>
                     <td>
@@ -456,9 +510,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                       </Stack>
                     </td>
                     <td>
-                      <Badge variant="light">
-                        {imp.entityType}
-                      </Badge>
+                      <Badge variant="light">{imp.entityType}</Badge>
                     </td>
                     <td>
                       <Stack gap={0}>
@@ -479,7 +531,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                         <Progress
                           value={successRate}
                           size="sm"
-                          color={successRate === 100 ? 'green' : successRate > 50 ? 'yellow' : 'red'}
+                          color={getProgressColor(successRate)}
                         />
                         <Group gap={4} mt={4}>
                           <Text size="xs" c="green">
@@ -506,10 +558,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                         color={getStatusColor(imp.status)}
                         leftSection={getStatusIcon(imp.status)}
                       >
-                        {imp.status === 'completed' && 'Completada'}
-                        {imp.status === 'partial' && 'Parcial'}
-                        {imp.status === 'failed' && 'Fallida'}
-                        {imp.status === 'in_progress' && 'En progreso'}
+                        {getStatusText(imp.status)}
                       </Badge>
                     </td>
                     <td>
@@ -519,7 +568,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                             <IconDots size={16} />
                           </ActionIcon>
                         </Menu.Target>
-                        
+
                         <Menu.Dropdown>
                           <Menu.Item
                             leftSection={<IconEye size={14} />}
@@ -530,7 +579,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                           >
                             Ver detalles
                           </Menu.Item>
-                          
+
                           {imp.status === 'failed' && onRetryImport && (
                             <Menu.Item
                               leftSection={<IconRefresh size={14} />}
@@ -539,20 +588,17 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                               Reintentar importación
                             </Menu.Item>
                           )}
-                          
+
                           <Menu.Item
                             leftSection={<IconFileExport size={14} />}
                             onClick={() => onExportReport?.(imp.id)}
                           >
                             Exportar reporte
                           </Menu.Item>
-                          
+
                           <Menu.Divider />
-                          
-                          <Menu.Item
-                            c="red"
-                            leftSection={<IconTrash size={14} />}
-                          >
+
+                          <Menu.Item c="red" leftSection={<IconTrash size={14} />}>
                             Eliminar registro
                           </Menu.Item>
                         </Menu.Dropdown>
@@ -564,7 +610,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             </tbody>
           </Table>
         </ScrollArea>
-        
+
         {sortedImports.length === 0 && (
           <Center p="xl">
             <Stack align="center" gap="xs">
@@ -576,7 +622,7 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
           </Center>
         )}
       </Paper>
-      
+
       {/* Modal de detalles */}
       <Modal
         opened={showDetailsModal}
@@ -589,71 +635,83 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
             <SimpleGrid cols={2} spacing="md">
               <Paper p="sm" withBorder>
                 <Stack gap={4}>
-                  <Text size="xs" c="dimmed">Archivo</Text>
+                  <Text size="xs" c="dimmed">
+                    Archivo
+                  </Text>
                   <Text fw={500}>{selectedImport.fileName}</Text>
                 </Stack>
               </Paper>
-              
+
               <Paper p="sm" withBorder>
                 <Stack gap={4}>
-                  <Text size="xs" c="dimmed">Usuario</Text>
+                  <Text size="xs" c="dimmed">
+                    Usuario
+                  </Text>
                   <Text fw={500}>{selectedImport.user}</Text>
                 </Stack>
               </Paper>
-              
+
               <Paper p="sm" withBorder>
                 <Stack gap={4}>
-                  <Text size="xs" c="dimmed">Fecha y hora</Text>
-                  <Text fw={500}>
-                    {selectedImport.timestamp.toLocaleString()}
+                  <Text size="xs" c="dimmed">
+                    Fecha y hora
                   </Text>
+                  <Text fw={500}>{selectedImport.timestamp.toLocaleString()}</Text>
                 </Stack>
               </Paper>
-              
+
               <Paper p="sm" withBorder>
                 <Stack gap={4}>
-                  <Text size="xs" c="dimmed">Duración</Text>
+                  <Text size="xs" c="dimmed">
+                    Duración
+                  </Text>
                   <Text fw={500}>{formatDuration(selectedImport.duration)}</Text>
                 </Stack>
               </Paper>
             </SimpleGrid>
-            
+
             <Divider />
-            
+
             <Title order={5}>Resultados</Title>
-            
+
             <SimpleGrid cols={3} spacing="sm">
               <Card withBorder>
                 <Stack gap={4} align="center">
                   <IconCheck size={20} color="var(--mantine-color-green-6)" />
-                  <Text size="xs" c="dimmed">Exitosos</Text>
+                  <Text size="xs" c="dimmed">
+                    Exitosos
+                  </Text>
                   <Text size="lg" fw={700} c="green">
                     {selectedImport.successfulRecords}
                   </Text>
                 </Stack>
               </Card>
-              
+
               <Card withBorder>
                 <Stack gap={4} align="center">
                   <IconX size={20} color="var(--mantine-color-red-6)" />
-                  <Text size="xs" c="dimmed">Fallidos</Text>
+                  <Text size="xs" c="dimmed">
+                    Fallidos
+                  </Text>
                   <Text size="lg" fw={700} c="red">
                     {selectedImport.failedRecords}
                   </Text>
                 </Stack>
               </Card>
-              
+
               <Card withBorder>
                 <Stack gap={4} align="center">
                   <IconAlertCircle size={20} color="var(--mantine-color-yellow-6)" />
-                  <Text size="xs" c="dimmed">Advertencias</Text>
+                  <Text size="xs" c="dimmed">
+                    Advertencias
+                  </Text>
                   <Text size="lg" fw={700} c="yellow">
                     {selectedImport.warningRecords}
                   </Text>
                 </Stack>
               </Card>
             </SimpleGrid>
-            
+
             {selectedImport.errors && selectedImport.errors.length > 0 && (
               <>
                 <Divider />
@@ -682,14 +740,12 @@ export const ImportHistory: React.FC<ImportHistoryProps> = ({
                 </ScrollArea>
               </>
             )}
-            
+
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setShowDetailsModal(false)}>
                 Cerrar
               </Button>
-              <Button leftSection={<IconDownload size={16} />}>
-                Descargar reporte
-              </Button>
+              <Button leftSection={<IconDownload size={16} />}>Descargar reporte</Button>
             </Group>
           </Stack>
         )}
