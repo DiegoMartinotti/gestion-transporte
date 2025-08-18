@@ -15,19 +15,16 @@ import {
   Modal,
   Select,
   Grid,
-  Divider
+  Divider,
 } from '@mantine/core';
 import {
   IconAlertTriangle,
   IconCheck,
-  IconX,
   IconEye,
   IconCalendar,
   IconExclamationMark,
-  IconInfoCircle
+  IconInfoCircle,
 } from '@tabler/icons-react';
-import { DateInput } from '@mantine/dates';
-import { useQuery } from '@tanstack/react-query';
 import { detectConflicts, TarifaConflict, TarifaVersion } from '../../services/tarifaService';
 
 interface TarifaConflictDetectorProps {
@@ -51,12 +48,13 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
   tramoId,
   versions,
   newVersion,
-  onConflictResolved
+  onConflictResolved,
 }) => {
   const [conflicts, setConflicts] = useState<TarifaConflict[]>([]);
   const [selectedConflict, setSelectedConflict] = useState<TarifaConflict | null>(null);
   const [resolutionModal, setResolutionModal] = useState(false);
-  const [resolutionAction, setResolutionAction] = useState<ConflictResolution['action']>('adjust_dates');
+  const [resolutionAction, setResolutionAction] =
+    useState<ConflictResolution['action']>('adjust_dates');
 
   // Detectar conflictos cuando cambie la nueva versión
   useEffect(() => {
@@ -106,7 +104,7 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
     const resolution: ConflictResolution = {
       conflictId: selectedConflict.tipo + '_' + selectedConflict.fechaInicio,
       action: resolutionAction,
-      parameters: {}
+      parameters: {},
     };
 
     onConflictResolved?.(resolution);
@@ -140,9 +138,11 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
             <Group gap="xs">
               <IconAlertTriangle size={16} color="red" />
               <div>
-                <Text fw={500} size="sm">Críticos</Text>
+                <Text fw={500} size="sm">
+                  Críticos
+                </Text>
                 <Text size="xs" c="dimmed">
-                  {conflicts.filter(c => c.tipo === 'superposicion').length}
+                  {conflicts.filter((c) => c.tipo === 'superposicion').length}
                 </Text>
               </div>
             </Group>
@@ -153,9 +153,11 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
             <Group gap="xs">
               <IconExclamationMark size={16} color="orange" />
               <div>
-                <Text fw={500} size="sm">Advertencias</Text>
+                <Text fw={500} size="sm">
+                  Advertencias
+                </Text>
                 <Text size="xs" c="dimmed">
-                  {conflicts.filter(c => c.tipo === 'gap').length}
+                  {conflicts.filter((c) => c.tipo === 'gap').length}
                 </Text>
               </div>
             </Group>
@@ -166,9 +168,11 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
             <Group gap="xs">
               <IconInfoCircle size={16} color="yellow" />
               <div>
-                <Text fw={500} size="sm">Información</Text>
+                <Text fw={500} size="sm">
+                  Información
+                </Text>
                 <Text size="xs" c="dimmed">
-                  {conflicts.filter(c => c.tipo === 'duplicado').length}
+                  {conflicts.filter((c) => c.tipo === 'duplicado').length}
                 </Text>
               </div>
             </Group>
@@ -181,9 +185,9 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
         {conflicts.map((conflict, index) => {
           const severity = getConflictSeverity(conflict);
           const SeverityIcon = severity.icon;
-          
+
           return (
-            <Alert 
+            <Alert
               key={index}
               color={severity.color}
               icon={<SeverityIcon size={16} />}
@@ -225,14 +229,14 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
             Timeline de Conflictos
           </Group>
         </Title>
-        
+
         <Timeline>
           {conflicts
             .sort((a, b) => new Date(a.fechaInicio).getTime() - new Date(b.fechaInicio).getTime())
             .map((conflict, index) => {
               const severity = getConflictSeverity(conflict);
               const SeverityIcon = severity.icon;
-              
+
               return (
                 <Timeline.Item
                   key={index}
@@ -246,9 +250,7 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
                     {formatDate(conflict.fechaInicio)}
                     {conflict.fechaFin && ` - ${formatDate(conflict.fechaFin)}`}
                   </Text>
-                  <Text size="xs">
-                    {conflict.mensaje}
-                  </Text>
+                  <Text size="xs">{conflict.mensaje}</Text>
                 </Timeline.Item>
               );
             })}
@@ -278,22 +280,22 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
               value={resolutionAction}
               onChange={(value) => setResolutionAction(value as ConflictResolution['action'])}
               data={[
-                { 
-                  value: 'adjust_dates', 
-                  label: 'Ajustar fechas automáticamente' 
+                {
+                  value: 'adjust_dates',
+                  label: 'Ajustar fechas automáticamente',
                 },
-                { 
-                  value: 'deactivate_overlapping', 
-                  label: 'Desactivar versiones en conflicto' 
+                {
+                  value: 'deactivate_overlapping',
+                  label: 'Desactivar versiones en conflicto',
                 },
-                { 
-                  value: 'create_gap', 
-                  label: 'Crear período de transición' 
+                {
+                  value: 'create_gap',
+                  label: 'Crear período de transición',
                 },
-                { 
-                  value: 'ignore', 
-                  label: 'Ignorar conflicto (no recomendado)' 
-                }
+                {
+                  value: 'ignore',
+                  label: 'Ignorar conflicto (no recomendado)',
+                },
               ]}
             />
 
@@ -312,9 +314,9 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
               </Table.Thead>
               <Table.Tbody>
                 {selectedConflict.versionesAfectadas.map((versionId) => {
-                  const version = versions.find(v => v._id === versionId);
+                  const version = versions.find((v) => v._id === versionId);
                   if (!version) return null;
-                  
+
                   return (
                     <Table.Tr key={versionId}>
                       <Table.Td>v{version.version}</Table.Td>
@@ -325,10 +327,7 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
                         </Text>
                       </Table.Td>
                       <Table.Td>
-                        <Badge 
-                          size="xs" 
-                          color={version.activa ? 'green' : 'gray'}
-                        >
+                        <Badge size="xs" color={version.activa ? 'green' : 'gray'}>
                           {version.activa ? 'Activa' : 'Inactiva'}
                         </Badge>
                       </Table.Td>
@@ -339,16 +338,10 @@ export const TarifaConflictDetector: React.FC<TarifaConflictDetectorProps> = ({
             </Table>
 
             <Group justify="flex-end">
-              <Button
-                variant="default"
-                onClick={() => setResolutionModal(false)}
-              >
+              <Button variant="default" onClick={() => setResolutionModal(false)}>
                 Cancelar
               </Button>
-              <Button
-                color="red"
-                onClick={applyResolution}
-              >
+              <Button color="red" onClick={applyResolution}>
                 Aplicar Resolución
               </Button>
             </Group>
