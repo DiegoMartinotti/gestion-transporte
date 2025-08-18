@@ -22,7 +22,7 @@ import {
   Box,
   Center,
   Container,
-  Skeleton
+  Skeleton,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -36,7 +36,7 @@ import {
   IconSortAscending,
   IconSortDescending,
   IconFileExport,
-  IconChartBar
+  IconChartBar,
 } from '@tabler/icons-react';
 import {
   ResponsiveContainer,
@@ -55,14 +55,9 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
   ScatterChart,
-  Scatter
+  Scatter,
 } from 'recharts';
-import {
-  ReportData,
-  ReportDefinition,
-  ChartConfig,
-  ExportConfig
-} from '../../types/reports';
+import { ReportData, ReportDefinition, ChartConfig, ExportConfig } from '../../types/reports';
 
 interface ReportViewerProps {
   reportDefinition: ReportDefinition;
@@ -82,8 +77,16 @@ interface TableState {
 }
 
 const CHART_COLORS = [
-  '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00',
-  '#ff00ff', '#00ffff', '#ff0000', '#0000ff', '#ffff00'
+  '#8884d8',
+  '#82ca9d',
+  '#ffc658',
+  '#ff7300',
+  '#00ff00',
+  '#ff00ff',
+  '#00ffff',
+  '#ff0000',
+  '#0000ff',
+  '#ffff00',
 ];
 
 export const ReportViewer: React.FC<ReportViewerProps> = ({
@@ -91,7 +94,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   data,
   loading = false,
   onRefresh,
-  onExport
+  onExport,
 }) => {
   const [activeTab, setActiveTab] = useState('table');
   const [selectedChart, setSelectedChart] = useState<number>(0);
@@ -100,10 +103,11 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     pageSize: 50,
     sortDirection: 'asc',
     searchTerm: '',
-    filters: {}
+    filters: {},
   });
 
-  const [fullscreenModalOpened, { open: openFullscreenModal, close: closeFullscreenModal }] = useDisclosure(false);
+  const [fullscreenModalOpened, { open: openFullscreenModal, close: closeFullscreenModal }] =
+    useDisclosure(false);
 
   // Procesar datos para la tabla
   const processedTableData = useMemo(() => {
@@ -114,10 +118,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     // Aplicar búsqueda
     if (tableState.searchTerm) {
       const searchLower = tableState.searchTerm.toLowerCase();
-      filteredRows = filteredRows.filter(row =>
-        row.some(cell => 
-          String(cell).toLowerCase().includes(searchLower)
-        )
+      filteredRows = filteredRows.filter((row) =>
+        row.some((cell) => String(cell).toLowerCase().includes(searchLower))
       );
     }
 
@@ -128,12 +130,12 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
         filteredRows = [...filteredRows].sort((a, b) => {
           const aVal = a[columnIndex];
           const bVal = b[columnIndex];
-          
+
           const comparison = String(aVal).localeCompare(String(bVal), undefined, {
             numeric: true,
-            sensitivity: 'base'
+            sensitivity: 'base',
           });
-          
+
           return tableState.sortDirection === 'asc' ? comparison : -comparison;
         });
       }
@@ -162,171 +164,171 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   }, [data]);
 
   const handleSort = (column: string) => {
-    setTableState(prev => ({
+    setTableState((prev) => ({
       ...prev,
       sortBy: column,
       sortDirection: prev.sortBy === column && prev.sortDirection === 'asc' ? 'desc' : 'asc',
-      page: 1
+      page: 1,
     }));
   };
 
   const handleSearch = (searchTerm: string) => {
-    setTableState(prev => ({
+    setTableState((prev) => ({
       ...prev,
       searchTerm,
-      page: 1
+      page: 1,
     }));
   };
 
   const handlePageChange = (page: number) => {
-    setTableState(prev => ({ ...prev, page }));
+    setTableState((prev) => ({ ...prev, page }));
   };
 
   const handlePageSizeChange = (pageSize: number) => {
-    setTableState(prev => ({ ...prev, pageSize, page: 1 }));
+    setTableState((prev) => ({ ...prev, pageSize, page: 1 }));
   };
 
   const formatCellValue = (value: any, header: string) => {
     if (value === null || value === undefined) return '-';
-    
+
     // Determinar el tipo de campo para formateo
-    const reportField = reportDefinition.fields.find(f => f.label === header);
-    
+    const reportField = reportDefinition.fields.find((f) => f.label === header);
+
     if (reportField?.type === 'currency') {
       return new Intl.NumberFormat('es-AR', {
         style: 'currency',
-        currency: 'ARS'
+        currency: 'ARS',
       }).format(Number(value));
     }
-    
+
     if (reportField?.type === 'number') {
       return new Intl.NumberFormat('es-AR').format(Number(value));
     }
-    
+
     if (reportField?.type === 'date') {
       return new Date(value).toLocaleDateString('es-AR');
     }
-    
+
     if (reportField?.type === 'boolean') {
       return value ? 'Sí' : 'No';
     }
-    
+
     return String(value);
   };
+
+  const renderBarChart = (chartConfig: ChartConfig, commonProps: any) => (
+    <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
+      <BarChart {...commonProps}>
+        {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+        <XAxis dataKey={chartConfig.xAxis} />
+        <YAxis />
+        {chartConfig.showTooltip && <RechartsTooltip />}
+        {chartConfig.showLegend && <Legend />}
+        {chartConfig.yAxis.map((yField, yIndex) => (
+          <Bar key={yField} dataKey={yField} fill={CHART_COLORS[yIndex % CHART_COLORS.length]} />
+        ))}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  const renderLineChart = (chartConfig: ChartConfig, commonProps: any) => (
+    <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
+      <LineChart {...commonProps}>
+        {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+        <XAxis dataKey={chartConfig.xAxis} />
+        <YAxis />
+        {chartConfig.showTooltip && <RechartsTooltip />}
+        {chartConfig.showLegend && <Legend />}
+        {chartConfig.yAxis.map((yField, yIndex) => (
+          <Line
+            key={yField}
+            type="monotone"
+            dataKey={yField}
+            stroke={CHART_COLORS[yIndex % CHART_COLORS.length]}
+            strokeWidth={2}
+          />
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  const renderAreaChart = (chartConfig: ChartConfig, commonProps: any) => (
+    <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
+      <AreaChart {...commonProps}>
+        {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+        <XAxis dataKey={chartConfig.xAxis} />
+        <YAxis />
+        {chartConfig.showTooltip && <RechartsTooltip />}
+        {chartConfig.showLegend && <Legend />}
+        {chartConfig.yAxis.map((yField, yIndex) => (
+          <Area
+            key={yField}
+            type="monotone"
+            dataKey={yField}
+            stackId="1"
+            stroke={CHART_COLORS[yIndex % CHART_COLORS.length]}
+            fill={CHART_COLORS[yIndex % CHART_COLORS.length]}
+          />
+        ))}
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+
+  const renderPieChart = (chartConfig: ChartConfig) => {
+    const pieData = processedChartData.slice(0, 10);
+    return (
+      <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
+        <PieChart>
+          <Pie
+            data={pieData}
+            dataKey={chartConfig.yAxis[0]}
+            nameKey={chartConfig.xAxis}
+            cx="50%"
+            cy="50%"
+            outerRadius={80}
+            label
+          >
+            {pieData.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+            ))}
+          </Pie>
+          {chartConfig.showTooltip && <RechartsTooltip />}
+          {chartConfig.showLegend && <Legend />}
+        </PieChart>
+      </ResponsiveContainer>
+    );
+  };
+
+  const renderScatterChart = (chartConfig: ChartConfig, commonProps: any) => (
+    <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
+      <ScatterChart {...commonProps}>
+        {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
+        <XAxis dataKey={chartConfig.xAxis} />
+        <YAxis dataKey={chartConfig.yAxis[0]} />
+        {chartConfig.showTooltip && <RechartsTooltip />}
+        {chartConfig.showLegend && <Legend />}
+        <Scatter data={processedChartData} fill={CHART_COLORS[0]} />
+      </ScatterChart>
+    </ResponsiveContainer>
+  );
 
   const renderChart = (chartConfig: ChartConfig) => {
     const commonProps = {
       data: processedChartData,
-      margin: { top: 5, right: 30, left: 20, bottom: 5 }
+      margin: { top: 5, right: 30, left: 20, bottom: 5 },
     };
 
     switch (chartConfig.type) {
       case 'bar':
-        return (
-          <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
-            <BarChart {...commonProps}>
-              {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
-              <XAxis dataKey={chartConfig.xAxis} />
-              <YAxis />
-              {chartConfig.showTooltip && <RechartsTooltip />}
-              {chartConfig.showLegend && <Legend />}
-              {chartConfig.yAxis.map((yField, yIndex) => (
-                <Bar
-                  key={yField}
-                  dataKey={yField}
-                  fill={CHART_COLORS[yIndex % CHART_COLORS.length]}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        );
-
+        return renderBarChart(chartConfig, commonProps);
       case 'line':
-        return (
-          <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
-            <LineChart {...commonProps}>
-              {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
-              <XAxis dataKey={chartConfig.xAxis} />
-              <YAxis />
-              {chartConfig.showTooltip && <RechartsTooltip />}
-              {chartConfig.showLegend && <Legend />}
-              {chartConfig.yAxis.map((yField, yIndex) => (
-                <Line
-                  key={yField}
-                  type="monotone"
-                  dataKey={yField}
-                  stroke={CHART_COLORS[yIndex % CHART_COLORS.length]}
-                  strokeWidth={2}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        );
-
+        return renderLineChart(chartConfig, commonProps);
       case 'area':
-        return (
-          <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
-            <AreaChart {...commonProps}>
-              {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
-              <XAxis dataKey={chartConfig.xAxis} />
-              <YAxis />
-              {chartConfig.showTooltip && <RechartsTooltip />}
-              {chartConfig.showLegend && <Legend />}
-              {chartConfig.yAxis.map((yField, yIndex) => (
-                <Area
-                  key={yField}
-                  type="monotone"
-                  dataKey={yField}
-                  stackId="1"
-                  stroke={CHART_COLORS[yIndex % CHART_COLORS.length]}
-                  fill={CHART_COLORS[yIndex % CHART_COLORS.length]}
-                />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
-        );
-
+        return renderAreaChart(chartConfig, commonProps);
       case 'pie':
-        const pieData = processedChartData.slice(0, 10); // Limitar a 10 elementos
-        return (
-          <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey={chartConfig.yAxis[0]}
-                nameKey={chartConfig.xAxis}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label
-              >
-                {pieData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              {chartConfig.showTooltip && <RechartsTooltip />}
-              {chartConfig.showLegend && <Legend />}
-            </PieChart>
-          </ResponsiveContainer>
-        );
-
+        return renderPieChart(chartConfig);
       case 'scatter':
-        return (
-          <ResponsiveContainer width="100%" height={chartConfig.height || 300}>
-            <ScatterChart {...commonProps}>
-              {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
-              <XAxis dataKey={chartConfig.xAxis} />
-              <YAxis dataKey={chartConfig.yAxis[0]} />
-              {chartConfig.showTooltip && <RechartsTooltip />}
-              {chartConfig.showLegend && <Legend />}
-              <Scatter
-                data={processedChartData}
-                fill={CHART_COLORS[0]}
-              />
-            </ScatterChart>
-          </ResponsiveContainer>
-        );
-
+        return renderScatterChart(chartConfig, commonProps);
       default:
         return (
           <Center h={200}>
@@ -354,18 +356,16 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               { value: '25', label: '25 filas' },
               { value: '50', label: '50 filas' },
               { value: '100', label: '100 filas' },
-              { value: '200', label: '200 filas' }
+              { value: '200', label: '200 filas' },
             ]}
             value={String(tableState.pageSize)}
             onChange={(value) => handlePageSizeChange(Number(value))}
             w={120}
           />
         </Group>
-        
+
         <Group>
-          <Badge variant="light">
-            {processedTableData.rows.length} registros
-          </Badge>
+          <Badge variant="light">{processedTableData.rows.length} registros</Badge>
           <Button
             variant="light"
             leftSection={<IconRefresh size={16} />}
@@ -390,7 +390,9 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                     onClick={() => handleSort(header)}
                   >
                     <Group gap="xs" wrap="nowrap">
-                      <Text size="sm" fw={500}>{header}</Text>
+                      <Text size="sm" fw={500}>
+                        {header}
+                      </Text>
                       {tableState.sortBy === header && (
                         <ActionIcon size="xs" variant="transparent">
                           {tableState.sortDirection === 'asc' ? (
@@ -406,29 +408,25 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <Table.Tr key={index}>
-                    {data?.headers.map((header) => (
-                      <Table.Td key={header}>
-                        <Skeleton height={20} />
-                      </Table.Td>
-                    ))}
-                  </Table.Tr>
-                ))
-              ) : (
-                processedTableData.visibleRows.map((row, rowIndex) => (
-                  <Table.Tr key={rowIndex}>
-                    {row.map((cell, cellIndex) => (
-                      <Table.Td key={cellIndex}>
-                        <Text size="sm">
-                          {formatCellValue(cell, data.headers[cellIndex])}
-                        </Text>
-                      </Table.Td>
-                    ))}
-                  </Table.Tr>
-                ))
-              )}
+              {loading
+                ? Array.from({ length: 5 }).map((_, index) => (
+                    <Table.Tr key={index}>
+                      {data?.headers.map((header) => (
+                        <Table.Td key={header}>
+                          <Skeleton height={20} />
+                        </Table.Td>
+                      ))}
+                    </Table.Tr>
+                  ))
+                : processedTableData.visibleRows.map((row, rowIndex) => (
+                    <Table.Tr key={rowIndex}>
+                      {row.map((cell, cellIndex) => (
+                        <Table.Td key={cellIndex}>
+                          <Text size="sm">{formatCellValue(cell, data.headers[cellIndex])}</Text>
+                        </Table.Td>
+                      ))}
+                    </Table.Tr>
+                  ))}
             </Table.Tbody>
           </Table>
         </ScrollArea>
@@ -465,11 +463,13 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
         {/* Selector de gráfico */}
         {reportDefinition.charts.length > 1 && (
           <Group>
-            <Text size="sm" fw={500}>Seleccionar gráfico:</Text>
+            <Text size="sm" fw={500}>
+              Seleccionar gráfico:
+            </Text>
             <Select
               data={reportDefinition.charts.map((chart, index) => ({
                 value: String(index),
-                label: chart.title
+                label: chart.title,
               }))}
               value={String(selectedChart)}
               onChange={(value) => setSelectedChart(Number(value))}
@@ -486,10 +486,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
             </Text>
             <Group>
               <Tooltip label="Pantalla completa">
-                <ActionIcon
-                  variant="light"
-                  onClick={openFullscreenModal}
-                >
+                <ActionIcon variant="light" onClick={openFullscreenModal}>
                   <IconMaximize size={16} />
                 </ActionIcon>
               </Tooltip>
@@ -500,40 +497,36 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                   </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
-                  <Menu.Item leftSection={<IconDownload size={16} />}>
-                    Descargar imagen
-                  </Menu.Item>
-                  <Menu.Item leftSection={<IconSettings size={16} />}>
-                    Configurar
-                  </Menu.Item>
+                  <Menu.Item leftSection={<IconDownload size={16} />}>Descargar imagen</Menu.Item>
+                  <Menu.Item leftSection={<IconSettings size={16} />}>Configurar</Menu.Item>
                 </Menu.Dropdown>
               </Menu>
             </Group>
           </Group>
-          
+
           {loading ? (
             <Center h={300}>
               <Loader />
             </Center>
           ) : (
-            <Box>
-              {renderChart(reportDefinition.charts[selectedChart])}
-            </Box>
+            <Box>{renderChart(reportDefinition.charts[selectedChart])}</Box>
           )}
         </Card>
 
         {/* Todos los gráficos en modo galería */}
         {reportDefinition.charts.length > 1 && (
           <Card withBorder>
-            <Text fw={500} mb="md">Todos los gráficos</Text>
+            <Text fw={500} mb="md">
+              Todos los gráficos
+            </Text>
             <Grid>
               {reportDefinition.charts.map((chart, index) => (
                 <Grid.Col key={index} span={6}>
                   <Card withBorder>
-                    <Text size="sm" fw={500} mb="xs">{chart.title}</Text>
-                    <Box style={{ height: 200 }}>
-                      {renderChart({ ...chart, height: 200 })}
-                    </Box>
+                    <Text size="sm" fw={500} mb="xs">
+                      {chart.title}
+                    </Text>
+                    <Box style={{ height: 200 }}>{renderChart({ ...chart, height: 200 })}</Box>
                   </Card>
                 </Grid.Col>
               ))}
@@ -571,9 +564,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                 </Text>
               )}
               <Group gap="xs" mt="xs">
-                <Badge variant="light">
-                  {reportDefinition.type}
-                </Badge>
+                <Badge variant="light">{reportDefinition.type}</Badge>
                 {data.metadata?.generatedAt && (
                   <Text size="xs" c="dimmed">
                     Generado: {new Date(data.metadata.generatedAt).toLocaleString('es-AR')}
@@ -586,7 +577,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                 )}
               </Group>
             </div>
-            
+
             <Group>
               <Button
                 variant="light"
@@ -598,11 +589,13 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
               </Button>
               <Button
                 leftSection={<IconFileExport size={16} />}
-                onClick={() => onExport?.({
-                  format: 'excel',
-                  includeCharts: true,
-                  includeTable: true
-                })}
+                onClick={() =>
+                  onExport?.({
+                    format: 'excel',
+                    includeCharts: true,
+                    includeTable: true,
+                  })
+                }
               >
                 Exportar
               </Button>
@@ -613,10 +606,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
         {/* Pestañas */}
         <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'table')}>
           <Tabs.List>
-            <Tabs.Tab
-              value="table"
-              leftSection={<IconTable size={16} />}
-            >
+            <Tabs.Tab value="table" leftSection={<IconTable size={16} />}>
               Tabla de Datos
             </Tabs.Tab>
             <Tabs.Tab
@@ -646,9 +636,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
           fullScreen
         >
           {reportDefinition.charts?.[selectedChart] && (
-            <Box h="80vh">
-              {renderChart(reportDefinition.charts[selectedChart])}
-            </Box>
+            <Box h="80vh">{renderChart(reportDefinition.charts[selectedChart])}</Box>
           )}
         </Modal>
       </Stack>
