@@ -116,7 +116,7 @@ export const StepItem: React.FC<StepItemProps> = ({
   onToggleDetails,
   showDetails,
 }) => {
-  const hasDetails = showDetails && (step.details || step.message);
+  const hasDetails = showDetails && !!(step.details || step.message);
 
   return (
     <Timeline.Item
