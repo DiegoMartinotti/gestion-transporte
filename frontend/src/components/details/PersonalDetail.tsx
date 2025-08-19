@@ -114,11 +114,11 @@ const getStatusText = (status: { status: string; days: number } | null): string 
 };
 
 const hasValidAddress = (direccion: DireccionData | undefined): boolean => {
-  return direccion && Object.values(direccion).some((v) => v);
+  return !!(direccion && Object.values(direccion).some((v) => v));
 };
 
 const hasValidDatosLaborales = (datosLaborales: DatosLaboralesData | undefined): boolean => {
-  return datosLaborales && Object.values(datosLaborales).some((v) => v);
+  return !!(datosLaborales && Object.values(datosLaborales).some((v) => v));
 };
 
 const buildAddressString = (direccion: DireccionData): string => {
@@ -303,7 +303,9 @@ const AddressCard: React.FC<{ personal: Personal }> = ({ personal }) => {
         <IconMapPin size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />
         Dirección
       </Title>
-      <Text size="sm">{buildAddressString(personal.direccion)}</Text>
+      <Text size="sm">
+        {personal.direccion ? buildAddressString(personal.direccion) : 'Sin dirección'}
+      </Text>
     </Card>
   );
 };
