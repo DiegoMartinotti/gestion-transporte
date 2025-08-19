@@ -26,7 +26,7 @@ interface ExcelImportModalContentProps
 
 interface StepContentConfig {
   currentStep: number;
-  entityType: string;
+  entityType: 'cliente' | 'empresa' | 'personal' | 'sites' | 'viajes';
   state: ExcelImportState;
   actions: ExcelImportActions;
   abortController: React.MutableRefObject<AbortController | null>;
