@@ -15,7 +15,7 @@ import {
   getFormatIcon,
   getFormatColor,
 } from './ReportHistoryHelpers';
-import { ReportExecution } from '../../types/reports';
+import { ReportExecution, ExportFormat } from '../../types/reports';
 
 interface ReportHistoryTableProps {
   executions: ReportExecution[];
@@ -111,7 +111,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ execution, onShare, onRerun, on
 
 // Helper component for format icon
 const FormatIconComponent: React.FC<{ format: string }> = ({ format }) => {
-  const Icon = getFormatIcon(format);
+  const Icon = getFormatIcon(format as ExportFormat);
   return <Icon size={16} />;
 };
 
@@ -124,7 +124,7 @@ export const ReportHistoryTable: React.FC<ReportHistoryTableProps> = ({
   onRerun,
 }) => (
   <ScrollArea>
-    <Table striped highlightOnHover withBorder withColumnBorders>
+    <Table striped highlightOnHover withColumnBorders>
       <thead>
         <tr>
           <th>Reporte</th>
@@ -164,7 +164,9 @@ export const ReportHistoryTable: React.FC<ReportHistoryTableProps> = ({
             </td>
             <td>
               <Text size="sm">
-                {execution.fileSize ? `${(execution.fileSize / 1024).toFixed(2)} KB` : '-'}
+                {execution.outputFile?.size
+                  ? `${(execution.outputFile.size / 1024).toFixed(2)} KB`
+                  : '-'}
               </Text>
             </td>
             <td>
