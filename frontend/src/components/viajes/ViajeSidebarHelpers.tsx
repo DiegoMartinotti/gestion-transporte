@@ -1,6 +1,13 @@
 import { Stack, Card, Text, Button, Group, ActionIcon, RingProgress, Center } from '@mantine/core';
 import { IconFileText, IconDownload } from '@tabler/icons-react';
 
+interface Documento {
+  id: string;
+  nombre: string;
+  url: string;
+  tipo: string;
+}
+
 export const renderProgressCard = (progressValue: number, badgeColor: string) => (
   <Card>
     <Stack ta="center">
@@ -85,7 +92,7 @@ export const renderActionButtons = (estado: string, onChangeEstado: (estado: str
   return <Stack gap="xs">{buttons}</Stack>;
 };
 
-export const renderDocumentsCard = (documentos: unknown[], onShowDocuments: () => void) => (
+export const renderDocumentsCard = (documentos: Documento[], onShowDocuments: () => void) => (
   <Card>
     <Group justify="space-between" mb="md">
       <Text size="sm" fw={600}>
