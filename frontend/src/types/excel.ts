@@ -103,6 +103,7 @@ export interface ValidationRule {
 
 export interface ValidationError {
   row: number;
+  column: string;
   field: string;
   value: ExcelCellValue;
   message: string;
