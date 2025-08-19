@@ -6,9 +6,10 @@ import { DataSource, ReportDefinition, ReportField, ReportTemplate } from '../..
 import { reportService } from '../../../services/reportService';
 
 const getFormValidation = () => ({
-  name: (value: string) => (!value ? 'El nombre es requerido' : null),
-  dataSource: (value: string) => (!value ? 'Debe seleccionar una fuente de datos' : null),
-  fields: (value: ReportField[]) =>
+  name: (value: string | undefined) => (!value ? 'El nombre es requerido' : null),
+  dataSource: (value: string | undefined) =>
+    !value ? 'Debe seleccionar una fuente de datos' : null,
+  fields: (value: ReportField[] | undefined) =>
     !value || value.length === 0 ? 'Debe seleccionar al menos un campo' : null,
 });
 
