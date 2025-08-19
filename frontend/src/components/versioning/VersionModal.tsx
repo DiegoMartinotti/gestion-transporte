@@ -8,7 +8,7 @@ interface VersionModalProps {
   onClose: () => void;
   editingVersion: TarifaVersion | null;
   newVersion: Partial<TarifaVersion>;
-  onNewVersionChange: (field: string, value: string | number) => void;
+  onNewVersionChange: (field: string, value: string | number | null | Record<string, any>) => void;
   onSubmit: () => void;
   isCreating: boolean;
 }
