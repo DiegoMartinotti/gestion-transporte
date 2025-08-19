@@ -1,5 +1,7 @@
 import { EstadoPartida } from '../../../types/ordenCompra';
 
+export type { EstadoPartida };
+
 export interface PartidaReportData {
   numero: string;
   ordenCompra: string;

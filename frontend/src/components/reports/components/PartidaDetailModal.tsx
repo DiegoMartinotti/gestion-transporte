@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Stack, Group, Text, Badge, Grid } from '@mantine/core';
 import { formatCurrency, getEstadoColor } from '../utils/formatters';
-import { PartidaReportData } from '../types';
+import { PartidaReportData, EstadoPartida } from '../types';
 
 interface PartidaDetailModalProps {
   opened: boolean;
