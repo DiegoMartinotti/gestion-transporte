@@ -254,10 +254,7 @@ export const PersonalPage: React.FC = () => {
   const { formModal, detailModal, deleteModal, importModal } = usePersonalModals(loadPersonal);
 
   // Event handlers
-  const handleFilterChange = (
-    key: keyof Omit<PersonalFilters, 'page' | 'limit'>,
-    value: unknown
-  ) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
