@@ -152,6 +152,7 @@ export function createValidationError(
 ): ValidationError {
   return {
     row,
+    column: field,
     field,
     value,
     message,
