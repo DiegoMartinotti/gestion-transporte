@@ -7,6 +7,7 @@ import {
   ChartConfig,
   ReportField,
   DataSource,
+  ReportDefinition,
 } from '../../types';
 
 export const REPORT_TYPES = [
@@ -200,9 +201,14 @@ export const handleSaveReport = async (
     let result;
 
     if (reportId) {
-      result = await reportService.updateReportDefinition(reportId, formValues);
+      result = await reportService.updateReportDefinition(
+        reportId,
+        formValues as Omit<ReportDefinition, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>
+      );
     } else {
-      result = await reportService.createReportDefinition(formValues);
+      result = await reportService.createReportDefinition(
+        formValues as Omit<ReportDefinition, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>
+      );
     }
 
     onSave?.(result);

@@ -1,46 +1,48 @@
 // Types for the Reports System
-export type ReportType = 
-  | 'financial' 
-  | 'operations' 
-  | 'vehicle' 
-  | 'client' 
-  | 'partidas' 
-  | 'trips' 
+export type ReportType =
+  | 'financial'
+  | 'operations'
+  | 'vehicle'
+  | 'client'
+  | 'partidas'
+  | 'trips'
   | 'routes'
   | 'custom';
 
-export type ChartType = 
-  | 'line' 
-  | 'bar' 
-  | 'area' 
-  | 'pie' 
-  | 'radar' 
-  | 'scatter' 
-  | 'composed';
+export type ChartType = 'line' | 'bar' | 'area' | 'pie' | 'radar' | 'scatter' | 'composed';
 
 export type ExportFormat = 'pdf' | 'excel' | 'csv' | 'image';
 
-export type FilterOperator = 
-  | 'equals' 
-  | 'contains' 
-  | 'greaterThan' 
-  | 'lessThan' 
-  | 'between' 
-  | 'in' 
+export type FilterOperator =
+  | 'equals'
+  | 'contains'
+  | 'greaterThan'
+  | 'lessThan'
+  | 'between'
+  | 'in'
   | 'not_in'
   | 'is_null'
   | 'is_not_null';
 
-export type AggregationFunction = 
-  | 'sum' 
-  | 'avg' 
-  | 'count' 
-  | 'min' 
-  | 'max' 
+export type AggregationFunction =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'min'
+  | 'max'
   | 'median'
   | 'distinct_count';
 
-export type DateRange = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'custom';
+export type DateRange =
+  | 'today'
+  | 'yesterday'
+  | 'last7days'
+  | 'last30days'
+  | 'thisMonth'
+  | 'lastMonth'
+  | 'thisYear'
+  | 'lastYear'
+  | 'custom';
 
 export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
@@ -138,6 +140,10 @@ export interface ReportDefinition {
     to: Date;
   };
   limit?: number;
+  dateRange?: string;
+  pageSize?: number;
+  exportFormats?: string[];
+  schedule?: any;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
