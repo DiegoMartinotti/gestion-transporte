@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
-import { Table, Text, Group, Stack, Paper, Alert } from '@mantine/core';
-import { IconSortAscending, IconSortDescending } from '@tabler/icons-react';
+import React from 'react';
+import { Table, Text, Stack, Paper, Alert } from '@mantine/core';
 import TarifaHistorialFilters from './TarifaHistorialFilters';
 import TarifaHistorialRow from './TarifaHistorialRow';
 import TarifaHistorialStats from './TarifaHistorialStats';
-import {
-  TarifaHistorica,
-  filterTarifas,
-  sortTarifas,
-  calculateStats,
-} from './helpers/tarifaHistorialHelpers';
+import TarifaHistorialTableHeader from './TarifaHistorialTableHeader';
+import { TarifaHistorica } from './helpers/tarifaHistorialHelpers';
+import { useTarifaHistorialFilters } from '../../hooks/useTarifaHistorialFilters';
 
 interface TarifaHistorialProps {
   tarifas: TarifaHistorica[];
@@ -28,57 +24,25 @@ const TarifaHistorial: React.FC<TarifaHistorialProps> = ({
   onDuplicate,
   showFilters = true,
 }) => {
-  const [sortField, setSortField] = useState<keyof TarifaHistorica>('vigenciaDesde');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [filterTipo, setFilterTipo] = useState<string>('');
-  const [filterMetodo, setFilterMetodo] = useState<string>('');
-  const [filterVigencia, setFilterVigencia] = useState<'vigente' | 'vencida' | 'futura' | ''>('');
-  const [filterFechaDesde, setFilterFechaDesde] = useState<string | null>(null);
-  const [filterFechaHasta, setFilterFechaHasta] = useState<string | null>(null);
-
-  const handleSort = (field: keyof TarifaHistorica) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const handleFilterVigenciaChange = (value: string) => {
-    setFilterVigencia(value as 'vigente' | 'vencida' | 'futura' | '');
-  };
-
-  const getSortIcon = (field: keyof TarifaHistorica) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? (
-      <IconSortAscending size={14} />
-    ) : (
-      <IconSortDescending size={14} />
-    );
-  };
-
-  // Filtrar y ordenar tarifas
-  const filteredTarifas = filterTarifas(tarifas, {
-    tipo: filterTipo,
-    metodo: filterMetodo,
-    vigencia: filterVigencia,
-    fechaDesde: filterFechaDesde,
-    fechaHasta: filterFechaHasta,
-  });
-
-  const sortedTarifas = sortTarifas(filteredTarifas, sortField, sortDirection);
-
-  // Calcular estadísticas
-  const stats = calculateStats(sortedTarifas);
-
-  const clearFilters = () => {
-    setFilterTipo('');
-    setFilterMetodo('');
-    setFilterVigencia('');
-    setFilterFechaDesde(null);
-    setFilterFechaHasta(null);
-  };
+  const {
+    filterTipo,
+    filterMetodo,
+    filterVigencia,
+    filterFechaDesde,
+    filterFechaHasta,
+    setFilterTipo,
+    setFilterMetodo,
+    handleFilterVigenciaChange,
+    setFilterFechaDesde,
+    setFilterFechaHasta,
+    clearFilters,
+    sortField,
+    sortDirection,
+    handleSort,
+    filteredTarifas,
+    sortedTarifas,
+    stats,
+  } = useTarifaHistorialFilters(tarifas);
 
   if (tarifas.length === 0) {
     return (
@@ -108,64 +72,12 @@ const TarifaHistorial: React.FC<TarifaHistorialProps> = ({
 
       <Paper withBorder>
         <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>
-                <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => handleSort('tipo')}>
-                  <Text size="sm" fw={500}>
-                    Tipo
-                  </Text>
-                  {getSortIcon('tipo')}
-                </Group>
-              </Table.Th>
-              <Table.Th>
-                <Group
-                  gap="xs"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('metodoCalculo')}
-                >
-                  <Text size="sm" fw={500}>
-                    Método
-                  </Text>
-                  {getSortIcon('metodoCalculo')}
-                </Group>
-              </Table.Th>
-              <Table.Th>
-                <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => handleSort('valor')}>
-                  <Text size="sm" fw={500}>
-                    Valor
-                  </Text>
-                  {getSortIcon('valor')}
-                </Group>
-              </Table.Th>
-              <Table.Th>
-                <Group
-                  gap="xs"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('valorPeaje')}
-                >
-                  <Text size="sm" fw={500}>
-                    Peaje
-                  </Text>
-                  {getSortIcon('valorPeaje')}
-                </Group>
-              </Table.Th>
-              <Table.Th>
-                <Group
-                  gap="xs"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => handleSort('vigenciaDesde')}
-                >
-                  <Text size="sm" fw={500}>
-                    Vigencia
-                  </Text>
-                  {getSortIcon('vigenciaDesde')}
-                </Group>
-              </Table.Th>
-              <Table.Th>Estado</Table.Th>
-              {!readonly && <Table.Th>Acciones</Table.Th>}
-            </Table.Tr>
-          </Table.Thead>
+          <TarifaHistorialTableHeader
+            readonly={readonly}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+          />
           <Table.Tbody>
             {sortedTarifas.map((tarifa) => (
               <TarifaHistorialRow
