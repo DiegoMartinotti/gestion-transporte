@@ -1,5 +1,5 @@
 import React from 'react';
-import { MultiSelect } from '@mantine/core';
+import { MultiSelect, ComboboxData } from '@mantine/core';
 
 interface PersonalMultiSelectProps {
   label?: string;
@@ -8,7 +8,7 @@ interface PersonalMultiSelectProps {
   clearable?: boolean;
   error?: string;
   disabled?: boolean;
-  data: unknown[];
+  data: ComboboxData;
   value: string[] | null;
   onChange: (value: string[] | null) => void;
 }
