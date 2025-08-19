@@ -78,7 +78,8 @@ interface MetadataPageConfig {
 }
 
 const addMetadataToPage = (config: MetadataPageConfig): number => {
-  const { pdf, yPosition, margin, exportState, reportData } = config;
+  const { pdf, margin, exportState, reportData } = config;
+  let yPosition = config.yPosition;
   pdf.setFontSize(10);
   pdf.setTextColor(exportState.colors.secondary);
   pdf.text(
@@ -127,7 +128,8 @@ interface TablePageConfig {
 }
 
 const addTableToPage = (config: TablePageConfig): number => {
-  const { pdf, yPosition, margin, contentWidth, pageHeight, exportState, reportData } = config;
+  const { pdf, margin, contentWidth, pageHeight, exportState, reportData } = config;
+  let yPosition = config.yPosition;
   pdf.setFontSize(14);
   pdf.setTextColor(exportState.colors.primary);
   pdf.text('Datos', margin, yPosition);
