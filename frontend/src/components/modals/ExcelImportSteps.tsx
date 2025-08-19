@@ -145,7 +145,11 @@ const ValidationReport: React.FC<{ validationResult: ValidationData; entityType:
         Resultado de validación:
       </Text>
       <ExcelValidationReport
-        validationErrors={validationResult.validationResult?.errors || []}
+        validationErrors={(validationResult.validationResult?.errors || []).map((error) => ({
+          ...error,
+          column: error.field,
+          value: '',
+        }))}
         validationSummary={{
           totalRows: validationResult.processedData?.data?.length || 0,
           validRows: validationResult.validationResult?.summary?.validRows || 0,
@@ -282,10 +286,11 @@ const ImportStepContent: React.FC<{ importProgress: number }> = ({ importProgres
       </Text>
 
       <ImportProgress
-        entityType="viajes"
-        status={importProgress < 100 ? 'processing' : 'completed'}
-        progress={importProgress}
-        stats={stats}
+        total={stats.total}
+        processed={stats.processed}
+        errors={stats.failed}
+        warnings={0}
+        isProcessing={importProgress < 100}
       />
     </>
   );
