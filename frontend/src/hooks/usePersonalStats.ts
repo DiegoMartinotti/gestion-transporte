@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Personal } from '../types';
 
 interface PersonalStats {
+  total: number;
   activos: number;
   inactivos: number;
   conductores: number;
@@ -35,11 +36,12 @@ const hasExpiringDocuments = (personal: Personal): boolean => {
 
 export const usePersonalStats = (personal: Personal[]): PersonalStats => {
   return useMemo(() => {
+    const total = personal.length;
     const activos = personal.filter((p) => p.activo).length;
     const inactivos = personal.filter((p) => !p.activo).length;
     const conductores = personal.filter((p) => p.tipo === 'Conductor').length;
     const documentosVenciendo = personal.filter(hasExpiringDocuments).length;
 
-    return { activos, inactivos, conductores, documentosVenciendo };
+    return { total, activos, inactivos, conductores, documentosVenciendo };
   }, [personal]);
 };
