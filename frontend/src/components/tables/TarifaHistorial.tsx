@@ -45,6 +45,10 @@ const TarifaHistorial: React.FC<TarifaHistorialProps> = ({
     }
   };
 
+  const handleFilterVigenciaChange = (value: string) => {
+    setFilterVigencia(value as 'vigente' | 'vencida' | 'futura' | '');
+  };
+
   const getSortIcon = (field: keyof TarifaHistorica) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? (
@@ -95,7 +99,7 @@ const TarifaHistorial: React.FC<TarifaHistorialProps> = ({
           filterFechaHasta={filterFechaHasta}
           onFilterTipoChange={setFilterTipo}
           onFilterMetodoChange={setFilterMetodo}
-          onFilterVigenciaChange={setFilterVigencia}
+          onFilterVigenciaChange={handleFilterVigenciaChange}
           onFilterFechaDesdeChange={setFilterFechaDesde}
           onFilterFechaHastaChange={setFilterFechaHasta}
           onClearFilters={clearFilters}
