@@ -13,19 +13,10 @@ import {
 import { IconAlertCircle } from '@tabler/icons-react';
 import { UseFormReturnType } from '@mantine/form';
 import { DataSource, ReportType, DateRange } from '../../../types/reports';
-
-interface ReportFormValues {
-  name: string;
-  description?: string;
-  type: ReportType;
-  dataSource: string;
-  defaultDateRange?: DateRange;
-  limit?: number;
-  tags?: string[];
-}
+import { ReportFormData } from '../hooks/useReportBuilderLogic';
 
 interface BasicConfigTabProps {
-  form: UseFormReturnType<ReportFormValues>;
+  form: UseFormReturnType<ReportFormData>;
   dataSources: DataSource[];
   selectedDataSource: DataSource | null;
 }

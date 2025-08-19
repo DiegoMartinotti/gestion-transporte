@@ -18,14 +18,10 @@ import {
   ReportAggregation,
   AggregationFunction,
 } from '../../../types/reports';
-
-interface ReportFormValues {
-  groupBy?: ReportGroupBy[];
-  aggregations?: ReportAggregation[];
-}
+import { ReportFormData } from '../hooks/useReportBuilderLogic';
 
 interface GroupingTabProps {
-  form: UseFormReturnType<ReportFormValues>;
+  form: UseFormReturnType<ReportFormData>;
   availableFields: ReportField[];
   onAddGroupBy: () => void;
   onRemoveGroupBy: (index: number) => void;

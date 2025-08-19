@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { UseFormReturnType } from '@mantine/form';
 import {
-  ReportDefinition,
   ReportField,
   ReportFilter,
   ReportGroupBy,
@@ -9,6 +8,7 @@ import {
   ChartConfig,
   AggregationFunction,
 } from '../../../types/reports';
+import { ReportFormData } from './useReportBuilderLogic';
 
 const AGGREGATION_FUNCTIONS: { value: AggregationFunction; label: string }[] = [
   { value: 'sum', label: 'Suma' },
@@ -21,7 +21,7 @@ const AGGREGATION_FUNCTIONS: { value: AggregationFunction; label: string }[] = [
 ];
 
 export const useReportBuilderHandlers = (
-  form: UseFormReturnType<Partial<ReportDefinition>>,
+  form: UseFormReturnType<ReportFormData>,
   availableFields: ReportField[]
 ) => {
   const filterHandlers = useMemo(

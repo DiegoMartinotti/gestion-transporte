@@ -15,14 +15,10 @@ import {
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { UseFormReturnType } from '@mantine/form';
 import { ReportField, ReportFilter, FilterOperator } from '../../../types/reports';
-
-interface ReportFormValues {
-  fields?: ReportField[];
-  filters?: ReportFilter[];
-}
+import { ReportFormData } from '../hooks/useReportBuilderLogic';
 
 interface FieldsFiltersTabProps {
-  form: UseFormReturnType<ReportFormValues>;
+  form: UseFormReturnType<ReportFormData>;
   availableFields: ReportField[];
   onAddFilter: () => void;
   onRemoveFilter: (index: number) => void;

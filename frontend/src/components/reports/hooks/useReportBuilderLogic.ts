@@ -2,7 +2,36 @@ import { useState, useEffect, useCallback } from 'react';
 import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { DataSource, ReportDefinition, ReportField, ReportTemplate } from '../../../types/reports';
+import {
+  DataSource,
+  ReportField,
+  ReportTemplate,
+  ReportType,
+  DateRange,
+  ReportFilter,
+  ReportGroupBy,
+  ReportAggregation,
+  ReportSorting,
+  ChartConfig,
+} from '../../../types/reports';
+
+// Tipo específico para el formulario del Report Builder
+export interface ReportFormData {
+  name: string;
+  description?: string;
+  type: ReportType;
+  dataSource: string;
+  fields: ReportField[];
+  filters?: ReportFilter[];
+  groupBy?: ReportGroupBy[];
+  aggregations?: ReportAggregation[];
+  sorting?: ReportSorting[];
+  charts?: ChartConfig[];
+  defaultDateRange?: DateRange;
+  limit?: number;
+  tags?: string[];
+}
+
 import { reportService } from '../../../services/reportService';
 
 const getFormValidation = () => ({
@@ -61,8 +90,8 @@ export const useReportBuilderLogic = (
   const [previewModalOpened, { open: openPreviewModal, close: closePreviewModal }] =
     useDisclosure(false);
 
-  const form = useForm<Partial<ReportDefinition>>({
-    initialValues: getInitialValues(template),
+  const form = useForm<ReportFormData>({
+    initialValues: getInitialValues(template) as ReportFormData,
     validate: getFormValidation(),
   });
 
