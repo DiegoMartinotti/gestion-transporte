@@ -12,18 +12,14 @@ import {
   Divider,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
+import { UseFormReturnType } from '@mantine/form';
 import { IconPlus, IconChartBar } from '@tabler/icons-react';
 import { REPORT_TYPES, DATE_RANGES } from './ReportBuilderHelpers';
 import { ChartItem, FilterItem, GroupByItem, AggregationItem } from './ReportBuilderTabsHelpers';
+import { ReportFormData } from './hooks/useReportBuilderLogic';
 
 interface BasicTabProps {
-  form: {
-    getInputProps: (field: string) => unknown;
-    values: Record<string, unknown> & {
-      dateRange?: string;
-    };
-    setFieldValue: (field: string, value: unknown) => void;
-  };
+  form: UseFormReturnType<ReportFormData>;
   dataSources: Array<{ key: string; label: string; value: string }>;
   availableFields: Array<{ key: string; label: string; type: string }>;
 }
@@ -74,10 +70,10 @@ export const BasicTab: React.FC<BasicTabProps> = ({ form, dataSources, available
       label="Rango de fechas"
       placeholder="Seleccionar rango"
       data={DATE_RANGES}
-      {...form.getInputProps('dateRange')}
+      {...form.getInputProps('defaultDateRange')}
     />
 
-    {form.values.dateRange === 'custom' && (
+    {form.values.defaultDateRange === 'custom' && (
       <Group grow>
         <DatePickerInput
           label="Desde"
@@ -95,10 +91,7 @@ export const BasicTab: React.FC<BasicTabProps> = ({ form, dataSources, available
 );
 
 interface FiltersTabProps {
-  form: {
-    values: Record<string, unknown> & { filters?: unknown[] };
-    setFieldValue: (field: string, value: unknown) => void;
-  };
+  form: UseFormReturnType<ReportFormData>;
   availableFields: Array<{ key: string; label: string; type: string }>;
   addFilter: () => void;
   removeFilter: (index: number) => void;
@@ -120,10 +113,10 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
       </Button>
     </Group>
 
-    {(form.values.filters as Array<Record<string, unknown>>)?.map((filter, index) => (
+    {form.values.filters?.map((filter, index) => (
       <FilterItem
-        key={filter.id as string}
-        filter={filter}
+        key={(filter as any).id || index}
+        filter={filter as unknown as Record<string, unknown>}
         index={index}
         availableFields={availableFields}
         onRemove={() => removeFilter(index)}
@@ -131,7 +124,7 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
       />
     ))}
 
-    {(!form.values.filters || (form.values.filters as unknown[]).length === 0) && (
+    {(!form.values.filters || form.values.filters.length === 0) && (
       <Text size="sm" c="dimmed" ta="center">
         No hay filtros configurados
       </Text>
@@ -140,10 +133,7 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
 );
 
 interface GroupingTabProps {
-  form: {
-    values: Record<string, unknown> & { groupBy?: unknown[]; aggregations?: unknown[] };
-    setFieldValue: (field: string, value: unknown) => void;
-  };
+  form: UseFormReturnType<ReportFormData>;
   availableFields: Array<{ key: string; label: string; type: string }>;
   addGroupBy: () => void;
   removeGroupBy: (index: number) => void;
@@ -168,14 +158,14 @@ export const GroupingTab: React.FC<GroupingTabProps> = ({
         </Button>
       </Group>
 
-      {(form.values.groupBy as Array<Record<string, unknown>>)?.map((group, index) => (
+      {form.values.groupBy?.map((group, index) => (
         <GroupByItem
           key={index}
-          group={group}
+          group={group as unknown as Record<string, unknown>}
           availableFields={availableFields}
           onRemove={() => removeGroupBy(index)}
           onUpdate={(updates) => {
-            const groupBy = [...(form.values.groupBy as unknown[])];
+            const groupBy = [...(form.values.groupBy || [])];
             groupBy[index] = { ...groupBy[index], ...updates };
             form.setFieldValue('groupBy', groupBy);
           }}
@@ -198,14 +188,14 @@ export const GroupingTab: React.FC<GroupingTabProps> = ({
         </Button>
       </Group>
 
-      {(form.values.aggregations as Array<Record<string, unknown>>)?.map((aggregation, index) => (
+      {form.values.aggregations?.map((aggregation, index) => (
         <AggregationItem
           key={index}
-          aggregation={aggregation}
+          aggregation={aggregation as unknown as Record<string, unknown>}
           availableFields={availableFields}
           onRemove={() => removeAggregation(index)}
           onUpdate={(updates) => {
-            const aggregations = [...(form.values.aggregations as unknown[])];
+            const aggregations = [...(form.values.aggregations || [])];
             aggregations[index] = { ...aggregations[index], ...updates };
             form.setFieldValue('aggregations', aggregations);
           }}
@@ -216,10 +206,7 @@ export const GroupingTab: React.FC<GroupingTabProps> = ({
 );
 
 interface ChartsTabProps {
-  form: {
-    values: Record<string, unknown> & { charts?: unknown[] };
-    setFieldValue: (field: string, value: unknown) => void;
-  };
+  form: UseFormReturnType<ReportFormData>;
   availableFields: Array<{ key: string; label: string; type: string }>;
   addChart: () => void;
   removeChart: (index: number) => void;
@@ -239,22 +226,22 @@ export const ChartsTab: React.FC<ChartsTabProps> = ({
       </Button>
     </Group>
 
-    {(form.values.charts as Array<Record<string, unknown>>)?.map((chart, index) => (
+    {form.values.charts?.map((chart, index) => (
       <ChartItem
         key={index}
-        chart={chart}
+        chart={chart as unknown as Record<string, unknown>}
         index={index}
         availableFields={availableFields}
         onRemove={() => removeChart(index)}
         onUpdate={(updates) => {
-          const charts = [...(form.values.charts as unknown[])];
+          const charts = [...(form.values.charts || [])];
           charts[index] = { ...charts[index], ...updates };
           form.setFieldValue('charts', charts);
         }}
       />
     ))}
 
-    {(!form.values.charts || (form.values.charts as unknown[]).length === 0) && (
+    {(!form.values.charts || form.values.charts.length === 0) && (
       <Text size="sm" c="dimmed" ta="center">
         No hay gráficos configurados
       </Text>
