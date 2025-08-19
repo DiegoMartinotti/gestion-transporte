@@ -93,7 +93,7 @@ export const viewReport = async (execution: ReportExecution) => {
 
 export const deleteReportExecution = async (executionId: string) => {
   try {
-    await reportService.deleteReportExecution(executionId);
+    await reportService.deleteReportExecutions([executionId]);
     notifications.show({
       title: 'Éxito',
       message: 'Ejecución eliminada correctamente',
@@ -111,7 +111,8 @@ export const deleteReportExecution = async (executionId: string) => {
 
 export const shareReport = async (execution: ReportExecution) => {
   try {
-    const shareLink = await reportService.generateShareLink(execution.id);
+    // TODO: Implement generateShareLink method in ReportService
+    const shareLink = `${window.location.origin}/reports/executions/${execution.id}`;
     await navigator.clipboard.writeText(shareLink);
     notifications.show({
       title: 'Enlace copiado',
@@ -145,7 +146,7 @@ export const filterExecutions = (
   let filtered = [...executions];
 
   if (filters.reportId) {
-    filtered = filtered.filter((e) => e.reportId === filters.reportId);
+    filtered = filtered.filter((e) => (e.reportId || e.reportDefinitionId) === filters.reportId);
   }
 
   if (filters.status) {
@@ -157,11 +158,11 @@ export const filterExecutions = (
   }
 
   if (filters.startDate) {
-    filtered = filtered.filter((e) => new Date(e.createdAt) >= filters.startDate);
+    filtered = filtered.filter((e) => new Date(e.createdAt) >= filters.startDate!);
   }
 
   if (filters.endDate) {
-    filtered = filtered.filter((e) => new Date(e.createdAt) <= filters.endDate);
+    filtered = filtered.filter((e) => new Date(e.createdAt) <= filters.endDate!);
   }
 
   if (filters.searchTerm) {

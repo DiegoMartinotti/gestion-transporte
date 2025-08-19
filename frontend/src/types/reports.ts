@@ -210,6 +210,11 @@ export interface ReportExecution {
   error?: string;
   parameters?: Record<string, any>;
   isScheduled?: boolean;
+  // Additional properties for backward compatibility
+  reportName: string;
+  createdAt: string;
+  reportId?: string; // alias for reportDefinitionId
+  description?: string;
 }
 
 // Report History (for backward compatibility)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, ReactElement } from 'react';
 import {
   Title,
   Group,
@@ -125,8 +125,8 @@ const filterExecutionsByTab = (executions: ReportExecution[], activeTab: string)
 const renderExecutionDetails = (
   execution: ReportExecution,
   reportDefinition: ReportDefinition | undefined,
-  getStatusBadge: (status: ReportExecutionStatus) => JSX.Element,
-  getFormatIcon: (format: ExportFormat) => JSX.Element
+  getStatusBadge: (status: ReportExecutionStatus) => ReactElement,
+  getFormatIcon: (format: ExportFormat) => ReactElement
 ) => (
   <Grid>
     <Grid.Col span={6}>
@@ -520,15 +520,15 @@ const createFilterModalHandlers = (
     });
   };
 
-  const handleStartDateChange = (value: Date | null) => {
+  const handleStartDateChange = (value: string | null) => {
     updateState({
-      filters: { ...state.filters, startDate: value || undefined },
+      filters: { ...state.filters, startDate: value ? new Date(value) : undefined },
     });
   };
 
-  const handleEndDateChange = (value: Date | null) => {
+  const handleEndDateChange = (value: string | null) => {
     updateState({
-      filters: { ...state.filters, endDate: value || undefined },
+      filters: { ...state.filters, endDate: value ? new Date(value) : undefined },
     });
   };
 
@@ -673,14 +673,18 @@ export const ReportHistory: React.FC<ReportHistoryProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = execution.outputFile.name;
+      a.download = execution.outputFile?.name || 'reporte';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       onReportDownload?.(execution);
-      showNotification('Descarga iniciada', `Descargando ${execution.outputFile.name}`, 'green');
+      showNotification(
+        'Descarga iniciada',
+        `Descargando ${execution.outputFile?.name || 'reporte'}`,
+        'green'
+      );
     } catch (error) {
       showNotification('Error de descarga', 'No se pudo descargar el archivo', 'red');
     }
@@ -853,7 +857,11 @@ export const ReportHistory: React.FC<ReportHistoryProps> = ({
               <DatePickerInput
                 label="Fecha Desde"
                 placeholder="Seleccionar fecha"
-                value={state.filters.startDate}
+                value={
+                  state.filters.startDate
+                    ? state.filters.startDate.toISOString().split('T')[0]
+                    : null
+                }
                 onChange={handlers.handleStartDateChange}
                 clearable
               />
@@ -862,7 +870,9 @@ export const ReportHistory: React.FC<ReportHistoryProps> = ({
               <DatePickerInput
                 label="Fecha Hasta"
                 placeholder="Seleccionar fecha"
-                value={state.filters.endDate}
+                value={
+                  state.filters.endDate ? state.filters.endDate.toISOString().split('T')[0] : null
+                }
                 onChange={handlers.handleEndDateChange}
                 clearable
               />
