@@ -15,10 +15,10 @@ const handleDateChange =
     onFiltrosChange: (filtros: FiltrosReporte) => void,
     field: 'fechaDesde' | 'fechaHasta'
   ) =>
-  (date: Date | null) => {
+  (date: string | null) => {
     onFiltrosChange({
       ...filtros,
-      [field]: date || undefined,
+      [field]: date ? new Date(date) : undefined,
     });
   };
 
