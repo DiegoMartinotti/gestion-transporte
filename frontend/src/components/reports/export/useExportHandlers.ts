@@ -51,6 +51,12 @@ export const useExportHandlers = ({
       description: '',
       type: 'custom',
       charts: [],
+      dataSource: 'export',
+      fields: [],
+      filters: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system',
     };
   }, [exportState.title]);
 
