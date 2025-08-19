@@ -18,7 +18,6 @@ interface SelectItemProps {
   showDni?: boolean;
   withAvatar?: boolean;
   compact?: boolean;
-  [key: string]: unknown;
 }
 
 // Helper para renderizar avatar
