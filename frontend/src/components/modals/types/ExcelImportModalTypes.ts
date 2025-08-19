@@ -114,7 +114,21 @@ export interface ExcelImportActions {
 }
 
 export interface ExcelImportActionsConfig {
-  state: ExcelImportState;
+  state: ExcelImportState & {
+    setCurrentStep: (step: number) => void;
+    setFile: (file: File | null) => void;
+    setPreviewData: (data: PreviewResult | null) => void;
+    setValidationResult: (result: ValidationFileResult | null) => void;
+    setImportProgress: (progress: number) => void;
+    setImportResult: (result: ImportResult | null) => void;
+    setLoading: (loading: boolean) => void;
+    setAutoCorrect: (autoCorrect: boolean) => void;
+    setSkipInvalidRows: (skipInvalidRows: boolean) => void;
+    setError: (error: string | null) => void;
+    setCorrectionUploadModalOpen: (open: boolean) => void;
+    resetState: () => void;
+    resetImportForm: () => void;
+  };
   processExcelFile: (file: File, options: ImportOptions) => Promise<ImportResult>;
   validateExcelFile: (file: File) => Promise<ValidationFileResult>;
   previewExcelFile: (file: File, sampleSize?: number) => Promise<PreviewResult>;
