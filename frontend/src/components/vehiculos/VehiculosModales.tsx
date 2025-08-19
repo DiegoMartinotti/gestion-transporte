@@ -6,22 +6,22 @@ import { Vehiculo } from '../../types/vehiculo';
 
 const VehiculoForm = lazy(() => import('../forms/VehiculoForm'));
 
-interface ModalState {
+interface ModalState<T> {
   isOpen: boolean;
-  selectedItem: any;
+  selectedItem: T | null;
   close: () => void;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
-interface FormModalState extends ModalState {
-  openEdit: (item: any) => void;
+interface FormModalState<T> extends ModalState<T> {
+  openEdit: (item: T) => void;
 }
 
 interface VehiculosModalesProps {
-  deleteModal: ModalState;
-  formModal: FormModalState;
-  detailModal: ModalState & {
-    openView: (item: any) => void;
+  deleteModal: ModalState<{ id: string; dominio?: string }>;
+  formModal: FormModalState<Vehiculo>;
+  detailModal: ModalState<Vehiculo> & {
+    openView: (item: Vehiculo) => void;
   };
   handleDelete: () => void;
 }
