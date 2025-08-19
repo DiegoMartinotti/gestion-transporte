@@ -114,7 +114,7 @@ export const KPICard = ({
   const hasIcon = Boolean(icon);
   const hasSubtitle = Boolean(subtitle);
   const hasRefresh = Boolean(onRefresh);
-  const showTrend = (trend || trendValue) && !loading;
+  const showTrend = Boolean((trend || trendValue) && !loading);
   const hasPreviousValue = Boolean(previousValue);
   const showProgress = progress !== undefined && !loading;
   const displayValue = loading ? '...' : formatValue(value, format);
