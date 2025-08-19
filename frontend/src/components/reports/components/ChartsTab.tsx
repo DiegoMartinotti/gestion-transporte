@@ -16,13 +16,10 @@ import {
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { UseFormReturnType } from '@mantine/form';
 import { ReportField, ChartConfig, ChartType } from '../../../types/reports';
-
-interface ReportFormValues {
-  charts?: ChartConfig[];
-}
+import { ReportFormData } from '../hooks/useReportBuilderLogic';
 
 interface ChartsTabProps {
-  form: UseFormReturnType<ReportFormValues>;
+  form: UseFormReturnType<ReportFormData>;
   availableFields: ReportField[];
   onAddChart: () => void;
   onRemoveChart: (index: number) => void;

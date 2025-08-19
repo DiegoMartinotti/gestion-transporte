@@ -11,7 +11,7 @@ import {
 } from '@tabler/icons-react';
 import { ReportDefinition, ReportTemplate } from '../../types/reports';
 import { reportService } from '../../services/reportService';
-import { useReportBuilderLogic } from './hooks/useReportBuilderLogic';
+import { useReportBuilderLogic, ReportFormData } from './hooks/useReportBuilderLogic';
 import { useReportBuilderHandlers } from './hooks/useReportBuilderHandlers';
 import BasicConfigTab from './components/BasicConfigTab';
 import FieldsFiltersTab from './components/FieldsFiltersTab';
@@ -22,7 +22,7 @@ interface ReportBuilderProps {
   reportId?: string;
   template?: ReportTemplate;
   onSave?: (report: ReportDefinition) => void;
-  onPreview?: (definition: Partial<ReportDefinition>) => void;
+  onPreview?: (definition: ReportFormData) => void;
 }
 
 export const ReportBuilder: React.FC<ReportBuilderProps> = ({
@@ -56,11 +56,25 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({
           const updated = await reportService.updateReportDefinition(reportId, form.values);
           onSave?.(updated);
         } else {
-          const reportDefinition: Partial<ReportDefinition> = {
-            ...form.values,
-            id: undefined,
-            createdAt: undefined,
-            updatedAt: undefined,
+          // Crear el objeto con solo los campos necesarios para la creación
+          const reportDefinition: Omit<
+            ReportDefinition,
+            'id' | 'createdAt' | 'updatedAt' | 'createdBy'
+          > = {
+            name: form.values.name,
+            description: form.values.description,
+            type: form.values.type,
+            dataSource: form.values.dataSource,
+            fields: form.values.fields,
+            filters: form.values.filters || [],
+            groupBy: form.values.groupBy,
+            aggregations: form.values.aggregations,
+            sorting: form.values.sorting,
+            charts: form.values.charts,
+            defaultDateRange: form.values.defaultDateRange,
+            limit: form.values.limit,
+            tags: form.values.tags,
+            isTemplate: false,
           };
           const created = await reportService.createReportDefinition(reportDefinition);
           onSave?.(created);
