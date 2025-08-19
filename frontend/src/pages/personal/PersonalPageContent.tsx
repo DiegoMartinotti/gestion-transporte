@@ -60,6 +60,7 @@ interface PersonalPageContentProps {
   handleCreatePersonal: () => void;
   handleEditPersonal: (person: Personal) => void;
   handleViewPersonal: (person: Personal) => void;
+  handleDeletePersonal: (person: Personal) => void;
   handleFormSubmit: () => Promise<void>;
   handleImportComplete: (result: unknown) => Promise<void>;
   confirmDelete: () => Promise<void>;
