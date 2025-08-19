@@ -15,11 +15,13 @@ export interface ImportError {
   severity: 'error' | 'warning';
 }
 
+import { PreviewData } from '../excel/ExcelDataPreview';
+
 export interface ImportState {
   file?: File;
-  data: unknown[];
+  data: PreviewData[];
   validationErrors: ImportError[];
-  correctedData: unknown[];
+  correctedData: PreviewData[];
   importResult?: ImportResult;
   isValidating: boolean;
   isImporting: boolean;

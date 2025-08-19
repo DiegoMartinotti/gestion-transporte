@@ -123,7 +123,7 @@ export const DataPreviewStep: React.FC<DataPreviewStepProps> = ({ importState, e
       data={importState.data}
       columns={
         importState.data.length > 0
-          ? Object.keys(importState.data[0]).map((key) => ({
+          ? Object.keys(importState.data[0] as Record<string, unknown>).map((key) => ({
               key,
               label: key,
               type: 'text' as const,
