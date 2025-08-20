@@ -1,6 +1,13 @@
 import { apiService } from './api';
 import { Cliente, ClienteFilters, PaginatedResponse } from '../types';
 import { ExcelService } from './excel';
+import type {
+  ImportResult,
+  ValidationFileResult,
+  PreviewResult,
+  ImportOptions,
+} from '../components/modals/types/ExcelImportModalTypes';
+import type { ValidationResult, ExcelRowData, ExcelCellValue } from '../types/excel';
 
 interface BackendPaginatedResponse<T> {
   success: boolean;
@@ -14,18 +21,6 @@ const ERROR_MESSAGES = {
   UPDATE_ERROR: 'Error al actualizar cliente',
   BULK_ERROR: 'Error en operación bulk',
 } as const;
-
-interface ImportResult {
-  success: boolean;
-  summary?: {
-    totalRows: number;
-    insertedRows: number;
-    errorRows: number;
-  };
-  hasMissingData?: boolean;
-  importId?: string;
-  errors?: unknown[];
-}
 
 export class ClienteService {
   private static baseUrl = '/clientes';
@@ -138,25 +133,114 @@ export const clienteService = {
   // Process Excel file with our new system
   async processExcelFile(
     file: File,
-    options: {
-      autoCorrect?: boolean;
-      skipInvalidRows?: boolean;
-      progressCallback?: (progress: { percentage: number }) => void;
-    } = {}
+    options: ImportOptions = { autoCorrect: false, skipInvalidRows: false }
   ): Promise<ImportResult> {
     const excelService = new ExcelService();
-    return await excelService.processExcelFile(file, 'cliente', options);
+    const result = await excelService.processExcelFile(file, 'cliente', options);
+
+    // Adapt the result to match ImportResult interface
+    return {
+      success: result.bulkResult?.successful > 0 || false,
+      summary: {
+        totalRows: result.summary.totalRows,
+        insertedRows: result.summary.insertedRows,
+        errorRows: result.summary.errorRows,
+      },
+      errors: result.validationResult?.errors?.map(this._adaptValidationError.bind(this)) || [],
+    };
+  },
+
+  // Helper functions for validation result adaptation
+  _adaptValidationError(
+    error: unknown
+  ): import('../components/modals/types/ExcelImportModalTypes').ImportError {
+    const err = error as Record<string, unknown>;
+    return {
+      row: (err.row as number) || 0,
+      column: (err.column as string) || (err.field as string) || 'unknown',
+      field: (err.field as string) || 'unknown',
+      value: err.value as ExcelCellValue,
+      message: (err.message as string) || 'Error desconocido',
+      severity: ((err.severity as string) || 'error') as 'error' | 'warning',
+    };
+  },
+
+  _getValidRows(data: unknown[], errors: unknown[]): ExcelRowData[] {
+    return (data || [])
+      .filter(
+        (_, index) =>
+          !errors?.some(
+            (error: unknown) => ((error as Record<string, unknown>).row as number) === index + 1
+          )
+      )
+      .map((row: unknown) => row as ExcelRowData);
+  },
+
+  _getInvalidRows(data: unknown[], errors: unknown[]): ExcelRowData[] {
+    return (data || [])
+      .filter((_, index) =>
+        errors?.some(
+          (error: unknown) => ((error as Record<string, unknown>).row as number) === index + 1
+        )
+      )
+      .map((row: unknown) => row as ExcelRowData);
   },
 
   // Validate Excel file without importing
-  async validateExcelFile(file: File): Promise<unknown> {
+  async validateExcelFile(file: File): Promise<ValidationFileResult> {
     const excelService = new ExcelService();
-    return await excelService.validateExcelFile(file, 'cliente');
+    const result = await excelService.validateExcelFile(file, 'cliente');
+
+    const validRows = this._getValidRows(result.processedData.data, result.validationResult.errors);
+    const invalidRows = this._getInvalidRows(
+      result.processedData.data,
+      result.validationResult.errors
+    );
+
+    return {
+      validationResult: {
+        isValid: result.validationResult.isValid,
+        errors: result.validationResult.errors?.map(this._adaptValidationError.bind(this)) || [],
+        warnings:
+          result.validationResult.warnings?.map(this._adaptValidationError.bind(this)) || [],
+        validRows,
+        invalidRows,
+        summary: {
+          totalRows: result.processedData.data?.length || 0,
+          validRows: validRows.length,
+          errorRows: result.validationResult.errors?.length || 0,
+          warningRows: result.validationResult.warnings?.length || 0,
+        },
+      } as ValidationResult,
+      processedData: {
+        data: result.processedData.data?.map((row: unknown) => row as ExcelRowData) || [],
+        headers: result.processedData.headers || [],
+      },
+    };
   },
 
   // Preview Excel file data
-  async previewExcelFile(file: File, sampleSize = 5): Promise<unknown> {
+  async previewExcelFile(file: File, sampleSize = 5): Promise<PreviewResult> {
     const excelService = new ExcelService();
-    return await excelService.previewExcelFile(file, sampleSize);
+    const result = await excelService.previewExcelFile(file, sampleSize);
+
+    // Adapt the result to match PreviewResult interface
+    return {
+      samples:
+        result.samples?.map((sample: unknown) => ({
+          sample:
+            ((sample as Record<string, unknown>).sample as unknown[])?.map(
+              (row: unknown) => row as ExcelRowData
+            ) || [],
+          sheetName: (sample as Record<string, unknown>).sheetName as string,
+        })) || [],
+      headers: Object.keys(result.samples?.[0]?.sample?.[0] || {}),
+      totalRows:
+        result.samples?.reduce(
+          (total: number, sample: unknown) =>
+            total + (((sample as Record<string, unknown>).sample as unknown[])?.length || 0),
+          0
+        ) || 0,
+    };
   },
 };
