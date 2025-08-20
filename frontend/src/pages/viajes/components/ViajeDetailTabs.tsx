@@ -12,7 +12,7 @@ import { ViajeCargaTab } from '../../../components/viajes/ViajeCargaTab';
 import { ViajeCostosTab } from '../../../components/viajes/ViajeCostosTab';
 import { Viaje } from '../../../types/viaje';
 
-import { ViajeTracker } from '../ViajeTracker';
+import ViajeTracker from '../ViajeTracker';
 import { formatDate, formatCurrency } from '../helpers/viajeDetailHelpers';
 
 interface ViajeDetailTabsProps {
