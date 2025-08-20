@@ -1,5 +1,5 @@
 {
-  "backend/**/*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-  "frontend/**/*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+  "backend/**/*.{ts,tsx}": ["eslint --max-warnings 0", "prettier --write"],
+  "frontend/**/*.{ts,tsx}": ["eslint --max-warnings 0", "prettier --write"],
   "**/*.{md,json}": ["prettier --write"]
 }

@@ -33,9 +33,28 @@ Before creating ANY new code, verify it doesn't duplicate existing functionality
 
 **Note**: Global agents (typescript-pro, react-pro, backend-architect, database-optimizer, test-automator, code-reviewer, api-documenter, performance-engineer, legacy-modernizer, security-auditor) are also available in ~/.claude/agents/ and should be used for general development tasks.
 
-## MANDATORY: Use Serena MCP for Code Navigation
+## MANDATORY: Serena MCP Session Protocol
+
+**CRITICAL**: At the start of EVERY new session, execute this protocol:
+
+1. **Load Session Context**: `mcp__serena__read_memory serena_usage_guidelines`
+2. **Load Project Context**: Read essential memories (`project_overview`, `code_style_conventions`, `critical_patterns_excel_system`)
+3. **Use Think Tools Throughout**:
+   - `think_about_task_adherence` before starting tasks
+   - `think_about_collected_information` after code exploration
+   - `think_about_whether_you_are_done` when completing work
 
 **CRITICAL**: ALWAYS use Serena MCP server for efficient code navigation and editing. Serena provides semantic code analysis tools that must be used instead of reading entire files. Use `find_symbol`, `get_symbols_overview`, and `search_for_pattern` for exploration, and `replace_symbol_body` or `replace_regex` for precise edits.
+
+## MANDATORY: Code Quality Verification
+
+**CRITICAL**: ALWAYS verify both TypeScript and ESLint when working with code files. After any code modification, run:
+
+1. **TypeScript check**: `npm run type-check:files src/path/to/file.tsx`
+2. **ESLint check**: `npm run lint src/path/to/file.tsx`
+3. **ESLint auto-fix**: `npm run lint:fix src/path/to/file.tsx` (if warnings found)
+
+Both checks must pass before considering any task complete. The project has strict ESLint rules for code quality and the pre-commit hook blocks commits with warnings (`--max-warnings 0`).
 
 ## Project Overview
 
