@@ -39,7 +39,17 @@ export const SitesModals: React.FC<SitesModalsProps> = ({
       processExcelFile={siteService.processExcelFile.bind(siteService)}
       validateExcelFile={siteService.validateExcelFile.bind(siteService)}
       previewExcelFile={siteService.previewExcelFile.bind(siteService)}
-      getTemplate={siteExcelService.getTemplate}
+      getTemplate={async () => {
+        const blob = await siteExcelService.getTemplate();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'plantilla_sites.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }}
     />
   </>
 );
