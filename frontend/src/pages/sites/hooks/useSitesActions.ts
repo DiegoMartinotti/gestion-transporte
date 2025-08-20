@@ -65,8 +65,8 @@ export const useSitesActions = (
   }, []);
 
   const openGoogleMaps = useCallback((site: Site) => {
-    if (site.ubicacion?.latitud && site.ubicacion?.longitud) {
-      const url = `https://www.google.com/maps?q=${site.ubicacion.latitud},${site.ubicacion.longitud}`;
+    if (site.coordenadas?.lat && site.coordenadas?.lng) {
+      const url = `https://www.google.com/maps?q=${site.coordenadas.lat},${site.coordenadas.lng}`;
       window.open(url, '_blank');
     }
   }, []);
