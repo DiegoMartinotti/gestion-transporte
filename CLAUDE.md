@@ -17,22 +17,6 @@ Before creating ANY new code, verify it doesn't duplicate existing functionality
 
 **CRITICAL**: Before writing any code (using Edit, Write, MultiEdit tools), ALWAYS consult MCP Context7 first to get current documentation for the libraries, frameworks, or APIs being used. This ensures code follows latest best practices and correct usage patterns.
 
-## MANDATORY: Proactive Use of Project-Specific Agents
-
-**CRITICAL**: ALWAYS use specialized agents proactively for tasks matching their expertise. This project has 5 specific agents configured in .claude/agents/:
-
-### Project-Specific Agents (in .claude/agents/):
-
-- **transport-business-expert**: Transportation domain logic, tariff calculations, trip management, client-specific formulas (uses MongoDB MCP for direct database access)
-- **excel-specialist**: Excel import/export operations using BaseExcelService patterns, bulk operations, templates
-- **geocoding-routes-expert**: Geocoding services, distance calculations, route visualization with Leaflet (uses WebFetch for external APIs)
-- **mantine-ui-expert**: Mantine UI v8 components, React hooks, frontend patterns (uses Playwright MCP for UI testing)
-- **mongodb-atlas-specialist**: Direct MongoDB operations, complex aggregations, index optimization (uses all MongoDB MCP tools)
-
-**Usage**: Invoke agents using the Task tool when their expertise matches the current task. Multiple agents can work concurrently on different aspects of a problem.
-
-**Note**: Global agents (typescript-pro, react-pro, backend-architect, database-optimizer, test-automator, code-reviewer, api-documenter, performance-engineer, legacy-modernizer, security-auditor) are also available in ~/.claude/agents/ and should be used for general development tasks.
-
 ## MANDATORY: Serena MCP Session Protocol
 
 **CRITICAL**: At the start of EVERY new session, execute this protocol:
