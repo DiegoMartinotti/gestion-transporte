@@ -30,6 +30,7 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
+import { Site, Cliente, Tramo } from '../../types';
 import TarifaForm from './TarifaForm';
 import { tramoValidationRules, getInitialTramoValues } from './validation/tramoValidation';
 import {
@@ -37,21 +38,6 @@ import {
   validateTarifaConflicts,
   filterSitesByClient,
 } from './helpers/tramoHelpers';
-
-interface Site {
-  _id: string;
-  nombre: string;
-  direccion: string;
-  cliente: string;
-  location?: {
-    coordinates: [number, number];
-  };
-}
-
-interface Cliente {
-  _id: string;
-  nombre: string;
-}
 
 interface TarifaHistorica {
   _id?: string;
@@ -61,24 +47,6 @@ interface TarifaHistorica {
   valorPeaje: number;
   vigenciaDesde: string;
   vigenciaHasta: string;
-}
-
-interface Tramo {
-  _id: string;
-  origen: {
-    _id: string;
-    nombre: string;
-  };
-  destino: {
-    _id: string;
-    nombre: string;
-  };
-  cliente: {
-    _id: string;
-    nombre: string;
-  };
-  distancia: number;
-  tarifasHistoricas: TarifaHistorica[];
 }
 
 interface TramoFormProps {
@@ -217,7 +185,7 @@ const TramoForm: React.FC<TramoFormProps> = ({ tramo, clientes, sites, onSubmit,
                     placeholder="Selecciona origen"
                     data={sitesFiltered.map((s) => ({
                       value: s._id,
-                      label: `${s.nombre} - ${s.direccion}`,
+                      label: `${s.nombre} - ${s.direccion || 'Sin dirección'}`,
                     }))}
                     {...form.getInputProps('origen')}
                     searchable
@@ -234,7 +202,7 @@ const TramoForm: React.FC<TramoFormProps> = ({ tramo, clientes, sites, onSubmit,
                       .filter((s) => s._id !== form.values.origen)
                       .map((s) => ({
                         value: s._id,
-                        label: `${s.nombre} - ${s.direccion}`,
+                        label: `${s.nombre} - ${s.direccion || 'Sin dirección'}`,
                       }))}
                     {...form.getInputProps('destino')}
                     searchable
