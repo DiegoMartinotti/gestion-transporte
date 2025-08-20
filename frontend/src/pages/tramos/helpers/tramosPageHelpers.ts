@@ -32,7 +32,7 @@ export const matchesSearchTerm = (tramo: Tramo, searchTerm: string): boolean => 
 
   const lowerSearchTerm = searchTerm.toLowerCase();
 
-  return (
+  return !!(
     (tramo.origen.nombre && tramo.origen.nombre.toLowerCase().includes(lowerSearchTerm)) ||
     (tramo.destino.nombre && tramo.destino.nombre.toLowerCase().includes(lowerSearchTerm)) ||
     (tramo.cliente.nombre && tramo.cliente.nombre.toLowerCase().includes(lowerSearchTerm))

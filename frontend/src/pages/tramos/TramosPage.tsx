@@ -778,9 +778,23 @@ const TramosPage: React.FC = () => {
         validateExcelFile={async (_file: File) => {
           // Validación básica de archivo
           return {
-            valid: true,
-            validationResult: { errors: [], warnings: [] },
-            processedData: [],
+            validationResult: {
+              isValid: true,
+              errors: [],
+              warnings: [],
+              validRows: [],
+              invalidRows: [],
+              summary: {
+                totalRows: 0,
+                validRows: 0,
+                errorRows: 0,
+                warningRows: 0,
+              },
+            },
+            processedData: {
+              data: [],
+              headers: [],
+            },
           };
         }}
         previewExcelFile={async (_file: File, _sampleSize?: number) => {
