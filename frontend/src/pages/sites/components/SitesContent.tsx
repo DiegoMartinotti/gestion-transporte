@@ -1,7 +1,7 @@
 import React from 'react';
 import { DataTable } from '../../../components/base';
 import SiteMap from '../../../components/maps/SiteMap';
-import { Site, PaginationData, SiteFilters } from '../../../types';
+import { Site, SiteFilters } from '../../../types';
 
 type FilterValue = string | number | boolean | Date | null | undefined;
 
@@ -9,18 +9,23 @@ interface SitesContentProps {
   viewMode: 'list' | 'map';
   sites: Site[];
   loading: boolean;
-  pagination: PaginationData;
-  selectedSite: Site | null;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+  selectedSite: Site | undefined;
   columns: Array<{
-    accessor: string;
-    title: string;
+    key: string;
+    label: string;
     sortable?: boolean;
     render?: (site: Site) => React.ReactNode;
-    textAlign?: 'center' | 'left' | 'right';
+    align?: 'center' | 'left' | 'right';
   }>;
-  onPageChange: (page: number, pageSize: number) => void;
+  onPageChange: (page: number) => void;
   onFiltersChange: (key: keyof Omit<SiteFilters, 'page' | 'limit'>, value: FilterValue) => void;
-  onSiteSelect: (site: Site | null) => void;
+  onSiteSelect: (site: Site | undefined) => void;
   onSiteEdit: (site: Site) => void;
   setBaseFilters: React.Dispatch<React.SetStateAction<SiteFilters>>;
 }
@@ -54,7 +59,9 @@ export const SitesContent: React.FC<SitesContentProps> = ({
       columns={columns}
       data={sites}
       loading={loading}
-      pagination={pagination}
+      totalItems={pagination.totalItems}
+      currentPage={pagination.currentPage}
+      pageSize={pagination.itemsPerPage}
       onPageChange={onPageChange}
       onFiltersChange={(tableFilters) => {
         if (tableFilters.sortBy && tableFilters.sortOrder) {
@@ -64,9 +71,11 @@ export const SitesContent: React.FC<SitesContentProps> = ({
             sortOrder: tableFilters.sortOrder,
           }));
         }
+        if (tableFilters.search !== undefined) {
+          onFiltersChange('search', tableFilters.search);
+        }
       }}
-      searchable
-      onSearchChange={(search) => onFiltersChange('search', search)}
+      showSearch
     />
   );
 };
