@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Stack, Text, Button, Group, Grid } from '@mantine/core';
+import { Stack, Text, Group, Grid } from '@mantine/core';
 import { Viaje } from '../../types/viaje';
 import { notifications } from '@mantine/notifications';
 import { ViajeTrackerModals } from './components/ViajeTrackerModals';
@@ -19,7 +19,7 @@ interface EventoViaje {
 
 interface ViajeTrackerProps {
   viaje: Viaje;
-  onClose: () => void;
+  onUpdateEstado: (estado: string) => void;
 }
 
 interface EventoFormData {
@@ -30,7 +30,7 @@ interface EventoFormData {
   fecha: Date;
 }
 
-const ViajeTracker: React.FC<ViajeTrackerProps> = ({ viaje, onClose }) => {
+const ViajeTracker: React.FC<ViajeTrackerProps> = ({ viaje, onUpdateEstado: _onUpdateEstado }) => {
   const {
     eventos,
     selectedEvento,
@@ -103,9 +103,6 @@ const ViajeTracker: React.FC<ViajeTrackerProps> = ({ viaje, onClose }) => {
             {viaje.origen?.nombre} → {viaje.destino?.nombre}
           </Text>
         </div>
-        <Button variant="light" onClick={onClose}>
-          Cerrar
-        </Button>
       </Group>
 
       <Grid>
