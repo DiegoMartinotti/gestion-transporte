@@ -62,12 +62,6 @@
     "type-check:test": "tsc --noEmit --project tsconfig.test.json",
     "type-check:e2e": "tsc --noEmit --project tsconfig.e2e.json"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",
