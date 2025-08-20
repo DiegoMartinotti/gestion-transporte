@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ActionIcon, Button, Group, Badge } from '@mantine/core';
+import { ActionIcon, Button, Group } from '@mantine/core';
 import { IconEdit, IconTrash, IconMapPin } from '@tabler/icons-react';
 import { Site } from '../../../types';
 
@@ -40,28 +40,10 @@ export const useSitesTable = ({
         },
       },
       {
-        accessor: 'tipo',
-        title: 'Tipo',
-        sortable: true,
-        render: (site: Site) => {
-          const getColor = () => {
-            if (site.tipo === 'origen') return 'blue';
-            if (site.tipo === 'destino') return 'green';
-            return 'gray';
-          };
-
-          return (
-            <Badge color={getColor()} variant="light">
-              {site.tipo || 'Sin definir'}
-            </Badge>
-          );
-        },
-      },
-      {
         accessor: 'ubicacion',
         title: 'Ubicación',
         render: (site: Site) =>
-          site.ubicacion?.latitud && site.ubicacion?.longitud ? (
+          site.coordenadas?.lat && site.coordenadas?.lng ? (
             <Button
               variant="subtle"
               size="xs"
