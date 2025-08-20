@@ -1,0 +1,110 @@
+import { useMemo } from 'react';
+import { ActionIcon, Button, Group, Badge } from '@mantine/core';
+import { IconEdit, IconTrash, IconMapPin } from '@tabler/icons-react';
+import { Site } from '../../../types';
+
+interface UseSitesTableProps {
+  sites: Site[];
+  getClienteNombre: (clienteId: string) => string;
+  onEdit: (site: Site) => void;
+  onDelete: (site: Site) => void;
+  onOpenMap: (site: Site) => void;
+}
+
+export const useSitesTable = ({
+  sites,
+  getClienteNombre,
+  onEdit,
+  onDelete,
+  onOpenMap,
+}: UseSitesTableProps) => {
+  const columns = useMemo(
+    () => [
+      {
+        accessor: 'nombre',
+        title: 'Nombre',
+        sortable: true,
+      },
+      {
+        accessor: 'direccion',
+        title: 'Dirección',
+        sortable: true,
+      },
+      {
+        accessor: 'cliente',
+        title: 'Cliente',
+        sortable: true,
+        render: (site: Site) => {
+          const clienteId = typeof site.cliente === 'string' ? site.cliente : site.cliente._id;
+          return getClienteNombre(clienteId);
+        },
+      },
+      {
+        accessor: 'tipo',
+        title: 'Tipo',
+        sortable: true,
+        render: (site: Site) => {
+          const getColor = () => {
+            if (site.tipo === 'origen') return 'blue';
+            if (site.tipo === 'destino') return 'green';
+            return 'gray';
+          };
+
+          return (
+            <Badge color={getColor()} variant="light">
+              {site.tipo || 'Sin definir'}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessor: 'ubicacion',
+        title: 'Ubicación',
+        render: (site: Site) =>
+          site.ubicacion?.latitud && site.ubicacion?.longitud ? (
+            <Button
+              variant="subtle"
+              size="xs"
+              leftSection={<IconMapPin size={14} />}
+              onClick={() => onOpenMap(site)}
+            >
+              Ver en mapa
+            </Button>
+          ) : (
+            <span style={{ color: 'var(--mantine-color-dimmed)' }}>Sin ubicación</span>
+          ),
+      },
+      {
+        accessor: 'acciones',
+        title: 'Acciones',
+        textAlign: 'center' as const,
+        render: (site: Site) => (
+          <Group gap="xs" justify="center">
+            <ActionIcon
+              variant="subtle"
+              color="blue"
+              onClick={() => onEdit(site)}
+              aria-label={`Editar ${site.nombre}`}
+            >
+              <IconEdit size={16} />
+            </ActionIcon>
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              onClick={() => onDelete(site)}
+              aria-label={`Eliminar ${site.nombre}`}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Group>
+        ),
+      },
+    ],
+    [getClienteNombre, onEdit, onDelete, onOpenMap]
+  );
+
+  return {
+    columns,
+    records: sites,
+  };
+};
