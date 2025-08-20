@@ -57,7 +57,12 @@ export const useSitesData = (baseFilters: SiteFilters) => {
   return {
     sites: sitesLoader.data,
     loading: sitesLoader.loading,
-    pagination: sitesLoader.pagination,
+    pagination: {
+      currentPage: sitesLoader.currentPage,
+      totalPages: sitesLoader.totalPages,
+      totalItems: sitesLoader.totalItems,
+      itemsPerPage: sitesLoader.itemsPerPage,
+    },
     clientes: clientesLoader.data,
     selectedSite,
     setSelectedSite,
