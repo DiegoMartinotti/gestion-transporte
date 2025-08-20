@@ -3,6 +3,7 @@ import { ExcelImportModal } from '../../../components/modals/ExcelImportModal';
 import { tramoExcelService } from '../../../services/BaseExcelService';
 import { ModalReturn } from '../../../hooks/useModal';
 import { TramosImportResult } from '../types';
+import { ImportResult } from '../../../components/modals/types/ExcelImportModalTypes';
 
 interface TramoImportModalProps {
   importModal: ModalReturn;
@@ -13,13 +14,21 @@ export const TramoImportModal: React.FC<TramoImportModalProps> = ({
   importModal,
   onImportComplete,
 }) => {
+  const handleImportComplete = (result: ImportResult) => {
+    const tramosResult: TramosImportResult = {
+      ...result,
+      entityType: 'tramos' as const,
+    };
+    onImportComplete(tramosResult);
+  };
+
   return (
     <ExcelImportModal
       opened={importModal.isOpen}
       onClose={importModal.close}
       title="Importar Tramos desde Excel"
       entityType="cliente"
-      onImportComplete={onImportComplete}
+      onImportComplete={handleImportComplete}
       processExcelFile={async (file: File) => {
         return await tramoExcelService.importFromExcel(file);
       }}
