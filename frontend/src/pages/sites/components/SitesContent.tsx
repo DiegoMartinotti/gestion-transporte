@@ -23,7 +23,7 @@ interface SitesContentProps {
     render?: (site: Site) => React.ReactNode;
     align?: 'center' | 'left' | 'right';
   }>;
-  onPageChange: (page: number) => void;
+  onPageChange: (page: number, pageSize: number) => void;
   onFiltersChange: (key: keyof Omit<SiteFilters, 'page' | 'limit'>, value: FilterValue) => void;
   onSiteSelect: (site: Site | undefined) => void;
   onSiteEdit: (site: Site) => void;
@@ -62,7 +62,8 @@ export const SitesContent: React.FC<SitesContentProps> = ({
       totalItems={pagination.totalItems}
       currentPage={pagination.currentPage}
       pageSize={pagination.itemsPerPage}
-      onPageChange={onPageChange}
+      onPageChange={(page) => onPageChange(page, pagination.itemsPerPage)}
+      onPageSizeChange={(pageSize) => onPageChange(pagination.currentPage, pageSize)}
       onFiltersChange={(tableFilters) => {
         if (tableFilters.sortBy && tableFilters.sortOrder) {
           setBaseFilters((prev) => ({

@@ -6,11 +6,23 @@ import { ModalReturn } from '../../../hooks/useModal';
 import { siteService } from '../../../services/siteService';
 import { siteExcelService } from '../../../services/BaseExcelService';
 
+interface ImportResult {
+  success: boolean;
+  summary?: {
+    totalRows: number;
+    insertedRows: number;
+    errorRows: number;
+  };
+  hasMissingData?: boolean;
+  importId?: string;
+  errors?: unknown[];
+}
+
 interface SitesModalsProps {
   deleteModal: ModalReturn<Site>;
   importModal: ModalReturn;
   onDelete: (site: Site) => void;
-  onImportComplete: () => void;
+  onImportComplete: (result: ImportResult) => void;
   onImportClose: () => void;
 }
 
