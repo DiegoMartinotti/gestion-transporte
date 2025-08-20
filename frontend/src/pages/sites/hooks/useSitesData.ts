@@ -5,7 +5,7 @@ import { siteService } from '../../../services/siteService';
 import { clienteService } from '../../../services/clienteService';
 
 export const useSitesData = (baseFilters: SiteFilters) => {
-  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+  const [selectedSite, setSelectedSite] = useState<Site | undefined>(undefined);
 
   const sitesLoader = useDataLoader<Site>({
     fetchFunction: async () => {

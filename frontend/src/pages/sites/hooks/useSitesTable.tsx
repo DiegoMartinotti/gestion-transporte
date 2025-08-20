@@ -21,18 +21,18 @@ export const useSitesTable = ({
   const columns = useMemo(
     () => [
       {
-        accessor: 'nombre',
-        title: 'Nombre',
+        key: 'nombre',
+        label: 'Nombre',
         sortable: true,
       },
       {
-        accessor: 'direccion',
-        title: 'Dirección',
+        key: 'direccion',
+        label: 'Dirección',
         sortable: true,
       },
       {
-        accessor: 'cliente',
-        title: 'Cliente',
+        key: 'cliente',
+        label: 'Cliente',
         sortable: true,
         render: (site: Site) => {
           const clienteId = typeof site.cliente === 'string' ? site.cliente : site.cliente._id;
@@ -40,8 +40,8 @@ export const useSitesTable = ({
         },
       },
       {
-        accessor: 'ubicacion',
-        title: 'Ubicación',
+        key: 'ubicacion',
+        label: 'Ubicación',
         render: (site: Site) =>
           site.coordenadas?.lat && site.coordenadas?.lng ? (
             <Button
@@ -57,9 +57,9 @@ export const useSitesTable = ({
           ),
       },
       {
-        accessor: 'acciones',
-        title: 'Acciones',
-        textAlign: 'center' as const,
+        key: 'acciones',
+        label: 'Acciones',
+        align: 'center' as const,
         render: (site: Site) => (
           <Group gap="xs" justify="center">
             <ActionIcon

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Container, Group, SegmentedControl, Stack, Space } from '@mantine/core';
-import { IconList, IconMap } from '@tabler/icons-react';
 import { Site, SiteFilters } from '../../types';
 import { useModal } from '../../hooks/useModal';
 import { siteExcelService } from '../../services/BaseExcelService';
@@ -82,10 +81,10 @@ const SitesPage: React.FC = () => {
         <Group justify="flex-end">
           <SegmentedControl
             value={viewMode}
-            onChange={(value: 'list' | 'map') => setViewMode(value)}
+            onChange={(value) => setViewMode(value as 'list' | 'map')}
             data={[
-              { label: 'Lista', value: 'list', leftSection: <IconList size={16} /> },
-              { label: 'Mapa', value: 'map', leftSection: <IconMap size={16} /> },
+              { label: 'Lista', value: 'list' },
+              { label: 'Mapa', value: 'map' },
             ]}
           />
         </Group>
@@ -114,7 +113,6 @@ const SitesPage: React.FC = () => {
         onImportComplete={handleImportComplete}
         onImportClose={() => {
           importModal.close();
-          excelOperations.resetImportForm();
         }}
       />
     </Container>
