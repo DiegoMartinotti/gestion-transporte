@@ -2,12 +2,13 @@ import React from 'react';
 import { ConfirmModal } from '../../../components/base';
 import { ExcelImportModal } from '../../../components/modals';
 import { Site } from '../../../types';
-import { Modal } from '../../../hooks/useModal';
+import { ModalReturn } from '../../../hooks/useModal';
+import { siteService } from '../../../services/siteService';
 import { siteExcelService } from '../../../services/BaseExcelService';
 
 interface SitesModalsProps {
-  deleteModal: Modal<Site>;
-  importModal: Modal;
+  deleteModal: ModalReturn<Site>;
+  importModal: ModalReturn;
   onDelete: (site: Site) => void;
   onImportComplete: () => void;
   onImportClose: () => void;
@@ -35,9 +36,9 @@ export const SitesModals: React.FC<SitesModalsProps> = ({
       title="Importar Sites"
       entityType="sites"
       onImportComplete={onImportComplete}
-      processExcelFile={siteExcelService.processExcelFile}
-      validateExcelFile={siteExcelService.validateExcelFile}
-      previewExcelFile={siteExcelService.previewExcelFile}
+      processExcelFile={siteService.processExcelFile.bind(siteService)}
+      validateExcelFile={siteService.validateExcelFile.bind(siteService)}
+      previewExcelFile={siteService.previewExcelFile.bind(siteService)}
       getTemplate={siteExcelService.getTemplate}
     />
   </>
