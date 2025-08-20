@@ -1,12 +1,13 @@
 import React from 'react';
-import { Stack, Textarea, Select, DateInput, Group, Button } from '@mantine/core';
+import { Stack, Textarea, Select, Group, Button } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 
 interface EventoFormData {
   descripcion: string;
   estado: 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
   observaciones: string;
   responsable: string;
-  fecha: Date;
+  fecha: string;
 }
 
 interface EventoFormProps {
@@ -50,7 +51,9 @@ export const EventoForm: React.FC<EventoFormProps> = ({
       label="Fecha"
       required
       value={formData.fecha}
-      onChange={(date) => setFormData({ ...formData, fecha: date || new Date() })}
+      onChange={(date) =>
+        setFormData({ ...formData, fecha: date || new Date().toISOString().split('T')[0] })
+      }
     />
 
     <Textarea
