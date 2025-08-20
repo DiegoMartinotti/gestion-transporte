@@ -1,6 +1,11 @@
-import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+  AxiosRequestConfig,
+} from 'axios';
 import { notifications } from '@mantine/notifications';
-import { API_BASE_URL, TOKEN_KEY } from '../constants';
+import { API_BASE_URL } from '../constants';
 import { ApiResponse } from '../types';
 
 class ApiService {
@@ -36,8 +41,12 @@ class ApiService {
         return response;
       },
       (error) => {
-        const message = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido';
-        
+        const message =
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          error.message ||
+          'Error desconocido';
+
         // Show error notification
         notifications.show({
           title: 'Error',
@@ -59,17 +68,17 @@ class ApiService {
   }
 
   // Generic methods
-  async get<T>(url: string, params?: any): Promise<ApiResponse<T>> {
+  async get<T>(url: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
     const response = await this.client.get(url, { params });
     return response.data;
   }
 
-  async post<T>(url: string, data?: any, config?: any): Promise<ApiResponse<T>> {
+  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.post(url, data, config);
     return response.data;
   }
 
-  async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async put<T>(url: string, data?: unknown): Promise<ApiResponse<T>> {
     const response = await this.client.put(url, data);
     return response.data;
   }
@@ -79,13 +88,17 @@ class ApiService {
     return response.data;
   }
 
-  async patch<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async patch<T>(url: string, data?: unknown): Promise<ApiResponse<T>> {
     const response = await this.client.patch(url, data);
     return response.data;
   }
 
   // File upload
-  async uploadFile<T>(url: string, file: File, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> {
+  async uploadFile<T>(
+    url: string,
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<ApiResponse<T>> {
     const formData = new FormData();
     formData.append('file', file);
 

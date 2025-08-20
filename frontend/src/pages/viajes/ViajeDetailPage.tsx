@@ -1,8 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Button, Group, Stack, Title, Alert } from '@mantine/core';
+import { Container, Button, Group, Stack, Alert } from '@mantine/core';
 import { IconArrowLeft, IconAlertCircle, IconEdit } from '@tabler/icons-react';
 import { ViajeDetail } from './ViajeDetail';
-import { LoadingOverlay } from '../../components/base';
 
 export default function ViajeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,12 +21,7 @@ export default function ViajeDetailPage() {
             </Button>
           </Group>
 
-          <Alert
-            icon={<IconAlertCircle size="1rem" />}
-            title="Error"
-            color="red"
-            variant="light"
-          >
+          <Alert icon={<IconAlertCircle size="1rem" />} title="Error" color="red" variant="light">
             ID de viaje no proporcionado.
           </Alert>
         </Stack>
@@ -56,20 +50,13 @@ export default function ViajeDetailPage() {
               Volver a Viajes
             </Button>
           </Group>
-          
-          <Button
-            leftSection={<IconEdit size="1rem" />}
-            onClick={handleEdit}
-          >
+
+          <Button leftSection={<IconEdit size="1rem" />} onClick={handleEdit}>
             Editar Viaje
           </Button>
         </Group>
 
-        <ViajeDetail
-          viajeId={id}
-          onEdit={handleEdit}
-          onClose={handleClose}
-        />
+        <ViajeDetail viajeId={id} onEdit={handleEdit} onClose={handleClose} />
       </Stack>
     </Container>
   );
