@@ -16,13 +16,19 @@ export const ViajeInfo: React.FC<ViajeInfoProps> = ({ viaje }) => (
       <Group gap="xs">
         <IconMapPin size={16} />
         <Text size="sm">
-          <strong>Origen:</strong> {viaje.origen?.nombre}
+          <strong>Origen:</strong>{' '}
+          {typeof viaje.origen === 'object'
+            ? viaje.origen?.denominacion || viaje.origen?.nombre
+            : viaje.origen}
         </Text>
       </Group>
       <Group gap="xs">
         <IconFlag size={16} />
         <Text size="sm">
-          <strong>Destino:</strong> {viaje.destino?.nombre}
+          <strong>Destino:</strong>{' '}
+          {typeof viaje.destino === 'object'
+            ? viaje.destino?.denominacion || viaje.destino?.nombre
+            : viaje.destino}
         </Text>
       </Group>
       <Text size="sm">
