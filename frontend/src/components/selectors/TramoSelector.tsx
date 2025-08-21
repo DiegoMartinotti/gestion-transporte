@@ -28,7 +28,7 @@ export function TramoSelector({
     () =>
       tramos.map((tramo) => ({
         value: tramo._id,
-        label: `${tramo.denominacion} (${tramo.distanciaKm} km)`,
+        label: `${tramo.origen.nombre} → ${tramo.destino.nombre} (${tramo.distancia} km)`,
       })),
     [tramos] // Only recalculate when tramos array changes
   );
