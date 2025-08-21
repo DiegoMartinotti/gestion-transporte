@@ -3,6 +3,7 @@ import { Stack, Text, Group, Grid } from '@mantine/core';
 import { Viaje } from '../../types/viaje';
 import { notifications } from '@mantine/notifications';
 import { ViajeTrackerModals } from './components/ViajeTrackerModals';
+import { EventoFormData } from './components/EventoForm';
 import { useViajeTrackerData } from './hooks/useViajeTrackerData';
 import { ViajeProgress } from './components/ViajeProgress';
 import { ViajeInfo } from './components/ViajeInfo';
@@ -20,14 +21,6 @@ interface EventoViaje {
 interface ViajeTrackerProps {
   viaje: Viaje;
   onUpdateEstado: (estado: string) => void;
-}
-
-interface EventoFormData {
-  descripcion: string;
-  estado: 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
-  observaciones: string;
-  responsable: string;
-  fecha: Date;
 }
 
 const ViajeTracker: React.FC<ViajeTrackerProps> = ({ viaje, onUpdateEstado: _onUpdateEstado }) => {
