@@ -15,7 +15,7 @@ const renderTarifaBadges = (
   tipo: string,
   metodoCalculo: string,
   valor: number,
-  valorPeaje: number
+  valorPeaje?: number
 ) => (
   <Group gap="xs">
     <Badge color="blue" size="xs">
@@ -25,7 +25,7 @@ const renderTarifaBadges = (
       {metodoCalculo}
     </Badge>
     <Badge color="yellow" size="xs">
-      ${valor} + ${valorPeaje}
+      ${valor} + ${valorPeaje || 0}
     </Badge>
   </Group>
 );
