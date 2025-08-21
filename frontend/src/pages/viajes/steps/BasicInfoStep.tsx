@@ -65,7 +65,6 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
               form.setFieldValue('tramo', value || '');
               onTramoChange(value || '');
             }}
-            clienteId={form.values.cliente}
             error={typeof form.errors.tramo === 'string' ? form.errors.tramo : undefined}
             required
           />
@@ -76,12 +75,14 @@ const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
         <Alert icon={<IconMapPin />} color="blue">
           <Group justify="apart">
             <div>
-              <Text fw={500}>{selectedTramo.denominacion}</Text>
+              <Text fw={500}>
+                {selectedTramo.origen?.nombre} - {selectedTramo.destino?.nombre}
+              </Text>
               <Text size="sm" c="dimmed">
-                {selectedTramo.origen?.denominacion} → {selectedTramo.destino?.denominacion}
+                {selectedTramo.origen?.nombre} → {selectedTramo.destino?.nombre}
               </Text>
             </div>
-            <Badge color="blue">{selectedTramo.distanciaKm} km</Badge>
+            <Badge color="blue">{selectedTramo.distancia} km</Badge>
           </Group>
         </Alert>
       )}
