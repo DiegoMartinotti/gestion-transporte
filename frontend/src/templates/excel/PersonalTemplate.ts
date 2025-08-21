@@ -225,51 +225,29 @@ export class PersonalTemplate {
       XLSX.utils.book_append_sheet(wb, empresasWs, 'Ref_Empresas');
     }
   }
-
-  /**
-   * Genera una plantilla Excel para carga masiva de personal
-   */
   static generateTemplate(empresas: { id: string; nombre: string }[] = []): WorkBook {
     const wb = XLSX.utils.book_new();
-
-    // Hoja principal con plantilla
     const wsData = [
       EXCEL_SHARED_CONSTANTS.PERSONAL.HEADERS,
       ...PERSONAL_CONSTANTS.SAMPLE_DATA.map((row) =>
         this.mapRowToColumns(row as PersonalTemplateData)
       ),
     ];
-
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Configurar ancho de columnas usando constantes
     ws['!cols'] = this.createColumnWidths();
-
-    // Agregar validaciones de datos
     this.addDataValidations(ws, empresas);
-
-    // Agregar todas las hojas del workbook
     this.addWorksheets(wb, ws, empresas);
-
     return wb;
   }
-
-  /**
-   * Crea hoja de instrucciones
-   */
   private static createInstructionsSheet(): WorkSheet {
     const ws = XLSX.utils.aoa_to_sheet(EXCEL_SHARED_CONSTANTS.PERSONAL.INSTRUCTIONS);
     ws['!cols'] = [{ wch: EXCEL_SHARED_CONSTANTS.COLUMN_WIDTHS.INSTRUCTIONS_WIDE }];
     return ws;
   }
 
-  /**
-   * Crea hoja de referencia de empresas
-   */
   private static createEmpresasReferenceSheet(
     empresas: { id: string; nombre: string }[]
   ): WorkSheet {
-    // Adaptar el tipo de empresas para ReferenceDataSheets
     const empresasCompletas = empresas.map((e) => ({
       ...e,
       tipo: 'Propia' as const,
@@ -290,9 +268,9 @@ export class PersonalTemplate {
     const dnisVistos = new Set<string>();
     const empresaMap = new Map(empresas.map((e) => [e.nombre, e.id]));
 
-    data.forEach((row: Record<string, unknown>, index) => {
+    data.forEach((row, index) => {
       const rowNum = index + 2;
-      const personal = this.parsePersonalRowData(row);
+      const personal = this.parsePersonalRowData(row as Record<string, unknown>);
 
       // Validación usando métodos auxiliares
       const validationResult = this.validatePersonalRow({
@@ -492,12 +470,10 @@ export class PersonalTemplate {
     return { isValid: errors.length === 0, errors };
   }
 
-  // Construir objeto PersonalTemplateData
   private static buildPersonalData(
     personal: PersonalRawData,
     empresaId?: string
   ): PersonalTemplateData {
-    // Campos básicos obligatorios
     const baseData: PersonalTemplateData = {
       nombre: personal.nombre || '',
       apellido: personal.apellido || '',
@@ -541,7 +517,6 @@ export class PersonalTemplate {
       'psicofisicoFecha',
       'psicofisicoVencimiento',
     ];
-
     dateFields.forEach((field) => {
       if (personal[field]) {
         (baseData as unknown as Record<string, unknown>)[field] = parseDate(personal[field]);
@@ -550,15 +525,8 @@ export class PersonalTemplate {
     if (personal.activo !== undefined) {
       baseData.activo = parseBooleanValue(personal.activo);
     }
-
     return baseData;
   }
-
-  // Métodos auxiliares para reducción de complejidad
-
-  /**
-   * Genera archivo Excel para descarga
-   */
   static downloadTemplate(
     empresas: { id: string; nombre: string }[] = [],
     filename = PERSONAL_CONSTANTS.DEFAULTS.FILENAME
@@ -567,5 +535,4 @@ export class PersonalTemplate {
     XLSX.writeFile(wb, filename);
   }
 }
-
 export default PersonalTemplate;
