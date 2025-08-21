@@ -202,11 +202,8 @@ export const updateFormWithTramoData = (
   setFieldValue: (field: string, value: number) => void
 ) => {
   if (!tramo) return;
-  if (tramo.distanciaKm) {
-    setFieldValue('distanciaKm', tramo.distanciaKm);
-  }
-  if (tramo.tiempoEstimadoHoras) {
-    setFieldValue('tiempoEstimadoHoras', tramo.tiempoEstimadoHoras);
+  if (tramo.distancia) {
+    setFieldValue('distanciaKm', tramo.distancia);
   }
 };
 
@@ -230,13 +227,11 @@ export const canCalculateTarifa = (
 // Extra management helpers
 export const updateExtraField = (
   extras: Extra[],
-  index: number,
-  field: keyof Extra,
-  value: string | number,
+  update: { index: number; field: keyof Extra; value: string | number },
   setFieldValue: (field: string, value: Extra[]) => void
 ) => {
   const newExtras = [...extras];
-  newExtras[index] = { ...newExtras[index], [field]: value };
+  newExtras[update.index] = { ...newExtras[update.index], [update.field]: update.value };
   setFieldValue('extras', newExtras);
 };
 
