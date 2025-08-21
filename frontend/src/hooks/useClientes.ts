@@ -1,16 +1,34 @@
 import { useState, useEffect } from 'react';
+import { Cliente } from '../types/cliente';
 
-interface Cliente {
-  _id: string;
-  nombre: string;
-  email?: string;
-}
+const DEFAULT_DATE = '2024-01-01T00:00:00Z';
 
 export function useClientes() {
   const [clientes] = useState<Cliente[]>([
-    { _id: '1', nombre: 'Empresa ABC S.A.', email: 'contacto@abc.com' },
-    { _id: '2', nombre: 'Distribuidora XYZ', email: 'ventas@xyz.com' },
-    { _id: '3', nombre: 'Logística del Sur', email: 'info@sur.com' },
+    {
+      _id: '1',
+      nombre: 'Empresa ABC S.A.',
+      email: 'contacto@abc.com',
+      activo: true,
+      createdAt: DEFAULT_DATE,
+      updatedAt: DEFAULT_DATE,
+    },
+    {
+      _id: '2',
+      nombre: 'Distribuidora XYZ',
+      email: 'ventas@xyz.com',
+      activo: true,
+      createdAt: DEFAULT_DATE,
+      updatedAt: DEFAULT_DATE,
+    },
+    {
+      _id: '3',
+      nombre: 'Logística del Sur',
+      email: 'info@sur.com',
+      activo: true,
+      createdAt: DEFAULT_DATE,
+      updatedAt: DEFAULT_DATE,
+    },
   ]);
   const [loading, setLoading] = useState(false);
   const [error] = useState<string | null>(null);
