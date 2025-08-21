@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal } from '@mantine/core';
-import { EventoForm } from './EventoForm';
+import { EventoForm, EventoFormData } from './EventoForm';
 
 interface EventoViaje {
   id: string;
@@ -9,14 +9,6 @@ interface EventoViaje {
   estado: 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
   observaciones?: string;
   responsable?: string;
-}
-
-interface EventoFormData {
-  descripcion: string;
-  estado: 'pendiente' | 'en_progreso' | 'completado' | 'cancelado';
-  observaciones: string;
-  responsable: string;
-  fecha: Date;
 }
 
 interface ViajeTrackerModalsProps {
