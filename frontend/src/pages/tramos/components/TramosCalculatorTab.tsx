@@ -14,25 +14,19 @@ interface TramosCalculatorTabProps {
 }
 
 export const TramosCalculatorTab: React.FC<TramosCalculatorTabProps> = ({
-  tramos,
+  tramos: _tramos,
   formModal,
   onCalculationChange,
 }) => {
   return (
     <Stack gap="md">
       <TramosSelector
-        value={formModal.selectedItem?._id || ''}
-        onChange={(tramoId) => {
-          const tramo = tramos.find((t) => t._id === tramoId);
+        selectedTramo={formModal.selectedItem}
+        onTramoSelect={(tramo) => {
           if (tramo) {
             formModal.openEdit(tramo);
           }
         }}
-        data={tramos.map((t) => ({
-          value: t._id,
-          label: `${t.origen.nombre} → ${t.destino.nombre} (${t.cliente.nombre})`,
-        }))}
-        placeholder="Seleccione un tramo para calcular"
       />
 
       {formModal.selectedItem && (
@@ -40,7 +34,27 @@ export const TramosCalculatorTab: React.FC<TramosCalculatorTabProps> = ({
           <TarifaCalculator
             tramoId={formModal.selectedItem._id}
             tramo={formModal.selectedItem}
-            onCalculationChange={onCalculationChange}
+            onCalculationChange={(calculation) => {
+              // Convertir CalculationResult a TarifaCalculationResult
+              const result: TarifaCalculationResult = {
+                tarifa: calculation.tarifaBase,
+                peaje: 0, // Calcular desde el desglose si existe
+                total: calculation.total,
+                metodo: calculation.metodCalculo,
+                variables: {},
+                formula: calculation.desglose.find((d) => d.formula)?.formula,
+              };
+
+              // Extraer peaje del desglose si existe
+              const peajeItem = calculation.desglose.find((d) =>
+                d.concepto.toLowerCase().includes('peaje')
+              );
+              if (peajeItem) {
+                result.peaje = peajeItem.valor;
+              }
+
+              onCalculationChange(result);
+            }}
           />
 
           <TarifaVersioning
