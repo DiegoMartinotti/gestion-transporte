@@ -15,12 +15,6 @@ import {
   TramoFilters as LocalTramoFilters,
 } from '../helpers/tramosPageHelpers';
 
-interface LocalSite {
-  _id: string;
-  nombre: string;
-  cliente: string;
-}
-
 // Funciones auxiliares para reducir complejidad
 const extractTramosData = async () => {
   const response = await tramoService.getAll();
@@ -62,16 +56,12 @@ const useDataLoaders = () => {
     errorMessage: 'Error al cargar clientes',
   });
 
-  const sitesLoader = useDataLoader<LocalSite>({
+  const sitesLoader = useDataLoader<Site>({
     fetchFunction: useCallback(async () => {
       const response = await siteService.getAll();
       const sitesData = Array.isArray(response) ? response : response.data;
       return {
-        data: sitesData.map((site: Site) => ({
-          _id: site._id,
-          nombre: site.nombre,
-          cliente: typeof site.cliente === 'string' ? site.cliente : site.cliente._id,
-        })),
+        data: sitesData,
         pagination: {
           currentPage: 1,
           totalPages: 1,
