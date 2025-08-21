@@ -23,18 +23,18 @@ export const TramosListView: React.FC<TramosListViewProps> = ({
     <DataTable
       data={tramos}
       columns={[
-        { key: 'cliente.nombre', header: 'Cliente', sortable: true },
-        { key: 'origen.nombre', header: 'Origen', sortable: true },
-        { key: 'destino.nombre', header: 'Destino', sortable: true },
-        { key: 'distancia', header: 'Distancia (km)', sortable: true },
+        { key: 'cliente.nombre', label: 'Cliente', sortable: true },
+        { key: 'origen.nombre', label: 'Origen', sortable: true },
+        { key: 'destino.nombre', label: 'Destino', sortable: true },
+        { key: 'distancia', label: 'Distancia (km)', sortable: true },
         {
           key: 'tarifa',
-          header: 'Tarifa',
+          label: 'Tarifa',
           render: getTarifaStatus,
         },
         {
           key: 'actions',
-          header: 'Acciones',
+          label: 'Acciones',
           render: (tramo: Tramo) => (
             <Group gap="xs">
               <ActionIcon size="sm" variant="light" onClick={() => detailModal.openView(tramo)}>
