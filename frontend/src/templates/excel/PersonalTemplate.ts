@@ -29,17 +29,14 @@ export interface PersonalTemplateData {
   empresaNombre?: string;
   numeroLegajo?: string;
   fechaIngreso?: Date;
-  // Dirección
   direccionCalle?: string;
   direccionNumero?: string;
   direccionLocalidad?: string;
   direccionProvincia?: string;
   direccionCodigoPostal?: string;
-  // Contacto
   telefono?: string;
   telefonoEmergencia?: string;
   email?: string;
-  // Documentación
   licenciaNumero?: string;
   licenciaCategoria?: string;
   licenciaVencimiento?: Date;
@@ -49,7 +46,6 @@ export interface PersonalTemplateData {
   evaluacionMedicaVencimiento?: Date;
   psicofisicoFecha?: Date;
   psicofisicoVencimiento?: Date;
-  // Datos laborales
   categoria?: string;
   obraSocial?: string;
   art?: string;
@@ -57,7 +53,6 @@ export interface PersonalTemplateData {
   observaciones?: string;
 }
 
-// Constantes para PersonalTemplate
 const PERSONAL_CONSTANTS = {
   VALIDATION: {
     DNI_REGEX: /^[0-9]{7,8}$/,
@@ -79,10 +74,7 @@ const PERSONAL_CONSTANTS = {
     REQUIRED_LICENSE: 'Licencia obligatoria para conductores',
   },
   ERROR_PREFIX: 'Fila',
-  DEFAULTS: {
-    FILENAME: 'plantilla_personal.xlsx',
-    ACTIVE_VALUE: 'Sí',
-  },
+  DEFAULTS: { FILENAME: 'plantilla_personal.xlsx', ACTIVE_VALUE: 'Sí' },
   SAMPLE_DATA: [
     {
       nombre: 'Juan Carlos',
@@ -144,9 +136,6 @@ const PERSONAL_CONSTANTS = {
 };
 
 export class PersonalTemplate {
-  /**
-   * Funciones auxiliares para reducir complejidad ciclomática
-   */
   private static mapRowToColumns(row: PersonalTemplateData): (string | number)[] {
     const formatValue = (value: unknown): string => String(value || '');
     const formatDateValue = (date?: Date): string => formatDate(date || null);
@@ -156,8 +145,6 @@ export class PersonalTemplate {
           ? EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.SI
           : EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.NO
         : PERSONAL_CONSTANTS.DEFAULTS.ACTIVE_VALUE;
-
-    // Orden de columnas según HEADERS
     return [
       formatValue(row.nombre),
       formatValue(row.apellido),
@@ -206,15 +193,11 @@ export class PersonalTemplate {
   ) {
     const DATA_VALIDATION_KEY = '!dataValidation';
     if (!ws[DATA_VALIDATION_KEY]) ws[DATA_VALIDATION_KEY] = [];
-
-    // Validación para Tipo
     ws[DATA_VALIDATION_KEY].push({
       sqref: 'E2:E1000',
       type: 'list',
       formula1: `"${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.CONDUCTOR},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.ADMINISTRATIVO},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.MECANICO},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.SUPERVISOR},${EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.OTRO}"`,
     });
-
-    // Validación para Empresa (si se proporcionan empresas)
     if (empresas.length > 0) {
       const empresaNames = empresas.map((e) => e.nombre).join(',');
       ws[DATA_VALIDATION_KEY].push({
@@ -223,27 +206,20 @@ export class PersonalTemplate {
         formula1: `"${empresaNames}"`,
       });
     }
-
-    // Validación para Activo
     ws[DATA_VALIDATION_KEY].push({
       sqref: 'AE2:AE1000',
       type: 'list',
       formula1: `"${EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.SI},${EXCEL_SHARED_CONSTANTS.PERSONAL.BOOLEAN.NO}"`,
     });
   }
-
   private static addWorksheets(
     wb: WorkBook,
     ws: WorkSheet,
     empresas: { id: string; nombre: string }[] = []
   ) {
     XLSX.utils.book_append_sheet(wb, ws, 'Personal');
-
-    // Hoja de instrucciones
     const instructionsWs = this.createInstructionsSheet();
     XLSX.utils.book_append_sheet(wb, instructionsWs, 'Instrucciones');
-
-    // Hoja de referencia de empresas si se proporcionan
     if (empresas.length > 0) {
       const empresasWs = this.createEmpresasReferenceSheet(empresas);
       XLSX.utils.book_append_sheet(wb, empresasWs, 'Ref_Empresas');
@@ -314,7 +290,7 @@ export class PersonalTemplate {
     const dnisVistos = new Set<string>();
     const empresaMap = new Map(empresas.map((e) => [e.nombre, e.id]));
 
-    data.forEach((row, index) => {
+    data.forEach((row: Record<string, unknown>, index) => {
       const rowNum = index + 2;
       const personal = this.parsePersonalRowData(row);
 
@@ -337,9 +313,7 @@ export class PersonalTemplate {
     return { valid, errors };
   }
 
-  // Método auxiliar para parsear datos de fila de personal
   private static parsePersonalRowData(row: Record<string, unknown>): PersonalRawData {
-    // Mapa de columnas a propiedades
     const columnMap: { [key: string]: string } = {
       'Nombre (*)': 'nombre',
       'Apellido (*)': 'apellido',
@@ -380,24 +354,17 @@ export class PersonalTemplate {
     Object.entries(columnMap).forEach(([columnName, propName]) => {
       const value = row[columnName];
       if (value !== undefined && value !== null && value !== '') {
-        // Tratamiento especial para DNI (solo números)
         if (propName === 'dni') {
           parsedData[propName] = value.toString().trim().replace(/\D/g, '');
-        }
-        // Tratamiento para fechas
-        else if (
+        } else if (
           propName.includes('fecha') ||
           propName.includes('Fecha') ||
           propName.includes('Vencimiento')
         ) {
           parsedData[propName] = value.toString().trim();
-        }
-        // Tratamiento para activo (booleano)
-        else if (propName === 'activo') {
+        } else if (propName === 'activo') {
           parsedData[propName] = parseBooleanValue(value);
-        }
-        // Campos normales
-        else {
+        } else {
           parsedData[propName] = value.toString().trim();
         }
       }
@@ -415,26 +382,18 @@ export class PersonalTemplate {
     empresas: { id: string; nombre: string }[];
   }): { isValid: boolean; personalData?: PersonalTemplateData; errors: string[] } {
     const { personal, rowNum, dnisVistos, empresaMap, empresas } = params;
-
-    // Validar campos obligatorios
     const requiredResult = this.validatePersonalRequiredFields(personal, rowNum);
     if (!requiredResult.isValid) {
       return { isValid: false, errors: requiredResult.errors };
     }
-
-    // Validar formatos básicos
     const formatResult = this.validatePersonalFormats(personal, rowNum);
     if (!formatResult.isValid) {
       return { isValid: false, errors: formatResult.errors };
     }
-
-    // Validar duplicados
     const duplicateResult = this.validatePersonalDuplicates(personal.dni || '', rowNum, dnisVistos);
     if (!duplicateResult.isValid) {
       return { isValid: false, errors: duplicateResult.errors };
     }
-
-    // Validar empresa
     const empresaResult = this.validatePersonalEmpresa(
       personal.empresaNombre as string,
       rowNum,
@@ -444,14 +403,10 @@ export class PersonalTemplate {
     if (!empresaResult.isValid) {
       return { isValid: false, errors: empresaResult.errors };
     }
-
-    // Validar campos específicos según tipo
     const specificResult = this.validatePersonalSpecificFields(personal, rowNum);
     if (!specificResult.isValid) {
       return { isValid: false, errors: specificResult.errors };
     }
-
-    // Construir objeto personalData
     const personalData = this.buildPersonalData(personal, empresaResult.empresaId);
 
     return { isValid: true, personalData, errors: [] };
@@ -471,30 +426,23 @@ export class PersonalTemplate {
     ]);
   }
 
-  // Validar formatos de personal
   private static validatePersonalFormats(
     personal: PersonalRawData,
     rowNum: number
   ): { isValid: boolean; errors: string[] } {
     const validationResults = [];
-
-    // Validar formato DNI
     if (personal.dni) {
       validationResults.push(validateDNIFormat(personal.dni, rowNum));
     }
-
-    // Validar tipo
     const validTypes = Object.values(EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS);
-    validationResults.push(validateEnumValue(personal.tipo, rowNum, validTypes, 'Tipo'));
-
-    // Validar CUIL si se proporciona
+    if (personal.tipo) {
+      validationResults.push(validateEnumValue(personal.tipo, rowNum, validTypes, 'Tipo'));
+    }
     if (personal.cuil) {
       validationResults.push(validateCUILFormat(personal.cuil, rowNum));
     }
-
-    // Validar email si se proporciona
     if (personal.email) {
-      validationResults.push(validateEmailFormat(personal.email, rowNum));
+      validationResults.push(validateEmailFormat(personal.email as string, rowNum));
     }
 
     return combineValidationResults(...validationResults);
@@ -525,14 +473,11 @@ export class PersonalTemplate {
     };
   }
 
-  // Validar campos específicos según tipo de personal
   private static validatePersonalSpecificFields(
     personal: PersonalRawData,
     rowNum: number
   ): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
-
-    // Validaciones específicas por tipo usando un mapa
     const typeValidations: { [key: string]: () => void } = {
       [EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.CONDUCTOR]: () => {
         if (!personal.licenciaNumero) {
@@ -540,13 +485,10 @@ export class PersonalTemplate {
         }
       },
     };
-
-    // Ejecutar validación específica si existe
-    const validation = typeValidations[personal.tipo];
+    const validation = personal.tipo ? typeValidations[personal.tipo] : undefined;
     if (validation) {
       validation();
     }
-
     return { isValid: errors.length === 0, errors };
   }
 
@@ -557,15 +499,13 @@ export class PersonalTemplate {
   ): PersonalTemplateData {
     // Campos básicos obligatorios
     const baseData: PersonalTemplateData = {
-      nombre: personal.nombre,
-      apellido: personal.apellido,
-      dni: personal.dni,
-      tipo: personal.tipo as any,
+      nombre: personal.nombre || '',
+      apellido: personal.apellido || '',
+      dni: personal.dni || '',
+      tipo: personal.tipo as 'Conductor' | 'Administrativo' | 'Mecánico' | 'Supervisor' | 'Otro',
       empresaId,
-      empresaNombre: personal.empresaNombre,
+      empresaNombre: personal.empresaNombre as string | undefined,
     };
-
-    // Agregar campos opcionales de texto
     const textFields = [
       'cuil',
       'email',
@@ -588,11 +528,9 @@ export class PersonalTemplate {
 
     textFields.forEach((field) => {
       if (personal[field]) {
-        (baseData as Record<string, string>)[field] = personal[field] as string;
+        (baseData as unknown as Record<string, unknown>)[field] = personal[field] as string;
       }
     });
-
-    // Agregar campos de fecha
     const dateFields = [
       'fechaNacimiento',
       'fechaIngreso',
@@ -606,11 +544,9 @@ export class PersonalTemplate {
 
     dateFields.forEach((field) => {
       if (personal[field]) {
-        (baseData as Record<string, unknown>)[field] = parseDate(personal[field]);
+        (baseData as unknown as Record<string, unknown>)[field] = parseDate(personal[field]);
       }
     });
-
-    // Campo booleano
     if (personal.activo !== undefined) {
       baseData.activo = parseBooleanValue(personal.activo);
     }
