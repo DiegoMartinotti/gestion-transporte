@@ -236,7 +236,12 @@ export const useTramosPage = () => {
   // Estados computados
   const tramos = tramosLoader.data;
   const clientes = clientesLoader.data;
-  const sites = sitesLoader.data;
+  const sites =
+    sitesLoader.data?.map((site) => ({
+      _id: site._id,
+      nombre: site.nombre,
+      cliente: typeof site.cliente === 'string' ? site.cliente : site.cliente._id,
+    })) || [];
   const loading = tramosLoader.loading || clientesLoader.loading || sitesLoader.loading;
 
   return {
