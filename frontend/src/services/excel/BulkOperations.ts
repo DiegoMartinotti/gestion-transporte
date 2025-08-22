@@ -1,4 +1,8 @@
 import { apiService } from '../api';
+import { Cliente, Empresa, Personal } from '../../types';
+
+// Tipo de dato para operaciones masivas
+type BulkData = Cliente | Empresa | Personal;
 
 export interface BulkOperationOptions {
   batchSize?: number;
@@ -24,7 +28,7 @@ export interface BulkProgress {
 
 export interface BulkError {
   row: number;
-  data: any;
+  data: BulkData;
   error: string;
   retryCount: number;
   timestamp: Date;
@@ -42,13 +46,15 @@ export interface BulkResult {
 
 export interface BatchResult {
   batchNumber: number;
-  successful: any[];
+  successful: BulkData[];
   failed: BulkError[];
   duration: number;
 }
 
 export class BulkOperations {
-  private options: Required<BulkOperationOptions>;
+  private options: Required<Omit<BulkOperationOptions, 'progressCallback'>> & {
+    progressCallback?: (progress: BulkProgress) => void;
+  };
   private startTime: Date | null = null;
   private progress: BulkProgress;
 
@@ -60,48 +66,45 @@ export class BulkOperations {
       retryDelay: options.retryDelay ?? 1000,
       continueOnError: options.continueOnError ?? true,
       validateBeforeInsert: options.validateBeforeInsert ?? true,
-      progressCallback: options.progressCallback ?? (() => {})
+      progressCallback: options.progressCallback,
     };
 
     this.progress = this.initializeProgress();
   }
 
-  /**
-   * Ejecuta operación masiva de inserción
-   */
-  async bulkInsert(entityType: 'clientes' | 'empresas' | 'personal', data: any[]): Promise<BulkResult> {
+  async bulkInsert(
+    entityType: 'clientes' | 'empresas' | 'personal',
+    data: BulkData[]
+  ): Promise<BulkResult> {
     this.startTime = new Date();
     this.progress = this.initializeProgress();
     this.progress.total = data.length;
     this.progress.totalBatches = Math.ceil(data.length / this.options.batchSize);
 
     const endpoint = this.getEndpoint(entityType);
-    const batches = this.createBatches(data);
+    const batches = this.createBatches<BulkData>(data);
     const allErrors: BulkError[] = [];
     let totalSuccessful = 0;
 
     try {
-      // Procesar batches con concurrencia limitada
       const results = await this.processBatchesConcurrently(batches, endpoint);
-      
-      // Consolidar resultados
-      results.forEach(result => {
+
+      results.forEach((result) => {
         totalSuccessful += result.successful.length;
         allErrors.push(...result.failed);
-        
-        // Actualizar progreso
         this.progress.processed += this.options.batchSize;
         this.progress.successful = totalSuccessful;
         this.progress.failed = allErrors.length;
         this.progress.currentBatch = result.batchNumber;
-        this.progress.percentage = Math.round((this.progress.processed / this.progress.total) * 100);
+        this.progress.percentage = Math.round(
+          (this.progress.processed / this.progress.total) * 100
+        );
         this.progress.errors = allErrors;
         this.updateEstimatedTime();
-        
-        this.options.progressCallback(this.progress);
+        this.options.progressCallback?.(this.progress);
       });
 
-      const duration = Date.now() - this.startTime!.getTime();
+      const duration = this.startTime ? Date.now() - this.startTime.getTime() : 0;
       const throughput = totalSuccessful / (duration / 1000);
 
       return {
@@ -111,12 +114,10 @@ export class BulkOperations {
         failed: allErrors.length,
         errors: allErrors,
         duration,
-        throughput
+        throughput,
       };
-
     } catch (error) {
-      const duration = Date.now() - this.startTime!.getTime();
-      
+      const duration = this.startTime ? Date.now() - this.startTime.getTime() : 0;
       return {
         success: false,
         total: data.length,
@@ -124,44 +125,43 @@ export class BulkOperations {
         failed: data.length - totalSuccessful,
         errors: allErrors,
         duration,
-        throughput: 0
+        throughput: 0,
       };
     }
   }
 
-  /**
-   * Ejecuta operación masiva de actualización
-   */
-  async bulkUpdate(entityType: 'clientes' | 'empresas' | 'personal', data: any[]): Promise<BulkResult> {
-    // Similar a bulkInsert pero usa PUT/PATCH
+  async bulkUpdate(
+    entityType: 'clientes' | 'empresas' | 'personal',
+    data: BulkData[]
+  ): Promise<BulkResult> {
     const endpoint = this.getEndpoint(entityType);
-    
     return this.executeBulkOperation(data, async (item) => {
-      return apiService.put(`${endpoint}/${item.id || item._id}`, item);
+      const itemId = '_id' in item ? item._id : '';
+      const response = await apiService.put(`${endpoint}/${itemId}`, item);
+      return response.data as BulkData;
     });
   }
 
-  /**
-   * Ejecuta operación masiva de eliminación
-   */
-  async bulkDelete(entityType: 'clientes' | 'empresas' | 'personal', ids: string[]): Promise<BulkResult> {
+  async bulkDelete(
+    entityType: 'clientes' | 'empresas' | 'personal',
+    ids: string[]
+  ): Promise<BulkResult> {
     const endpoint = this.getEndpoint(entityType);
-    
     return this.executeBulkOperation(ids, async (id) => {
-      return apiService.delete(`${endpoint}/${id}`);
+      await apiService.delete(`${endpoint}/${id}`);
+      return id;
     });
   }
 
-  /**
-   * Procesa lotes de manera concurrente
-   */
-  private async processBatchesConcurrently(batches: any[][], endpoint: string): Promise<BatchResult[]> {
+  private async processBatchesConcurrently(
+    batches: BulkData[][],
+    endpoint: string
+  ): Promise<BatchResult[]> {
     const results: BatchResult[] = [];
     const semaphore = new Semaphore(this.options.maxConcurrency);
 
     const promises = batches.map(async (batch, index) => {
       await semaphore.acquire();
-      
       try {
         const result = await this.processBatch(batch, index + 1, endpoint);
         results[index] = result;
@@ -172,15 +172,16 @@ export class BulkOperations {
     });
 
     await Promise.all(promises);
-    return results.filter(r => r !== undefined); // Filtrar undefined por si acaso
+    return results.filter((r) => r !== undefined);
   }
 
-  /**
-   * Procesa un lote individual
-   */
-  private async processBatch(batch: any[], batchNumber: number, endpoint: string): Promise<BatchResult> {
+  private async processBatch(
+    batch: BulkData[],
+    batchNumber: number,
+    endpoint: string
+  ): Promise<BatchResult> {
     const startTime = Date.now();
-    const successful: any[] = [];
+    const successful: BulkData[] = [];
     const failed: BulkError[] = [];
 
     for (let i = 0; i < batch.length; i++) {
@@ -196,128 +197,124 @@ export class BulkOperations {
           data: item,
           error: error instanceof Error ? error.message : String(error),
           retryCount: 0,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
 
-        // Intentar reintentos
         const retryResult = await this.retryOperation(item, endpoint, bulkError);
         if (retryResult.success) {
           successful.push(retryResult.data);
         } else {
           failed.push(retryResult.error);
-          
-          // Si no continuamos en error, lanzar excepción
           if (!this.options.continueOnError) {
-            throw new Error(`Error en lote ${batchNumber}, fila ${rowNumber}: ${retryResult.error.error}`);
+            throw new Error(
+              `Error en lote ${batchNumber}, fila ${rowNumber}: ${retryResult.error.error}`
+            );
           }
         }
       }
     }
 
-    return {
-      batchNumber,
-      successful,
-      failed,
-      duration: Date.now() - startTime
-    };
+    return { batchNumber, successful, failed, duration: Date.now() - startTime };
   }
 
-  /**
-   * Inserta un elemento individual
-   */
-  private async insertSingleItem(item: any, endpoint: string, rowNumber: number): Promise<any> {
+  private async insertSingleItem(
+    item: BulkData,
+    endpoint: string,
+    rowNumber: number
+  ): Promise<BulkData> {
     try {
       const response = await apiService.post(endpoint, item);
-      return response.data;
-    } catch (error: any) {
-      // Mejorar mensaje de error con contexto
-      const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+      return response.data as BulkData;
+    } catch (error: unknown) {
+      const errorMessage = this.extractErrorMessage(error);
       const detailedError = new Error(`Fila ${rowNumber}: ${errorMessage}`);
-      (detailedError as any).cause = error;
+      (detailedError as Error & { cause?: unknown }).cause = error;
       throw detailedError;
     }
   }
 
-  /**
-   * Maneja reintentos de operaciones fallidas
-   */
+  private extractErrorMessage(error: unknown): string {
+    if (
+      error instanceof Error &&
+      'response' in error &&
+      typeof error.response === 'object' &&
+      error.response !== null &&
+      'data' in error.response &&
+      typeof error.response.data === 'object' &&
+      error.response.data !== null &&
+      'message' in error.response.data
+    ) {
+      return String(error.response.data.message);
+    }
+    return error instanceof Error ? error.message : 'Error desconocido';
+  }
+
   private async retryOperation(
-    item: any, 
-    endpoint: string, 
+    item: BulkData,
+    endpoint: string,
     originalError: BulkError
-  ): Promise<{ success: boolean; data?: any; error: BulkError }> {
+  ): Promise<{ success: boolean; data?: BulkData; error: BulkError }> {
     let lastError = originalError;
 
     for (let attempt = 1; attempt <= this.options.retryAttempts; attempt++) {
       try {
-        // Esperar antes del reintento
         if (attempt > 1) {
           await this.delay(this.options.retryDelay * attempt);
         }
-
         const result = await this.insertSingleItem(item, endpoint, originalError.row);
         return { success: true, data: result, error: lastError };
-
       } catch (error) {
         lastError = {
           ...originalError,
           error: error instanceof Error ? error.message : String(error),
           retryCount: attempt,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
       }
     }
-
     return { success: false, error: lastError };
   }
 
-  /**
-   * Ejecuta operación masiva genérica
-   */
-  private async executeBulkOperation(
-    data: any[], 
-    operation: (item: any) => Promise<any>
+  private async executeBulkOperation<T>(
+    data: T[],
+    operation: (item: T) => Promise<T>
   ): Promise<BulkResult> {
     this.startTime = new Date();
     this.progress = this.initializeProgress();
     this.progress.total = data.length;
 
-    const successful: any[] = [];
+    const successful: T[] = [];
     const errors: BulkError[] = [];
 
     for (let i = 0; i < data.length; i++) {
       const item = data[i];
-      
       try {
         const result = await operation(item);
         successful.push(result);
       } catch (error) {
         const bulkError: BulkError = {
           row: i + 1,
-          data: item,
+          data: item as BulkData,
           error: error instanceof Error ? error.message : String(error),
           retryCount: 0,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
         errors.push(bulkError);
-
         if (!this.options.continueOnError) {
           break;
         }
       }
 
-      // Actualizar progreso
       this.progress.processed = i + 1;
       this.progress.successful = successful.length;
       this.progress.failed = errors.length;
       this.progress.percentage = Math.round(((i + 1) / data.length) * 100);
       this.progress.errors = errors;
       this.updateEstimatedTime();
-      
-      this.options.progressCallback(this.progress);
+      this.options.progressCallback?.(this.progress);
     }
 
-    const duration = Date.now() - this.startTime!.getTime();
+    const duration = this.startTime ? Date.now() - this.startTime.getTime() : 0;
     const throughput = successful.length / (duration / 1000);
 
     return {
@@ -327,39 +324,27 @@ export class BulkOperations {
       failed: errors.length,
       errors,
       duration,
-      throughput
+      throughput,
     };
   }
 
-  /**
-   * Crea lotes de datos
-   */
-  private createBatches(data: any[]): any[][] {
-    const batches: any[][] = [];
-    
+  private createBatches<T>(data: T[]): T[][] {
+    const batches: T[][] = [];
     for (let i = 0; i < data.length; i += this.options.batchSize) {
       batches.push(data.slice(i, i + this.options.batchSize));
     }
-    
     return batches;
   }
 
-  /**
-   * Obtiene endpoint para tipo de entidad
-   */
   private getEndpoint(entityType: string): string {
     const endpoints = {
-      'clientes': '/clientes',
-      'empresas': '/empresas',
-      'personal': '/personal'
+      clientes: '/clientes',
+      empresas: '/empresas',
+      personal: '/personal',
     };
-    
     return endpoints[entityType as keyof typeof endpoints] || `/${entityType}`;
   }
 
-  /**
-   * Inicializa estructura de progreso
-   */
   private initializeProgress(): BulkProgress {
     return {
       total: 0,
@@ -369,85 +354,27 @@ export class BulkOperations {
       currentBatch: 0,
       totalBatches: 0,
       percentage: 0,
-      errors: []
+      errors: [],
     };
   }
 
-  /**
-   * Actualiza tiempo estimado restante
-   */
   private updateEstimatedTime(): void {
     if (!this.startTime || this.progress.processed === 0) return;
-
     const elapsed = Date.now() - this.startTime.getTime();
-    const rate = this.progress.processed / elapsed; // items por ms
+    const rate = this.progress.processed / elapsed;
     const remaining = this.progress.total - this.progress.processed;
-    
     this.progress.estimatedTimeRemaining = Math.round(remaining / rate);
   }
 
-  /**
-   * Delay helper
-   */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /**
-   * Cancela operación en curso
-   */
   cancel(): void {
-    // Implementar lógica de cancelación si es necesario
-    // Por ahora solo marca como cancelado
-    this.progress.percentage = -1; // Indica cancelación
-  }
-
-  /**
-   * Obtiene estadísticas de rendimiento
-   */
-  getPerformanceStats(): {
-    avgBatchTime: number;
-    itemsPerSecond: number;
-    errorRate: number;
-    memoryUsage: string;
-  } {
-    const duration = this.startTime ? Date.now() - this.startTime.getTime() : 0;
-    const avgBatchTime = this.progress.totalBatches > 0 ? duration / this.progress.totalBatches : 0;
-    const itemsPerSecond = duration > 0 ? (this.progress.processed / duration) * 1000 : 0;
-    const errorRate = this.progress.total > 0 ? (this.progress.failed / this.progress.total) * 100 : 0;
-
-    return {
-      avgBatchTime,
-      itemsPerSecond,
-      errorRate,
-      memoryUsage: '0 MB' // Browser environment, no process.memoryUsage
-    };
-  }
-
-  /**
-   * Optimiza tamaño de lote basado en rendimiento
-   */
-  optimizeBatchSize(performanceData: { duration: number; itemCount: number }[]): number {
-    if (performanceData.length < 3) return this.options.batchSize;
-
-    // Calcular throughput para cada tamaño probado
-    const throughputs = performanceData.map(data => data.itemCount / (data.duration / 1000));
-    const avgThroughput = throughputs.reduce((sum, t) => sum + t, 0) / throughputs.length;
-
-    // Ajustar tamaño de lote basado en throughput
-    if (avgThroughput < 10) {
-      return Math.max(10, this.options.batchSize / 2); // Reducir si es muy lento
-    } else if (avgThroughput > 100) {
-      return Math.min(200, this.options.batchSize * 2); // Aumentar si es rápido
-    }
-
-    return this.options.batchSize; // Mantener actual
+    this.progress.percentage = -1;
   }
 }
 
-/**
- * Semáforo para controlar concurrencia
- */
 class Semaphore {
   private permits: number;
   private waiting: Array<() => void> = [];
@@ -461,66 +388,24 @@ class Semaphore {
       this.permits--;
       return Promise.resolve();
     }
-
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       this.waiting.push(resolve);
     });
   }
 
   release(): void {
     this.permits++;
-    
     if (this.waiting.length > 0) {
-      const resolve = this.waiting.shift()!;
-      this.permits--;
-      resolve();
+      const resolve = this.waiting.shift();
+      if (resolve) {
+        this.permits--;
+        resolve();
+      }
     }
   }
 }
 
-/**
- * Utilidades para operaciones masivas
- */
 export class BulkUtils {
-  /**
-   * Estima tiempo de procesamiento
-   */
-  static estimateProcessingTime(
-    itemCount: number, 
-    avgItemTime: number = 100, // ms por item
-    batchSize: number = 50
-  ): { minutes: number; seconds: number; formatted: string } {
-    const totalTime = (itemCount * avgItemTime) / 1000; // segundos
-    const minutes = Math.floor(totalTime / 60);
-    const seconds = Math.round(totalTime % 60);
-    
-    const formatted = minutes > 0 ? 
-      `${minutes}m ${seconds}s` : 
-      `${seconds}s`;
-
-    return { minutes, seconds, formatted };
-  }
-
-  /**
-   * Calcula tamaño óptimo de lote
-   */
-  static calculateOptimalBatchSize(
-    itemCount: number, 
-    complexity: 'low' | 'medium' | 'high' = 'medium'
-  ): number {
-    const baseSizes = { low: 100, medium: 50, high: 25 };
-    const baseSize = baseSizes[complexity];
-
-    // Ajustar según cantidad total
-    if (itemCount < 100) return Math.min(itemCount, 20);
-    if (itemCount > 10000) return Math.max(baseSize * 2, 100);
-    
-    return baseSize;
-  }
-
-  /**
-   * Formatea errores para reporte
-   */
   static formatErrorReport(errors: BulkError[]): string {
     if (errors.length === 0) return 'No hay errores que reportar.';
 
@@ -528,7 +413,7 @@ export class BulkUtils {
       '=== REPORTE DE ERRORES DE OPERACIÓN MASIVA ===',
       `Total de errores: ${errors.length}`,
       '',
-      'DETALLES:'
+      'DETALLES:',
     ];
 
     errors.forEach((error, index) => {
