@@ -40,6 +40,16 @@ Before creating ANY new code, verify it doesn't duplicate existing functionality
 
 Both checks must pass before considering any task complete. The project has strict ESLint rules for code quality and the pre-commit hook blocks commits with warnings (`--max-warnings 0`).
 
+## MANDATORY: Git Hooks Configuration
+
+**CRITICAL**: NEVER modify git hooks, ESLint configuration, or pre-commit settings unless the user explicitly requests it. The project has strict quality gates configured through:
+
+- Husky pre-commit hooks
+- ESLint with `--max-warnings 0`
+- Lint-staged configuration in `.lintstagedrc.json`
+
+These configurations must remain unchanged to maintain code quality standards. If a commit is blocked by pre-commit hooks, the solution is to fix the underlying issues, not to bypass or modify the hooks.
+
 ## Project Overview
 
 This is a Transportation Management System (Sistema de Gestión de Transporte) - a comprehensive full-stack application for managing transportation logistics including clients, sites, routes, vehicles, trips, and billing. The system consists of a REST API backend (Node.js/Express/TypeScript) and a modern React frontend.
