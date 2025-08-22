@@ -48,6 +48,112 @@ interface BillingStepProps {
   onShowDetails: () => void;
 }
 
+const CalculationHeader: React.FC<{
+  onCalculate: () => void;
+  calculating: boolean;
+  hasRequiredData: boolean;
+  calculationResult: CalculationResult | null;
+  onShowDetails: () => void;
+}> = ({ onCalculate, calculating, hasRequiredData, calculationResult, onShowDetails }) => (
+  <Group justify="apart">
+    <Text fw={500}>Cálculo de Tarifa</Text>
+    <Group>
+      <Button
+        leftSection={<IconCalculator />}
+        onClick={onCalculate}
+        loading={calculating}
+        disabled={!hasRequiredData}
+      >
+        Calcular Tarifa
+      </Button>
+      {calculationResult && (
+        <Button variant="light" leftSection={<IconInfoCircle />} onClick={onShowDetails}>
+          Ver Detalles
+        </Button>
+      )}
+    </Group>
+  </Group>
+);
+
+const CalculationResult: React.FC<{ result: CalculationResult }> = ({ result }) => (
+  <Paper p="md" withBorder>
+    <Grid>
+      <Grid.Col span={4}>
+        <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+          Monto Base
+        </Text>
+        <Text size="lg" fw={700}>
+          {formatCurrency(result.montoBase)}
+        </Text>
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+          Extras
+        </Text>
+        <Text size="lg" fw={700}>
+          {formatCurrency(result.montoExtras)}
+        </Text>
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+          Total
+        </Text>
+        <Text size="xl" fw={700} c="green">
+          {formatCurrency(result.montoTotal)}
+        </Text>
+      </Grid.Col>
+    </Grid>
+  </Paper>
+);
+
+const ExtraItem: React.FC<{
+  extra: Extra;
+  index: number;
+  onUpdate: (index: number, field: keyof Extra, value: string | number) => void;
+  onRemove: (index: number) => void;
+}> = ({ extra, index, onUpdate, onRemove }) => (
+  <Paper key={extra.id} p="md" withBorder>
+    <Grid>
+      <Grid.Col span={4}>
+        <TextInput
+          label="Concepto"
+          placeholder="Descripción del extra"
+          value={extra.concepto}
+          onChange={(e) => onUpdate(index, 'concepto', e.target.value)}
+        />
+      </Grid.Col>
+      <Grid.Col span={3}>
+        <NumberInput
+          label="Monto"
+          placeholder="0.00"
+          value={extra.monto}
+          onChange={(value) => onUpdate(index, 'monto', typeof value === 'number' ? value : 0)}
+          decimalScale={2}
+          min={0}
+        />
+      </Grid.Col>
+      <Grid.Col span={4}>
+        <TextInput
+          label="Descripción"
+          placeholder="Detalles adicionales"
+          value={extra.descripcion}
+          onChange={(e) => onUpdate(index, 'descripcion', e.target.value)}
+        />
+      </Grid.Col>
+      <Grid.Col span={1}>
+        <ActionIcon
+          color="red"
+          variant="light"
+          onClick={() => onRemove(index)}
+          style={{ marginTop: 25 }}
+        >
+          <IconTrash size={16} />
+        </ActionIcon>
+      </Grid.Col>
+    </Grid>
+  </Paper>
+);
+
 const BillingStep: React.FC<BillingStepProps> = ({
   form,
   calculating,
@@ -56,7 +162,7 @@ const BillingStep: React.FC<BillingStepProps> = ({
   onShowDetails,
 }) => {
   const handleUpdateExtra = (index: number, field: keyof Extra, value: string | number) => {
-    updateExtraField(form.values.extras, index, field, value, form.setFieldValue);
+    updateExtraField(form.values.extras, { index, field, value }, form.setFieldValue);
   };
 
   const handleRemoveExtra = (index: number) => {
@@ -67,57 +173,19 @@ const BillingStep: React.FC<BillingStepProps> = ({
     addExtra(form.values.extras, form.setFieldValue);
   };
 
+  const hasRequiredData = !!(form.values.cliente && form.values.tramo);
+
   return (
     <Stack mt="md">
-      <Group justify="apart">
-        <Text fw={500}>Cálculo de Tarifa</Text>
-        <Group>
-          <Button
-            leftSection={<IconCalculator />}
-            onClick={onCalculate}
-            loading={calculating}
-            disabled={!form.values.cliente || !form.values.tramo}
-          >
-            Calcular Tarifa
-          </Button>
-          {calculationResult && (
-            <Button variant="light" leftSection={<IconInfoCircle />} onClick={onShowDetails}>
-              Ver Detalles
-            </Button>
-          )}
-        </Group>
-      </Group>
+      <CalculationHeader
+        onCalculate={onCalculate}
+        calculating={calculating}
+        hasRequiredData={hasRequiredData}
+        calculationResult={calculationResult}
+        onShowDetails={onShowDetails}
+      />
 
-      {calculationResult && (
-        <Paper p="md" withBorder>
-          <Grid>
-            <Grid.Col span={4}>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                Monto Base
-              </Text>
-              <Text size="lg" fw={700}>
-                {formatCurrency(calculationResult.montoBase)}
-              </Text>
-            </Grid.Col>
-            <Grid.Col span={4}>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                Extras
-              </Text>
-              <Text size="lg" fw={700}>
-                {formatCurrency(calculationResult.montoExtras)}
-              </Text>
-            </Grid.Col>
-            <Grid.Col span={4}>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                Total
-              </Text>
-              <Text size="xl" fw={700} c="green">
-                {formatCurrency(calculationResult.montoTotal)}
-              </Text>
-            </Grid.Col>
-          </Grid>
-        </Paper>
-      )}
+      {calculationResult && <CalculationResult result={calculationResult} />}
 
       <Divider label="Extras" labelPosition="left" />
 
@@ -129,48 +197,13 @@ const BillingStep: React.FC<BillingStepProps> = ({
       </Group>
 
       {form.values.extras.map((extra: Extra, index: number) => (
-        <Paper key={extra.id} p="md" withBorder>
-          <Grid>
-            <Grid.Col span={4}>
-              <TextInput
-                label="Concepto"
-                placeholder="Descripción del extra"
-                value={extra.concepto}
-                onChange={(e) => handleUpdateExtra(index, 'concepto', e.target.value)}
-              />
-            </Grid.Col>
-            <Grid.Col span={3}>
-              <NumberInput
-                label="Monto"
-                placeholder="0.00"
-                value={extra.monto}
-                onChange={(value) =>
-                  handleUpdateExtra(index, 'monto', typeof value === 'number' ? value : 0)
-                }
-                decimalScale={2}
-                min={0}
-              />
-            </Grid.Col>
-            <Grid.Col span={4}>
-              <TextInput
-                label="Descripción"
-                placeholder="Detalles adicionales"
-                value={extra.descripcion}
-                onChange={(e) => handleUpdateExtra(index, 'descripcion', e.target.value)}
-              />
-            </Grid.Col>
-            <Grid.Col span={1}>
-              <ActionIcon
-                color="red"
-                variant="light"
-                onClick={() => handleRemoveExtra(index)}
-                style={{ marginTop: 25 }}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Grid.Col>
-          </Grid>
-        </Paper>
+        <ExtraItem
+          key={extra.id}
+          extra={extra}
+          index={index}
+          onUpdate={handleUpdateExtra}
+          onRemove={handleRemoveExtra}
+        />
       ))}
 
       {form.values.extras.length === 0 && (
