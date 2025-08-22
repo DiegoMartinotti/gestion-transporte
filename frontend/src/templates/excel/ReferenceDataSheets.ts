@@ -2,14 +2,36 @@ import * as XLSX from 'xlsx';
 import { WorkSheet, WorkBook } from 'xlsx';
 import { apiService } from '../../services/api';
 
+// Interfaces para tipos de respuesta de la API
+interface ApiClienteResponse {
+  _id: string;
+  nombre: string;
+  cuit: string;
+  activo: boolean;
+}
+
+interface ApiEmpresaResponse {
+  _id: string;
+  nombre: string;
+  tipo: string;
+  activa: boolean;
+}
+
+interface ApiPersonalResponse {
+  _id: string;
+  nombre: string;
+  apellido: string;
+  tipo: string;
+  empresa?: { nombre: string };
+}
+
 export interface ReferenceData {
-  clientes: { id: string, nombre: string, cuit: string, activo: boolean }[];
-  empresas: { id: string, nombre: string, tipo: string, activa: boolean }[];
-  personal: { id: string, nombre: string, apellido: string, tipo: string, empresa: string }[];
+  clientes: { id: string; nombre: string; cuit: string; activo: boolean }[];
+  empresas: { id: string; nombre: string; tipo: string; activa: boolean }[];
+  personal: { id: string; nombre: string; apellido: string; tipo: string; empresa: string }[];
 }
 
 export class ReferenceDataSheets {
-  
   /**
    * Obtiene datos de referencia desde la API
    */
@@ -18,29 +40,29 @@ export class ReferenceDataSheets {
       const [clientesRes, empresasRes, personalRes] = await Promise.all([
         apiService.get('/clientes'),
         apiService.get('/empresas'),
-        apiService.get('/personal')
+        apiService.get('/personal'),
       ]);
 
       return {
-        clientes: (clientesRes.data as any[]).map((c: any) => ({
+        clientes: (clientesRes.data as ApiClienteResponse[]).map((c: ApiClienteResponse) => ({
           id: c._id,
           nombre: c.nombre,
           cuit: c.cuit,
-          activo: c.activo
+          activo: c.activo,
         })),
-        empresas: (empresasRes.data as any[]).map((e: any) => ({
+        empresas: (empresasRes.data as ApiEmpresaResponse[]).map((e: ApiEmpresaResponse) => ({
           id: e._id,
           nombre: e.nombre,
           tipo: e.tipo,
-          activa: e.activa
+          activa: e.activa,
         })),
-        personal: (personalRes.data as any[]).map((p: any) => ({
+        personal: (personalRes.data as ApiPersonalResponse[]).map((p: ApiPersonalResponse) => ({
           id: p._id,
           nombre: p.nombre,
           apellido: p.apellido,
           tipo: p.tipo,
-          empresa: p.empresa?.nombre || 'Sin empresa'
-        }))
+          empresa: p.empresa?.nombre || 'Sin empresa',
+        })),
       };
     } catch (error) {
       console.error('Error fetching reference data:', error);
@@ -55,22 +77,22 @@ export class ReferenceDataSheets {
     const headers = ['ID', 'Nombre', 'CUIT', 'Estado'];
     const data = [
       headers,
-      ...clientes.map(cliente => [
+      ...clientes.map((cliente) => [
         cliente.id,
         cliente.nombre,
         cliente.cuit,
-        cliente.activo ? 'Activo' : 'Inactivo'
-      ])
+        cliente.activo ? 'Activo' : 'Inactivo',
+      ]),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
+
     // Configurar anchos de columna
     ws['!cols'] = [
       { wch: 25 }, // ID
       { wch: 40 }, // Nombre
       { wch: 15 }, // CUIT
-      { wch: 10 }  // Estado
+      { wch: 10 }, // Estado
     ];
 
     // Aplicar estilos a headers
@@ -80,7 +102,7 @@ export class ReferenceDataSheets {
       if (ws[cellRef]) {
         ws[cellRef].s = {
           font: { bold: true },
-          fill: { fgColor: { rgb: 'E3F2FD' } }
+          fill: { fgColor: { rgb: 'E3F2FD' } },
         };
       }
     }
@@ -95,22 +117,22 @@ export class ReferenceDataSheets {
     const headers = ['ID', 'Nombre', 'Tipo', 'Estado'];
     const data = [
       headers,
-      ...empresas.map(empresa => [
+      ...empresas.map((empresa) => [
         empresa.id,
         empresa.nombre,
         empresa.tipo,
-        empresa.activa ? 'Activa' : 'Inactiva'
-      ])
+        empresa.activa ? 'Activa' : 'Inactiva',
+      ]),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
+
     // Configurar anchos de columna
     ws['!cols'] = [
       { wch: 25 }, // ID
       { wch: 35 }, // Nombre
       { wch: 15 }, // Tipo
-      { wch: 10 }  // Estado
+      { wch: 10 }, // Estado
     ];
 
     // Aplicar estilos a headers
@@ -120,7 +142,7 @@ export class ReferenceDataSheets {
       if (ws[cellRef]) {
         ws[cellRef].s = {
           font: { bold: true },
-          fill: { fgColor: { rgb: 'E8F5E8' } }
+          fill: { fgColor: { rgb: 'E8F5E8' } },
         };
       }
     }
@@ -133,26 +155,17 @@ export class ReferenceDataSheets {
    */
   static createPersonalReferenceSheet(personal: ReferenceData['personal']): WorkSheet {
     const headers = ['ID', 'Nombre', 'Apellido', 'Tipo', 'Empresa'];
-    const data = [
-      headers,
-      ...personal.map(p => [
-        p.id,
-        p.nombre,
-        p.apellido,
-        p.tipo,
-        p.empresa
-      ])
-    ];
+    const data = [headers, ...personal.map((p) => [p.id, p.nombre, p.apellido, p.tipo, p.empresa])];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
+
     // Configurar anchos de columna
     ws['!cols'] = [
       { wch: 25 }, // ID
       { wch: 20 }, // Nombre
       { wch: 20 }, // Apellido
       { wch: 15 }, // Tipo
-      { wch: 30 }  // Empresa
+      { wch: 30 }, // Empresa
     ];
 
     // Aplicar estilos a headers
@@ -162,7 +175,7 @@ export class ReferenceDataSheets {
       if (ws[cellRef]) {
         ws[cellRef].s = {
           font: { bold: true },
-          fill: { fgColor: { rgb: 'FFF3E0' } }
+          fill: { fgColor: { rgb: 'FFF3E0' } },
         };
       }
     }
@@ -190,18 +203,18 @@ export class ReferenceDataSheets {
       ['', '', '', '', 'D4'],
       ['', '', '', '', 'E1'],
       ['', '', '', '', 'E2'],
-      ['', '', '', '', 'E3']
+      ['', '', '', '', 'E3'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
+
     // Configurar anchos de columna
     ws['!cols'] = [
       { wch: 20 }, // Tipos Personal
-      { wch: 2 },  // Separador
+      { wch: 2 }, // Separador
       { wch: 20 }, // Tipos Empresa
-      { wch: 2 },  // Separador
-      { wch: 20 }  // Categorías Licencia
+      { wch: 2 }, // Separador
+      { wch: 20 }, // Categorías Licencia
     ];
 
     // Aplicar estilos a headers
@@ -210,7 +223,7 @@ export class ReferenceDataSheets {
       if (ws[cellRef]) {
         ws[cellRef].s = {
           font: { bold: true },
-          fill: { fgColor: { rgb: 'F3E5F5' } }
+          fill: { fgColor: { rgb: 'F3E5F5' } },
         };
       }
     }
@@ -262,11 +275,11 @@ export class ReferenceDataSheets {
       ['La Rioja'],
       ['La Pampa'],
       ['Santa Cruz'],
-      ['Tierra del Fuego']
+      ['Tierra del Fuego'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
+
     // Configurar anchos de columna
     ws['!cols'] = [{ wch: 50 }];
 
@@ -274,7 +287,7 @@ export class ReferenceDataSheets {
     if (ws['A1']) {
       ws['A1'].s = {
         font: { bold: true, size: 14 },
-        fill: { fgColor: { rgb: 'E1F5FE' } }
+        fill: { fgColor: { rgb: 'E1F5FE' } },
       };
     }
 
@@ -286,61 +299,75 @@ export class ReferenceDataSheets {
    */
   static async generateReferenceWorkbook(): Promise<WorkBook> {
     const wb = XLSX.utils.book_new();
-    
+
     try {
       // Obtener datos de la API
       const referenceData = await this.fetchReferenceData();
-      
+
       // Agregar hojas de referencia con datos reales
       const clientesWs = this.createClientesReferenceSheet(referenceData.clientes);
       XLSX.utils.book_append_sheet(wb, clientesWs, 'Ref_Clientes');
-      
+
       const empresasWs = this.createEmpresasReferenceSheet(referenceData.empresas);
       XLSX.utils.book_append_sheet(wb, empresasWs, 'Ref_Empresas');
-      
+
       const personalWs = this.createPersonalReferenceSheet(referenceData.personal);
       XLSX.utils.book_append_sheet(wb, personalWs, 'Ref_Personal');
-      
     } catch (error) {
       console.warn('No se pudieron obtener datos reales, usando datos de ejemplo');
-      
+
+      // Constante para evitar duplicación de string literal
+      const EMPRESA_PROPIA_EJEMPLO = 'Empresa Propia';
+
       // Si falla la API, crear hojas con datos de ejemplo
       const clientesEjemplo = [
         { id: 'ejemplo1', nombre: 'Cliente Ejemplo 1', cuit: '30-12345678-9', activo: true },
-        { id: 'ejemplo2', nombre: 'Cliente Ejemplo 2', cuit: '20-87654321-0', activo: true }
+        { id: 'ejemplo2', nombre: 'Cliente Ejemplo 2', cuit: '20-87654321-0', activo: true },
       ];
-      
+
       const empresasEjemplo = [
-        { id: 'ejemplo1', nombre: 'Empresa Propia', tipo: 'Propia', activa: true },
-        { id: 'ejemplo2', nombre: 'Empresa Subcontratada', tipo: 'Subcontratada', activa: true }
+        { id: 'ejemplo1', nombre: EMPRESA_PROPIA_EJEMPLO, tipo: 'Propia', activa: true },
+        { id: 'ejemplo2', nombre: 'Empresa Subcontratada', tipo: 'Subcontratada', activa: true },
       ];
-      
+
       const personalEjemplo = [
-        { id: 'ejemplo1', nombre: 'Juan', apellido: 'Pérez', tipo: 'Conductor', empresa: 'Empresa Propia' },
-        { id: 'ejemplo2', nombre: 'María', apellido: 'González', tipo: 'Administrativo', empresa: 'Empresa Propia' }
+        {
+          id: 'ejemplo1',
+          nombre: 'Juan',
+          apellido: 'Pérez',
+          tipo: 'Conductor',
+          empresa: EMPRESA_PROPIA_EJEMPLO,
+        },
+        {
+          id: 'ejemplo2',
+          nombre: 'María',
+          apellido: 'González',
+          tipo: 'Administrativo',
+          empresa: EMPRESA_PROPIA_EJEMPLO,
+        },
       ];
-      
+
       const clientesWs = this.createClientesReferenceSheet(clientesEjemplo);
       XLSX.utils.book_append_sheet(wb, clientesWs, 'Ref_Clientes');
-      
+
       const empresasWs = this.createEmpresasReferenceSheet(empresasEjemplo);
       XLSX.utils.book_append_sheet(wb, empresasWs, 'Ref_Empresas');
-      
+
       const personalWs = this.createPersonalReferenceSheet(personalEjemplo);
       XLSX.utils.book_append_sheet(wb, personalWs, 'Ref_Personal');
     }
-    
+
     // Agregar hojas auxiliares
     const typesWs = this.createTypesReferenceSheet();
     XLSX.utils.book_append_sheet(wb, typesWs, 'Ref_Tipos');
-    
+
     const validationWs = this.createValidationDataSheet();
     XLSX.utils.book_append_sheet(wb, validationWs, 'Ref_Validaciones');
-    
+
     // Hoja de información general
     const infoWs = this.createInfoSheet();
     XLSX.utils.book_append_sheet(wb, infoWs, 'Info_General');
-    
+
     return wb;
   }
 
@@ -374,11 +401,11 @@ export class ReferenceDataSheets {
       ['- Para importaciones, use los nombres exactos como aparecen aquí'],
       ['- Los IDs son únicos y no deben modificarse'],
       [''],
-      ['Generado el: ' + new Date().toLocaleString('es-AR')]
+      ['Generado el: ' + new Date().toLocaleString('es-AR')],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
+
     // Configurar anchos de columna
     ws['!cols'] = [{ wch: 70 }];
 
@@ -386,14 +413,14 @@ export class ReferenceDataSheets {
     if (ws['A1']) {
       ws['A1'].s = {
         font: { bold: true, size: 16 },
-        fill: { fgColor: { rgb: 'BBDEFB' } }
+        fill: { fgColor: { rgb: 'BBDEFB' } },
       };
     }
 
     if (ws['A2']) {
       ws['A2'].s = {
         font: { bold: true, size: 12 },
-        fill: { fgColor: { rgb: 'E3F2FD' } }
+        fill: { fgColor: { rgb: 'E3F2FD' } },
       };
     }
 
@@ -403,7 +430,7 @@ export class ReferenceDataSheets {
   /**
    * Descarga archivo Excel con hojas de referencia
    */
-  static async downloadReferenceFile(filename: string = 'referencias_sistema.xlsx'): Promise<void> {
+  static async downloadReferenceFile(filename = 'referencias_sistema.xlsx'): Promise<void> {
     try {
       const wb = await this.generateReferenceWorkbook();
       XLSX.writeFile(wb, filename);
@@ -416,12 +443,12 @@ export class ReferenceDataSheets {
   /**
    * Obtiene lista simplificada de empresas para otros templates
    */
-  static async getEmpresasForTemplate(): Promise<{ id: string, nombre: string }[]> {
+  static async getEmpresasForTemplate(): Promise<{ id: string; nombre: string }[]> {
     try {
       const response = await apiService.get('/empresas');
-      return (response.data as any[]).map((e: any) => ({
+      return (response.data as ApiEmpresaResponse[]).map((e: ApiEmpresaResponse) => ({
         id: e._id,
-        nombre: e.nombre
+        nombre: e.nombre,
       }));
     } catch (error) {
       console.warn('Could not fetch empresas, using empty list');
@@ -432,12 +459,12 @@ export class ReferenceDataSheets {
   /**
    * Obtiene lista simplificada de clientes para otros templates
    */
-  static async getClientesForTemplate(): Promise<{ id: string, nombre: string }[]> {
+  static async getClientesForTemplate(): Promise<{ id: string; nombre: string }[]> {
     try {
       const response = await apiService.get('/clientes');
-      return (response.data as any[]).map((c: any) => ({
+      return (response.data as ApiClienteResponse[]).map((c: ApiClienteResponse) => ({
         id: c._id,
-        nombre: c.nombre
+        nombre: c.nombre,
       }));
     } catch (error) {
       console.warn('Could not fetch clientes, using empty list');
