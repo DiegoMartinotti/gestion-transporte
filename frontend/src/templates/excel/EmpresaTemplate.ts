@@ -14,10 +14,16 @@ export interface EmpresaTemplateData {
   observaciones?: string;
 }
 
+type ExcelRowData = Record<string, unknown>;
+
 export class EmpresaTemplate {
+  private static REQUIRED_MARKER = '(*)';
+  private static DATA_VALIDATION_KEY = '!dataValidation';
+  private static ROW_PREFIX = 'Fila';
+
   private static HEADERS = [
-    'Nombre (*)',
-    'Tipo (*)',
+    `Nombre ${this.REQUIRED_MARKER}`,
+    `Tipo ${this.REQUIRED_MARKER}`,
     'Razón Social',
     'Dirección',
     'Teléfono',
@@ -25,7 +31,7 @@ export class EmpresaTemplate {
     'CUIT',
     'Contacto Principal',
     'Activa',
-    'Observaciones'
+    'Observaciones',
   ];
 
   private static SAMPLE_DATA: Partial<EmpresaTemplateData>[] = [
@@ -39,7 +45,7 @@ export class EmpresaTemplate {
       cuit: '30-12345678-9',
       contactoPrincipal: 'Juan Pérez',
       activa: true,
-      observaciones: 'Empresa principal'
+      observaciones: 'Empresa principal',
     },
     {
       nombre: 'Logística Sur',
@@ -51,35 +57,211 @@ export class EmpresaTemplate {
       cuit: '30-87654321-0',
       contactoPrincipal: 'María González',
       activa: true,
-      observaciones: 'Subcontratista de confianza'
-    }
+      observaciones: 'Subcontratista de confianza',
+    },
   ];
+
+  /**
+   * Mapea una fila de datos a array para Excel
+   */
+  private static mapRowToArray(row: Partial<EmpresaTemplateData>): string[] {
+    const activaValue = this.getActivaDisplayValue(row.activa);
+
+    return [
+      row.nombre || '',
+      row.tipo || '',
+      row.razonSocial || '',
+      row.direccion || '',
+      row.telefono || '',
+      row.mail || '',
+      row.cuit || '',
+      row.contactoPrincipal || '',
+      activaValue,
+      row.observaciones || '',
+    ];
+  }
+
+  /**
+   * Convierte valor booleano activa a string para display
+   */
+  private static getActivaDisplayValue(activa?: boolean): string {
+    return activa !== undefined ? (activa ? 'Sí' : 'No') : 'Sí';
+  }
+
+  /**
+   * Valida campos básicos de una fila
+   */
+  private static validateRowFields(row: ExcelRowData, rowNum: number): string[] {
+    const errors: string[] = [];
+    const nombre = row[`Nombre ${this.REQUIRED_MARKER}`]?.toString()?.trim();
+    const tipo = row[`Tipo ${this.REQUIRED_MARKER}`]?.toString()?.trim();
+
+    if (!nombre) {
+      errors.push(`${this.ROW_PREFIX} ${rowNum}: El nombre es obligatorio`);
+    }
+
+    if (!tipo) {
+      errors.push(`${this.ROW_PREFIX} ${rowNum}: El tipo es obligatorio`);
+    } else if (tipo !== 'Propia' && tipo !== 'Subcontratada') {
+      errors.push(`${this.ROW_PREFIX} ${rowNum}: El tipo debe ser "Propia" o "Subcontratada"`);
+    }
+
+    return errors;
+  }
+
+  /**
+   * Valida formato de email
+   */
+  private static validateEmail(email: string, rowNum: number): string | null {
+    if (email && !/^\w+(.-?\w+)*@\w+(.-?\w+)*(\.\w{2,3})+$/.test(email)) {
+      return `${this.ROW_PREFIX} ${rowNum}: Email con formato inválido`;
+    }
+    return null;
+  }
+
+  /**
+   * Valida formato de CUIT
+   */
+  private static validateCUIT(cuit: string, rowNum: number): string | null {
+    if (cuit && !/^(20|23|24|25|26|27|30|33|34)([0-9]{9}|-[0-9]{8}-[0-9]{1})$/.test(cuit)) {
+      return `${this.ROW_PREFIX} ${rowNum}: CUIT con formato inválido`;
+    }
+    return null;
+  }
+
+  /**
+   * Extrae los datos básicos de una fila de Excel
+   */
+  private static extractRowData(row: ExcelRowData) {
+    return {
+      nombre: row[`Nombre ${this.REQUIRED_MARKER}`]?.toString()?.trim() || '',
+      tipo: row[`Tipo ${this.REQUIRED_MARKER}`]?.toString()?.trim() || '',
+      razonSocial: row['Razón Social']?.toString()?.trim(),
+      direccion: row['Dirección']?.toString()?.trim(),
+      telefono: row['Teléfono']?.toString()?.trim(),
+      mail: row['Email']?.toString()?.trim(),
+      cuit: row['CUIT']?.toString()?.trim(),
+      contactoPrincipal: row['Contacto Principal']?.toString()?.trim(),
+      activa: row['Activa']?.toString()?.trim(),
+      observaciones: row['Observaciones']?.toString()?.trim(),
+    };
+  }
+
+  /**
+   * Procesa una fila válida y crea el objeto EmpresaTemplateData
+   */
+  private static processValidRow(row: ExcelRowData): EmpresaTemplateData {
+    const data = this.extractRowData(row);
+
+    // Validar activa
+    const activaValue = data.activa && data.activa.toLowerCase() === 'no' ? false : true;
+
+    const empresaData: EmpresaTemplateData = {
+      nombre: data.nombre,
+      tipo: data.tipo as 'Propia' | 'Subcontratada',
+      activa: activaValue,
+    };
+
+    // Agregar campos opcionales si están presentes
+    if (data.razonSocial) empresaData.razonSocial = data.razonSocial;
+    if (data.direccion) empresaData.direccion = data.direccion;
+    if (data.telefono) empresaData.telefono = data.telefono;
+    if (data.mail) empresaData.mail = data.mail;
+    if (data.cuit) empresaData.cuit = data.cuit;
+    if (data.contactoPrincipal) empresaData.contactoPrincipal = data.contactoPrincipal;
+    if (data.observaciones) empresaData.observaciones = data.observaciones;
+
+    return empresaData;
+  }
+
+  /**
+   * Procesa una sola fila durante la validación
+   */
+  private static processRowValidation(
+    row: ExcelRowData,
+    index: number,
+    nombresVistos: Set<string>
+  ): { success: boolean; empresa?: EmpresaTemplateData; errors: string[] } {
+    const rowNum = index + 2;
+    const data = this.extractRowData(row);
+
+    // Validar campos básicos
+    const fieldErrors = this.validateRowFields(row, rowNum);
+    if (fieldErrors.length > 0) {
+      return { success: false, errors: fieldErrors };
+    }
+
+    // Validar duplicados
+    if (nombresVistos.has(data.nombre.toLowerCase())) {
+      return {
+        success: false,
+        errors: [`${this.ROW_PREFIX} ${rowNum}: Nombre duplicado en el archivo`],
+      };
+    }
+    nombresVistos.add(data.nombre.toLowerCase());
+
+    // Validar email y CUIT
+    const validationError = this.validateEmailAndCuit(data, rowNum);
+    if (validationError) {
+      return { success: false, errors: [validationError] };
+    }
+
+    // Validar campo activa
+    const activaError = this.validateActivaField(data.activa, rowNum);
+    if (activaError) {
+      return { success: false, errors: [activaError] };
+    }
+
+    const empresa = this.processValidRow(row);
+    return { success: true, empresa, errors: [] };
+  }
+
+  /**
+   * Valida email y CUIT si están presentes
+   */
+  private static validateEmailAndCuit(
+    data: { mail?: string; cuit?: string },
+    rowNum: number
+  ): string | null {
+    if (data.mail) {
+      const emailError = this.validateEmail(data.mail, rowNum);
+      if (emailError) return emailError;
+    }
+
+    if (data.cuit) {
+      const cuitError = this.validateCUIT(data.cuit, rowNum);
+      if (cuitError) return cuitError;
+    }
+
+    return null;
+  }
+
+  /**
+   * Valida campo activa
+   */
+  private static validateActivaField(activa: string | undefined, rowNum: number): string | null {
+    if (
+      activa &&
+      activa.toLowerCase() !== 'sí' &&
+      activa.toLowerCase() !== 'si' &&
+      activa.toLowerCase() !== 'no'
+    ) {
+      return `${this.ROW_PREFIX} ${rowNum}: El campo Activa debe ser "Sí" o "No"`;
+    }
+    return null;
+  }
 
   /**
    * Genera una plantilla Excel para carga masiva de empresas
    */
   static generateTemplate(): WorkBook {
     const wb = XLSX.utils.book_new();
-    
+
     // Hoja principal con plantilla
-    const wsData = [
-      this.HEADERS,
-      ...this.SAMPLE_DATA.map(row => [
-        row.nombre || '',
-        row.tipo || '',
-        row.razonSocial || '',
-        row.direccion || '',
-        row.telefono || '',
-        row.mail || '',
-        row.cuit || '',
-        row.contactoPrincipal || '',
-        row.activa !== undefined ? (row.activa ? 'Sí' : 'No') : 'Sí',
-        row.observaciones || ''
-      ])
-    ];
+    const wsData = [this.HEADERS, ...this.SAMPLE_DATA.map((row) => this.mapRowToArray(row))];
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    
+
     // Configurar ancho de columnas
     ws['!cols'] = [
       { wch: 25 }, // Nombre
@@ -91,24 +273,24 @@ export class EmpresaTemplate {
       { wch: 15 }, // CUIT
       { wch: 25 }, // Contacto Principal
       { wch: 10 }, // Activa
-      { wch: 40 }  // Observaciones
+      { wch: 40 }, // Observaciones
     ];
 
     // Agregar validaciones de datos
-    if (!ws['!dataValidation']) ws['!dataValidation'] = [];
-    
+    if (!ws[this.DATA_VALIDATION_KEY]) ws[this.DATA_VALIDATION_KEY] = [];
+
     // Validación para Tipo
-    ws['!dataValidation'].push({
+    ws[this.DATA_VALIDATION_KEY].push({
       sqref: 'B2:B1000',
       type: 'list',
-      formula1: '"Propia,Subcontratada"'
+      formula1: '"Propia,Subcontratada"',
     });
 
     // Validación para Activa
-    ws['!dataValidation'].push({
+    ws[this.DATA_VALIDATION_KEY].push({
       sqref: 'I2:I1000',
       type: 'list',
-      formula1: '"Sí,No"'
+      formula1: '"Sí,No"',
     });
 
     XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
@@ -161,101 +343,33 @@ export class EmpresaTemplate {
       [''],
       ['CAMPOS OBLIGATORIOS (*)'],
       ['- Nombre: Denominación comercial de la empresa'],
-      ['- Tipo: Clasificación de la empresa (Propia/Subcontratada)']
+      ['- Tipo: Clasificación de la empresa (Propia/Subcontratada)'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(instructions);
-    
+
     // Configurar formato
     ws['!cols'] = [{ wch: 70 }];
-    
+
     return ws;
   }
 
   /**
    * Valida datos de empresa desde Excel
    */
-  static validateData(data: any[]): { valid: EmpresaTemplateData[], errors: string[] } {
+  static validateData(data: ExcelRowData[]): { valid: EmpresaTemplateData[]; errors: string[] } {
     const valid: EmpresaTemplateData[] = [];
     const errors: string[] = [];
     const nombresVistos = new Set<string>();
 
     data.forEach((row, index) => {
-      const rowNum = index + 2; // Ajustar por header
-      const nombre = row['Nombre (*)']?.toString()?.trim();
-      const tipo = row['Tipo (*)']?.toString()?.trim();
-      const razonSocial = row['Razón Social']?.toString()?.trim();
-      const direccion = row['Dirección']?.toString()?.trim();
-      const telefono = row['Teléfono']?.toString()?.trim();
-      const mail = row['Email']?.toString()?.trim();
-      const cuit = row['CUIT']?.toString()?.trim();
-      const contactoPrincipal = row['Contacto Principal']?.toString()?.trim();
-      const activa = row['Activa']?.toString()?.trim();
-      const observaciones = row['Observaciones']?.toString()?.trim();
+      const result = this.processRowValidation(row, index, nombresVistos);
 
-      // Validar campos obligatorios
-      if (!nombre) {
-        errors.push(`Fila ${rowNum}: El nombre es obligatorio`);
-        return;
+      if (result.success && result.empresa) {
+        valid.push(result.empresa);
+      } else {
+        errors.push(...result.errors);
       }
-
-      if (!tipo) {
-        errors.push(`Fila ${rowNum}: El tipo es obligatorio`);
-        return;
-      }
-
-      // Validar tipo
-      if (tipo !== 'Propia' && tipo !== 'Subcontratada') {
-        errors.push(`Fila ${rowNum}: El tipo debe ser "Propia" o "Subcontratada"`);
-        return;
-      }
-
-      // Validar duplicados en el archivo
-      if (nombresVistos.has(nombre.toLowerCase())) {
-        errors.push(`Fila ${rowNum}: Nombre duplicado en el archivo`);
-        return;
-      }
-      nombresVistos.add(nombre.toLowerCase());
-
-      // Validar email si se proporciona
-      if (mail && !/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail)) {
-        errors.push(`Fila ${rowNum}: Email con formato inválido`);
-        return;
-      }
-
-      // Validar CUIT si se proporciona
-      if (cuit && !/^(20|23|24|25|26|27|30|33|34)([0-9]{9}|-[0-9]{8}-[0-9]{1})$/.test(cuit)) {
-        errors.push(`Fila ${rowNum}: CUIT con formato inválido`);
-        return;
-      }
-
-      // Validar activa
-      let activaValue = true;
-      if (activa) {
-        if (activa.toLowerCase() === 'no') {
-          activaValue = false;
-        } else if (activa.toLowerCase() !== 'sí' && activa.toLowerCase() !== 'si') {
-          errors.push(`Fila ${rowNum}: El campo Activa debe ser "Sí" o "No"`);
-          return;
-        }
-      }
-
-      const empresaData: EmpresaTemplateData = {
-        nombre,
-        tipo: tipo as 'Propia' | 'Subcontratada',
-        activa: activaValue
-      };
-
-      // Agregar campos opcionales si están presentes
-      if (razonSocial) empresaData.razonSocial = razonSocial;
-      if (direccion) empresaData.direccion = direccion;
-      if (telefono) empresaData.telefono = telefono;
-      if (mail) empresaData.mail = mail;
-      if (cuit) empresaData.cuit = cuit;
-      if (contactoPrincipal) empresaData.contactoPrincipal = contactoPrincipal;
-      if (observaciones) empresaData.observaciones = observaciones;
-
-      valid.push(empresaData);
     });
 
     return { valid, errors };
@@ -264,7 +378,7 @@ export class EmpresaTemplate {
   /**
    * Genera archivo Excel para descarga
    */
-  static downloadTemplate(filename: string = 'plantilla_empresas.xlsx'): void {
+  static downloadTemplate(filename = 'plantilla_empresas.xlsx'): void {
     const wb = this.generateTemplate();
     XLSX.writeFile(wb, filename);
   }
