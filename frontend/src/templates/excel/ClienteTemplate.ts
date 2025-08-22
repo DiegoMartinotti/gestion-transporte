@@ -7,24 +7,33 @@ export interface ClienteTemplateData {
   activo?: boolean;
 }
 
+interface ExcelRowData {
+  [key: string]: string;
+}
+
 export class ClienteTemplate {
+  private static readonly DATA_VALIDATION_KEY = '!dataValidation';
+  private static readonly HEADER_NOMBRE = 'Nombre (*)';
+  private static readonly HEADER_CUIT = 'CUIT (*)';
+  private static readonly HEADER_ACTIVO = 'Activo';
+
   private static HEADERS = [
-    'Nombre (*)',
-    'CUIT (*)',
-    'Activo'
+    ClienteTemplate.HEADER_NOMBRE,
+    ClienteTemplate.HEADER_CUIT,
+    ClienteTemplate.HEADER_ACTIVO,
   ];
 
   private static SAMPLE_DATA: Partial<ClienteTemplateData>[] = [
     {
       nombre: 'Empresa Ejemplo S.A.',
       cuit: '20-12345678-9',
-      activo: true
+      activo: true,
     },
     {
       nombre: 'Transportes ABC S.R.L.',
       cuit: '30-87654321-0',
-      activo: true
-    }
+      activo: true,
+    },
   ];
 
   /**
@@ -32,32 +41,32 @@ export class ClienteTemplate {
    */
   static generateTemplate(): WorkBook {
     const wb = XLSX.utils.book_new();
-    
+
     // Hoja principal con plantilla
     const wsData = [
       this.HEADERS,
-      ...this.SAMPLE_DATA.map(row => [
+      ...this.SAMPLE_DATA.map((row) => [
         row.nombre || '',
         row.cuit || '',
-        row.activo !== undefined ? (row.activo ? 'Sí' : 'No') : 'Sí'
-      ])
+        row.activo !== undefined ? (row.activo ? 'Sí' : 'No') : 'Sí',
+      ]),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    
+
     // Configurar ancho de columnas
     ws['!cols'] = [
       { wch: 30 }, // Nombre
       { wch: 15 }, // CUIT
-      { wch: 10 }  // Activo
+      { wch: 10 }, // Activo
     ];
 
     // Agregar validación de datos para columna Activo
-    if (!ws['!dataValidation']) ws['!dataValidation'] = [];
-    ws['!dataValidation'].push({
+    if (!ws[this.DATA_VALIDATION_KEY]) ws[this.DATA_VALIDATION_KEY] = [];
+    ws[this.DATA_VALIDATION_KEY].push({
       sqref: 'C2:C1000',
       type: 'list',
-      formula1: '"Sí,No"'
+      formula1: '"Sí,No"',
     });
 
     XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
@@ -100,30 +109,30 @@ export class ClienteTemplate {
       [''],
       ['CAMPOS OBLIGATORIOS (*)'],
       ['- Nombre: Denominación de la empresa cliente'],
-      ['- CUIT: Código Único de Identificación Tributaria']
+      ['- CUIT: Código Único de Identificación Tributaria'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(instructions);
-    
+
     // Configurar formato
     ws['!cols'] = [{ wch: 60 }];
-    
+
     return ws;
   }
 
   /**
    * Valida datos de cliente desde Excel
    */
-  static validateData(data: any[]): { valid: ClienteTemplateData[], errors: string[] } {
+  static validateData(data: ExcelRowData[]): { valid: ClienteTemplateData[]; errors: string[] } {
     const valid: ClienteTemplateData[] = [];
     const errors: string[] = [];
     const nombresVistos = new Set<string>();
 
     data.forEach((row, index) => {
       const rowNum = index + 2; // Ajustar por header
-      const nombre = row['Nombre (*)']?.toString()?.trim();
-      const cuit = row['CUIT (*)']?.toString()?.trim();
-      const activo = row['Activo']?.toString()?.trim();
+      const nombre = row[this.HEADER_NOMBRE]?.toString()?.trim();
+      const cuit = row[this.HEADER_CUIT]?.toString()?.trim();
+      const activo = row[this.HEADER_ACTIVO]?.toString()?.trim();
 
       // Validar campos obligatorios
       if (!nombre) {
@@ -163,7 +172,7 @@ export class ClienteTemplate {
       valid.push({
         nombre,
         cuit,
-        activo: activoValue
+        activo: activoValue,
       });
     });
 
@@ -173,7 +182,7 @@ export class ClienteTemplate {
   /**
    * Genera archivo Excel para descarga
    */
-  static downloadTemplate(filename: string = 'plantilla_clientes.xlsx'): void {
+  static downloadTemplate(filename = 'plantilla_clientes.xlsx'): void {
     const wb = this.generateTemplate();
     XLSX.writeFile(wb, filename);
   }
