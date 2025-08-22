@@ -10,7 +10,9 @@ export const ESTADOS = {
 } as const;
 
 // Helper functions para reducir complejidad
-export const getSiteName = (site: any): string => {
+export const getSiteName = (
+  site: string | { Site?: string; nombre?: string; denominacion?: string } | null | undefined
+): string => {
   if (typeof site === 'object' && site) {
     return site.Site || site.nombre || site.denominacion || '-';
   }
@@ -19,11 +21,11 @@ export const getSiteName = (site: any): string => {
 
 export const matchesSearchFilter = (viaje: Viaje, search: string): boolean => {
   if (!search) return true;
-  return (
+  return Boolean(
     viaje.dt?.toString().includes(search) ||
-    viaje.tipoTramo?.toLowerCase().includes(search.toLowerCase()) ||
-    (typeof viaje.cliente === 'object' &&
-      viaje.cliente?.Cliente?.toLowerCase().includes(search.toLowerCase()))
+      viaje.tipoTramo?.toLowerCase().includes(search.toLowerCase()) ||
+      (typeof viaje.cliente === 'object' &&
+        viaje.cliente?.Cliente?.toLowerCase().includes(search.toLowerCase()))
   );
 };
 
@@ -39,7 +41,7 @@ export const matchesEstadoFilter = (viaje: Viaje, estadoFilter: string | null): 
 };
 
 export const matchesVehiculoFilter = (viaje: Viaje, vehiculoFilter: string | null): boolean => {
-  return !vehiculoFilter || viaje.vehiculos?.some((v) => v.vehiculo === vehiculoFilter);
+  return !vehiculoFilter || (viaje.vehiculos?.some((v) => v.vehiculo === vehiculoFilter) ?? false);
 };
 
 export const matchesChoferFilter = (viaje: Viaje, choferFilter: string | null): boolean => {
