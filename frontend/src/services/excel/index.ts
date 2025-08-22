@@ -5,32 +5,28 @@ import BulkOperations, { BulkUtils } from './BulkOperations';
 
 export { ExcelProcessor, ValidationEngine, ErrorRecovery, BulkOperations, BulkUtils };
 
-export type { 
-  ExcelProcessorOptions, 
-  ProcessedData, 
-  ExcelFileInfo 
-} from './ExcelProcessor';
+export type { ExcelProcessorOptions, ProcessedData, ExcelFileInfo } from './ExcelProcessor';
 
-export type { 
-  ValidationRule, 
-  ValidationError, 
-  ValidationResult, 
-  ValidationContext 
+export type {
+  ValidationRule,
+  ValidationError,
+  ValidationResult,
+  ValidationContext,
 } from './ValidationEngine';
 
-export type { 
-  ErrorRecoveryOptions, 
-  RecoveryAction, 
-  RecoveryPlan, 
-  RecoveryResult 
+export type {
+  ErrorRecoveryOptions,
+  RecoveryAction,
+  RecoveryPlan,
+  RecoveryResult,
 } from './ErrorRecovery';
 
-export type { 
-  BulkOperationOptions, 
-  BulkProgress, 
-  BulkError, 
-  BulkResult, 
-  BatchResult 
+export type {
+  BulkOperationOptions,
+  BulkProgress,
+  BulkError,
+  BulkResult,
+  BatchResult,
 } from './BulkOperations';
 
 /**
@@ -48,6 +44,22 @@ export class ExcelService {
     this.recovery = new ErrorRecovery();
     this.bulkOps = new BulkOperations();
   }
+  private mapEntityTypeToBulkType(
+    entityType: 'cliente' | 'empresa' | 'personal' | 'sites'
+  ): string {
+    switch (entityType) {
+      case 'cliente':
+        return 'clientes';
+      case 'empresa':
+        return 'empresas';
+      case 'sites':
+        return 'sites';
+      case 'personal':
+        return 'personal';
+      default:
+        return 'clientes';
+    }
+  }
 
   /**
    * Pipeline completo de procesamiento Excel
@@ -59,13 +71,13 @@ export class ExcelService {
       autoCorrect?: boolean;
       skipInvalidRows?: boolean;
       batchSize?: number;
-      progressCallback?: (progress: any) => void;
+      progressCallback?: (progress: { current: number; total: number; percent: number }) => void;
     } = {}
   ) {
     try {
       // 1. Cargar archivo
       const fileInfo = await this.processor.loadFromFile(file);
-      
+
       // 2. Validar estructura
       const structureValidation = this.processor.validateFileStructure();
       if (!structureValidation.isValid) {
@@ -77,25 +89,23 @@ export class ExcelService {
       const processedData = this.processor.processSheet(mainSheet);
 
       // 4. Validar datos
-      const validationResult = await this.validator.validateWithTemplate(entityType, processedData.data);
+      const validationResult = await this.validator.validateWithTemplate(
+        entityType,
+        processedData.data
+      );
 
       // 5. Recuperación de errores si hay problemas
       let finalData = processedData.data;
       if (!validationResult.isValid && (options.autoCorrect || options.skipInvalidRows)) {
-        const recoveryResult = this.recovery.executeRecovery(
-          processedData.data,
-          validationResult
-        );
+        const recoveryResult = this.recovery.executeRecovery(processedData.data, validationResult);
         finalData = recoveryResult.recoveredRows;
       }
 
       // 6. Operación masiva si hay datos válidos
       let bulkResult = null;
       if (finalData.length > 0) {
-        const bulkEntityType = entityType === 'cliente' ? 'clientes' : 
-                              entityType === 'empresa' ? 'empresas' : 
-                              entityType === 'sites' ? 'sites' : 'personal';
-        bulkResult = await this.bulkOps.bulkInsert(bulkEntityType as any, finalData);
+        const bulkEntityType = this.mapEntityTypeToBulkType(entityType);
+        bulkResult = await this.bulkOps.bulkInsert(bulkEntityType, finalData);
       }
 
       return {
@@ -107,10 +117,9 @@ export class ExcelService {
           totalRows: processedData.data.length,
           validRows: finalData.length,
           errorRows: processedData.data.length - finalData.length,
-          insertedRows: bulkResult?.successful || 0
-        }
+          insertedRows: bulkResult?.successful || 0,
+        },
       };
-
     } finally {
       this.processor.dispose();
     }
@@ -119,20 +128,20 @@ export class ExcelService {
   /**
    * Solo validación sin inserción
    */
-  async validateExcelFile(
-    file: File,
-    entityType: 'cliente' | 'empresa' | 'personal' | 'sites'
-  ) {
+  async validateExcelFile(file: File, entityType: 'cliente' | 'empresa' | 'personal' | 'sites') {
     try {
       const fileInfo = await this.processor.loadFromFile(file);
       const mainSheet = this.processor.findSheet(entityType) || fileInfo.sheets[0];
       const processedData = this.processor.processSheet(mainSheet);
-      const validationResult = await this.validator.validateWithTemplate(entityType, processedData.data);
+      const validationResult = await this.validator.validateWithTemplate(
+        entityType,
+        processedData.data
+      );
 
       return {
         fileInfo,
         processedData,
-        validationResult
+        validationResult,
       };
     } finally {
       this.processor.dispose();
@@ -142,18 +151,18 @@ export class ExcelService {
   /**
    * Obtiene muestra de datos para preview
    */
-  async previewExcelFile(file: File, sampleSize: number = 5) {
+  async previewExcelFile(file: File, sampleSize = 5) {
     try {
       const fileInfo = await this.processor.loadFromFile(file);
       const samples = fileInfo.sheets.map((sheetName: string) => ({
         sheetName,
         sample: this.processor.getDataSample(sheetName, sampleSize),
-        detectedType: this.processor.detectTemplateType(sheetName)
+        detectedType: this.processor.detectTemplateType(sheetName),
       }));
 
       return {
         fileInfo,
-        samples
+        samples,
       };
     } finally {
       this.processor.dispose();
@@ -167,11 +176,21 @@ export default ExcelService;
 const excelService = new ExcelService();
 
 // Export convenience functions
-export const previewExcelFile = (file: File, sampleSize?: number) => 
+export const previewExcelFile = (file: File, sampleSize?: number) =>
   excelService.previewExcelFile(file, sampleSize);
 
-export const validateExcelFile = (file: File, entityType?: 'cliente' | 'empresa' | 'personal' | 'sites') => 
-  excelService.validateExcelFile(file, entityType || 'cliente');
+export const validateExcelFile = (
+  file: File,
+  entityType?: 'cliente' | 'empresa' | 'personal' | 'sites'
+) => excelService.validateExcelFile(file, entityType || 'cliente');
 
-export const processExcelFile = (file: File, options: any) => 
-  excelService.processExcelFile(file, options.entityType || 'cliente', options);
+export const processExcelFile = (
+  file: File,
+  options: {
+    entityType?: 'cliente' | 'empresa' | 'personal' | 'sites';
+    autoCorrect?: boolean;
+    skipInvalidRows?: boolean;
+    batchSize?: number;
+    progressCallback?: (progress: { current: number; total: number; percent: number }) => void;
+  }
+) => excelService.processExcelFile(file, options.entityType || 'cliente', options);
