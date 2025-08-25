@@ -40,9 +40,10 @@ const TarifaForm: React.FC<TarifaFormProps> = ({ tarifa, onSubmit, onCancel, exi
     form.values.vigenciaHasta,
     existingTarifas,
     tarifa,
+    form.values,
   ]);
 
-  const handleSubmit = (values: any) => {
+  const handleSubmit = (values: ReturnType<typeof getInitialValues>) => {
     if (conflicts.length > 0) return;
 
     onSubmit({
