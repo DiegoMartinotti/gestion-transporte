@@ -26,6 +26,26 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 
+// Utility functions
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const getStatusColor = (
+  validationErrors: string[],
+  validationWarnings: string[],
+  uploadStatus: string
+) => {
+  if (validationErrors.length > 0) return 'red';
+  if (validationWarnings.length > 0) return 'yellow';
+  if (uploadStatus === 'success') return 'green';
+  return 'blue';
+};
+
 export interface ExcelUploadZoneProps extends Partial<DropzoneProps> {
   onFileAccepted?: (file: FileWithPath) => void;
   onFileRejected?: (files: FileRejection[]) => void;
@@ -39,6 +59,215 @@ export interface ExcelUploadZoneProps extends Partial<DropzoneProps> {
   validationWarnings?: string[];
   showTemplate?: boolean;
 }
+
+// Template section component
+interface TemplateSectionProps {
+  entityType: string;
+  onTemplateDownload?: () => Promise<void>;
+}
+
+const TemplateSection: React.FC<TemplateSectionProps> = ({ entityType, onTemplateDownload }) => {
+  const handleDownloadTemplate = async () => {
+    if (onTemplateDownload) {
+      try {
+        await onTemplateDownload();
+      } catch (error) {
+        console.error('Error downloading template:', error);
+      }
+    }
+  };
+
+  return (
+    <Paper p="md" withBorder>
+      <Group justify="space-between" align="center">
+        <Box>
+          <Text fw={500} size="sm">
+            Plantilla de {entityType}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Descarga la plantilla con los campos requeridos y formato correcto
+          </Text>
+        </Box>
+        <Button
+          leftSection={<IconDownload size={16} />}
+          variant="light"
+          size="sm"
+          onClick={handleDownloadTemplate}
+          disabled={!onTemplateDownload}
+        >
+          Descargar Plantilla
+        </Button>
+      </Group>
+    </Paper>
+  );
+};
+
+// File info component
+interface FileInfoProps {
+  file: FileWithPath;
+  validationErrors: string[];
+  validationWarnings: string[];
+  uploadStatus: string;
+  isProcessing: boolean;
+  onRemove: () => void;
+}
+
+const FileInfo: React.FC<FileInfoProps> = ({
+  file,
+  validationErrors,
+  validationWarnings,
+  uploadStatus,
+  isProcessing,
+  onRemove,
+}) => {
+  const statusColor = getStatusColor(validationErrors, validationWarnings, uploadStatus);
+
+  return (
+    <Paper p="md" withBorder>
+      <Group justify="space-between" align="center">
+        <Group gap="sm">
+          <ThemeIcon size="lg" variant="light" color={statusColor}>
+            <IconFileSpreadsheet size={20} />
+          </ThemeIcon>
+          <Box>
+            <Text fw={500} size="sm">
+              {file.name}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {formatFileSize(file.size)} • {file.type || 'Excel'}
+            </Text>
+          </Box>
+          <Badge color={statusColor} variant="light" size="sm">
+            {validationErrors.length > 0
+              ? 'Con errores'
+              : validationWarnings.length > 0
+                ? 'Con advertencias'
+                : uploadStatus === 'success'
+                  ? 'Listo'
+                  : 'Procesando'}
+          </Badge>
+        </Group>
+        <ActionIcon variant="light" color="red" onClick={onRemove} disabled={isProcessing}>
+          <IconTrash size={16} />
+        </ActionIcon>
+      </Group>
+    </Paper>
+  );
+};
+
+// Processing indicator component
+interface ProcessingIndicatorProps {
+  processingProgress: number;
+}
+
+const ProcessingIndicator: React.FC<ProcessingIndicatorProps> = ({ processingProgress }) => (
+  <Paper p="md" withBorder>
+    <Stack gap="xs">
+      <Group justify="space-between">
+        <Text size="sm" fw={500}>
+          Procesando archivo...
+        </Text>
+        <Text size="sm" c="dimmed">
+          {Math.round(processingProgress)}%
+        </Text>
+      </Group>
+      <Progress value={processingProgress} size="sm" animated />
+    </Stack>
+  </Paper>
+);
+
+// Validation alerts component
+interface ValidationAlertsProps {
+  validationErrors: string[];
+  validationWarnings: string[];
+}
+
+const ValidationAlerts: React.FC<ValidationAlertsProps> = ({
+  validationErrors,
+  validationWarnings,
+}) => (
+  <>
+    {validationErrors.length > 0 && (
+      <Alert
+        icon={<IconAlertTriangle size={16} />}
+        title="Errores de validación"
+        color="red"
+        variant="light"
+      >
+        <List size="sm" spacing="xs">
+          {validationErrors.map((error, index) => (
+            <List.Item key={index}>{error}</List.Item>
+          ))}
+        </List>
+      </Alert>
+    )}
+    {validationWarnings.length > 0 && (
+      <Alert
+        icon={<IconAlertTriangle size={16} />}
+        title="Advertencias"
+        color="yellow"
+        variant="light"
+      >
+        <List size="sm" spacing="xs">
+          {validationWarnings.map((warning, index) => (
+            <List.Item key={index}>{warning}</List.Item>
+          ))}
+        </List>
+      </Alert>
+    )}
+  </>
+);
+
+// Dropzone content component
+interface DropzoneContentProps {
+  supportedFormats: string[];
+  maxFileSize: number;
+}
+
+const DropzoneContent: React.FC<DropzoneContentProps> = ({ supportedFormats, maxFileSize }) => (
+  <Group justify="center" gap="xl" mih={220} style={{ pointerEvents: 'none' }}>
+    <Dropzone.Accept>
+      <IconUpload
+        style={{
+          width: rem(52),
+          height: rem(52),
+          color: 'var(--mantine-color-blue-6)',
+        }}
+        stroke={1.5}
+      />
+    </Dropzone.Accept>
+    <Dropzone.Reject>
+      <IconX
+        style={{
+          width: rem(52),
+          height: rem(52),
+          color: 'var(--mantine-color-red-6)',
+        }}
+        stroke={1.5}
+      />
+    </Dropzone.Reject>
+    <Dropzone.Idle>
+      <IconFileSpreadsheet
+        style={{
+          width: rem(52),
+          height: rem(52),
+          color: 'var(--mantine-color-dimmed)',
+        }}
+        stroke={1.5}
+      />
+    </Dropzone.Idle>
+
+    <div>
+      <Text size="xl" inline>
+        Arrastra tu archivo Excel aquí o haz clic para seleccionar
+      </Text>
+      <Text size="sm" c="dimmed" inline mt={7}>
+        Formatos soportados: {supportedFormats.join(', ')} • Tamaño máximo:{' '}
+        {formatFileSize(maxFileSize)}
+      </Text>
+    </div>
+  </Group>
+);
 
 export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
   onFileAccepted,
@@ -98,56 +327,10 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
     setUploadStatus('idle');
   };
 
-  const handleDownloadTemplate = async () => {
-    if (onTemplateDownload) {
-      try {
-        await onTemplateDownload();
-      } catch (error) {
-        console.error('Error downloading template:', error);
-      }
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getStatusColor = () => {
-    if (validationErrors.length > 0) return 'red';
-    if (validationWarnings.length > 0) return 'yellow';
-    if (uploadStatus === 'success') return 'green';
-    return 'blue';
-  };
-
   return (
     <Stack gap="md">
-      {/* Template Download Section */}
       {showTemplate && (
-        <Paper p="md" withBorder>
-          <Group justify="space-between" align="center">
-            <Box>
-              <Text fw={500} size="sm">
-                Plantilla de {entityType}
-              </Text>
-              <Text size="xs" c="dimmed">
-                Descarga la plantilla con los campos requeridos y formato correcto
-              </Text>
-            </Box>
-            <Button
-              leftSection={<IconDownload size={16} />}
-              variant="light"
-              size="sm"
-              onClick={handleDownloadTemplate}
-              disabled={!onTemplateDownload}
-            >
-              Descargar Plantilla
-            </Button>
-          </Group>
-        </Paper>
+        <TemplateSection entityType={entityType} onTemplateDownload={onTemplateDownload} />
       )}
 
       {/* Upload Zone */}
@@ -162,136 +345,26 @@ export const ExcelUploadZone: React.FC<ExcelUploadZoneProps> = ({
         disabled={isProcessing}
         {...dropzoneProps}
       >
-        <Group justify="center" gap="xl" mih={220} style={{ pointerEvents: 'none' }}>
-          <Dropzone.Accept>
-            <IconUpload
-              style={{
-                width: rem(52),
-                height: rem(52),
-                color: 'var(--mantine-color-blue-6)',
-              }}
-              stroke={1.5}
-            />
-          </Dropzone.Accept>
-          <Dropzone.Reject>
-            <IconX
-              style={{
-                width: rem(52),
-                height: rem(52),
-                color: 'var(--mantine-color-red-6)',
-              }}
-              stroke={1.5}
-            />
-          </Dropzone.Reject>
-          <Dropzone.Idle>
-            <IconFileSpreadsheet
-              style={{
-                width: rem(52),
-                height: rem(52),
-                color: 'var(--mantine-color-dimmed)',
-              }}
-              stroke={1.5}
-            />
-          </Dropzone.Idle>
-
-          <div>
-            <Text size="xl" inline>
-              Arrastra tu archivo Excel aquí o haz clic para seleccionar
-            </Text>
-            <Text size="sm" c="dimmed" inline mt={7}>
-              Formatos soportados: {supportedFormats.join(', ')} • Tamaño máximo:{' '}
-              {formatFileSize(maxFileSize)}
-            </Text>
-          </div>
-        </Group>
+        <DropzoneContent supportedFormats={supportedFormats} maxFileSize={maxFileSize} />
       </Dropzone>
 
-      {/* Uploaded File Info */}
       {uploadedFile && (
-        <Paper p="md" withBorder>
-          <Group justify="space-between" align="center">
-            <Group gap="sm">
-              <ThemeIcon size="lg" variant="light" color={getStatusColor()}>
-                <IconFileSpreadsheet size={20} />
-              </ThemeIcon>
-              <Box>
-                <Text fw={500} size="sm">
-                  {uploadedFile.name}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {formatFileSize(uploadedFile.size)} • {uploadedFile.type || 'Excel'}
-                </Text>
-              </Box>
-              <Badge color={getStatusColor()} variant="light" size="sm">
-                {validationErrors.length > 0
-                  ? 'Con errores'
-                  : validationWarnings.length > 0
-                    ? 'Con advertencias'
-                    : uploadStatus === 'success'
-                      ? 'Listo'
-                      : 'Procesando'}
-              </Badge>
-            </Group>
-            <ActionIcon
-              variant="light"
-              color="red"
-              onClick={handleRemoveFile}
-              disabled={isProcessing}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Group>
-        </Paper>
+        <FileInfo
+          file={uploadedFile}
+          validationErrors={validationErrors}
+          validationWarnings={validationWarnings}
+          uploadStatus={uploadStatus}
+          isProcessing={isProcessing}
+          onRemove={handleRemoveFile}
+        />
       )}
 
-      {/* Processing Progress */}
-      {isProcessing && (
-        <Paper p="md" withBorder>
-          <Stack gap="xs">
-            <Group justify="space-between">
-              <Text size="sm" fw={500}>
-                Procesando archivo...
-              </Text>
-              <Text size="sm" c="dimmed">
-                {Math.round(processingProgress)}%
-              </Text>
-            </Group>
-            <Progress value={processingProgress} size="sm" animated />
-          </Stack>
-        </Paper>
-      )}
+      {isProcessing && <ProcessingIndicator processingProgress={processingProgress} />}
 
-      {/* Validation Errors */}
-      {validationErrors.length > 0 && (
-        <Alert
-          icon={<IconAlertTriangle size={16} />}
-          title="Errores de validación"
-          color="red"
-          variant="light"
-        >
-          <List size="sm" spacing="xs">
-            {validationErrors.map((error, index) => (
-              <List.Item key={index}>{error}</List.Item>
-            ))}
-          </List>
-        </Alert>
-      )}
-
-      {/* Validation Warnings */}
-      {validationWarnings.length > 0 && (
-        <Alert
-          icon={<IconAlertTriangle size={16} />}
-          title="Advertencias"
-          color="yellow"
-          variant="light"
-        >
-          <List size="sm" spacing="xs">
-            {validationWarnings.map((warning, index) => (
-              <List.Item key={index}>{warning}</List.Item>
-            ))}
-          </List>
-        </Alert>
-      )}
+      <ValidationAlerts
+        validationErrors={validationErrors}
+        validationWarnings={validationWarnings}
+      />
     </Stack>
   );
 };
