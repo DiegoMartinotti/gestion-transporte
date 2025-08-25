@@ -24,7 +24,7 @@ interface QuickAction {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ size?: number }>;
   color: string;
   path: string;
   badge?: string;
@@ -35,76 +35,76 @@ interface QuickActionsProps {
   compact?: boolean;
 }
 
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    id: 'nuevo-viaje',
+    title: 'Nuevo Viaje',
+    description: 'Crear un nuevo viaje',
+    icon: IconTruckDelivery,
+    color: 'blue',
+    path: '/viajes/nuevo',
+  },
+  {
+    id: 'nuevo-cliente',
+    title: 'Nuevo Cliente',
+    description: 'Registrar cliente',
+    icon: IconUserPlus,
+    color: 'green',
+    path: '/clientes/nuevo',
+  },
+  {
+    id: 'nuevo-vehiculo',
+    title: 'Nuevo Vehículo',
+    description: 'Agregar vehículo',
+    icon: IconTruck,
+    color: 'orange',
+    path: '/vehiculos/nuevo',
+  },
+  {
+    id: 'nuevo-site',
+    title: 'Nuevo Site',
+    description: 'Agregar ubicación',
+    icon: IconMapPin,
+    color: 'cyan',
+    path: '/sites/nuevo',
+  },
+  {
+    id: 'nuevo-tramo',
+    title: 'Nuevo Tramo',
+    description: 'Definir ruta',
+    icon: IconRoute,
+    color: 'violet',
+    path: '/tramos/nuevo',
+  },
+  {
+    id: 'facturacion',
+    title: 'Facturación',
+    description: 'Generar facturas',
+    icon: IconFileInvoice,
+    color: 'indigo',
+    path: '/facturacion',
+    badge: '12 pendientes',
+  },
+  {
+    id: 'reportes',
+    title: 'Reportes',
+    description: 'Ver informes',
+    icon: IconReportAnalytics,
+    color: 'teal',
+    path: '/reportes',
+  },
+  {
+    id: 'configuracion',
+    title: 'Configuración',
+    description: 'Ajustes del sistema',
+    icon: IconSettings,
+    color: 'gray',
+    path: '/configuracion',
+  },
+];
+
 export const QuickActions = ({ compact = false }: QuickActionsProps) => {
   const navigate = useNavigate();
-
-  const actions: QuickAction[] = [
-    {
-      id: 'nuevo-viaje',
-      title: 'Nuevo Viaje',
-      description: 'Crear un nuevo viaje',
-      icon: IconTruckDelivery,
-      color: 'blue',
-      path: '/viajes/nuevo',
-    },
-    {
-      id: 'nuevo-cliente',
-      title: 'Nuevo Cliente',
-      description: 'Registrar cliente',
-      icon: IconUserPlus,
-      color: 'green',
-      path: '/clientes/nuevo',
-    },
-    {
-      id: 'nuevo-vehiculo',
-      title: 'Nuevo Vehículo',
-      description: 'Agregar vehículo',
-      icon: IconTruck,
-      color: 'orange',
-      path: '/vehiculos/nuevo',
-    },
-    {
-      id: 'nuevo-site',
-      title: 'Nuevo Site',
-      description: 'Agregar ubicación',
-      icon: IconMapPin,
-      color: 'cyan',
-      path: '/sites/nuevo',
-    },
-    {
-      id: 'nuevo-tramo',
-      title: 'Nuevo Tramo',
-      description: 'Definir ruta',
-      icon: IconRoute,
-      color: 'violet',
-      path: '/tramos/nuevo',
-    },
-    {
-      id: 'facturacion',
-      title: 'Facturación',
-      description: 'Generar facturas',
-      icon: IconFileInvoice,
-      color: 'indigo',
-      path: '/facturacion',
-      badge: '12 pendientes',
-    },
-    {
-      id: 'reportes',
-      title: 'Reportes',
-      description: 'Ver informes',
-      icon: IconReportAnalytics,
-      color: 'teal',
-      path: '/reportes',
-    },
-    {
-      id: 'configuracion',
-      title: 'Configuración',
-      description: 'Ajustes del sistema',
-      icon: IconSettings,
-      color: 'gray',
-      path: '/configuracion',
-    },
-  ];
 
   const handleActionClick = (action: QuickAction) => {
     if (!action.disabled) {
@@ -112,7 +112,7 @@ export const QuickActions = ({ compact = false }: QuickActionsProps) => {
     }
   };
 
-  const displayActions = compact ? actions.slice(0, 6) : actions;
+  const displayActions = compact ? QUICK_ACTIONS.slice(0, 6) : QUICK_ACTIONS;
 
   return (
     <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
