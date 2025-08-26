@@ -10,7 +10,7 @@ import {
   ExportFormat,
   ReportApiResponse,
   PaginatedReportResponse,
-  ReportExecution
+  ReportExecution,
 } from '../types/reports';
 
 export class ReportService {
@@ -18,28 +18,43 @@ export class ReportService {
 
   // Report Definitions
   async getReportDefinitions(): Promise<ReportDefinition[]> {
-    const response = await api.get<ReportApiResponse<ReportDefinition[]>>(`${this.baseUrl}/definitions`);
+    const response = await api.get<ReportApiResponse<ReportDefinition[]>>(
+      `${this.baseUrl}/definitions`
+    );
     return response.data?.data || [];
   }
 
   async getReportDefinition(id: string): Promise<ReportDefinition> {
-    const response = await api.get<ReportApiResponse<ReportDefinition>>(`${this.baseUrl}/definitions/${id}`);
+    const response = await api.get<ReportApiResponse<ReportDefinition>>(
+      `${this.baseUrl}/definitions/${id}`
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Report not found');
     }
     return response.data.data;
   }
 
-  async createReportDefinition(definition: Omit<ReportDefinition, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>): Promise<ReportDefinition> {
-    const response = await api.post<ReportApiResponse<ReportDefinition>>(`${this.baseUrl}/definitions`, definition);
+  async createReportDefinition(
+    definition: Omit<ReportDefinition, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>
+  ): Promise<ReportDefinition> {
+    const response = await api.post<ReportApiResponse<ReportDefinition>>(
+      `${this.baseUrl}/definitions`,
+      definition
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to create report');
     }
     return response.data.data;
   }
 
-  async updateReportDefinition(id: string, definition: Partial<ReportDefinition>): Promise<ReportDefinition> {
-    const response = await api.put<ReportApiResponse<ReportDefinition>>(`${this.baseUrl}/definitions/${id}`, definition);
+  async updateReportDefinition(
+    id: string,
+    definition: Partial<ReportDefinition>
+  ): Promise<ReportDefinition> {
+    const response = await api.put<ReportApiResponse<ReportDefinition>>(
+      `${this.baseUrl}/definitions/${id}`,
+      definition
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to update report');
     }
@@ -54,12 +69,18 @@ export class ReportService {
   }
 
   // Report Execution
-  async executeReport(definitionId: string, options?: {
-    limit?: number;
-    offset?: number;
-    exportFormat?: ExportFormat;
-  }): Promise<ReportData> {
-    const response = await api.post<ReportApiResponse<ReportData>>(`${this.baseUrl}/execute/${definitionId}`, options);
+  async executeReport(
+    definitionId: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+      exportFormat?: ExportFormat;
+    }
+  ): Promise<ReportData> {
+    const response = await api.post<ReportApiResponse<ReportData>>(
+      `${this.baseUrl}/execute/${definitionId}`,
+      options
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to execute report');
     }
@@ -69,7 +90,7 @@ export class ReportService {
   async previewReport(definition: Partial<ReportDefinition>): Promise<ReportData> {
     const response = await api.post<ReportApiResponse<ReportData>>(`${this.baseUrl}/preview`, {
       ...definition,
-      limit: 100 // Limit preview data
+      limit: 100, // Limit preview data
     });
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to generate preview');
@@ -81,35 +102,52 @@ export class ReportService {
   async exportReport(definitionId: string, config: ExportConfig): Promise<Blob> {
     const client = api.getClient();
     const response = await client.post(`${this.baseUrl}/export/${definitionId}`, config, {
-      responseType: 'blob'
+      responseType: 'blob',
     });
     return response.data as Blob;
   }
 
   async exportReportData(data: ReportData, config: ExportConfig): Promise<Blob> {
     const client = api.getClient();
-    const response = await client.post(`${this.baseUrl}/export-data`, { data, config }, {
-      responseType: 'blob'
-    });
+    const response = await client.post(
+      `${this.baseUrl}/export-data`,
+      { data, config },
+      {
+        responseType: 'blob',
+      }
+    );
     return response.data as Blob;
   }
 
   // Scheduled Reports
   async getScheduledReports(): Promise<ScheduledReport[]> {
-    const response = await api.get<ReportApiResponse<ScheduledReport[]>>(`${this.baseUrl}/scheduled`);
+    const response = await api.get<ReportApiResponse<ScheduledReport[]>>(
+      `${this.baseUrl}/scheduled`
+    );
     return response.data?.data || [];
   }
 
-  async createScheduledReport(scheduledReport: Omit<ScheduledReport, 'id' | 'createdAt' | 'createdBy' | 'lastRun' | 'nextRun'>): Promise<ScheduledReport> {
-    const response = await api.post<ReportApiResponse<ScheduledReport>>(`${this.baseUrl}/scheduled`, scheduledReport);
+  async createScheduledReport(
+    scheduledReport: Omit<ScheduledReport, 'id' | 'createdAt' | 'createdBy' | 'lastRun' | 'nextRun'>
+  ): Promise<ScheduledReport> {
+    const response = await api.post<ReportApiResponse<ScheduledReport>>(
+      `${this.baseUrl}/scheduled`,
+      scheduledReport
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to create scheduled report');
     }
     return response.data?.data;
   }
 
-  async updateScheduledReport(id: string, updates: Partial<ScheduledReport>): Promise<ScheduledReport> {
-    const response = await api.put<ReportApiResponse<ScheduledReport>>(`${this.baseUrl}/scheduled/${id}`, updates);
+  async updateScheduledReport(
+    id: string,
+    updates: Partial<ScheduledReport>
+  ): Promise<ScheduledReport> {
+    const response = await api.put<ReportApiResponse<ScheduledReport>>(
+      `${this.baseUrl}/scheduled/${id}`,
+      updates
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to update scheduled report');
     }
@@ -124,7 +162,9 @@ export class ReportService {
   }
 
   async toggleScheduledReport(id: string): Promise<ScheduledReport> {
-    const response = await api.post<ReportApiResponse<ScheduledReport>>(`${this.baseUrl}/scheduled/${id}/toggle`);
+    const response = await api.post<ReportApiResponse<ScheduledReport>>(
+      `${this.baseUrl}/scheduled/${id}/toggle`
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to toggle scheduled report');
     }
@@ -136,11 +176,22 @@ export class ReportService {
     const response = await api.get<ReportApiResponse<PaginatedReportResponse<ReportHistory>>>(
       `${this.baseUrl}/history?page=${page}&pageSize=${pageSize}`
     );
-    return response.data?.data || { items: [], totalItems: 0, currentPage: 1, totalPages: 0, hasNext: false, hasPrevious: false };
+    return (
+      response.data?.data || {
+        items: [],
+        totalItems: 0,
+        currentPage: 1,
+        totalPages: 0,
+        hasNext: false,
+        hasPrevious: false,
+      }
+    );
   }
 
   async getReportHistoryById(id: string): Promise<ReportHistory> {
-    const response = await api.get<ReportApiResponse<ReportHistory>>(`${this.baseUrl}/history/${id}`);
+    const response = await api.get<ReportApiResponse<ReportHistory>>(
+      `${this.baseUrl}/history/${id}`
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Report history not found');
     }
@@ -149,7 +200,7 @@ export class ReportService {
 
   async downloadReportFromHistory(historyId: string): Promise<Blob> {
     const response = await api.getClient().get(`${this.baseUrl}/history/${historyId}/download`, {
-      responseType: 'blob'
+      responseType: 'blob',
     });
     return response.data as Blob;
   }
@@ -183,7 +234,7 @@ export class ReportService {
         }
       });
     }
-    
+
     const response = await api.get<ReportApiResponse<ReportExecution[]>>(
       `${this.baseUrl}/executions?${searchParams.toString()}`
     );
@@ -191,30 +242,38 @@ export class ReportService {
   }
 
   async downloadReportExecution(executionId: string): Promise<Blob> {
-    const response = await api.getClient().get(`${this.baseUrl}/executions/${executionId}/download`, {
-      responseType: 'blob'
-    });
+    const response = await api
+      .getClient()
+      .get(`${this.baseUrl}/executions/${executionId}/download`, {
+        responseType: 'blob',
+      });
     return response.data as Blob;
   }
 
   async rerunReportExecution(executionId: string): Promise<void> {
-    const response = await api.post<ReportApiResponse<void>>(`${this.baseUrl}/executions/${executionId}/rerun`);
+    const response = await api.post<ReportApiResponse<void>>(
+      `${this.baseUrl}/executions/${executionId}/rerun`
+    );
     if (!response.data?.success) {
       throw new Error(response.data?.error || 'Failed to rerun report execution');
     }
   }
 
   async cancelReportExecution(executionId: string): Promise<void> {
-    const response = await api.post<ReportApiResponse<void>>(`${this.baseUrl}/executions/${executionId}/cancel`);
+    const response = await api.post<ReportApiResponse<void>>(
+      `${this.baseUrl}/executions/${executionId}/cancel`
+    );
     if (!response.data?.success) {
       throw new Error(response.data?.error || 'Failed to cancel report execution');
     }
   }
 
   async deleteReportExecutions(executionIds: string[]): Promise<void> {
-    const response = await api.getClient().delete<ReportApiResponse<void>>(`${this.baseUrl}/executions`, {
-      data: { ids: executionIds }
-    });
+    const response = await api
+      .getClient()
+      .delete<ReportApiResponse<void>>(`${this.baseUrl}/executions`, {
+        data: { ids: executionIds },
+      });
     if (!response.data.success) {
       throw new Error(response.data.error || 'Failed to delete report executions');
     }
@@ -222,7 +281,7 @@ export class ReportService {
 
   async archiveReportExecutions(executionIds: string[]): Promise<void> {
     const response = await api.post<ReportApiResponse<void>>(`${this.baseUrl}/executions/archive`, {
-      ids: executionIds
+      ids: executionIds,
     });
     if (!response.data?.success) {
       throw new Error(response.data?.error || 'Failed to archive report executions');
@@ -231,12 +290,20 @@ export class ReportService {
 
   // Templates
   async getReportTemplates(): Promise<ReportTemplate[]> {
-    const response = await api.get<ReportApiResponse<ReportTemplate[]>>(`${this.baseUrl}/templates`);
+    const response = await api.get<ReportApiResponse<ReportTemplate[]>>(
+      `${this.baseUrl}/templates`
+    );
     return response.data?.data || [];
   }
 
-  async createReportFromTemplate(templateId: string, customization?: Partial<ReportDefinition>): Promise<ReportDefinition> {
-    const response = await api.post<ReportApiResponse<ReportDefinition>>(`${this.baseUrl}/templates/${templateId}/create`, customization);
+  async createReportFromTemplate(
+    templateId: string,
+    customization?: Partial<ReportDefinition>
+  ): Promise<ReportDefinition> {
+    const response = await api.post<ReportApiResponse<ReportDefinition>>(
+      `${this.baseUrl}/templates/${templateId}/create`,
+      customization
+    );
     if (!response.data?.data) {
       throw new Error(response.data?.error || 'Failed to create report from template');
     }
@@ -249,8 +316,13 @@ export class ReportService {
     return response.data?.data || [];
   }
 
-  async getFieldOptions(dataSource: string, field: string): Promise<any[]> {
-    const response = await api.get<ReportApiResponse<any[]>>(`${this.baseUrl}/data-sources/${dataSource}/fields/${field}/options`);
+  async getFieldOptions(
+    dataSource: string,
+    field: string
+  ): Promise<Array<{ label: string; value: string | number }>> {
+    const response = await api.get<
+      ReportApiResponse<Array<{ label: string; value: string | number }>>
+    >(`${this.baseUrl}/data-sources/${dataSource}/fields/${field}/options`);
     return response.data?.data || [];
   }
 
@@ -284,12 +356,12 @@ export class ReportService {
 
   // Mock Data Generation (for development)
   generateMockData(definition: Partial<ReportDefinition>): ReportData {
-    const mockRows: any[][] = [];
+    const mockRows: (string | number | boolean | Date | null)[][] = [];
     const rowCount = Math.min(definition.limit || 50, 100);
-    
+
     for (let i = 0; i < rowCount; i++) {
-      const row: any[] = [];
-      definition.fields?.forEach(field => {
+      const row: (string | number | boolean | Date | null)[] = [];
+      definition.fields?.forEach((field) => {
         switch (field.type) {
           case 'string':
             row.push(`${field.label} ${i + 1}`);
@@ -314,14 +386,14 @@ export class ReportService {
     }
 
     return {
-      headers: definition.fields?.map(f => f.label) || [],
+      headers: definition.fields?.map((f) => f.label) || [],
       rows: mockRows,
       totalRows: mockRows.length,
       metadata: {
         executionTime: Math.random() * 1000,
         generatedAt: new Date(),
-        filters: definition.filters || []
-      }
+        filters: definition.filters || [],
+      },
     };
   }
 }

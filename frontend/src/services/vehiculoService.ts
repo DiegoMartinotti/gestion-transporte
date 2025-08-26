@@ -32,31 +32,37 @@ export const vehiculoService = {
       return response.data;
     }
 
-    return response as any;
+    return (response.data as Vehiculo[]) || [];
   },
 
   // Obtener vehículos por empresa
   getVehiculosByEmpresa: async (empresaId: string) => {
     const response = await api.get(`/vehiculos/empresa/${empresaId}`);
-    return (Array.isArray(response) ? response : response.data || response) as any;
+    return (
+      Array.isArray(response) ? response : response.data || response
+    ) as VehiculoConVencimientos[];
   },
 
   // Obtener vehículos con vencimientos próximos
   getVehiculosConVencimientos: async (dias = 30): Promise<VehiculoConVencimientos[]> => {
     const response = await api.get(`/vehiculos/vencimientos/${dias}`);
-    return (Array.isArray(response) ? response : response.data || response) as any;
+    return (
+      Array.isArray(response) ? response : response.data || response
+    ) as VehiculoConVencimientos[];
   },
 
   // Obtener vehículos con documentación vencida
   getVehiculosVencidos: async (): Promise<VehiculoConVencimientos[]> => {
     const response = await api.get('/vehiculos/vencidos');
-    return (Array.isArray(response) ? response : response.data || response) as any;
+    return (
+      Array.isArray(response) ? response : response.data || response
+    ) as VehiculoConVencimientos[];
   },
 
   // Obtener vehículo por ID
   getVehiculoById: async (id: string): Promise<Vehiculo> => {
     const response = await api.get(`/vehiculos/${id}`);
-    return (response.data || response) as any;
+    return (response.data || response) as Vehiculo;
   },
 
   // Crear nuevo vehículo
@@ -64,7 +70,7 @@ export const vehiculoService = {
     vehiculo: Omit<Vehiculo, '_id' | 'createdAt' | 'updatedAt'>
   ): Promise<Vehiculo> => {
     const response = await api.post('/vehiculos', vehiculo);
-    return (response.data || response) as any;
+    return (response.data || response) as Vehiculo;
   },
 
   // Crear múltiples vehículos (bulk)
@@ -72,13 +78,15 @@ export const vehiculoService = {
     vehiculos: Omit<Vehiculo, '_id' | 'createdAt' | 'updatedAt'>[]
   ): Promise<Vehiculo[]> => {
     const response = await api.post('/vehiculos/bulk', { vehiculos });
-    return (Array.isArray(response) ? response : response.data || response) as any;
+    return (
+      Array.isArray(response) ? response : response.data || response
+    ) as VehiculoConVencimientos[];
   },
 
   // Actualizar vehículo
   updateVehiculo: async (id: string, vehiculo: Partial<Vehiculo>): Promise<Vehiculo> => {
     const response = await api.put(`/vehiculos/${id}`, vehiculo);
-    return (response.data || response) as any;
+    return (response.data || response) as Vehiculo;
   },
 
   // Eliminar vehículo

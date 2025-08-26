@@ -7,7 +7,7 @@ export const personalService = {
   buildQueryParams: (filters?: PersonalFilters): URLSearchParams => {
     const params = new URLSearchParams();
 
-    const paramMappings: Array<[keyof PersonalFilters, (value: any) => string]> = [
+    const paramMappings: Array<[keyof PersonalFilters, (value: unknown) => string]> = [
       ['search', (v) => v],
       ['tipo', (v) => v],
       ['empresa', (v) => v],
@@ -39,7 +39,9 @@ export const personalService = {
   // Get all personal with optional filters
   getAll: async (filters?: PersonalFilters): Promise<PaginatedResponse<Personal>> => {
     const params = personalService.buildQueryParams(filters);
-    const response = await apiService.get<any>(`/personal?${params.toString()}`);
+    const response = await apiService.get<Personal[] | { data: Personal[] }>(
+      `/personal?${params.toString()}`
+    );
 
     // Handle direct array response
     if (Array.isArray(response)) {
@@ -50,12 +52,17 @@ export const personalService = {
     }
 
     // Handle ApiResponse format
-    return (
-      response.data || {
-        data: [],
-        pagination: personalService.createDefaultPagination([], filters),
-      }
-    );
+    if ('data' in response && response.data) {
+      return {
+        data: response.data,
+        pagination: personalService.createDefaultPagination(response.data, filters),
+      };
+    }
+
+    return {
+      data: [],
+      pagination: personalService.createDefaultPagination([], filters),
+    };
   },
 
   // Get personal by ID
@@ -119,12 +126,14 @@ export const personalService = {
     if (filters?.activo !== undefined) params.append('activo', filters.activo.toString());
     if (filters?.search) params.append('search', filters.search);
 
-    const response = await apiService.get<any>(`/personal?${params.toString()}`);
+    const response = await apiService.get<Personal[] | { data: Personal[] }>(
+      `/personal?${params.toString()}`
+    );
     // El backend puede devolver directo el array o en formato { data: [...] }
     if (Array.isArray(response)) {
       return response;
     }
-    return response.data || [];
+    return 'data' in response ? response.data || [] : [];
   },
 
   // Get conductores (drivers) only
@@ -135,12 +144,14 @@ export const personalService = {
 
     if (empresaId) params.append('empresa', empresaId);
 
-    const response = await apiService.get<any>(`/personal?${params.toString()}`);
+    const response = await apiService.get<Personal[] | { data: Personal[] }>(
+      `/personal?${params.toString()}`
+    );
     // El backend puede devolver directo el array o en formato { data: [...] }
     if (Array.isArray(response)) {
       return response;
     }
-    return response.data || [];
+    return 'data' in response ? response.data || [] : [];
   },
 
   // Get personal with expiring documents
@@ -165,7 +176,15 @@ export const personalService = {
     documentosVenciendo: number;
   }> => {
     const params = empresaId ? `?empresa=${empresaId}` : '';
-    const response = await apiService.get<ApiResponse<any>>(`/personal/stats${params}`);
+    const response = await apiService.get<
+      ApiResponse<{
+        total: number;
+        activos: number;
+        inactivos: number;
+        porTipo: Record<string, number>;
+        documentosVenciendo: number;
+      }>
+    >(`/personal/stats${params}`);
     if (!response.data?.data) {
       throw new Error('Error al obtener estadísticas');
     }
@@ -205,15 +224,21 @@ export const personalService = {
   // Excel operations now handled by BaseExcelService
 
   // Excel import functions
-  previewExcelFile: async (file: File, sampleSize?: number): Promise<any> => {
+  previewExcelFile: async (
+    file: File,
+    sampleSize?: number
+  ): Promise<{
+    fileInfo: unknown;
+    samples: unknown;
+  }> => {
     return await previewExcelFile(file, sampleSize);
   },
 
-  validateExcelFile: async (file: File): Promise<any> => {
+  validateExcelFile: async (file: File): Promise<unknown> => {
     return await validateExcelFile(file);
   },
 
-  processExcelFile: async (file: File, options: any): Promise<any> => {
+  processExcelFile: async (file: File, options: unknown): Promise<unknown> => {
     return await processExcelFile(file, {
       ...options,
       endpoint: '/personal/import',
