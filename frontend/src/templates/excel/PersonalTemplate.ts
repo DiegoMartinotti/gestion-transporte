@@ -7,7 +7,7 @@ import { PERSONAL_CONSTANTS, PersonalTemplateData } from './PersonalTemplateCons
 import { PersonalTemplateValidators } from './PersonalTemplateValidators';
 import { parseDate, formatDate, parseBooleanValue } from '../../utils/excel/validationHelpers';
 
-export { PersonalTemplateData } from './PersonalTemplateConstants';
+export type { PersonalTemplateData } from './PersonalTemplateConstants';
 
 export class PersonalTemplate {
   private static mapRowToColumns(row: PersonalTemplateData): (string | number)[] {
