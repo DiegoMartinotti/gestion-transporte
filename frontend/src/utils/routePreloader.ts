@@ -1,11 +1,13 @@
+import React from 'react';
+
 /**
  * Utilidad para precargar rutas de forma estratégica
  * Mejora la experiencia del usuario precargando páginas que probablemente visitará
  */
 
-type PreloadableRoute = 
+type PreloadableRoute =
   | 'dashboard'
-  | 'clientes' 
+  | 'clientes'
   | 'empresas'
   | 'personal'
   | 'sites'
@@ -19,7 +21,7 @@ type PreloadableRoute =
   | 'reports';
 
 interface RoutePreloader {
-  [key: string]: () => Promise<any>;
+  [key: string]: () => Promise<{ default: React.ComponentType }>;
 }
 
 // Mapa de rutas y sus imports lazy
@@ -30,16 +32,24 @@ const routePreloaders: RoutePreloader = {
   'cliente-form': () => import('../pages/clientes/ClienteFormPage'),
   empresas: () => import('../pages/empresas/EmpresasPage'),
   'empresa-detail': () => import('../pages/empresas/EmpresaDetailPage'),
-  personal: () => import('../pages/personal/PersonalPage').then(module => ({ default: module.PersonalPage })),
-  sites: () => import('../pages/sites').then(module => ({ default: module.SitesPage })),
+  personal: () =>
+    import('../pages/personal/PersonalPage').then((module) => ({ default: module.PersonalPage })),
+  sites: () => import('../pages/sites').then((module) => ({ default: module.SitesPage })),
   tramos: () => import('../pages/tramos/TramosPage'),
   vehiculos: () => import('../pages/vehiculos/VehiculosPage'),
-  viajes: () => import('../pages/viajes/ViajesPage').then(module => ({ default: module.ViajesPage })),
-  extras: () => import('../pages/extras/ExtrasPage').then(module => ({ default: module.ExtrasPage })),
-  'ordenes-compra': () => import('../pages/ordenes-compra/OrdenesCompraPage').then(module => ({ default: module.OrdenesCompraPage })),
+  viajes: () =>
+    import('../pages/viajes/ViajesPage').then((module) => ({ default: module.ViajesPage })),
+  extras: () =>
+    import('../pages/extras/ExtrasPage').then((module) => ({ default: module.ExtrasPage })),
+  'ordenes-compra': () =>
+    import('../pages/ordenes-compra/OrdenesCompraPage').then((module) => ({
+      default: module.OrdenesCompraPage,
+    })),
   calculadora: () => import('../pages/calculadora/CalculadoraPage'),
-  import: () => import('../pages/import/ImportPage').then(module => ({ default: module.ImportPage })),
-  reports: () => import('../pages/reports/ReportsPage').then(module => ({ default: module.ReportsPage }))
+  import: () =>
+    import('../pages/import/ImportPage').then((module) => ({ default: module.ImportPage })),
+  reports: () =>
+    import('../pages/reports/ReportsPage').then((module) => ({ default: module.ReportsPage })),
 };
 
 // Cache de rutas ya precargadas
@@ -73,9 +83,9 @@ export const preloadRoute = async (route: PreloadableRoute): Promise<void> => {
  */
 export const preloadRoutes = async (routes: PreloadableRoute[]): Promise<void> => {
   const promises = routes
-    .filter(route => !preloadedRoutes.has(route))
-    .map(route => preloadRoute(route));
-  
+    .filter((route) => !preloadedRoutes.has(route))
+    .map((route) => preloadRoute(route));
+
   await Promise.allSettled(promises);
 };
 
@@ -87,30 +97,41 @@ export const preloadStrategies = {
    * Precarga rutas principales después del login
    */
   afterLogin: () => preloadRoutes(['dashboard', 'clientes', 'viajes']),
-  
+
   /**
    * Precarga rutas de gestión cuando se visita cualquier página de gestión
    */
   managementContext: () => preloadRoutes(['clientes', 'empresas', 'personal']),
-  
+
   /**
    * Precarga rutas operacionales cuando se visita viajes o tramos
    */
   operationalContext: () => preloadRoutes(['viajes', 'tramos', 'vehiculos', 'ordenes-compra']),
-  
+
   /**
    * Precarga herramientas de análisis
    */
   analyticsContext: () => preloadRoutes(['reports', 'calculadora']),
-  
+
   /**
    * Precarga todo (usar con cuidado - solo en conexiones rápidas)
    */
-  preloadAll: () => preloadRoutes([
-    'dashboard', 'clientes', 'empresas', 'personal', 
-    'sites', 'tramos', 'vehiculos', 'viajes', 'extras',
-    'ordenes-compra', 'calculadora', 'import', 'reports'
-  ])
+  preloadAll: () =>
+    preloadRoutes([
+      'dashboard',
+      'clientes',
+      'empresas',
+      'personal',
+      'sites',
+      'tramos',
+      'vehiculos',
+      'viajes',
+      'extras',
+      'ordenes-compra',
+      'calculadora',
+      'import',
+      'reports',
+    ]),
 };
 
 /**
@@ -119,10 +140,10 @@ export const preloadStrategies = {
 export const setupMenuPreloading = () => {
   // Detectar hover en elementos del menú y precargar la ruta correspondiente
   const menuItems = document.querySelectorAll('[data-route-preload]');
-  
-  menuItems.forEach(item => {
+
+  menuItems.forEach((item) => {
     let hoverTimer: NodeJS.Timeout;
-    
+
     item.addEventListener('mouseenter', () => {
       const route = item.getAttribute('data-route-preload') as PreloadableRoute;
       if (route) {
@@ -130,7 +151,7 @@ export const setupMenuPreloading = () => {
         hoverTimer = setTimeout(() => preloadRoute(route), 200);
       }
     });
-    
+
     item.addEventListener('mouseleave', () => {
       if (hoverTimer) {
         clearTimeout(hoverTimer);
@@ -148,7 +169,7 @@ export const intelligentPreload = {
    */
   fromCurrentRoute: (currentPath: string) => {
     const path = currentPath.toLowerCase();
-    
+
     if (path.includes('/clientes')) {
       preloadStrategies.managementContext();
       preloadRoute('sites'); // Sites suelen visitarse después de clientes
@@ -160,13 +181,13 @@ export const intelligentPreload = {
       preloadStrategies.afterLogin();
     }
   },
-  
+
   /**
    * Precarga basada en la hora del día (patrones de uso)
    */
   timeBasedPreload: () => {
     const hour = new Date().getHours();
-    
+
     // Horario comercial - precargar operaciones
     if (hour >= 8 && hour <= 18) {
       preloadStrategies.operationalContext();
@@ -176,7 +197,7 @@ export const intelligentPreload = {
       preloadStrategies.analyticsContext();
       preloadStrategies.managementContext();
     }
-  }
+  },
 };
 
 /**
@@ -185,22 +206,22 @@ export const intelligentPreload = {
 export const initializeRoutePreloader = () => {
   // Configurar precarga en hover del menú
   document.addEventListener('DOMContentLoaded', setupMenuPreloading);
-  
+
   // Precarga inteligente después de 2 segundos de inactividad
   let inactivityTimer: NodeJS.Timeout;
-  
+
   const resetInactivityTimer = () => {
     clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(() => {
       intelligentPreload.fromCurrentRoute(window.location.pathname);
     }, 2000);
   };
-  
+
   // Monitorear actividad del usuario
-  ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+  ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach((event) => {
     document.addEventListener(event, resetInactivityTimer, true);
   });
-  
+
   // Iniciar timer
   resetInactivityTimer();
 };
@@ -210,5 +231,5 @@ export default {
   preloadRoutes,
   preloadStrategies,
   intelligentPreload,
-  initializeRoutePreloader
+  initializeRoutePreloader,
 };
