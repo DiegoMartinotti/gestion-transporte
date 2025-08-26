@@ -3,137 +3,11 @@ import { WorkSheet, WorkBook } from 'xlsx';
 import { PersonalRawData } from '../../types/excel';
 import { EXCEL_SHARED_CONSTANTS } from './constants';
 import ReferenceDataSheets from './ReferenceDataSheets';
-import {
-  validateRequiredFields,
-  validateEmailFormat,
-  validateDNIFormat,
-  validateCUILFormat,
-  validateDuplicates,
-  validateInReferenceList,
-  validateEnumValue,
-  parseDate,
-  formatDate,
-  parseBooleanValue,
-  combineValidationResults,
-  formatRowError,
-} from '../../utils/excel/validationHelpers';
+import { PERSONAL_CONSTANTS, PersonalTemplateData } from './PersonalTemplateConstants';
+import { PersonalTemplateValidators } from './PersonalTemplateValidators';
+import { parseDate, formatDate, parseBooleanValue } from '../../utils/excel/validationHelpers';
 
-export interface PersonalTemplateData {
-  nombre: string;
-  apellido: string;
-  dni: string;
-  cuil?: string;
-  tipo: 'Conductor' | 'Administrativo' | 'Mecánico' | 'Supervisor' | 'Otro';
-  fechaNacimiento?: Date;
-  empresaId?: string;
-  empresaNombre?: string;
-  numeroLegajo?: string;
-  fechaIngreso?: Date;
-  direccionCalle?: string;
-  direccionNumero?: string;
-  direccionLocalidad?: string;
-  direccionProvincia?: string;
-  direccionCodigoPostal?: string;
-  telefono?: string;
-  telefonoEmergencia?: string;
-  email?: string;
-  licenciaNumero?: string;
-  licenciaCategoria?: string;
-  licenciaVencimiento?: Date;
-  carnetProfesionalNumero?: string;
-  carnetProfesionalVencimiento?: Date;
-  evaluacionMedicaFecha?: Date;
-  evaluacionMedicaVencimiento?: Date;
-  psicofisicoFecha?: Date;
-  psicofisicoVencimiento?: Date;
-  categoria?: string;
-  obraSocial?: string;
-  art?: string;
-  activo?: boolean;
-  observaciones?: string;
-}
-
-const PERSONAL_CONSTANTS = {
-  VALIDATION: {
-    DNI_REGEX: /^[0-9]{7,8}$/,
-    CUIL_REGEX: /^[0-9]{2}-[0-9]{8}-[0-9]$/,
-    EMAIL_REGEX: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-  },
-  MESSAGES: {
-    REQUIRED_NAME: 'El nombre es obligatorio',
-    REQUIRED_LASTNAME: 'El apellido es obligatorio',
-    REQUIRED_DNI: 'El DNI es obligatorio',
-    REQUIRED_TYPE: 'El tipo es obligatorio',
-    REQUIRED_EMPRESA: 'La empresa es obligatoria',
-    INVALID_DNI: 'DNI con formato inválido',
-    DUPLICATE_DNI: 'DNI duplicado en el archivo',
-    INVALID_TYPE: 'Tipo inválido',
-    EMPRESA_NOT_FOUND: 'Empresa no encontrada',
-    INVALID_CUIL: 'CUIL con formato inválido',
-    INVALID_EMAIL: 'Email con formato inválido',
-    REQUIRED_LICENSE: 'Licencia obligatoria para conductores',
-  },
-  ERROR_PREFIX: 'Fila',
-  DEFAULTS: { FILENAME: 'plantilla_personal.xlsx', ACTIVE_VALUE: 'Sí' },
-  SAMPLE_DATA: [
-    {
-      nombre: 'Juan Carlos',
-      apellido: 'Pérez',
-      dni: '12345678',
-      cuil: '20-12345678-9',
-      tipo: 'Conductor',
-      fechaNacimiento: new Date('1985-03-15'),
-      empresaNombre: 'Transportes del Norte',
-      numeroLegajo: '0001',
-      fechaIngreso: new Date('2020-01-15'),
-      direccionCalle: 'San Martín',
-      direccionNumero: '1234',
-      direccionLocalidad: 'Buenos Aires',
-      direccionProvincia: 'Buenos Aires',
-      direccionCodigoPostal: '1000',
-      telefono: '+54 11 1234-5678',
-      telefonoEmergencia: '+54 11 8765-4321',
-      email: 'jperez@email.com',
-      licenciaNumero: 'BA123456789',
-      licenciaCategoria: 'D1',
-      licenciaVencimiento: new Date('2025-12-31'),
-      carnetProfesionalNumero: 'CP123456',
-      carnetProfesionalVencimiento: new Date('2024-06-30'),
-      evaluacionMedicaFecha: new Date('2023-01-15'),
-      evaluacionMedicaVencimiento: new Date('2024-01-15'),
-      psicofisicoFecha: new Date('2023-01-20'),
-      psicofisicoVencimiento: new Date('2024-01-20'),
-      categoria: 'Chofer',
-      obraSocial: 'OSDE',
-      art: 'La Caja ART',
-      activo: true,
-      observaciones: 'Conductor experimentado',
-    },
-    {
-      nombre: 'María',
-      apellido: 'González',
-      dni: '87654321',
-      cuil: '27-87654321-4',
-      tipo: 'Administrativo' as const,
-      fechaNacimiento: new Date('1990-08-22'),
-      empresaNombre: 'Transportes del Norte',
-      numeroLegajo: '0002',
-      fechaIngreso: new Date('2021-03-01'),
-      direccionCalle: 'Rivadavia',
-      direccionNumero: '567',
-      direccionLocalidad: 'CABA',
-      direccionProvincia: 'Ciudad Autónoma de Buenos Aires',
-      direccionCodigoPostal: '1002',
-      telefono: '+54 11 2345-6789',
-      email: 'mgonzalez@email.com',
-      categoria: 'Administrativa',
-      obraSocial: 'Swiss Medical',
-      art: 'Galeno ART',
-      activo: true,
-      observaciones: 'Encargada de facturación',
-    },
-  ] as Partial<PersonalTemplateData>[],
-};
+export { PersonalTemplateData } from './PersonalTemplateConstants';
 
 export class PersonalTemplate {
   private static mapRowToColumns(row: PersonalTemplateData): (string | number)[] {
@@ -341,7 +215,7 @@ export class PersonalTemplate {
         ) {
           parsedData[propName] = value.toString().trim();
         } else if (propName === 'activo') {
-          parsedData[propName] = parseBooleanValue(value);
+          parsedData[propName] = parseBooleanValue(value as string | number | boolean);
         } else {
           parsedData[propName] = value.toString().trim();
         }
@@ -360,115 +234,23 @@ export class PersonalTemplate {
     empresas: { id: string; nombre: string }[];
   }): { isValid: boolean; personalData?: PersonalTemplateData; errors: string[] } {
     const { personal, rowNum, dnisVistos, empresaMap, empresas } = params;
-    const requiredResult = this.validatePersonalRequiredFields(personal, rowNum);
-    if (!requiredResult.isValid) {
-      return { isValid: false, errors: requiredResult.errors };
-    }
-    const formatResult = this.validatePersonalFormats(personal, rowNum);
-    if (!formatResult.isValid) {
-      return { isValid: false, errors: formatResult.errors };
-    }
-    const duplicateResult = this.validatePersonalDuplicates(personal.dni || '', rowNum, dnisVistos);
-    if (!duplicateResult.isValid) {
-      return { isValid: false, errors: duplicateResult.errors };
-    }
-    const empresaResult = this.validatePersonalEmpresa(
-      personal.empresaNombre as string,
-      rowNum,
-      empresaMap,
-      empresas
-    );
-    if (!empresaResult.isValid) {
-      return { isValid: false, errors: empresaResult.errors };
-    }
-    const specificResult = this.validatePersonalSpecificFields(personal, rowNum);
-    if (!specificResult.isValid) {
-      return { isValid: false, errors: specificResult.errors };
-    }
-    const personalData = this.buildPersonalData(personal, empresaResult.empresaId);
 
-    return { isValid: true, personalData, errors: [] };
+    return PersonalTemplateValidators.validatePersonalRow({
+      personal,
+      rowNum,
+      dnisVistos,
+      empresaMap,
+      empresas,
+      buildPersonalData: (personal: PersonalRawData, empresaId?: string) =>
+        this.buildPersonalData(personal, empresaId),
+    });
   }
 
   // Validar campos obligatorios específicos de personal
-  private static validatePersonalRequiredFields(
-    personal: PersonalRawData,
-    rowNum: number
-  ): { isValid: boolean; errors: string[] } {
-    return validateRequiredFields([
-      { value: personal.nombre, fieldName: 'Nombre', rowNum, required: true },
-      { value: personal.apellido, fieldName: 'Apellido', rowNum, required: true },
-      { value: personal.dni, fieldName: 'DNI', rowNum, required: true },
-      { value: personal.tipo, fieldName: 'Tipo', rowNum, required: true },
-      { value: personal.empresaNombre, fieldName: 'Empresa', rowNum, required: true },
-    ]);
-  }
-
-  private static validatePersonalFormats(
-    personal: PersonalRawData,
-    rowNum: number
-  ): { isValid: boolean; errors: string[] } {
-    const validationResults = [];
-    if (personal.dni) {
-      validationResults.push(validateDNIFormat(personal.dni, rowNum));
-    }
-    const validTypes = Object.values(EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS);
-    if (personal.tipo) {
-      validationResults.push(validateEnumValue(personal.tipo, rowNum, validTypes, 'Tipo'));
-    }
-    if (personal.cuil) {
-      validationResults.push(validateCUILFormat(personal.cuil, rowNum));
-    }
-    if (personal.email) {
-      validationResults.push(validateEmailFormat(personal.email as string, rowNum));
-    }
-
-    return combineValidationResults(...validationResults);
-  }
 
   // Validar duplicados de DNI
-  private static validatePersonalDuplicates(
-    dni: string,
-    rowNum: number,
-    dnisVistos: Set<string>
-  ): { isValid: boolean; errors: string[] } {
-    return validateDuplicates(dni, rowNum, dnisVistos, 'DNI');
-  }
 
   // Validar empresa
-  private static validatePersonalEmpresa(
-    empresaNombre: string,
-    rowNum: number,
-    empresaMap: Map<string, string>,
-    _empresas: { id: string; nombre: string }[]
-  ): { isValid: boolean; errors: string[]; empresaId?: string } {
-    const result = validateInReferenceList(empresaNombre, rowNum, empresaMap, 'Empresa');
-
-    return {
-      isValid: result.isValid,
-      errors: result.errors,
-      empresaId: result.referenceId,
-    };
-  }
-
-  private static validatePersonalSpecificFields(
-    personal: PersonalRawData,
-    rowNum: number
-  ): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    const typeValidations: { [key: string]: () => void } = {
-      [EXCEL_SHARED_CONSTANTS.PERSONAL.TIPOS.CONDUCTOR]: () => {
-        if (!personal.licenciaNumero) {
-          errors.push(formatRowError(rowNum, 'Licencia obligatoria para conductores'));
-        }
-      },
-    };
-    const validation = personal.tipo ? typeValidations[personal.tipo] : undefined;
-    if (validation) {
-      validation();
-    }
-    return { isValid: errors.length === 0, errors };
-  }
 
   private static buildPersonalData(
     personal: PersonalRawData,
@@ -519,7 +301,9 @@ export class PersonalTemplate {
     ];
     dateFields.forEach((field) => {
       if (personal[field]) {
-        (baseData as unknown as Record<string, unknown>)[field] = parseDate(personal[field]);
+        (baseData as unknown as Record<string, unknown>)[field] = parseDate(
+          personal[field] as string | Date
+        );
       }
     });
     if (personal.activo !== undefined) {
