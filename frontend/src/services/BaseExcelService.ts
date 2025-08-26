@@ -20,9 +20,9 @@ export class BaseExcelService {
    * @param filters - Filtros opcionales para la exportación
    * @returns Promise<Blob> - Archivo Excel como blob
    */
-  async exportToExcel(filters?: any): Promise<Blob> {
+  async exportToExcel(filters?: Record<string, unknown>): Promise<Blob> {
     const url = new URL(`${API_BASE_URL}${this.config.endpoints.export}`);
-    
+
     // Agregar filtros como query parameters si existen
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -36,7 +36,7 @@ export class BaseExcelService {
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -57,13 +57,15 @@ export class BaseExcelService {
     const response = await fetch(`${API_BASE_URL}${this.config.endpoints.template}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Error al obtener plantilla de ${this.config.entityType}: ${response.statusText}`);
+      throw new Error(
+        `Error al obtener plantilla de ${this.config.entityType}: ${response.statusText}`
+      );
     }
 
     return response.blob();
@@ -74,7 +76,7 @@ export class BaseExcelService {
    * @param file - Archivo Excel a importar
    * @returns Promise<any> - Resultado de la importación
    */
-  async importFromExcel(file: File): Promise<any> {
+  async importFromExcel(file: File): Promise<unknown> {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -82,7 +84,7 @@ export class BaseExcelService {
     const response = await fetch(`${API_BASE_URL}${this.config.endpoints.export}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: formData,
     });

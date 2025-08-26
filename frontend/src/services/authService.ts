@@ -22,23 +22,27 @@ export interface AuthResponse {
   user: User;
 }
 
+interface AuthApiResponse extends ApiResponse<User> {
+  user?: User;
+}
+
 class AuthService {
   async login(credentials: LoginCredentials): Promise<User> {
-    const response: ApiResponse<User> = await apiService.post('/auth/login', credentials);
-    
+    const response: AuthApiResponse = await apiService.post('/auth/login', credentials);
+
     // Backend returns { success: true, user: {...} } directly, not wrapped in data
-    if (response.success && (response as any).user) {
-      const user = (response as any).user;
+    if (response.success && response.user) {
+      const user = response.user;
       localStorage.setItem('auth_user', JSON.stringify(user));
       return user;
     }
-    
+
     throw new Error(response.message || response.error || 'Login failed');
   }
 
   async register(data: RegisterData): Promise<void> {
     const response: ApiResponse<void> = await apiService.post('/auth/register', data);
-    
+
     if (!response.success) {
       throw new Error(response.message || 'Registration failed');
     }
@@ -56,11 +60,11 @@ class AuthService {
 
   async getCurrentUser(): Promise<User | null> {
     try {
-      const response: ApiResponse<User> = await apiService.get('/auth/me');
-      
+      const response: AuthApiResponse = await apiService.get('/auth/me');
+
       // Backend returns { success: true, user: {...} } directly
-      if (response.success && (response as any).user) {
-        const user = (response as any).user;
+      if (response.success && response.user) {
+        const user = response.user;
         localStorage.setItem('auth_user', JSON.stringify(user));
         return user;
       }
@@ -68,7 +72,7 @@ class AuthService {
       localStorage.removeItem('auth_user');
       throw error;
     }
-    
+
     return null;
   }
 
