@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 
 // Tipos para helpers
 export interface ProcessedRowData {
-  processedRow: any;
+  processedRow: Record<string, unknown>;
   hasData: boolean;
 }
 
@@ -42,7 +42,7 @@ const HELPER_CONSTANTS = {
  * Procesa una fila de datos individual
  */
 export const processRowData = (
-  row: any[],
+  row: unknown[],
   headers: string[],
   options: { trim: boolean; skipEmptyRows: boolean }
 ): ProcessedRowData | null => {
@@ -51,7 +51,7 @@ export const processRowData = (
     return null;
   }
 
-  const processedRow: any = {};
+  const processedRow: Record<string, unknown> = {};
   let hasData = false;
 
   headers.forEach((header, colIndex) => {
@@ -73,7 +73,7 @@ export const processRowData = (
 /**
  * Procesa el valor de una columna individual
  */
-export const processColumnValue = (value: any, shouldTrim: boolean): any => {
+export const processColumnValue = (value: unknown, shouldTrim: boolean): unknown => {
   // Trim si está configurado
   if (shouldTrim && typeof value === 'string') {
     value = value.trim();
@@ -99,9 +99,9 @@ export const processColumnValue = (value: any, shouldTrim: boolean): any => {
  * Procesa los datos de una hoja completa
  */
 export const processSheetData = (
-  rawData: any[][],
+  rawData: unknown[][],
   options: { skipEmptyRows: boolean; trim: boolean }
-): { headers: string[]; processedData: any[]; totalRows: number } => {
+): { headers: string[]; processedData: Record<string, unknown>[]; totalRows: number } => {
   if (rawData.length === 0) {
     return {
       headers: [],
@@ -115,7 +115,7 @@ export const processSheetData = (
 
   // Procesar datos (saltar header)
   const dataRows = rawData.slice(1);
-  const processedData: any[] = [];
+  const processedData: Record<string, unknown>[] = [];
 
   dataRows.forEach((row) => {
     const result = processRowData(row, headers, options);
@@ -166,7 +166,7 @@ export const hasAllRequiredHeaders = (headers: string[], required: string[]): bo
 /**
  * Extrae y normaliza headers de la primera fila
  */
-export const extractHeaders = (headerRow: any[], shouldTrim: boolean): string[] => {
+export const extractHeaders = (headerRow: unknown[], shouldTrim: boolean): string[] => {
   return headerRow.map((header, index) => {
     const h = String(header || `${HELPER_CONSTANTS.DEFAULTS.COLUMN_PREFIX}${index + 1}`);
     return shouldTrim ? h.trim() : h;
@@ -176,14 +176,13 @@ export const extractHeaders = (headerRow: any[], shouldTrim: boolean): string[] 
 /**
  * Verifica si una fila está vacía
  */
-export const isEmptyRow = (row: any[]): boolean => {
-  return row.every(
-    (cell) =>
-      cell === undefined ||
-      cell === null ||
-      cell === '' ||
-      (typeof cell === 'string' && cell.trim() === '')
-  );
+export const isEmptyRow = (row: unknown[]): boolean => {
+  return !row.some((cell) => {
+    if (cell === null || cell === undefined) return false;
+    if (typeof cell === 'string') return cell.trim() !== '';
+    if (typeof cell === 'number') return !isNaN(cell);
+    return true; // Para otros tipos, considerar que tienen contenido
+  });
 };
 
 /**

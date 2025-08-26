@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 
 export interface ImportRequest {
   entityType: string;
-  data: any[];
+  data: Record<string, unknown>[];
   options?: ImportOptions;
 }
 
@@ -25,7 +25,7 @@ export interface ImportValidationResult {
 export interface ImportError {
   row: number;
   field: string;
-  value: any;
+  value: unknown;
   error: string;
   severity: 'error' | 'warning';
   suggestion?: string;
@@ -102,13 +102,13 @@ export interface ImportLog {
   timestamp: Date;
   level: 'info' | 'warning' | 'error';
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface ImportTemplate {
   entityType: string;
   columns: TemplateColumn[];
-  sampleData: any[];
+  sampleData: Record<string, unknown>[];
   instructions: string[];
 }
 
@@ -120,7 +120,7 @@ export interface TemplateColumn {
   format?: string;
   enumValues?: string[];
   description?: string;
-  example?: any;
+  example?: unknown;
 }
 
 class ImportService {
@@ -191,10 +191,13 @@ class ImportService {
   }
 
   // Reintentar importación fallida
-  async retryImport(importId: string, options?: {
-    skipErrors?: boolean;
-    fromRow?: number;
-  }): Promise<ImportResult> {
+  async retryImport(
+    importId: string,
+    options?: {
+      skipErrors?: boolean;
+      fromRow?: number;
+    }
+  ): Promise<ImportResult> {
     try {
       const response = await api.post(`/imports/${importId}/retry`, options);
       return response.data as ImportResult;
@@ -219,7 +222,9 @@ class ImportService {
       const template = await this.getImportTemplate(entityType);
       const wb = this.createExcelTemplate(template);
       const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      return new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
     } catch (error) {
       throw this.handleError(error);
     }
@@ -238,64 +243,64 @@ class ImportService {
   }
 
   // Obtener datos de referencia para importación
-  async getReferenceData(entityType: string): Promise<any> {
+  async getReferenceData(entityType: string): Promise<Record<string, unknown>> {
     try {
       const response = await api.get(`/imports/reference/${entityType}`);
-      return response.data as any;
+      return response.data as Record<string, unknown>;
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
   // Procesar archivo Excel localmente
-  async processExcelFile(file: File): Promise<any[]> {
+  async processExcelFile(file: File): Promise<Record<string, unknown>[]> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
-          
+
           // Tomar la primera hoja
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          
+
           // Convertir a JSON
           const jsonData = XLSX.utils.sheet_to_json(worksheet, {
             header: 1,
             defval: '',
             blankrows: false,
           });
-          
+
           if (jsonData.length < 2) {
             reject(new Error('El archivo no contiene datos'));
             return;
           }
-          
+
           // Primera fila como headers
           const headers = jsonData[0] as string[];
           const rows = jsonData.slice(1);
-          
+
           // Convertir a objetos
-          const objects = rows.map((row: any) => {
-            const obj: any = {};
+          const objects = rows.map((row: unknown[]) => {
+            const obj: Record<string, unknown> = {};
             headers.forEach((header, index) => {
               obj[header] = row[index] || '';
             });
             return obj;
           });
-          
+
           resolve(objects);
         } catch (error) {
           reject(error);
         }
       };
-      
+
       reader.onerror = () => {
         reject(new Error('Error al leer el archivo'));
       };
-      
+
       reader.readAsArrayBuffer(file);
     });
   }
@@ -303,18 +308,17 @@ class ImportService {
   // Crear plantilla Excel
   private createExcelTemplate(template: ImportTemplate): XLSX.WorkBook {
     const wb = XLSX.utils.book_new();
-    
+
     // Hoja principal con datos
-    const headers = template.columns.map(col => 
-      col.required ? `${col.header} *` : col.header
-    );
-    
-    const wsData = [headers, ...template.sampleData.map(row => 
-      template.columns.map(col => row[col.field] || '')
-    )];
-    
+    const headers = template.columns.map((col) => (col.required ? `${col.header} *` : col.header));
+
+    const wsData = [
+      headers,
+      ...template.sampleData.map((row) => template.columns.map((col) => row[col.field] || '')),
+    ];
+
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    
+
     // Aplicar estilos a headers (simulado con comentarios)
     template.columns.forEach((col, index) => {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: index });
@@ -324,23 +328,23 @@ class ImportService {
         t: `${col.description || ''}\nTipo: ${col.type}${col.format ? `\nFormato: ${col.format}` : ''}${col.enumValues ? `\nValores: ${col.enumValues.join(', ')}` : ''}`,
       });
     });
-    
+
     XLSX.utils.book_append_sheet(wb, ws, 'Datos');
-    
+
     // Hoja de instrucciones
     const wsInstructions = XLSX.utils.aoa_to_sheet([
       ['INSTRUCCIONES DE IMPORTACIÓN'],
       [''],
-      ...template.instructions.map(inst => [inst]),
+      ...template.instructions.map((inst) => [inst]),
       [''],
       ['CAMPOS OBLIGATORIOS:'],
       ...template.columns
-        .filter(col => col.required)
-        .map(col => [`- ${col.header}: ${col.description || ''}`]),
+        .filter((col) => col.required)
+        .map((col) => [`- ${col.header}: ${col.description || ''}`]),
     ]);
-    
+
     XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instrucciones');
-    
+
     // Hoja de datos de referencia (si aplica)
     if (template.entityType === 'sites' || template.entityType === 'tramos') {
       const wsRef = XLSX.utils.aoa_to_sheet([
@@ -349,7 +353,7 @@ class ImportService {
       ]);
       XLSX.utils.book_append_sheet(wb, wsRef, 'Referencias');
     }
-    
+
     return wb;
   }
 
@@ -366,33 +370,32 @@ class ImportService {
       viajes: 0.35,
       extras: 0.1,
     };
-    
+
     const timePerRecord = baseTimePerRecord[entityType as keyof typeof baseTimePerRecord] || 0.2;
     const estimatedSeconds = recordCount * timePerRecord;
-    
+
     // Agregar tiempo de overhead
     return Math.ceil(estimatedSeconds + 5);
   }
 
   // Validar estructura del archivo
-  validateFileStructure(headers: string[], entityType: string): {
+  validateFileStructure(
+    headers: string[],
+    entityType: string
+  ): {
     valid: boolean;
     missingColumns: string[];
     extraColumns: string[];
   } {
     const requiredColumns = this.getRequiredColumns(entityType);
-    
-    const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
-    const normalizedRequired = requiredColumns.map(c => c.toLowerCase());
-    
-    const missingColumns = normalizedRequired.filter(
-      col => !normalizedHeaders.includes(col)
-    );
-    
-    const extraColumns = normalizedHeaders.filter(
-      col => !normalizedRequired.includes(col)
-    );
-    
+
+    const normalizedHeaders = headers.map((h) => h.toLowerCase().trim());
+    const normalizedRequired = requiredColumns.map((c) => c.toLowerCase());
+
+    const missingColumns = normalizedRequired.filter((col) => !normalizedHeaders.includes(col));
+
+    const extraColumns = normalizedHeaders.filter((col) => !normalizedRequired.includes(col));
+
     return {
       valid: missingColumns.length === 0,
       missingColumns,
@@ -412,17 +415,52 @@ class ImportService {
       viajes: ['fecha', 'tramo', 'vehiculos'],
       extras: ['nombre', 'tipo', 'valor', 'cliente'],
     };
-    
+
     return columns[entityType] || [];
   }
 
   // Manejo de errores
-  private handleError(error: any): Error {
-    if (error.response) {
-      const message = error.response.data?.message || 'Error en la importación';
-      return new Error(message);
+  private handleError(error: unknown): Error {
+    const axiosError = this.extractAxiosError(error);
+    if (axiosError) {
+      return new Error(axiosError);
     }
-    return error;
+
+    if (error instanceof Error) {
+      return error;
+    }
+
+    return new Error('Error desconocido en la importación');
+  }
+
+  private extractAxiosError(error: unknown): string | null {
+    if (!this.isAxiosError(error)) {
+      return null;
+    }
+
+    const response = error.response;
+    if (!this.hasResponseData(response)) {
+      return null;
+    }
+
+    const data = response.data;
+    if (this.hasMessageProperty(data)) {
+      return String(data.message) || 'Error en la importación';
+    }
+
+    return null;
+  }
+
+  private isAxiosError(error: unknown): error is { response: unknown } {
+    return error && typeof error === 'object' && 'response' in error;
+  }
+
+  private hasResponseData(response: unknown): response is { data: unknown } {
+    return response && typeof response === 'object' && 'data' in response;
+  }
+
+  private hasMessageProperty(data: unknown): data is { message: unknown } {
+    return data && typeof data === 'object' && 'message' in data;
   }
 }
 

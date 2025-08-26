@@ -62,10 +62,10 @@ class FormulaService {
     const params = new URLSearchParams();
     if (tipoUnidad) params.append('tipoUnidad', tipoUnidad);
     if (fecha) params.append('fecha', fecha);
-    
+
     const queryString = params.toString();
     const url = `${this.basePath}/cliente/${clienteId}${queryString ? `?${queryString}` : ''}`;
-    
+
     return api.get<Formula[]>(url);
   }
 
@@ -83,36 +83,62 @@ class FormulaService {
 
   async validate(formula: string, variables?: Record<string, number>): Promise<ValidationResult> {
     try {
-      const testVariables = variables || {
-        Valor: 1000,
-        Palets: 10,
-        Peaje: 500
-      };
+      const testVariables = variables || this.getDefaultTestVariables();
+      const response = await this.calculate(formula, testVariables);
 
-      const response = await api.post<CalculateResult>(`${this.basePath}/calculate`, {
-        formula,
-        variables: testVariables
-      });
-
-      return {
-        isValid: true,
-        result: response.data?.resultado,
-        variables: Object.keys(testVariables)
-      };
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Error al validar la fórmula';
-      
-      return {
-        isValid: false,
-        errors: [errorMessage]
-      };
+      return this.createSuccessResult(response, testVariables);
+    } catch (error: unknown) {
+      const errorMessage = this.extractValidationErrorMessage(error);
+      return this.createErrorResult(errorMessage);
     }
+  }
+
+  private getDefaultTestVariables(): Record<string, number> {
+    return {
+      Valor: 1000,
+      Palets: 10,
+      Peaje: 500,
+    };
+  }
+
+  private createSuccessResult(
+    response: { data?: CalculateResult },
+    testVariables: Record<string, number>
+  ): ValidationResult {
+    return {
+      isValid: true,
+      result: response.data?.resultado,
+      variables: Object.keys(testVariables),
+    };
+  }
+
+  private extractValidationErrorMessage(error: unknown): string {
+    if (
+      error instanceof Error &&
+      'response' in error &&
+      error.response &&
+      typeof error.response === 'object' &&
+      'data' in error.response &&
+      error.response.data &&
+      typeof error.response.data === 'object' &&
+      'message' in error.response.data
+    ) {
+      return String(error.response.data.message);
+    }
+    return 'Error al validar la fórmula';
+  }
+
+  private createErrorResult(errorMessage: string): ValidationResult {
+    return {
+      isValid: false,
+      errors: [errorMessage],
+    };
   }
 
   async calculate(formula: string, variables: Record<string, number>) {
     return api.post<CalculateResult>(`${this.basePath}/calculate`, {
       formula,
-      variables
+      variables,
     });
   }
 
@@ -122,7 +148,7 @@ class FormulaService {
       tipoUnidad: data.tipoUnidad,
       vigenciaDesde: data.vigenciaDesde.toISOString(),
       vigenciaHasta: data.vigenciaHasta?.toISOString() || null,
-      ...(data.excludeId && { excludeId: data.excludeId })
+      ...(data.excludeId && { excludeId: data.excludeId }),
     };
 
     return api.post<Formula[]>(`${this.basePath}/check-conflicts`, params);
@@ -131,10 +157,10 @@ class FormulaService {
   async getHistory(clienteId: string, tipoUnidad?: string) {
     const params = new URLSearchParams();
     if (tipoUnidad) params.append('tipoUnidad', tipoUnidad);
-    
+
     const queryString = params.toString();
     const url = `${this.basePath}/history/${clienteId}${queryString ? `?${queryString}` : ''}`;
-    
+
     return api.get<Formula[]>(url);
   }
 
@@ -142,7 +168,7 @@ class FormulaService {
     const params = new URLSearchParams();
     params.append('tipoUnidad', tipoUnidad);
     if (fecha) params.append('fecha', fecha.toISOString());
-    
+
     const url = `${this.basePath}/active/${clienteId}?${params.toString()}`;
     return api.get<Formula | null>(url);
   }
@@ -163,30 +189,28 @@ class FormulaService {
     if (!formula.trim()) {
       return {
         isValid: false,
-        errors: ['La fórmula no puede estar vacía']
+        errors: ['La fórmula no puede estar vacía'],
       };
     }
 
     // Verificar variables válidas
     const validVariables = ['Valor', 'Palets', 'Peaje'];
-    const foundVariables = validVariables.filter(variable => 
-      formula.includes(variable)
-    );
+    const foundVariables = validVariables.filter((variable) => formula.includes(variable));
 
     if (foundVariables.length === 0) {
       return {
         isValid: false,
         errors: ['La fórmula debe incluir al menos una variable válida (Valor, Palets, Peaje)'],
-        variables: validVariables
+        variables: validVariables,
       };
     }
 
     // Verificar caracteres no permitidos
-    const allowedChars = /^[A-Za-z0-9\s\+\-\*\/\(\)\.\,\;\>\<\=]+$/;
+    const allowedChars = /^[A-Za-z0-9\s+\-*/().,;><= ]+$/;
     if (!allowedChars.test(formula)) {
       return {
         isValid: false,
-        errors: ['La fórmula contiene caracteres no permitidos']
+        errors: ['La fórmula contiene caracteres no permitidos'],
       };
     }
 
@@ -198,21 +222,21 @@ class FormulaService {
       if (parentheses < 0) {
         return {
           isValid: false,
-          errors: ['Paréntesis desbalanceados']
+          errors: ['Paréntesis desbalanceados'],
         };
       }
     }
-    
+
     if (parentheses !== 0) {
       return {
         isValid: false,
-        errors: ['Paréntesis desbalanceados']
+        errors: ['Paréntesis desbalanceados'],
       };
     }
 
     return {
       isValid: true,
-      variables: foundVariables
+      variables: foundVariables,
     };
   }
 }
