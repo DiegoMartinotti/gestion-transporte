@@ -1,5 +1,5 @@
 // Common types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -331,7 +331,7 @@ export interface BaseFilters {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface ClienteFilters extends BaseFilters {}
+export type ClienteFilters = BaseFilters;
 
 export interface EmpresaFilters extends BaseFilters {
   tipo?: 'Propia' | 'Subcontratada';

@@ -7,7 +7,7 @@ export interface IVariableDefinition {
   tipo: 'number' | 'string' | 'boolean' | 'date';
   origen: 'tramo' | 'viaje' | 'cliente' | 'vehiculo' | 'calculado' | 'constante';
   campo?: string;
-  valorPorDefecto?: any;
+  valorPorDefecto?: string | number | boolean | Date | null;
   requerido: boolean;
 }
 
@@ -24,7 +24,7 @@ export interface ITarifaMetodo {
   requiereDistancia: boolean;
   requierePalets: boolean;
   permiteFormulasPersonalizadas: boolean;
-  configuracion: Record<string, any>;
+  configuracion: Record<string, string | number | boolean | Date | null>;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,8 +42,8 @@ export interface ICondicion {
     | 'entre'
     | 'en'
     | 'contiene';
-  valor: any;
-  valorHasta?: any;
+  valor: string | number | boolean | Date | null;
+  valorHasta?: string | number | boolean | Date | null;
 }
 
 // Tariff modifier interface
@@ -100,7 +100,7 @@ export interface IEscenarioSimulacion {
     palets?: number;
     fecha?: string;
     vehiculo?: string;
-    [key: string]: any;
+    [key: string]: string | number | boolean | Date | undefined;
   };
   valoresBase: {
     tarifa: number;
@@ -146,14 +146,14 @@ export interface IEntradaAuditoria {
   tramo: string;
   viaje?: string;
   metodoCalculo: string;
-  contexto: Record<string, any>;
+  contexto: Record<string, string | number | boolean | Date | null>;
   valoresEntrada: Record<string, number>;
   valoresSalida: Record<string, number>;
   reglasAplicadas: string[];
   tiempoCalculo: number;
   errores?: string[];
   formula?: string;
-  variables?: Record<string, any>;
+  variables?: Record<string, string | number | boolean | Date | null>;
   createdAt: string;
 }
 
@@ -200,7 +200,7 @@ export interface TarifaMetodoFormData {
   requiereDistancia: boolean;
   requierePalets: boolean;
   permiteFormulasPersonalizadas: boolean;
-  configuracion: Record<string, any>;
+  configuracion: Record<string, string | number | boolean | Date | null>;
 }
 
 export interface ReglaTarifaFormData {

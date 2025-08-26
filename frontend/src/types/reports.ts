@@ -62,8 +62,8 @@ export interface ReportFilter {
   id: string;
   field: string;
   operator: FilterOperator;
-  value: any;
-  values?: any[];
+  value: string | number | boolean | Date | null;
+  values?: (string | number | boolean | Date | null)[];
   label?: string;
   group?: string;
 }
@@ -143,7 +143,12 @@ export interface ReportDefinition {
   dateRange?: string;
   pageSize?: number;
   exportFormats?: string[];
-  schedule?: any;
+  schedule?: {
+    enabled: boolean;
+    frequency: 'daily' | 'weekly' | 'monthly';
+    time?: string;
+    day?: number;
+  };
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -154,10 +159,10 @@ export interface ReportDefinition {
 // Report Data
 export interface ReportData {
   headers: string[];
-  rows: any[][];
+  rows: (string | number | boolean | Date | null)[][];
   totalRows: number;
-  aggregatedData?: Record<string, any>;
-  chartData?: any[];
+  aggregatedData?: Record<string, string | number | boolean | Date | null>;
+  chartData?: Record<string, string | number | boolean>[];
   metadata?: {
     executionTime: number;
     generatedAt: Date;
@@ -208,7 +213,7 @@ export interface ReportExecution {
     url?: string;
   };
   error?: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, string | number | boolean | Date | null>;
   isScheduled?: boolean;
   // Additional properties for backward compatibility
   reportName: string;
@@ -279,7 +284,7 @@ export interface ReportTemplate {
 
 // Filter Options for UI
 export interface FilterOption {
-  value: any;
+  value: string | number | boolean | Date | null;
   label: string;
   count?: number;
 }
@@ -302,7 +307,7 @@ export interface ReportWidget {
 }
 
 // API Responses
-export interface ReportApiResponse<T = any> {
+export interface ReportApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
