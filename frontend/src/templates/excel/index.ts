@@ -28,106 +28,150 @@ export const TEMPLATE_INFO: Record<TemplateType, TemplateInfo> = {
     validations: [
       'Nombre único en el sistema',
       'CUIT con formato argentino válido',
-      'Sin duplicados en el archivo'
-    ]
+      'Sin duplicados en el archivo',
+    ],
   },
   empresa: {
     name: 'Empresas',
     description: 'Plantilla para carga masiva de empresas',
     requiredFields: ['Nombre', 'Tipo'],
-    optionalFields: ['Razón Social', 'Dirección', 'Teléfono', 'Email', 'CUIT', 'Contacto Principal', 'Activa', 'Observaciones'],
+    optionalFields: [
+      'Razón Social',
+      'Dirección',
+      'Teléfono',
+      'Email',
+      'CUIT',
+      'Contacto Principal',
+      'Activa',
+      'Observaciones',
+    ],
     validations: [
       'Nombre único en el sistema',
       'Tipo: Propia o Subcontratada',
       'Email con formato válido',
-      'CUIT con formato argentino válido'
-    ]
+      'CUIT con formato argentino válido',
+    ],
   },
   personal: {
     name: 'Personal',
     description: 'Plantilla para carga masiva de personal',
     requiredFields: ['Nombre', 'Apellido', 'DNI', 'Tipo', 'Empresa'],
     optionalFields: [
-      'CUIL', 'Fecha Nacimiento', 'Dirección completa', 'Contacto',
+      'CUIL',
+      'Fecha Nacimiento',
+      'Dirección completa',
+      'Contacto',
       'Documentación (Licencia, Carnet Profesional, Evaluaciones)',
-      'Datos Laborales', 'Observaciones'
+      'Datos Laborales',
+      'Observaciones',
     ],
     validations: [
       'DNI único con 7-8 dígitos',
       'Tipo válido del menú desplegable',
       'Empresa existente en el sistema',
       'Licencia obligatoria para conductores',
-      'Fechas en formato DD/MM/AAAA'
-    ]
-  }
+      'Fechas en formato DD/MM/AAAA',
+    ],
+  },
 };
 
 /**
  * Factory para generar templates
  */
+// Template options interfaces
+interface TemplateOptions {
+  filename?: string;
+  empresas?: { id: string; nombre: string }[];
+}
+
+interface ValidationOptions {
+  empresas?: { id: string; nombre: string }[];
+}
+
+// Excel row data type - debe coincidir con el tipo usado en los templates
+interface ExcelRowData {
+  [key: string]: string;
+}
+
 export class TemplateFactory {
   /**
    * Genera template según el tipo
    */
-  static async generateTemplate(type: TemplateType, options: any = {}) {
+  static async generateTemplate(type: TemplateType, options: TemplateOptions = {}) {
     switch (type) {
-      case 'cliente':
+      case 'cliente': {
         return ClienteTemplate.generateTemplate();
-      
-      case 'empresa':
+      }
+
+      case 'empresa': {
         return EmpresaTemplate.generateTemplate();
-      
-      case 'personal':
-        const empresas = options.empresas || await ReferenceDataSheets.getEmpresasForTemplate();
+      }
+
+      case 'personal': {
+        const empresas = options.empresas || (await ReferenceDataSheets.getEmpresasForTemplate());
         return PersonalTemplate.generateTemplate(empresas);
-      
-      default:
+      }
+
+      default: {
         throw new Error(`Tipo de template no válido: ${type}`);
+      }
     }
   }
 
   /**
    * Descarga template según el tipo
    */
-  static async downloadTemplate(type: TemplateType, options: any = {}) {
+  static async downloadTemplate(type: TemplateType, options: TemplateOptions = {}) {
     const filename = options.filename || `plantilla_${type}.xlsx`;
-    
+
     switch (type) {
-      case 'cliente':
+      case 'cliente': {
         ClienteTemplate.downloadTemplate(filename);
         break;
-      
-      case 'empresa':
+      }
+
+      case 'empresa': {
         EmpresaTemplate.downloadTemplate(filename);
         break;
-      
-      case 'personal':
-        const empresas = options.empresas || await ReferenceDataSheets.getEmpresasForTemplate();
+      }
+
+      case 'personal': {
+        const empresas = options.empresas || (await ReferenceDataSheets.getEmpresasForTemplate());
         PersonalTemplate.downloadTemplate(empresas, filename);
         break;
-      
-      default:
+      }
+
+      default: {
         throw new Error(`Tipo de template no válido: ${type}`);
+      }
     }
   }
 
   /**
    * Valida datos según el tipo
    */
-  static async validateData(type: TemplateType, data: any[], options: any = {}) {
+  static async validateData(
+    type: TemplateType,
+    data: ExcelRowData[],
+    options: ValidationOptions = {}
+  ) {
     switch (type) {
-      case 'cliente':
+      case 'cliente': {
         return ClienteTemplate.validateData(data);
-      
-      case 'empresa':
+      }
+
+      case 'empresa': {
         return EmpresaTemplate.validateData(data);
-      
-      case 'personal':
-        const empresas = options.empresas || await ReferenceDataSheets.getEmpresasForTemplate();
+      }
+
+      case 'personal': {
+        const empresas = options.empresas || (await ReferenceDataSheets.getEmpresasForTemplate());
         return PersonalTemplate.validateData(data, empresas);
-      
-      default:
+      }
+
+      default: {
         throw new Error(`Tipo de template no válido: ${type}`);
+      }
     }
   }
 

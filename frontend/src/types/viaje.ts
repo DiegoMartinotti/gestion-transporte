@@ -3,30 +3,38 @@ export interface Viaje {
   dt?: string;
   numeroViaje?: string;
   fecha: string;
-  cliente?: string | {
-    _id: string;
-    nombre?: string;
-    Cliente?: string;
-  };
-  origen?: string | {
-    _id: string;
-    denominacion?: string;
-    nombre?: string;
-    Site?: string;
-  };
-  destino?: string | {
-    _id: string;
-    denominacion?: string;
-    nombre?: string;
-    Site?: string;
-  };
+  cliente?:
+    | string
+    | {
+        _id: string;
+        nombre?: string;
+        Cliente?: string;
+      };
+  origen?:
+    | string
+    | {
+        _id: string;
+        denominacion?: string;
+        nombre?: string;
+        Site?: string;
+      };
+  destino?:
+    | string
+    | {
+        _id: string;
+        denominacion?: string;
+        nombre?: string;
+        Site?: string;
+      };
   tipoTramo?: string;
   chofer?: string;
   vehiculos?: Array<{
-    vehiculo: string | {
-      _id: string;
-      dominio?: string;
-    };
+    vehiculo:
+      | string
+      | {
+          _id: string;
+          dominio?: string;
+        };
     posicion: number;
     _id: string;
   }>;
@@ -34,7 +42,13 @@ export interface Viaje {
   paletas?: number;
   tarifa?: number;
   peaje?: number;
-  cobros?: Array<any>;
+  cobros?: Array<{
+    id: string;
+    concepto: string;
+    monto: number;
+    fecha?: Date;
+    descripcion?: string;
+  }>;
   total: number;
   estado: 'Pendiente' | 'En Progreso' | 'Completado' | 'Cancelado' | 'Facturado';
   estadoPartida?: 'Abierta' | 'Cerrada' | 'Pagada';
