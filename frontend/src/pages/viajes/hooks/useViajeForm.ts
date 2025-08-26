@@ -3,15 +3,11 @@ import { useForm } from '@mantine/form';
 import {
   getInitialViajeFormData,
   getStepValidator,
-  canCalculateTarifa,
-  simulateCalculation,
   updateFormWithTramoData,
-  updateFormWithCalculation,
-  showCalculationSuccess,
-  showCalculationError,
-  showValidationError,
-  showSaveSuccess,
-  showSaveError,
+  createCalculateHandler,
+  createSubmitHandler,
+  createClienteChangeHandler,
+  createTramoChangeHandler,
 } from '../helpers/viajeFormHelpers';
 import { useClientes } from '../../../hooks/useClientes';
 import { useTramos } from '../../../hooks/useTramos';
@@ -76,25 +72,6 @@ export const useViajeForm = ({ viaje, onSave }: UseViajeFormProps) => {
     }
   }, [form.values.tramo, tramos, form.setFieldValue]);
 
-  const handleCalculateTarifa = async () => {
-    if (!canCalculateTarifa(selectedCliente, selectedTramo)) {
-      showValidationError();
-      return;
-    }
-
-    setCalculating(true);
-    try {
-      const result = simulateCalculation(form.values);
-      setCalculationResult(result);
-      updateFormWithCalculation(result, form.setFieldValue);
-      showCalculationSuccess(result.montoTotal);
-    } catch (error) {
-      showCalculationError();
-    } finally {
-      setCalculating(false);
-    }
-  };
-
   const saveViaje = async (values: ViajeFormData, isUpdate: boolean) => {
     if (isUpdate && viaje) {
       return await updateViaje(viaje._id, values);
@@ -102,16 +79,21 @@ export const useViajeForm = ({ viaje, onSave }: UseViajeFormProps) => {
     return await createViaje(values);
   };
 
-  const handleSubmit = async (values: ViajeFormData) => {
-    try {
-      const isUpdate = !!viaje;
-      await saveViaje(values, isUpdate);
-      showSaveSuccess(isUpdate);
-      onSave(values);
-    } catch (error) {
-      showSaveError();
-    }
-  };
+  // Create handlers using helper functions
+  const handleCalculateTarifa = createCalculateHandler({
+    selectedCliente,
+    selectedTramo,
+    formValues: form.values,
+    setCalculating,
+    setCalculationResult,
+    setFieldValue: form.setFieldValue,
+  });
+
+  const handleSubmit = createSubmitHandler(viaje, saveViaje, onSave);
+
+  const handleClienteChange = createClienteChangeHandler(clientes, setSelectedCliente);
+
+  const handleTramoChange = createTramoChangeHandler(tramos, setSelectedTramo, form.setFieldValue);
 
   const nextStep = () => {
     const errors = form.validate();
@@ -122,19 +104,6 @@ export const useViajeForm = ({ viaje, onSave }: UseViajeFormProps) => {
 
   const prevStep = () => {
     setActiveStep((current) => Math.max(current - 1, 0));
-  };
-
-  const handleClienteChange = (clienteId: string) => {
-    const cliente = clientes.find((c) => c._id === clienteId);
-    setSelectedCliente(cliente || null);
-  };
-
-  const handleTramoChange = (tramoId: string) => {
-    const tramo = tramos.find((t) => t._id === tramoId);
-    setSelectedTramo(tramo || null);
-    if (tramo) {
-      updateFormWithTramoData(tramo, form.setFieldValue);
-    }
   };
 
   return {
