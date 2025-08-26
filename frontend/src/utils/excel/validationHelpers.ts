@@ -9,7 +9,7 @@ interface ValidationResult {
 }
 
 interface FieldValidation {
-  value: any;
+  value: string | number | boolean | Date | null | undefined;
   fieldName: string;
   rowNum: number;
   required?: boolean;
@@ -142,7 +142,7 @@ export function validateDuplicates(
 /**
  * Parses date in DD/MM/YYYY or YYYY-MM-DD format
  */
-export function parseDate(dateStr: any): Date | null {
+export function parseDate(dateStr: string | Date | null | undefined): Date | null {
   if (!dateStr) return null;
 
   // If already a Date object
@@ -193,10 +193,12 @@ export function formatDate(date: Date | null): string {
  */
 export function validateInReferenceList<T>(
   value: string,
-  rowNum: number,
   referenceMap: Map<string, T>,
-  fieldName: string,
-  notFoundMessage?: string
+  options: {
+    rowNum: number;
+    fieldName: string;
+    notFoundMessage?: string;
+  }
 ): ValidationResult & { referenceId?: T } {
   const errors: string[] = [];
   let referenceId: T | undefined;
@@ -218,7 +220,8 @@ export function validateInReferenceList<T>(
 
       if (!referenceId) {
         errors.push(
-          notFoundMessage || `Fila ${rowNum}: ${fieldName} "${normalizedValue}" no encontrado`
+          options.notFoundMessage ||
+            `Fila ${options.rowNum}: ${options.fieldName} "${normalizedValue}" no encontrado`
         );
       }
     }
@@ -289,7 +292,7 @@ function validateNumericRange(
 }
 
 export function validateNumericValue(
-  value: any,
+  value: string | number | null | undefined,
   rowNum: number,
   fieldName: string,
   options?: {
@@ -325,7 +328,7 @@ export function validateNumericValue(
 /**
  * Validates boolean values (Sí/No, Si/No, true/false, 1/0)
  */
-export function parseBooleanValue(value: any): boolean {
+export function parseBooleanValue(value: string | number | boolean | null | undefined): boolean {
   if (value === null || value === undefined || value === '') {
     return false;
   }
