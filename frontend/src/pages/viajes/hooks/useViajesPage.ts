@@ -14,8 +14,17 @@ import {
 
 const DEFAULT_PAGE_SIZE = 10;
 
-export const useViajesPage = () => {
-  // Hook centralizado para carga de viajes
+// Interfaces para tipado fuerte
+interface ImportResult {
+  summary?: {
+    insertedRows: number;
+    errorRows: number;
+  };
+  hasMissingData?: boolean;
+}
+
+// Hook para manejo de datos
+const useViajesDataLoaders = () => {
   const viajesLoader = useDataLoader<Viaje>({
     fetchFunction: useCallback(async () => {
       const response = await ViajeService.getAll({}, 1, 1000);
@@ -32,7 +41,27 @@ export const useViajesPage = () => {
     errorMessage: 'Error al cargar los viajes',
   });
 
-  // Estados de filtros
+  const deleteViaje = async (id: string) => {
+    try {
+      await ViajeService.delete(id);
+      await viajesLoader.refresh();
+    } catch (err: unknown) {
+      console.error('Error al eliminar viaje:', err);
+      throw err;
+    }
+  };
+
+  return {
+    viajes: viajesLoader.data,
+    loading: viajesLoader.loading,
+    error: viajesLoader.error,
+    fetchViajes: viajesLoader.refresh,
+    deleteViaje,
+  };
+};
+
+// Hook para manejo de filtros
+const useViajesFilters = (viajes: Viaje[]) => {
   const [search, setSearch] = useState('');
   const [clienteFilter, setClienteFilter] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string | null>(null);
@@ -40,37 +69,6 @@ export const useViajesPage = () => {
   const [vehiculoFilter, setVehiculoFilter] = useState<string | null>(null);
   const [choferFilter, setChoferFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>('todos');
-
-  // Estados de paginación y UI
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [selectedViajeIds, setSelectedViajeIds] = useState<string[]>([]);
-
-  // Estados de modales
-  const [importModalOpened, setImportModalOpened] = useState(false);
-  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-  const [viajeToDelete, setViajeToDelete] = useState<Viaje | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [bulkDeleteModalOpened, setBulkDeleteModalOpened] = useState(false);
-  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
-
-  // Datos derivados
-  const viajes = viajesLoader.data;
-  const loading = viajesLoader.loading;
-  const error = viajesLoader.error;
-  const fetchViajes = viajesLoader.refresh;
-
-  // Hook unificado para operaciones Excel
-  const excelOperations = useExcelOperations({
-    entityType: 'viajes',
-    entityName: 'viajes',
-    exportFunction: (filters) => viajeExcelService.exportToExcel(filters),
-    templateFunction: () => viajeExcelService.getTemplate(),
-    reloadFunction: fetchViajes,
-  });
-
-  // Estados calculados
-  const useVirtualScrolling = viajes.length > 100;
 
   const filteredViajes = useMemo(
     () =>
@@ -98,11 +96,6 @@ export const useViajesPage = () => {
 
   const viajesStats = useMemo(() => calculateViajesStats(viajes), [viajes]);
 
-  const paginatedViajes = useMemo(
-    () => getPaginatedData(filteredViajes, currentPage, pageSize),
-    [filteredViajes, currentPage, pageSize]
-  );
-
   const hasActiveFiltersValue = useMemo(
     () =>
       checkActiveFilters(
@@ -116,17 +109,6 @@ export const useViajesPage = () => {
     [search, clienteFilter, estadoFilter, dateRange, vehiculoFilter, choferFilter]
   );
 
-  // Funciones de manejo
-  const deleteViaje = async (id: string) => {
-    try {
-      await ViajeService.delete(id);
-      await fetchViajes();
-    } catch (err: any) {
-      console.error('Error al eliminar viaje:', err);
-      throw err;
-    }
-  };
-
   const handleClearFilters = () => {
     const cleared = clearAllFilters();
     setSearch(cleared.search);
@@ -135,20 +117,75 @@ export const useViajesPage = () => {
     setDateRange(cleared.dateRange);
     setVehiculoFilter(cleared.vehiculoFilter);
     setChoferFilter(cleared.choferFilter);
-    setCurrentPage(1);
   };
 
-  const handleImportComplete = async (result: any) => {
+  return {
+    search,
+    setSearch,
+    clienteFilter,
+    setClienteFilter,
+    estadoFilter,
+    setEstadoFilter,
+    dateRange,
+    setDateRange,
+    vehiculoFilter,
+    setVehiculoFilter,
+    choferFilter,
+    setChoferFilter,
+    activeTab,
+    setActiveTab,
+    filteredViajes,
+    viajesStats,
+    hasActiveFilters: hasActiveFiltersValue,
+    handleClearFilters,
+  };
+};
+
+// Hook para manejo de modales
+const useViajesModals = () => {
+  const [importModalOpened, setImportModalOpened] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+  const [viajeToDelete, setViajeToDelete] = useState<Viaje | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [bulkDeleteModalOpened, setBulkDeleteModalOpened] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
+  return {
+    importModalOpened,
+    setImportModalOpened,
+    deleteModalOpened,
+    setDeleteModalOpened,
+    viajeToDelete,
+    setViajeToDelete,
+    deleteLoading,
+    setDeleteLoading,
+    bulkDeleteModalOpened,
+    setBulkDeleteModalOpened,
+    bulkDeleteLoading,
+    setBulkDeleteLoading,
+  };
+};
+
+// Hook para acciones
+const useViajesActions = (
+  fetchViajes: () => Promise<void>,
+  deleteViaje: (id: string) => Promise<void>,
+  modals: ReturnType<typeof useViajesModals>,
+  excelOperations: { handleImportComplete: (result: ImportResult) => void }
+) => {
+  const [selectedViajeIds, setSelectedViajeIds] = useState<string[]>([]);
+
+  const handleImportComplete = async (result: ImportResult) => {
     console.log('handleImportComplete called with result:', result);
 
-    if (result.summary?.insertedRows > 0) {
+    if (result.summary?.insertedRows && result.summary.insertedRows > 0) {
       console.log('Refrescando lista de viajes después de importación exitosa');
       await fetchViajes();
     }
 
     if (!result.hasMissingData || result.summary?.errorRows === 0) {
       console.log('Cerrando modal porque no hay datos faltantes');
-      setImportModalOpened(false);
+      modals.setImportModalOpened(false);
     } else {
       console.log('Manteniendo modal abierto para mostrar opción de descarga');
     }
@@ -156,22 +193,22 @@ export const useViajesPage = () => {
   };
 
   const handleDeleteClick = (viaje: Viaje) => {
-    setViajeToDelete(viaje);
-    setDeleteModalOpened(true);
+    modals.setViajeToDelete(viaje);
+    modals.setDeleteModalOpened(true);
   };
 
   const handleDelete = async () => {
-    if (!viajeToDelete) return;
+    if (!modals.viajeToDelete) return;
 
     try {
-      setDeleteLoading(true);
-      await deleteViaje(viajeToDelete._id);
-      setDeleteModalOpened(false);
-      setViajeToDelete(null);
+      modals.setDeleteLoading(true);
+      await deleteViaje(modals.viajeToDelete._id);
+      modals.setDeleteModalOpened(false);
+      modals.setViajeToDelete(null);
     } catch (error) {
       console.error('Error deleting viaje:', error);
     } finally {
-      setDeleteLoading(false);
+      modals.setDeleteLoading(false);
     }
   };
 
@@ -179,15 +216,15 @@ export const useViajesPage = () => {
     if (selectedViajeIds.length === 0) return;
 
     try {
-      setBulkDeleteLoading(true);
+      modals.setBulkDeleteLoading(true);
       await ViajeService.deleteMany(selectedViajeIds);
       setSelectedViajeIds([]);
-      setBulkDeleteModalOpened(false);
+      modals.setBulkDeleteModalOpened(false);
       window.location.reload();
     } catch (error) {
       console.error('Error bulk deleting viajes:', error);
     } finally {
-      setBulkDeleteLoading(false);
+      modals.setBulkDeleteLoading(false);
     }
   };
 
@@ -213,35 +250,70 @@ export const useViajesPage = () => {
     setSelectedViajeIds(selectedIds);
   };
 
+  return {
+    selectedViajeIds,
+    handleImportComplete,
+    handleDeleteClick,
+    handleDelete,
+    handleBulkDelete,
+    handleBulkExport,
+    handleSelectionChange,
+  };
+};
+
+// Hook principal
+const useViajesPage = () => {
+  // Estados de paginación y UI
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
+  // Hooks auxiliares
+  const { viajes, loading, error, fetchViajes, deleteViaje } = useViajesDataLoaders();
+  const filters = useViajesFilters(viajes);
+  const modals = useViajesModals();
+
+  // Hook unificado para operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'viajes',
+    entityName: 'viajes',
+    exportFunction: (filters) => viajeExcelService.exportToExcel(filters),
+    templateFunction: () => viajeExcelService.getTemplate(),
+    reloadFunction: fetchViajes,
+  });
+
+  const actions = useViajesActions(fetchViajes, deleteViaje, modals, excelOperations);
+
+  // Estados calculados
+  const useVirtualScrolling = viajes.length > 100;
+
+  const paginatedViajes = useMemo(
+    () => getPaginatedData(filters.filteredViajes, currentPage, pageSize),
+    [filters.filteredViajes, currentPage, pageSize]
+  );
+
   // Reset página cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, clienteFilter, estadoFilter, dateRange, vehiculoFilter, choferFilter, activeTab]);
+  }, [
+    filters.search,
+    filters.clienteFilter,
+    filters.estadoFilter,
+    filters.dateRange,
+    filters.vehiculoFilter,
+    filters.choferFilter,
+    filters.activeTab,
+  ]);
 
   return {
     // Datos
-    viajes: filteredViajes,
+    viajes: filters.filteredViajes,
     paginatedViajes,
-    viajesStats,
+    viajesStats: filters.viajesStats,
     loading,
     error,
 
-    // Estados de filtros
-    search,
-    setSearch,
-    clienteFilter,
-    setClienteFilter,
-    estadoFilter,
-    setEstadoFilter,
-    dateRange,
-    setDateRange,
-    vehiculoFilter,
-    setVehiculoFilter,
-    choferFilter,
-    setChoferFilter,
-    activeTab,
-    setActiveTab,
-    hasActiveFilters: hasActiveFiltersValue,
+    // Estados de filtros (destructuring para mantener compatibilidad)
+    ...filters,
 
     // Estados de UI
     currentPage,
@@ -249,30 +321,17 @@ export const useViajesPage = () => {
     pageSize,
     setPageSize,
     useVirtualScrolling,
-    selectedViajeIds,
+    selectedViajeIds: actions.selectedViajeIds,
 
-    // Estados de modales
-    importModalOpened,
-    setImportModalOpened,
-    deleteModalOpened,
-    setDeleteModalOpened,
-    viajeToDelete,
-    setViajeToDelete,
-    deleteLoading,
-    bulkDeleteModalOpened,
-    setBulkDeleteModalOpened,
-    bulkDeleteLoading,
+    // Estados de modales (destructuring para mantener compatibilidad)
+    ...modals,
 
-    // Acciones
-    handleClearFilters,
-    handleImportComplete,
-    handleDeleteClick,
-    handleDelete,
-    handleBulkDelete,
-    handleBulkExport,
-    handleSelectionChange,
+    // Acciones (destructuring para mantener compatibilidad)
+    ...actions,
 
     // Operaciones Excel
     excelOperations,
   };
 };
+
+export { useViajesPage };
