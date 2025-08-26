@@ -65,25 +65,26 @@ const matchesTabFilter = (viaje: Viaje, activeTab: string | null): boolean => {
 };
 
 // Main filter function
-export const applyViajesFilters = (
-  viajes: Viaje[],
-  search: string,
-  clienteFilter: string | null,
-  estadoFilter: string | null,
-  dateRange: [Date | null, Date | null],
-  vehiculoFilter: string | null,
-  choferFilter: string | null,
-  activeTab: string | null
-): Viaje[] => {
+// Interface for filter parameters
+export interface ViajesFilters {
+  search: string;
+  clienteFilter: string | null;
+  estadoFilter: string | null;
+  dateRange: [Date | null, Date | null];
+  vehiculoFilter: string | null;
+  choferFilter: string | null;
+  activeTab?: string | null;
+}
+export const applyViajesFilters = (viajes: Viaje[], filters: ViajesFilters): Viaje[] => {
   return viajes.filter((viaje) => {
     return (
-      matchesSearchTerm(viaje, search) &&
-      matchesClienteFilter(viaje, clienteFilter) &&
-      matchesEstadoFilter(viaje, estadoFilter) &&
-      matchesDateRangeFilter(viaje, dateRange) &&
-      matchesVehiculoFilter(viaje, vehiculoFilter) &&
-      matchesChoferFilter(viaje, choferFilter) &&
-      matchesTabFilter(viaje, activeTab)
+      matchesSearchTerm(viaje, filters.search) &&
+      matchesClienteFilter(viaje, filters.clienteFilter) &&
+      matchesEstadoFilter(viaje, filters.estadoFilter) &&
+      matchesDateRangeFilter(viaje, filters.dateRange) &&
+      matchesVehiculoFilter(viaje, filters.vehiculoFilter) &&
+      matchesChoferFilter(viaje, filters.choferFilter) &&
+      matchesTabFilter(viaje, filters.activeTab || null)
     );
   });
 };
@@ -175,21 +176,14 @@ export const estadoOptions = [
 ];
 
 // Filter utility functions
-export const hasActiveFilters = (
-  search: string,
-  clienteFilter: string | null,
-  estadoFilter: string | null,
-  dateRange: [Date | null, Date | null],
-  vehiculoFilter: string | null,
-  choferFilter: string | null
-): boolean => {
+export const hasActiveFilters = (filters: Omit<ViajesFilters, 'activeTab'>): boolean => {
   return !!(
-    search ||
-    clienteFilter ||
-    estadoFilter ||
-    dateRange[0] ||
-    vehiculoFilter ||
-    choferFilter
+    filters.search ||
+    filters.clienteFilter ||
+    filters.estadoFilter ||
+    filters.dateRange[0] ||
+    filters.vehiculoFilter ||
+    filters.choferFilter
   );
 };
 

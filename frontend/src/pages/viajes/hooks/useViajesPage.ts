@@ -72,16 +72,15 @@ const useViajesFilters = (viajes: Viaje[]) => {
 
   const filteredViajes = useMemo(
     () =>
-      applyViajesFilters(
-        viajes,
+      applyViajesFilters(viajes, {
         search,
         clienteFilter,
         estadoFilter,
         dateRange,
         vehiculoFilter,
         choferFilter,
-        activeTab
-      ),
+        activeTab,
+      }),
     [
       viajes,
       search,
@@ -98,14 +97,14 @@ const useViajesFilters = (viajes: Viaje[]) => {
 
   const hasActiveFiltersValue = useMemo(
     () =>
-      checkActiveFilters(
+      checkActiveFilters({
         search,
         clienteFilter,
         estadoFilter,
         dateRange,
         vehiculoFilter,
-        choferFilter
-      ),
+        choferFilter,
+      }),
     [search, clienteFilter, estadoFilter, dateRange, vehiculoFilter, choferFilter]
   );
 
