@@ -251,3 +251,77 @@ export const addExtra = (
   const newExtra = createNewExtra();
   setFieldValue('extras', [...extras, newExtra]);
 };
+// Handler helpers for useViajeForm
+interface CalculateHandlerConfig {
+  selectedCliente: Cliente | null;
+  selectedTramo: Tramo | null;
+  formValues: ViajeFormData;
+  setCalculating: (value: boolean) => void;
+  setCalculationResult: (result: CalculationResult | null) => void;
+  setFieldValue: (field: string, value: number) => void;
+}
+
+export const createCalculateHandler = (config: CalculateHandlerConfig) => async () => {
+  const {
+    selectedCliente,
+    selectedTramo,
+    formValues,
+    setCalculating,
+    setCalculationResult,
+    setFieldValue,
+  } = config;
+  if (!canCalculateTarifa(selectedCliente, selectedTramo)) {
+    showValidationError();
+    return;
+  }
+
+  setCalculating(true);
+  try {
+    const result = simulateCalculation(formValues);
+    setCalculationResult(result);
+    updateFormWithCalculation(result, setFieldValue);
+    showCalculationSuccess(result.montoTotal);
+  } catch (error) {
+    showCalculationError();
+  } finally {
+    setCalculating(false);
+  }
+};
+
+export const createSubmitHandler =
+  (
+    viaje: Viaje | undefined,
+    saveViaje: (values: ViajeFormData, isUpdate: boolean) => Promise<unknown>,
+    onSave: (viaje: ViajeFormData) => void
+  ) =>
+  async (values: ViajeFormData) => {
+    try {
+      const isUpdate = !!viaje;
+      await saveViaje(values, isUpdate);
+      showSaveSuccess(isUpdate);
+      onSave(values);
+    } catch (error) {
+      showSaveError();
+    }
+  };
+
+export const createClienteChangeHandler =
+  (clientes: Cliente[], setSelectedCliente: (cliente: Cliente | null) => void) =>
+  (clienteId: string) => {
+    const cliente = clientes.find((c) => c._id === clienteId);
+    setSelectedCliente(cliente || null);
+  };
+
+export const createTramoChangeHandler =
+  (
+    tramos: Tramo[],
+    setSelectedTramo: (tramo: Tramo | null) => void,
+    setFieldValue: (field: string, value: number) => void
+  ) =>
+  (tramoId: string) => {
+    const tramo = tramos.find((t) => t._id === tramoId);
+    setSelectedTramo(tramo || null);
+    if (tramo) {
+      updateFormWithTramoData(tramo, setFieldValue);
+    }
+  };
