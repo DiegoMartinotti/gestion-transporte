@@ -31,12 +31,12 @@ export const getDocumentStatus = (vencimiento: Date | null): string => {
 };
 
 // Date conversion helper
-export const safeToDate = (dateValue: any): Date | null => {
+export const safeToDate = (dateValue: unknown): Date | null => {
   return dateValue ? new Date(dateValue) : null;
 };
 
 // Document data extraction
-export const getDocumentData = (doc: any) => ({
+export const getDocumentData = (doc: Record<string, unknown> | null | undefined) => ({
   numero: doc?.numero || '',
   categoria: doc?.categoria || '',
   vencimiento: safeToDate(doc?.vencimiento),
@@ -101,9 +101,11 @@ export const getInitialIncidentes = (personal?: Personal) =>
   })) || [];
 
 // Data processing for submit
-export const processDocumentacionForSubmit = (documentacion: any) => {
+export const processDocumentacionForSubmit = (
+  documentacion: Record<string, unknown> | null | undefined
+) => {
   // Helper function to process individual document with numero requirement
-  const processDocumentWithNumero = (doc: any) => {
+  const processDocumentWithNumero = (doc: Record<string, unknown> | null | undefined) => {
     if (!doc.numero) return undefined;
 
     return {
@@ -113,7 +115,7 @@ export const processDocumentacionForSubmit = (documentacion: any) => {
   };
 
   // Helper function to process document with fecha requirement
-  const processDocumentWithFecha = (doc: any) => {
+  const processDocumentWithFecha = (doc: Record<string, unknown> | null | undefined) => {
     if (!doc.fecha) return undefined;
 
     return {
@@ -131,14 +133,14 @@ export const processDocumentacionForSubmit = (documentacion: any) => {
   };
 };
 
-export const processPeriodosEmpleoForSubmit = (periodos: any[]) =>
+export const processPeriodosEmpleoForSubmit = (periodos: Array<Record<string, unknown>>) =>
   periodos.map((periodo) => ({
     ...periodo,
     fechaIngreso: periodo.fechaIngreso,
     fechaEgreso: periodo.fechaEgreso || undefined,
   }));
 
-export const processCapacitacionesForSubmit = (capacitaciones: any[]) =>
+export const processCapacitacionesForSubmit = (capacitaciones: Array<Record<string, unknown>>) =>
   capacitaciones
     .filter((cap) => cap.nombre)
     .map((cap) => ({
@@ -147,7 +149,7 @@ export const processCapacitacionesForSubmit = (capacitaciones: any[]) =>
       vencimiento: cap.vencimiento || undefined,
     }));
 
-export const processIncidentesForSubmit = (incidentes: any[]) =>
+export const processIncidentesForSubmit = (incidentes: Array<Record<string, unknown>>) =>
   incidentes
     .filter((inc) => inc.descripcion)
     .map((inc) => ({
@@ -155,12 +157,12 @@ export const processIncidentesForSubmit = (incidentes: any[]) =>
       fecha: inc.fecha || undefined,
     }));
 
-export const hasDatosLaborales = (datosLaborales: any) =>
+export const hasDatosLaborales = (datosLaborales: Record<string, unknown> | null | undefined) =>
   Object.values(datosLaborales).some((v) => v);
 
 // Build personal data for submission
 export const buildPersonalData = (
-  values: any,
+  values: Record<string, unknown>,
   helpers: {
     processPeriodosEmpleoForSubmit: typeof processPeriodosEmpleoForSubmit;
     processDocumentacionForSubmit: typeof processDocumentacionForSubmit;
@@ -181,7 +183,7 @@ export const buildPersonalData = (
 });
 
 // Save personal
-export const savePersonal = async (personalData: any, personalId?: string) => {
+export const savePersonal = async (personalData: Record<string, unknown>, personalId?: string) => {
   if (personalId) {
     return await personalService.update(personalId, personalData);
   }
@@ -200,7 +202,7 @@ export const showSuccessNotification = (isEdit: boolean) => {
   });
 };
 
-export const showErrorNotification = (error: any) => {
+export const showErrorNotification = (error: unknown) => {
   notifications.show({
     title: 'Error',
     message: error.response?.data?.message || error.message || 'Error al guardar personal',

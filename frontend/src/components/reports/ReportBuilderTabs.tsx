@@ -115,7 +115,7 @@ export const FiltersTab: React.FC<FiltersTabProps> = ({
 
     {form.values.filters?.map((filter, index) => (
       <FilterItem
-        key={(filter as any).id || index}
+        key={(filter as Record<string, unknown>)?.id?.toString() || index}
         filter={filter as unknown as Record<string, unknown>}
         index={index}
         availableFields={availableFields}

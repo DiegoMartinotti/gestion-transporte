@@ -14,7 +14,7 @@ export const getDocumentosInfo = (vehiculo: Vehiculo): DocumentoInfo[] => {
   const hoy = new Date();
   const docs = vehiculo.documentacion;
 
-  const checkDocumento = (nombre: string, doc: any): DocumentoInfo => {
+  const checkDocumento = (nombre: string, doc: Record<string, unknown> | null): DocumentoInfo => {
     if (!doc?.vencimiento) {
       return {
         nombre,

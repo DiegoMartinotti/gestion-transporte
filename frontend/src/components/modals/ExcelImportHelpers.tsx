@@ -57,7 +57,7 @@ export const downloadMissingDataTemplates = async (
       message: 'Se han descargado las plantillas con los datos faltantes',
       color: 'green',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error descargando plantillas:', err);
     console.error('Error response:', err.response);
     notifications.show({
@@ -70,7 +70,10 @@ export const downloadMissingDataTemplates = async (
   }
 };
 
-export const processImportResult = (importResult: any, reintentoResult: any) => {
+export const processImportResult = (
+  importResult: Record<string, unknown>,
+  reintentoResult: Record<string, unknown>
+) => {
   return {
     ...importResult,
     summary: {
@@ -101,7 +104,7 @@ export const showTemplateDownloadNotification = (success: boolean) => {
   }
 };
 
-export const showCorrectionSuccessNotification = (reintentoResult: any) => {
+export const showCorrectionSuccessNotification = (reintentoResult: Record<string, unknown>) => {
   if (reintentoResult && reintentoResult.success) {
     notifications.show({
       title: 'Datos importados y viajes reintentados',

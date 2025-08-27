@@ -3,21 +3,25 @@ import { Card, Title, Group, Button, Stack, Paper, Text, ActionIcon } from '@man
 import { UseFormReturnType } from '@mantine/form';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 
-interface DynamicListFieldProps<T = any> {
+interface DynamicListFieldProps<T = Record<string, unknown>> {
   title: string;
-  form: UseFormReturnType<any>;
+  form: UseFormReturnType<{ [key: string]: T[] }>;
   path: string;
   initialItem: T;
-  renderFields: (item: T, index: number, form: UseFormReturnType<any>) => React.ReactNode;
+  renderFields: (
+    item: T,
+    index: number,
+    form: UseFormReturnType<{ [key: string]: T[] }>
+  ) => React.ReactNode;
   minItems?: number;
   maxItems?: number;
   canRemove?: (index: number) => boolean;
   itemLabel?: (index: number) => string;
   addButtonText?: string;
-  _validation?: Record<string, (value: any) => string | null>;
+  validation?: Record<string, (value: unknown) => string | null>;
 }
 
-export default function DynamicListField<T = any>({
+export default function DynamicListField<T = Record<string, unknown>>({
   title,
   form,
   path,

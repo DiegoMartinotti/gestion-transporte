@@ -8,7 +8,7 @@ export const vehiculoValidationRules = {
     }
     return null;
   },
-  empresa: (value: string | any) => (!value ? 'La empresa es obligatoria' : null),
+  empresa: (value: string | unknown) => (!value ? 'La empresa es obligatoria' : null),
   año: (value: number | undefined) => {
     if (value && (value < 1950 || value > new Date().getFullYear() + 1)) {
       return 'Año inválido';
@@ -60,7 +60,7 @@ const createDefaultVehiculo = (): Vehiculo => ({
   observaciones: '',
 });
 
-const createDocumentacionDefaults = (doc?: any) => ({
+const createDocumentacionDefaults = (doc?: Record<string, unknown>) => ({
   seguro: {
     numero: doc?.seguro?.numero || '',
     vencimiento: doc?.seguro?.vencimiento || '',
@@ -80,7 +80,7 @@ const createDocumentacionDefaults = (doc?: any) => ({
   },
 });
 
-const createCaracteristicasDefaults = (car?: any) => ({
+const createCaracteristicasDefaults = (car?: Record<string, unknown>) => ({
   capacidadCarga: car?.capacidadCarga || 0,
   tara: car?.tara || 0,
   largo: car?.largo || 0,

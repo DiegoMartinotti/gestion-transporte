@@ -12,7 +12,7 @@ export const tarifaValidationRules = {
   valor: (value: number) => (value <= 0 ? 'El valor debe ser mayor a 0' : null),
   valorPeaje: (value: number) => (value < 0 ? 'El valor del peaje no puede ser negativo' : null),
   vigenciaDesde: (value: Date | null) => (!value ? 'Fecha de inicio es requerida' : null),
-  vigenciaHasta: (value: Date | null, values: any) => {
+  vigenciaHasta: (value: Date | null, values: Record<string, unknown>) => {
     if (!value) return 'Fecha de fin es requerida';
     if (values.vigenciaDesde && value < values.vigenciaDesde) {
       return 'La fecha de fin debe ser posterior a la fecha de inicio';
@@ -31,7 +31,7 @@ export const getInitialValues = (tarifa?: TarifaHistorica | null) => ({
 });
 
 export function validateTarifaConflicts(
-  formValues: any,
+  formValues: Record<string, unknown>,
   existingTarifas: TarifaHistorica[],
   currentTarifa?: TarifaHistorica | null
 ): string[] {

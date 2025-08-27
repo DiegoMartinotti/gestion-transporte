@@ -5,7 +5,7 @@ export const tramoValidationRules = {
   distancia: (value: number) => (value <= 0 ? 'Distancia debe ser mayor a 0' : null),
 };
 
-export const getInitialTramoValues = (tramo: any) => ({
+export const getInitialTramoValues = (tramo: Record<string, unknown> | null) => ({
   cliente: tramo?.cliente._id || '',
   origen: tramo?.origen._id || '',
   destino: tramo?.destino._id || '',
