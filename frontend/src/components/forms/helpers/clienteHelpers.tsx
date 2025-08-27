@@ -51,7 +51,7 @@ export const saveCliente = async (
   }
 };
 
-export const handleClienteError = (error: any) => {
+export const handleClienteError = (error: unknown) => {
   console.error('Error saving cliente:', error);
 
   const errorMessage =

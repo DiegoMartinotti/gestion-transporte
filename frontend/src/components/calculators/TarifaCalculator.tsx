@@ -20,10 +20,11 @@ import { DateInput } from '@mantine/dates';
 import { IconCalculator, IconTruck, IconClock } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { calculateTarifa } from '../../services/tarifaService';
+import { Tramo } from '../../types';
 
 interface TarifaCalculatorProps {
   tramoId?: string;
-  tramo?: any; // Información completa del tramo
+  tramo?: Tramo; // Información completa del tramo
   onCalculationChange?: (calculation: CalculationResult) => void;
   readonly?: boolean;
 }
@@ -55,15 +56,15 @@ interface CalculationResult {
 }
 
 // Helper functions
-const getClienteId = (tramo: any) => {
+const getClienteId = (tramo: Tramo | null) => {
   return typeof tramo?.cliente === 'string' ? tramo.cliente : tramo?.cliente?._id || '';
 };
 
-const getSiteId = (site: any) => {
+const getSiteId = (site: { _id?: string } | null) => {
   return site?._id || site || '';
 };
 
-const initializeParams = (tramo: any, tramoId?: string): CalculationParams => {
+const initializeParams = (tramo: Tramo | null, tramoId?: string): CalculationParams => {
   return {
     cliente: getClienteId(tramo),
     origen: getSiteId(tramo?.origen),
@@ -75,18 +76,22 @@ const initializeParams = (tramo: any, tramoId?: string): CalculationParams => {
   };
 };
 
-const updateAvailableTypes = (tramo: any, setAvailableTypes: any, setParams: any) => {
+const updateAvailableTypes = (
+  tramo: Tramo | null,
+  setAvailableTypes: React.Dispatch<React.SetStateAction<string[]>>,
+  setParams: React.Dispatch<React.SetStateAction<CalculationParams>>
+) => {
   if (
     tramo.tarifasHistoricas &&
     Array.isArray(tramo.tarifasHistoricas) &&
     tramo.tarifasHistoricas.length > 0
   ) {
     const tipos = Array.from(
-      new Set(tramo.tarifasHistoricas.map((t: any) => t.tipo).filter(Boolean))
+      new Set(tramo.tarifasHistoricas.map((t: { tipo?: string }) => t.tipo).filter(Boolean))
     ) as string[];
     if (tipos.length > 0) {
       setAvailableTypes(tipos);
-      setParams((prev: any) => {
+      setParams((prev: CalculationParams) => {
         if (!tipos.includes(prev.tipoTramo)) {
           return { ...prev, tipoTramo: tipos[0] };
         }
@@ -98,11 +103,11 @@ const updateAvailableTypes = (tramo: any, setAvailableTypes: any, setParams: any
 
 // Component for calculation parameters
 const ParametersSection: React.FC<{
-  tramo: any;
+  tramo: Tramo | null;
   params: CalculationParams;
   availableTypes: string[];
   readonly: boolean;
-  onParamChange: (field: keyof CalculationParams, value: any) => void;
+  onParamChange: (field: keyof CalculationParams, value: string | number) => void;
   onCalculate: () => void;
   isLoading: boolean;
   tramoId?: string;
@@ -314,7 +319,7 @@ const TarifaCalculator: React.FC<TarifaCalculatorProps> = ({
     calculationMutation.mutate({ tramoId: realTramoId, params });
   }, [tramoId, params, tramo, calculationMutation]);
 
-  const handleParamChange = (field: keyof CalculationParams, value: any) => {
+  const handleParamChange = (field: keyof CalculationParams, value: string | number) => {
     setParams((prev) => ({ ...prev, [field]: value }));
   };
 

@@ -74,7 +74,7 @@ export function EmpresaDetailInfo({ empresa }: EmpresaDetailInfoProps) {
               <InfoField
                 icon={<IconWorld size="1.2rem" color="gray" />}
                 label="Sitio Web"
-                value={(empresa as any).sitioWeb || (empresa as any).web}
+                value={empresa.sitioWeb}
               />
             </Stack>
           </Grid.Col>

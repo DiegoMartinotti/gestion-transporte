@@ -60,7 +60,7 @@ export const saveEmpresa = async (
   }
 };
 
-export const handleEmpresaError = (error: any) => {
+export const handleEmpresaError = (error: unknown) => {
   console.error('Error saving empresa:', error);
 
   const errorMessage =

@@ -1,4 +1,5 @@
 import React from 'react';
+import { UseFormReturnType } from '@mantine/form';
 import {
   Stack,
   Grid,
@@ -39,7 +40,7 @@ export function renderConflictAlerts(conflicts: string[], isValid: boolean) {
   );
 }
 
-export function renderFormFields(form: any) {
+export function renderFormFields(form: UseFormReturnType<Record<string, unknown>>) {
   return (
     <Grid>
       <Grid.Col span={6}>
@@ -108,7 +109,7 @@ export function renderFormFields(form: any) {
   );
 }
 
-export function renderPreview(values: any) {
+export function renderPreview(values: Record<string, unknown>) {
   return (
     <Paper p="md" withBorder bg="gray.0">
       <Text size="sm" fw={500} mb="xs">
@@ -132,7 +133,7 @@ export function renderPreview(values: any) {
 
 export function renderActions(
   onCancel: () => void,
-  tarifa: any,
+  tarifa: Record<string, unknown>,
   isValid: boolean,
   conflicts: string[]
 ) {

@@ -13,7 +13,9 @@ export const siteValidationRules = {
   },
 };
 
-export const getInitialValues = (site: any): CreateSiteData => ({
+export const getInitialValues = (
+  site: CreateSiteData | { cliente: { _id: string } } | null
+): CreateSiteData => ({
   nombre: site?.nombre || '',
   direccion: site?.direccion || '',
   ciudad: site?.localidad || '',

@@ -7,7 +7,7 @@ interface VehiculoDetailInfoProps {
 
 export function VehiculoDetailInfo({ vehiculo }: VehiculoDetailInfoProps) {
   const NO_ESPECIFICADO = 'No especificado';
-  const getEmpresaNombre = (empresa: any) => {
+  const getEmpresaNombre = (empresa: string | { nombre?: string } | null) => {
     if (typeof empresa === 'object' && empresa && 'nombre' in empresa) {
       return empresa.nombre;
     }
