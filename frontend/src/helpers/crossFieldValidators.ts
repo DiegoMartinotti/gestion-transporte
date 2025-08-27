@@ -15,15 +15,15 @@ export function validatePersonalCrossFields(
   const tipo = row['Tipo (*)'];
   const licencia = row['Licencia - Número'];
 
-  if (!validateDriverLicense(tipo, licencia)) {
+  if (!validateDriverLicense(String(tipo || ''), licencia)) {
     errors.push(
-      createValidationError(
-        rowNumber,
-        'Licencia - Número',
-        licencia,
-        'Los conductores deben tener número de licencia',
-        { severity: 'error' }
-      )
+      createValidationError({
+        row: rowNumber,
+        field: 'Licencia - Número',
+        value: licencia,
+        message: 'Los conductores deben tener número de licencia',
+        severity: 'error',
+      })
     );
   }
 
@@ -41,15 +41,15 @@ function validateExpirationDates(row: ExcelRowData, rowNumber: number): Validati
 
   DATE_FIELDS.forEach((campo) => {
     const fecha = row[campo];
-    if (fecha && isDateInPast(fecha)) {
+    if (fecha && isDateInPast(String(fecha))) {
       errors.push(
-        createValidationError(
-          rowNumber,
-          campo,
-          fecha,
-          'La fecha de vencimiento no puede ser del pasado',
-          { severity: 'warning' }
-        )
+        createValidationError({
+          row: rowNumber,
+          field: campo,
+          value: fecha,
+          message: 'La fecha de vencimiento no puede ser del pasado',
+          severity: 'warning',
+        })
       );
     }
   });
