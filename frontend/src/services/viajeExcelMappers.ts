@@ -43,10 +43,10 @@ interface ResolvedIds {
 }
 
 interface ResolveIdsParams {
-  origenNombre: string | number | boolean | null | undefined;
-  destinoNombre: string | number | boolean | null | undefined;
-  choferDni: string | number | boolean | null | undefined;
-  vehiculoDominio: string | number | boolean | null | undefined;
+  origenNombre: string | number | boolean | Date | null | undefined;
+  destinoNombre: string | number | boolean | Date | null | undefined;
+  choferDni: string | number | boolean | Date | null | undefined;
+  vehiculoDominio: string | number | boolean | Date | null | undefined;
   siteMap: Map<string, string>;
   personalMap: Map<string, string>;
   vehiculoMap: Map<string, string>;
@@ -57,10 +57,10 @@ interface ValidateIdsParams {
   destinoId: string | undefined;
   choferId: string | undefined;
   vehiculoId: string | undefined;
-  origenNombre: string | number | boolean | null | undefined;
-  destinoNombre: string | number | boolean | null | undefined;
+  origenNombre: string | number | boolean | Date | null | undefined;
+  destinoNombre: string | number | boolean | Date | null | undefined;
   choferDniStr: string;
-  vehiculoDominio: string | number | boolean | null | undefined;
+  vehiculoDominio: string | number | boolean | Date | null | undefined;
 }
 
 interface CreateViajeParams {
