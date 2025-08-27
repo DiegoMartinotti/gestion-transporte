@@ -11,18 +11,18 @@ interface VehiculosTabsProps {
   activeTab: string | null;
   handleTabChange: (value: string | null) => void;
   vehiculos: Vehiculo[];
-  vehiculosVencimientos: any[];
-  filters: any;
-  handleFiltersChange: (filters: any) => void;
+  vehiculosVencimientos: Array<Record<string, unknown>>;
+  filters: Record<string, unknown>;
+  handleFiltersChange: (filters: Record<string, unknown>) => void;
   empresas: Empresa[];
   viewMode: 'list' | 'cards';
   setViewMode: (mode: 'list' | 'cards') => void;
-  vehiculosColumns: any[];
-  vencimientosColumns: any[];
+  vehiculosColumns: Array<Record<string, unknown>>;
+  vencimientosColumns: Array<Record<string, unknown>>;
   loading: boolean;
-  formModal: any;
+  formModal: Record<string, unknown>;
   openDeleteModal: (id: string, dominio?: string) => void;
-  detailModal: any;
+  detailModal: Record<string, unknown>;
 }
 
 export const VehiculosTabs: React.FC<VehiculosTabsProps> = ({

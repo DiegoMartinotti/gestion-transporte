@@ -369,5 +369,48 @@ export interface ViajeFilters extends BaseFilters {
   fechaHasta?: Date;
 }
 
-// Re-export reports types
+// Additional types for calculations and formulas
+export interface FormulaAplicada {
+  formula: string;
+  resultado: number;
+  parametros: Record<string, unknown>;
+}
+
+export interface CalculationResult {
+  precioTotal: number;
+  desglose: Array<{
+    concepto: string;
+    valor: number;
+  }>;
+  formulas?: FormulaAplicada[];
+}
+
+export interface ContactoSeguimiento {
+  fecha: Date;
+  tipo: 'llamada' | 'email' | 'visita' | 'otro';
+  descripcion: string;
+  resultado?: string;
+  proximaAccion?: Date;
+}
+
+// Map related types
+export interface MapBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+// Document types for vehicles
+export interface DocumentoVehiculo {
+  tipo: string;
+  numero?: string;
+  vencimiento?: Date;
+  estado?: 'vigente' | 'vencido' | 'por_vencer';
+}
+
+// Re-export all types
 export * from './reports';
+export * from './forms';
+export * from './validators';
+export * from './excel';

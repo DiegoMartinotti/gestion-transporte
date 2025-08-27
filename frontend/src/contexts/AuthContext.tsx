@@ -57,13 +57,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const user = await authService.login(credentials);
       setUser(user);
-      
+
       notifications.show({
         title: 'Bienvenido',
         message: `Hola ${user.nombre}!`,
         color: 'green',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notifications.show({
         title: 'Error de autenticación',
         message: error.message || 'Credenciales inválidas',
@@ -79,13 +79,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       await authService.register(data);
-      
+
       notifications.show({
         title: 'Registro exitoso',
         message: 'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.',
         color: 'green',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notifications.show({
         title: 'Error de registro',
         message: error.message || 'Error al crear la cuenta',
@@ -102,7 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       await authService.logout();
       setUser(null);
-      
+
       notifications.show({
         title: 'Sesión cerrada',
         message: 'Has cerrado sesión exitosamente',
@@ -125,9 +125,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,11 +1,14 @@
-import { ValidationError } from '../types/excel';
+import { ValidationError, ExcelRowData } from '../types/excel';
 import { createValidationError, validateDriverLicense, isDateInPast } from './validationHelpers';
 import { DATE_FIELDS } from '../constants/validationRules';
 
 /**
  * Valida campos cruzados para la entidad Personal
  */
-export function validatePersonalCrossFields(row: any, rowNumber: number): ValidationError[] {
+export function validatePersonalCrossFields(
+  row: ExcelRowData,
+  rowNumber: number
+): ValidationError[] {
   const errors: ValidationError[] = [];
 
   // Validar que conductores tengan licencia
@@ -33,7 +36,7 @@ export function validatePersonalCrossFields(row: any, rowNumber: number): Valida
 /**
  * Valida fechas de vencimiento
  */
-function validateExpirationDates(row: any, rowNumber: number): ValidationError[] {
+function validateExpirationDates(row: ExcelRowData, rowNumber: number): ValidationError[] {
   const errors: ValidationError[] = [];
 
   DATE_FIELDS.forEach((campo) => {
@@ -57,7 +60,10 @@ function validateExpirationDates(row: any, rowNumber: number): ValidationError[]
 /**
  * Valida campos cruzados para Cliente
  */
-export function validateClienteCrossFields(_row: any, _rowNumber: number): ValidationError[] {
+export function validateClienteCrossFields(
+  _row: ExcelRowData,
+  _rowNumber: number
+): ValidationError[] {
   // Por ahora no hay validaciones específicas para Cliente
   return [];
 }
@@ -65,7 +71,10 @@ export function validateClienteCrossFields(_row: any, _rowNumber: number): Valid
 /**
  * Valida campos cruzados para Empresa
  */
-export function validateEmpresaCrossFields(_row: any, _rowNumber: number): ValidationError[] {
+export function validateEmpresaCrossFields(
+  _row: ExcelRowData,
+  _rowNumber: number
+): ValidationError[] {
   // Por ahora no hay validaciones específicas para Empresa
   return [];
 }
@@ -75,7 +84,7 @@ export function validateEmpresaCrossFields(_row: any, _rowNumber: number): Valid
  */
 export function validateCrossFieldsByEntity(
   entityType: string,
-  row: any,
+  row: ExcelRowData,
   rowNumber: number
 ): ValidationError[] {
   switch (entityType) {

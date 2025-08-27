@@ -6,7 +6,7 @@ import { VEHICULOS_CONSTANTS } from '../../constants/vehiculos';
 
 interface VehiculosTableProps {
   vehiculos: Vehiculo[];
-  columns: any[];
+  columns: Array<Record<string, unknown>>;
   loading: boolean;
   viewMode: 'list' | 'cards';
   onEdit: (vehiculo: Vehiculo) => void;
