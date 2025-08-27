@@ -1,4 +1,4 @@
-import { ValidationError } from '../types/excel';
+import { ValidationError, ExcelRowData, ExcelCellValue } from '../types/excel';
 
 /**
  * Valida formato de CUIT
@@ -35,7 +35,7 @@ export function validateCuilFormat(value: string): boolean {
 /**
  * Valida si un valor está vacío
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: ExcelCellValue): boolean {
   return (
     value === undefined ||
     value === null ||
@@ -116,7 +116,7 @@ export function getSuggestionForField(field: string, value: string): string | un
 export function validateUniqueInArray(
   value: string,
   field: string,
-  allData: any[],
+  allData: ExcelRowData[],
   currentIndex: number
 ): boolean {
   const stringValue = value.toString().trim().toLowerCase();
@@ -136,35 +136,39 @@ export function validateUniqueInArray(
 /**
  * Valida existencia en datos de referencia
  */
-export function validateExistsInReference(value: string, referenceMap: Map<string, any>): boolean {
+export function validateExistsInReference(
+  value: string,
+  referenceMap: Map<string, unknown>
+): boolean {
   return referenceMap.has(value.toLowerCase());
 }
 
 /**
  * Crea error de validación estándar
  */
-export function createValidationError(
-  row: number,
-  field: string,
-  value: any,
-  message: string,
-  options: { severity?: 'error' | 'warning'; suggestion?: string } = {}
-): ValidationError {
+export function createValidationError(config: {
+  row: number;
+  field: string;
+  value: ExcelCellValue;
+  message: string;
+  severity?: 'error' | 'warning';
+  suggestion?: string;
+}): ValidationError {
   return {
-    row,
-    column: field,
-    field,
-    value,
-    message,
-    severity: options.severity || 'error',
-    suggestion: options.suggestion,
+    row: config.row,
+    column: config.field,
+    field: config.field,
+    value: config.value,
+    message: config.message,
+    severity: config.severity || 'error',
+    suggestion: config.suggestion,
   };
 }
 
 /**
  * Valida que conductores tengan licencia
  */
-export function validateDriverLicense(tipo: string, licencia: any): boolean {
+export function validateDriverLicense(tipo: string, licencia: ExcelCellValue): boolean {
   if (tipo === 'Conductor') {
     return !!licencia && licencia.toString().trim() !== '';
   }
@@ -174,7 +178,7 @@ export function validateDriverLicense(tipo: string, licencia: any): boolean {
 /**
  * Valida valores booleanos como texto
  */
-export function validateBooleanText(value: any): boolean {
+export function validateBooleanText(value: ExcelCellValue): boolean {
   if (!value) return true; // Opcional
   const v = value.toString().toLowerCase().trim();
   return v === 'sí' || v === 'si' || v === 'no';
@@ -183,7 +187,7 @@ export function validateBooleanText(value: any): boolean {
 /**
  * Valida tipos de empresa
  */
-export function validateEmpresaType(value: any): boolean {
+export function validateEmpresaType(value: ExcelCellValue): boolean {
   if (!value) return false;
   const v = value.toString().trim();
   return v === 'Propia' || v === 'Subcontratada';
@@ -192,7 +196,7 @@ export function validateEmpresaType(value: any): boolean {
 /**
  * Valida tipos de personal
  */
-export function validatePersonalType(value: any): boolean {
+export function validatePersonalType(value: ExcelCellValue): boolean {
   if (!value) return false;
   const validTypes = ['Conductor', 'Administrativo', 'Mecánico', 'Supervisor', 'Otro'];
   return validTypes.includes(value.toString().trim());

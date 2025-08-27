@@ -1,4 +1,10 @@
-import { ValidationRule, ValidationError, ValidationContext } from '../types/excel';
+import {
+  ValidationRule,
+  ValidationError,
+  ValidationContext,
+  ExcelRowData,
+  ExcelCellValue,
+} from '../types/excel';
 import {
   isEmpty,
   getSuggestionForField,
@@ -8,14 +14,14 @@ import {
   createValidationError,
 } from './validationHelpers';
 
-export type ValidationStrategy = (
-  rule: ValidationRule,
-  value: any,
-  row: any,
-  allData: any[],
-  rowNumber: number,
-  context: ValidationContext
-) => Promise<{
+export type ValidationStrategy = (params: {
+  rule: ValidationRule;
+  value: ExcelCellValue;
+  row: ExcelRowData;
+  allData: ExcelRowData[];
+  rowNumber: number;
+  context: ValidationContext;
+}) => Promise<{
   isValid: boolean;
   error?: ValidationError;
   severity: 'error' | 'warning';
@@ -24,18 +30,19 @@ export type ValidationStrategy = (
 /**
  * Estrategia de validación para campos requeridos
  */
-export const requiredValidationStrategy: ValidationStrategy = async (
+export const requiredValidationStrategy: ValidationStrategy = async ({
   rule,
   value,
-  row,
-  allData,
   rowNumber,
-  _context
-) => {
+}) => {
   if (isEmpty(value)) {
     return {
       isValid: false,
-      error: createValidationError(rowNumber, rule.field, value, rule.message, {
+      error: createValidationError({
+        row: rowNumber,
+        field: rule.field,
+        value,
+        message: rule.message,
         severity: 'error',
       }),
       severity: 'error',
@@ -47,14 +54,7 @@ export const requiredValidationStrategy: ValidationStrategy = async (
 /**
  * Estrategia de validación para formato
  */
-export const formatValidationStrategy: ValidationStrategy = async (
-  rule,
-  value,
-  row,
-  allData,
-  rowNumber,
-  _context
-) => {
+export const formatValidationStrategy: ValidationStrategy = async ({ rule, value, rowNumber }) => {
   if (!value || value === '') return { isValid: true, severity: 'error' }; // Skip si está vacío
 
   const stringValue = value.toString().trim();
@@ -63,7 +63,11 @@ export const formatValidationStrategy: ValidationStrategy = async (
   if (!isValid) {
     return {
       isValid: false,
-      error: createValidationError(rowNumber, rule.field, value, rule.message, {
+      error: createValidationError({
+        row: rowNumber,
+        field: rule.field,
+        value,
+        message: rule.message,
         severity: 'error',
         suggestion: getSuggestionForField(rule.field, stringValue),
       }),
@@ -77,14 +81,13 @@ export const formatValidationStrategy: ValidationStrategy = async (
 /**
  * Estrategia de validación para unicidad
  */
-export const uniqueValidationStrategy: ValidationStrategy = async (
+export const uniqueValidationStrategy: ValidationStrategy = async ({
   rule,
   value,
-  row,
   allData,
   rowNumber,
-  context
-) => {
+  context,
+}) => {
   if (!value || value === '') return { isValid: true, severity: 'error' };
 
   const stringValue = value.toString().trim().toLowerCase();
@@ -93,13 +96,13 @@ export const uniqueValidationStrategy: ValidationStrategy = async (
   if (!validateUniqueInArray(stringValue, rule.field, allData, rowNumber - 2)) {
     return {
       isValid: false,
-      error: createValidationError(
-        rowNumber,
-        rule.field,
+      error: createValidationError({
+        row: rowNumber,
+        field: rule.field,
         value,
-        `${rule.message} (duplicado en el archivo)`,
-        { severity: 'error' }
-      ),
+        message: `${rule.message} (duplicado en el archivo)`,
+        severity: 'error',
+      }),
       severity: 'error',
     };
   }
@@ -109,15 +112,20 @@ export const uniqueValidationStrategy: ValidationStrategy = async (
     const entityType = rule.referenceEndpoint.replace('/', '');
     const existingData = context.existingData.get(entityType) || [];
 
-    const exists = existingData.some((item: any) => {
-      const itemValue = item[rule.referenceField!];
+    const exists = existingData.some((item: unknown) => {
+      if (!rule.referenceField) return false;
+      const itemValue = (item as Record<string, unknown>)[rule.referenceField];
       return itemValue && itemValue.toString().trim().toLowerCase() === stringValue;
     });
 
     if (exists) {
       return {
         isValid: false,
-        error: createValidationError(rowNumber, rule.field, value, rule.message, {
+        error: createValidationError({
+          row: rowNumber,
+          field: rule.field,
+          value,
+          message: rule.message,
           severity: 'error',
         }),
         severity: 'error',
@@ -131,14 +139,12 @@ export const uniqueValidationStrategy: ValidationStrategy = async (
 /**
  * Estrategia de validación para referencias
  */
-export const referenceValidationStrategy: ValidationStrategy = async (
+export const referenceValidationStrategy: ValidationStrategy = async ({
   rule,
   value,
-  row,
-  allData,
   rowNumber,
-  context
-) => {
+  context,
+}) => {
   if (!value || value === '') return { isValid: true, severity: 'error' };
 
   const stringValue = value.toString().trim();
@@ -151,7 +157,11 @@ export const referenceValidationStrategy: ValidationStrategy = async (
       if (!validateExistsInReference(stringValue, referenceMap)) {
         return {
           isValid: false,
-          error: createValidationError(rowNumber, rule.field, value, rule.message, {
+          error: createValidationError({
+            row: rowNumber,
+            field: rule.field,
+            value,
+            message: rule.message,
             severity: 'error',
             suggestion: findClosestMatch(stringValue, Array.from(referenceMap.keys())),
           }),
@@ -167,14 +177,12 @@ export const referenceValidationStrategy: ValidationStrategy = async (
 /**
  * Estrategia de validación personalizada
  */
-export const customValidationStrategy: ValidationStrategy = async (
+export const customValidationStrategy: ValidationStrategy = async ({
   rule,
   value,
   row,
-  allData,
   rowNumber,
-  _context
-) => {
+}) => {
   if (!rule.validator) return { isValid: true, severity: 'error' };
 
   const isValid = rule.validator(value, row, []);
@@ -182,7 +190,11 @@ export const customValidationStrategy: ValidationStrategy = async (
   if (!isValid) {
     return {
       isValid: false,
-      error: createValidationError(rowNumber, rule.field, value, rule.message, {
+      error: createValidationError({
+        row: rowNumber,
+        field: rule.field,
+        value,
+        message: rule.message,
         severity: 'error',
       }),
       severity: 'error',
