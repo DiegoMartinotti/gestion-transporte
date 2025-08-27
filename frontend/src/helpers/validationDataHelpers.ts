@@ -1,4 +1,4 @@
-import { ValidationError } from '../types/excel';
+import { ValidationError, ExcelRowData } from '../types/excel';
 
 /**
  * Procesa errores de validación para una fila
@@ -21,10 +21,10 @@ export function processRowValidationErrors(
  * Clasifica una fila como válida o inválida
  */
 export function classifyRow(
-  row: any,
+  row: ExcelRowData,
   hasErrors: boolean,
-  validRows: any[],
-  invalidRows: any[]
+  validRows: ExcelRowData[],
+  invalidRows: ExcelRowData[]
 ): void {
   if (hasErrors) {
     invalidRows.push(row);
@@ -38,8 +38,8 @@ export function classifyRow(
  */
 export function createValidationSummary(
   totalRows: number,
-  validRows: any[],
-  invalidRows: any[],
+  validRows: ExcelRowData[],
+  invalidRows: ExcelRowData[],
   warnings: ValidationError[]
 ) {
   return {

@@ -1,19 +1,20 @@
 import { ClienteTemplate, EmpresaTemplate, PersonalTemplate } from '../templates/excel';
+import { ExcelRowData } from '../types/excel';
 
 export type EntityType = 'cliente' | 'empresa' | 'personal' | 'sites';
 
 export interface TemplateValidationResult {
   isValid: boolean;
   errors: string[];
-  validRows: any[];
-  invalidRows: any[];
-  valid?: any[]; // Para compatibilidad con formato existente
+  validRows: ExcelRowData[];
+  invalidRows: ExcelRowData[];
+  valid?: ExcelRowData[]; // Para compatibilidad con formato existente
 }
 
 /**
  * Valida datos de Cliente usando la plantilla
  */
-function validateClienteWithTemplate(data: any[]): TemplateValidationResult {
+function validateClienteWithTemplate(data: ExcelRowData[]): TemplateValidationResult {
   const result = ClienteTemplate.validateData(data);
   return {
     isValid: result.valid.length > 0 && result.errors.length === 0,
@@ -27,7 +28,7 @@ function validateClienteWithTemplate(data: any[]): TemplateValidationResult {
 /**
  * Valida datos de Empresa usando la plantilla
  */
-function validateEmpresaWithTemplate(data: any[]): TemplateValidationResult {
+function validateEmpresaWithTemplate(data: ExcelRowData[]): TemplateValidationResult {
   const result = EmpresaTemplate.validateData(data);
   return {
     isValid: result.valid.length > 0 && result.errors.length === 0,
@@ -42,7 +43,7 @@ function validateEmpresaWithTemplate(data: any[]): TemplateValidationResult {
  * Valida datos de Personal usando la plantilla
  */
 function validatePersonalWithTemplate(
-  data: any[],
+  data: ExcelRowData[],
   empresas: { id: string; nombre: string }[]
 ): TemplateValidationResult {
   const result = PersonalTemplate.validateData(data, empresas);
@@ -58,7 +59,7 @@ function validatePersonalWithTemplate(
 /**
  * Valida datos de Sites (validación básica)
  */
-function validateSitesWithTemplate(data: any[]): TemplateValidationResult {
+function validateSitesWithTemplate(data: ExcelRowData[]): TemplateValidationResult {
   return {
     isValid: true,
     errors: [],
@@ -71,7 +72,7 @@ function validateSitesWithTemplate(data: any[]): TemplateValidationResult {
 /**
  * Mapa de validadores por tipo de entidad
  */
-type ValidatorFunction = (data: any[], ...args: any[]) => TemplateValidationResult;
+type ValidatorFunction = (data: ExcelRowData[], ...args: unknown[]) => TemplateValidationResult;
 
 const TEMPLATE_VALIDATORS: Record<EntityType, ValidatorFunction> = {
   cliente: validateClienteWithTemplate,
@@ -98,8 +99,8 @@ export function getTemplateValidator(entityType: EntityType): ValidatorFunction 
  */
 export function validateWithTemplateFactory(
   entityType: EntityType,
-  data: any[],
-  additionalParams: any[] = []
+  data: ExcelRowData[],
+  additionalParams: unknown[] = []
 ): TemplateValidationResult {
   const validator = getTemplateValidator(entityType);
   return validator(data, ...additionalParams);

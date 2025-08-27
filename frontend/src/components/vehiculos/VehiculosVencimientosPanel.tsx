@@ -9,7 +9,7 @@ import { VEHICULOS_CONSTANTS } from '../../constants/vehiculos';
 interface VehiculosVencimientosPanelProps {
   vehiculos: Vehiculo[];
   vehiculosVencimientos: VehiculoConVencimientos[];
-  vencimientosColumns: any[];
+  vencimientosColumns: Array<Record<string, unknown>>;
   loading: boolean;
   formModal: VehiculoFormModal;
 }
@@ -23,15 +23,13 @@ export const VehiculosVencimientosPanel = ({
 }: VehiculosVencimientosPanelProps) => (
   <>
     <DocumentExpiration
-      vehiculos={
-        vehiculos
-          .filter((v: Vehiculo) => v._id !== undefined)
-          .map((v: Vehiculo) => ({
-            ...v,
-            _id: v._id as string,
-            empresa: typeof v.empresa === 'string' ? undefined : v.empresa,
-          })) as any
-      }
+      vehiculos={vehiculos
+        .filter((v: Vehiculo) => v._id !== undefined)
+        .map((v: Vehiculo) => ({
+          ...v,
+          _id: v._id as string,
+          empresa: typeof v.empresa === 'string' ? undefined : v.empresa,
+        }))}
       mostrarVencidos={true}
       mostrarProximos={true}
       mostrarVigentes={false}
