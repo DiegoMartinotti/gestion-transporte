@@ -40,7 +40,7 @@ interface FormFieldProps {
   description?: string;
   required?: boolean;
   disabled?: boolean;
-  form?: UseFormReturnType<any>;
+  form?: UseFormReturnType<Record<string, unknown>>;
   options?: FormFieldOption[];
   rows?: number;
   min?: number;
@@ -56,20 +56,20 @@ interface FormFieldProps {
 }
 
 // Render functions for each field type
-const renderTextArea = (fieldProps: any, label: string, rows: number) => (
+const renderTextArea = (fieldProps: Record<string, unknown>, label: string, rows: number) => (
   <Textarea {...fieldProps} label={label} rows={rows} minRows={rows} autosize />
 );
 
-const renderEmailInput = (fieldProps: any, label: string) => (
+const renderEmailInput = (fieldProps: Record<string, unknown>, label: string) => (
   <TextInput {...fieldProps} type="email" label={label} />
 );
 
-const renderPasswordInput = (fieldProps: any, label: string) => (
+const renderPasswordInput = (fieldProps: Record<string, unknown>, label: string) => (
   <TextInput {...fieldProps} type="password" label={label} />
 );
 
 interface NumberInputProps {
-  fieldProps: any;
+  fieldProps: Record<string, unknown>;
   label: string;
   min?: number;
   max?: number;
@@ -91,7 +91,11 @@ const renderNumberInput = (props: NumberInputProps) => (
   />
 );
 
-const renderSelect = (fieldProps: any, label: string, options: FormFieldOption[]) => (
+const renderSelect = (
+  fieldProps: Record<string, unknown>,
+  label: string,
+  options: FormFieldOption[]
+) => (
   <Select
     {...fieldProps}
     label={label}
@@ -99,7 +103,11 @@ const renderSelect = (fieldProps: any, label: string, options: FormFieldOption[]
   />
 );
 
-const renderMultiSelect = (fieldProps: any, label: string, options: FormFieldOption[]) => (
+const renderMultiSelect = (
+  fieldProps: Record<string, unknown>,
+  label: string,
+  options: FormFieldOption[]
+) => (
   <MultiSelect
     {...fieldProps}
     label={label}
@@ -107,19 +115,23 @@ const renderMultiSelect = (fieldProps: any, label: string, options: FormFieldOpt
   />
 );
 
-const renderDateInput = (fieldProps: any, label: string) => (
+const renderDateInput = (fieldProps: Record<string, unknown>, label: string) => (
   <DateInput {...fieldProps} label={label} valueFormat="DD/MM/YYYY" />
 );
 
-const renderSwitch = (fieldProps: any, label: string) => (
+const renderSwitch = (fieldProps: Record<string, unknown>, label: string) => (
   <Switch {...fieldProps} label={label} labelPosition="left" />
 );
 
-const renderCheckbox = (fieldProps: any, label: string) => (
+const renderCheckbox = (fieldProps: Record<string, unknown>, label: string) => (
   <Checkbox {...fieldProps} label={label} />
 );
 
-const renderRadioGroup = (fieldProps: any, label: string, options: FormFieldOption[]) => (
+const renderRadioGroup = (
+  fieldProps: Record<string, unknown>,
+  label: string,
+  options: FormFieldOption[]
+) => (
   <Radio.Group {...fieldProps} label={label}>
     <Stack>
       {options.map((option) => (
