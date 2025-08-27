@@ -24,7 +24,7 @@ import {
   IconEye,
   IconBuilding,
 } from '@tabler/icons-react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { useDataLoader } from '../../hooks/useDataLoader';
@@ -36,7 +36,8 @@ import { ExcelImportModal } from '../../components/modals/ExcelImportModal';
 import { Empresa, EmpresaFilters } from '../../types';
 import { empresaService } from '../../services/empresaService';
 
-export default function EmpresasPage() {
+// Hooks y handlers
+function useEmpresasPageLogic() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<EmpresaFilters>({});
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -72,10 +73,6 @@ export default function EmpresasPage() {
     setCurrentPage(1);
   };
 
-  const handlePageSizeChange = (newPageSize: number) => {
-    setItemsPerPage(newPageSize);
-  };
-
   const handleDelete = async () => {
     if (!deleteModal.selectedItem) return;
 
@@ -107,12 +104,34 @@ export default function EmpresasPage() {
     reloadFunction: loadEmpresas,
   });
 
-  const handleImportComplete = async (result: any) => {
+  const handleImportComplete = async (result: Record<string, unknown>) => {
     importModal.close();
     excelOperations.handleImportComplete(result);
   };
 
-  const columns: DataTableColumn<Empresa>[] = [
+  return {
+    navigate,
+    filters,
+    deleteLoading,
+    deleteModal,
+    importModal,
+    empresas,
+    loading,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setItemsPerPage,
+    handleFiltersChange,
+    handleDelete,
+    excelOperations,
+    handleImportComplete,
+  };
+}
+
+// Definición de columnas base
+function getEmpresasBaseColumns(): DataTableColumn<Empresa>[] {
+  return [
     {
       key: 'nombre',
       label: 'Nombre',
@@ -187,105 +206,141 @@ export default function EmpresasPage() {
       sortable: true,
       render: (record: Empresa) => new Date(record.createdAt).toLocaleDateString('es-AR'),
     },
-    {
-      key: 'actions',
-      label: 'Acciones',
-      align: 'center',
-      width: 100,
-      render: (record: Empresa) => (
-        <Menu shadow="md" width={200}>
-          <Menu.Target>
-            <ActionIcon variant="subtle" color="gray">
-              <IconDots size="1rem" />
-            </ActionIcon>
-          </Menu.Target>
-
-          <Menu.Dropdown>
-            <Menu.Item
-              leftSection={<IconEye size="0.9rem" />}
-              onClick={() => navigate(`/empresas/${record._id}`)}
-            >
-              Ver Detalles
-            </Menu.Item>
-
-            <Menu.Item
-              leftSection={<IconEdit size="0.9rem" />}
-              onClick={() => navigate(`/empresas/${record._id}/edit`)}
-            >
-              Editar
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item
-              leftSection={<IconUser size="0.9rem" />}
-              onClick={() => navigate(`/empresas/${record._id}/personal`)}
-            >
-              Ver Personal
-            </Menu.Item>
-            <Menu.Item
-              leftSection={<IconTruck size="0.9rem" />}
-              onClick={() => navigate(`/empresas/${record._id}/vehiculos`)}
-            >
-              Ver Vehículos
-            </Menu.Item>
-            <Menu.Divider />
-            <Menu.Item
-              leftSection={<IconTrash size="0.9rem" />}
-              color="red"
-              onClick={() => deleteModal.openDelete(record)}
-            >
-              Eliminar
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      ),
-    },
   ];
+}
+
+// Función para generar columna de acciones
+function getEmpresasActionsColumn(
+  navigate: ReturnType<typeof useNavigate>,
+  deleteModal: ReturnType<typeof useModal<Empresa>>
+): DataTableColumn<Empresa> {
+  return {
+    key: 'actions',
+    label: 'Acciones',
+    align: 'center',
+    width: 100,
+    render: (record: Empresa) => (
+      <Menu shadow="md" width={200}>
+        <Menu.Target>
+          <ActionIcon variant="subtle" color="gray">
+            <IconDots size="1rem" />
+          </ActionIcon>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item
+            leftSection={<IconEye size="0.9rem" />}
+            onClick={() => navigate(`/empresas/${record._id}`)}
+          >
+            Ver Detalles
+          </Menu.Item>
+          <Menu.Item
+            leftSection={<IconEdit size="0.9rem" />}
+            onClick={() => navigate(`/empresas/${record._id}/edit`)}
+          >
+            Editar
+          </Menu.Item>
+          <Menu.Divider />
+          <Menu.Item
+            leftSection={<IconUser size="0.9rem" />}
+            onClick={() => navigate(`/empresas/${record._id}/personal`)}
+          >
+            Ver Personal
+          </Menu.Item>
+          <Menu.Item
+            leftSection={<IconTruck size="0.9rem" />}
+            onClick={() => navigate(`/empresas/${record._id}/vehiculos`)}
+          >
+            Ver Vehículos
+          </Menu.Item>
+          <Menu.Divider />
+          <Menu.Item
+            leftSection={<IconTrash size="0.9rem" />}
+            color="red"
+            onClick={() => deleteModal.openDelete(record)}
+          >
+            Eliminar
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    ),
+  };
+}
+
+// Hook de columnas
+function useEmpresasTableColumns(
+  navigate: ReturnType<typeof useNavigate>,
+  deleteModal: ReturnType<typeof useModal<Empresa>>
+) {
+  return useMemo<DataTableColumn<Empresa>[]>(
+    () => [...getEmpresasBaseColumns(), getEmpresasActionsColumn(navigate, deleteModal)],
+    [navigate, deleteModal]
+  );
+}
+
+// Componente de header con acciones
+function EmpresasPageHeader({
+  navigate,
+  importModal,
+  excelOperations,
+  filters,
+}: {
+  navigate: ReturnType<typeof useNavigate>;
+  importModal: ReturnType<typeof useModal>;
+  excelOperations: ReturnType<typeof useExcelOperations>;
+  filters: EmpresaFilters;
+}) {
+  return (
+    <Group justify="space-between">
+      <Title order={1}>Gestión de Empresas</Title>
+      <Group gap="sm">
+        <Button
+          variant="outline"
+          leftSection={<IconUpload size="1rem" />}
+          onClick={importModal.openCreate}
+        >
+          Importar
+        </Button>
+        <Button
+          variant="outline"
+          leftSection={<IconDownload size="1rem" />}
+          onClick={() => excelOperations.handleExport(filters)}
+          loading={excelOperations.isExporting}
+        >
+          Exportar
+        </Button>
+        <Button leftSection={<IconPlus size="1rem" />} onClick={() => navigate('/empresas/new')}>
+          Nueva Empresa
+        </Button>
+      </Group>
+    </Group>
+  );
+}
+
+export default function EmpresasPage() {
+  const pageLogic = useEmpresasPageLogic();
+  const columns = useEmpresasTableColumns(pageLogic.navigate, pageLogic.deleteModal);
 
   return (
     <Container size="xl">
-      <LoadingOverlay loading={loading}>
+      <LoadingOverlay loading={pageLogic.loading}>
         <Stack gap="lg">
-          <Group justify="space-between">
-            <Title order={1}>Gestión de Empresas</Title>
-
-            <Group gap="sm">
-              <Button
-                variant="outline"
-                leftSection={<IconUpload size="1rem" />}
-                onClick={importModal.openCreate}
-              >
-                Importar
-              </Button>
-
-              <Button
-                variant="outline"
-                leftSection={<IconDownload size="1rem" />}
-                onClick={() => excelOperations.handleExport(filters)}
-                loading={excelOperations.isExporting}
-              >
-                Exportar
-              </Button>
-
-              <Button
-                leftSection={<IconPlus size="1rem" />}
-                onClick={() => navigate('/empresas/new')}
-              >
-                Nueva Empresa
-              </Button>
-            </Group>
-          </Group>
-
+          <EmpresasPageHeader
+            navigate={pageLogic.navigate}
+            importModal={pageLogic.importModal}
+            excelOperations={pageLogic.excelOperations}
+            filters={pageLogic.filters}
+          />
           <Paper>
             <DataTable
               columns={columns}
-              data={empresas}
-              loading={loading}
-              totalItems={totalItems}
-              currentPage={currentPage}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={handlePageSizeChange}
-              onFiltersChange={handleFiltersChange}
+              data={pageLogic.empresas}
+              loading={pageLogic.loading}
+              totalItems={pageLogic.totalItems}
+              currentPage={pageLogic.currentPage}
+              pageSize={pageLogic.pageSize}
+              onPageChange={pageLogic.setCurrentPage}
+              onPageSizeChange={pageLogic.setItemsPerPage}
+              onFiltersChange={pageLogic.handleFiltersChange}
               searchPlaceholder="Buscar empresas..."
               emptyMessage="No se encontraron empresas"
             />
@@ -294,21 +349,21 @@ export default function EmpresasPage() {
       </LoadingOverlay>
 
       <ConfirmModal
-        opened={deleteModal.isOpen}
-        onClose={deleteModal.close}
-        onConfirm={handleDelete}
+        opened={pageLogic.deleteModal.isOpen}
+        onClose={pageLogic.deleteModal.close}
+        onConfirm={pageLogic.handleDelete}
         title="Eliminar Empresa"
-        message={`¿Estás seguro de que deseas eliminar la empresa "${deleteModal.selectedItem?.nombre}"? Esta acción no se puede deshacer.`}
+        message={`¿Estás seguro de que deseas eliminar la empresa "${pageLogic.deleteModal.selectedItem?.nombre}"? Esta acción no se puede deshacer.`}
         type="delete"
-        loading={deleteLoading}
+        loading={pageLogic.deleteLoading}
       />
 
       <ExcelImportModal
-        opened={importModal.isOpen}
-        onClose={importModal.close}
+        opened={pageLogic.importModal.isOpen}
+        onClose={pageLogic.importModal.close}
         title="Importar Empresas desde Excel"
         entityType="empresa"
-        onImportComplete={handleImportComplete}
+        onImportComplete={pageLogic.handleImportComplete}
         processExcelFile={empresaService.processExcelFile.bind(empresaService)}
         validateExcelFile={empresaService.validateExcelFile.bind(empresaService)}
         previewExcelFile={empresaService.previewExcelFile.bind(empresaService)}

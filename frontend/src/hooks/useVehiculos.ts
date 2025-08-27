@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { notifications } from '@mantine/notifications';
 import { useDataLoader } from './useDataLoader';
 import { useModal } from './useModal';
@@ -14,96 +14,52 @@ import {
   getVencimientosBadge,
 } from '../constants/vehiculos';
 
-export const useVehiculos = () => {
-  // Estados principales
-  const [filters, setFilters] = useState<VehiculoFilter>({});
-  const [activeTab, setActiveTab] = useState<string | null>('todos');
-  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
+// Helper functions
+const createPaginationResponse = <T>(data: T[]) => ({
+  data,
+  pagination: {
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: data.length,
+    itemsPerPage: data.length,
+  },
+});
 
-  // Data loaders
-  const empresasLoader = useDataLoader<Empresa>({
-    fetchFunction: useCallback(async () => {
-      const response = await empresaService.getAll();
-      return {
-        data: response.data,
-        pagination: {
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: response.data.length,
-          itemsPerPage: response.data.length,
-        },
-      };
-    }, []),
-    errorMessage: 'Error al cargar empresas',
+const showDeleteNotification = (success: boolean) => {
+  notifications.show({
+    title: success ? 'Éxito' : 'Error',
+    message: success
+      ? VEHICULOS_CONSTANTS.MESSAGES.SUCCESS_DELETE
+      : VEHICULOS_CONSTANTS.MESSAGES.ERROR_DELETE,
+    color: success ? 'green' : 'red',
   });
+};
 
-  const vehiculosLoader = useDataLoader<Vehiculo>({
-    fetchFunction: useCallback(async () => {
-      const vehiculosData = await vehiculoService.getVehiculos(filters);
-      return {
-        data: vehiculosData as Vehiculo[],
-        pagination: {
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: vehiculosData.length,
-          itemsPerPage: vehiculosData.length,
-        },
-      };
-    }, [filters]),
-    dependencies: [filters],
-    initialLoading: activeTab !== 'vencimientos',
-    errorMessage: 'Error al cargar vehículos',
-  });
+interface ColumnType {
+  key: string;
+  label: string;
+  render?: (item: Vehiculo) => React.ReactNode;
+}
 
-  const vencimientosLoader = useDataLoader<VehiculoConVencimientos>({
-    fetchFunction: useCallback(async () => {
-      const vencimientosData = await vehiculoService.getVehiculosConVencimientos(30);
-      return {
-        data: vencimientosData,
-        pagination: {
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: vencimientosData.length,
-          itemsPerPage: vencimientosData.length,
-        },
-      };
-    }, []),
-    initialLoading: activeTab === 'vencimientos',
-    errorMessage: 'Error al cargar vencimientos',
-  });
+const createVencimientosColumns = (vehiculosColumns: ColumnType[]) => [
+  ...vehiculosColumns.slice(0, -1),
+  {
+    key: 'vencimientos',
+    label: 'Vencimientos',
+    render: (vehiculo: Vehiculo) =>
+      getVencimientosBadge((vehiculo as VehiculoConVencimientos).vencimientosProximos || []),
+  },
+  vehiculosColumns[vehiculosColumns.length - 1],
+];
 
-  // Modales
-  const formModal = useModal<Vehiculo>({
-    onSuccess: () => loadData(),
-  });
-  const deleteModal = useModal<{ id: string; dominio?: string }>();
-  const detailModal = useModal<Vehiculo>();
-
-  // Operaciones Excel
-  const excelOperations = useExcelOperations({
-    entityType: 'vehiculos',
-    entityName: 'vehículos',
-    exportFunction: (filters) => vehiculoExcelService.exportToExcel(filters),
-    templateFunction: () => vehiculoExcelService.getTemplate(),
-    reloadFunction: () => loadData(),
-  });
-
-  // Funciones de utilidad
-  const getCurrentLoadingState = (): boolean => {
-    if (empresasLoader.loading) return true;
-    return activeTab === 'vencimientos' ? vencimientosLoader.loading : vehiculosLoader.loading;
-  };
-
-  const loadData = async () => {
-    await empresasLoader.refresh();
-    if (activeTab === 'vencimientos') {
-      await vencimientosLoader.refresh();
-    } else {
-      await vehiculosLoader.refresh();
-    }
-  };
-
-  // Handlers
+const useVehiculosHandlers = (config: {
+  activeTab: string | null;
+  setActiveTab: (tab: string | null) => void;
+  vencimientosLoader: ReturnType<typeof useDataLoader<VehiculoConVencimientos>>;
+  deleteModal: ReturnType<typeof useModal<{ id: string; dominio?: string }>>;
+  loadDataFn: () => void;
+}) => {
+  const { setActiveTab, vencimientosLoader, deleteModal, loadDataFn } = config;
   const handleTabChange = (tab: string | null) => {
     setActiveTab(tab);
     if (tab === 'vencimientos' && vencimientosLoader.data && vencimientosLoader.data.length === 0) {
@@ -116,26 +72,106 @@ export const useVehiculos = () => {
 
     try {
       await vehiculoService.deleteVehiculo(deleteModal.selectedItem.id);
-      notifications.show({
-        title: 'Éxito',
-        message: VEHICULOS_CONSTANTS.MESSAGES.SUCCESS_DELETE,
-        color: 'green',
-      });
-      loadData();
+      showDeleteNotification(true);
+      loadDataFn();
     } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: VEHICULOS_CONSTANTS.MESSAGES.ERROR_DELETE,
-        color: 'red',
-      });
+      showDeleteNotification(false);
     } finally {
       deleteModal.close();
     }
   };
 
-  const openDeleteModal = (id: string, dominio?: string) => {
-    deleteModal.openDelete({ id, dominio });
+  const openDeleteModal = useCallback(
+    (id: string, dominio?: string) => {
+      deleteModal.openDelete({ id, dominio });
+    },
+    [deleteModal]
+  );
+
+  return { handleTabChange, handleDelete, openDeleteModal };
+};
+
+export const useVehiculos = () => {
+  // Estados principales
+  const [filters, setFilters] = useState<VehiculoFilter>({});
+  const [activeTab, setActiveTab] = useState<string | null>('todos');
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
+
+  // Data fetchers
+  const fetchEmpresas = useCallback(async () => {
+    const response = await empresaService.getAll();
+    return createPaginationResponse(response.data);
+  }, []);
+
+  const fetchVehiculos = useCallback(async () => {
+    const vehiculosData = await vehiculoService.getVehiculos(filters);
+    return createPaginationResponse(vehiculosData as Vehiculo[]);
+  }, [filters]);
+
+  const fetchVencimientos = useCallback(async () => {
+    const vencimientosData = await vehiculoService.getVehiculosConVencimientos(30);
+    return createPaginationResponse(vencimientosData);
+  }, []);
+
+  // Data loaders
+  const empresasLoader = useDataLoader<Empresa>({
+    fetchFunction: fetchEmpresas,
+    errorMessage: 'Error al cargar empresas',
+  });
+
+  const vehiculosLoader = useDataLoader<Vehiculo>({
+    fetchFunction: fetchVehiculos,
+    dependencies: [filters],
+    initialLoading: activeTab !== 'vencimientos',
+    errorMessage: 'Error al cargar vehículos',
+  });
+
+  const vencimientosLoader = useDataLoader<VehiculoConVencimientos>({
+    fetchFunction: fetchVencimientos,
+    initialLoading: activeTab === 'vencimientos',
+    errorMessage: 'Error al cargar vencimientos',
+  });
+
+  // Funciones de utilidad
+  const loadData = async () => {
+    await empresasLoader.refresh();
+    if (activeTab === 'vencimientos') {
+      await vencimientosLoader.refresh();
+    } else {
+      await vehiculosLoader.refresh();
+    }
   };
+
+  // Modales
+  const formModal = useModal<Vehiculo>({
+    onSuccess: () => loadData(),
+  });
+  const deleteModal = useModal<{ id: string; dominio?: string }>();
+  const detailModal = useModal<Vehiculo>();
+
+  // Operaciones Excel
+  const excelOperations = useExcelOperations({
+    entityType: 'vehiculos',
+    entityName: 'vehículos',
+    exportFunction: (filters) =>
+      vehiculoExcelService.exportToExcel(filters as Record<string, unknown>),
+    templateFunction: () => vehiculoExcelService.getTemplate(),
+    reloadFunction: () => loadData(),
+  });
+
+  const getCurrentLoadingState = (): boolean => {
+    if (empresasLoader.loading) return true;
+    return activeTab === 'vencimientos' ? vencimientosLoader.loading : vehiculosLoader.loading;
+  };
+
+  // Handlers
+  const { handleTabChange, handleDelete, openDeleteModal } = useVehiculosHandlers({
+    activeTab,
+    setActiveTab,
+    vencimientosLoader,
+    deleteModal,
+    loadDataFn: loadData,
+  });
 
   const handleFiltersChange = (newFilters: Partial<VehiculoFilter>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -145,20 +181,11 @@ export const useVehiculos = () => {
   const vehiculosColumns = useMemo(
     () =>
       createVehiculosColumns(empresasLoader.data || [], openDeleteModal, formModal, detailModal),
-    [empresasLoader.data, formModal, detailModal]
+    [empresasLoader.data, openDeleteModal, formModal, detailModal]
   );
 
   const vencimientosColumns = useMemo(
-    () => [
-      ...vehiculosColumns.slice(0, -1),
-      {
-        key: 'vencimientos',
-        label: 'Vencimientos',
-        render: (vehiculo: any) =>
-          getVencimientosBadge((vehiculo as VehiculoConVencimientos).vencimientosProximos || []),
-      },
-      vehiculosColumns[vehiculosColumns.length - 1],
-    ],
+    () => createVencimientosColumns(vehiculosColumns),
     [vehiculosColumns]
   );
 
