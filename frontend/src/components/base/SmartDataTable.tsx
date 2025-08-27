@@ -5,7 +5,7 @@ import DataTable, { DataTableColumn } from './DataTable';
 import VirtualizedDataTable from './VirtualizedDataTable';
 import { BaseFilters } from '../../types';
 
-interface SmartDataTableProps<T = any> {
+interface SmartDataTableProps<T = Record<string, unknown>> {
   columns: DataTableColumn<T>[];
   data: T[];
   loading?: boolean;
@@ -47,7 +47,10 @@ const shouldUseVirtualization = (dataLength: number, threshold: number, forced: 
   return dataLength >= threshold;
 };
 
-const renderPerformanceAlert = (performanceInfo: any, dataLength: number) => (
+const renderPerformanceAlert = (
+  performanceInfo: { level: string; message: string; color: string },
+  dataLength: number
+) => (
   <Alert color={performanceInfo.color} variant="light" style={{ padding: '4px 8px' }}>
     <Text size="xs">
       {dataLength} elementos - {performanceInfo.message}
@@ -77,7 +80,7 @@ const renderVirtualToggle = (isVirtualActive: boolean, onToggle: (checked: boole
   </Group>
 );
 
-function SmartDataTable<T = any>({
+function SmartDataTable<T = Record<string, unknown>>({
   columns,
   data,
   loading = false,
