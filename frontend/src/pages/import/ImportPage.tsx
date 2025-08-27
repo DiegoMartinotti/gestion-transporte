@@ -1,11 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { Container, Tabs, Badge, Group, Text } from '@mantine/core';
-import {
-  IconFileImport,
-  IconHistory,
-  IconAlertCircle,
-  IconSettings,
-} from '@tabler/icons-react';
+import { IconFileImport, IconHistory, IconAlertCircle, IconSettings } from '@tabler/icons-react';
 import { ImportHistory } from '../../components/import/ImportHistory';
 import { FailureRecovery } from '../../components/import/FailureRecovery';
 import { showNotification } from '@mantine/notifications';
@@ -31,13 +26,13 @@ export const ImportPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string | null>('wizard');
   const [hasFailures] = useState(true); // Simulación de fallos pendientes
 
-  const handleImportComplete = (result: any) => {
+  const handleImportComplete = (result: Record<string, unknown>) => {
     showNotification({
       title: 'Importación completada',
       message: `Se importaron ${result.success} de ${result.total} registros`,
       color: result.failed > 0 ? 'yellow' : 'green',
     });
-    
+
     // Cambiar a historial después de completar
     setActiveTab('history');
   };
@@ -50,7 +45,7 @@ export const ImportPage: React.FC = () => {
     });
   };
 
-  const handleRecoveryComplete = (result: any) => {
+  const handleRecoveryComplete = (result: Record<string, unknown>) => {
     showNotification({
       title: 'Recuperación completada',
       message: `Se recuperaron ${result.recoveredRecords} registros`,
@@ -62,20 +57,14 @@ export const ImportPage: React.FC = () => {
     <Container size="xl" py="lg">
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
-          <Tabs.Tab
-            value="wizard"
-            leftSection={<IconFileImport size={14} />}
-          >
+          <Tabs.Tab value="wizard" leftSection={<IconFileImport size={14} />}>
             Nueva importación
           </Tabs.Tab>
-          
-          <Tabs.Tab
-            value="history"
-            leftSection={<IconHistory size={14} />}
-          >
+
+          <Tabs.Tab value="history" leftSection={<IconHistory size={14} />}>
             Historial
           </Tabs.Tab>
-          
+
           <Tabs.Tab
             value="recovery"
             leftSection={<IconAlertCircle size={14} />}
@@ -89,42 +78,38 @@ export const ImportPage: React.FC = () => {
           >
             Recuperación
           </Tabs.Tab>
-          
-          <Tabs.Tab
-            value="settings"
-            leftSection={<IconSettings size={14} />}
-          >
+
+          <Tabs.Tab value="settings" leftSection={<IconSettings size={14} />}>
             Configuración
           </Tabs.Tab>
         </Tabs.List>
-        
+
         <Tabs.Panel value="wizard" pt="xl">
-          <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Cargando wizard de importación...</div>}>
-            <ImportWizard
-              onComplete={handleImportComplete}
-            />
+          <Suspense
+            fallback={
+              <div style={{ padding: '40px', textAlign: 'center' }}>
+                Cargando wizard de importación...
+              </div>
+            }
+          >
+            <ImportWizard onComplete={handleImportComplete} />
           </Suspense>
         </Tabs.Panel>
-        
+
         <Tabs.Panel value="history" pt="xl">
-          <ImportHistory
-            onRetryImport={handleRetryImport}
-          />
+          <ImportHistory onRetryImport={handleRetryImport} />
         </Tabs.Panel>
-        
+
         <Tabs.Panel value="recovery" pt="xl">
           {hasFailures ? (
-            <FailureRecovery
-              failure={MOCK_FAILURE}
-              onRecover={handleRecoveryComplete}
-            />
+            <FailureRecovery failure={MOCK_FAILURE} onRecover={handleRecoveryComplete} />
           ) : (
             <Group justify="center" py="xl">
               <Text c="dimmed">No hay fallos pendientes de recuperación</Text>
             </Group>
           )}
         </Tabs.Panel>
-        
+
         <Tabs.Panel value="settings" pt="xl">
           <Group justify="center" py="xl">
             <Text c="dimmed">Configuración de importación (próximamente)</Text>
