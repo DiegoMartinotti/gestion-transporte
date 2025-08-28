@@ -9,10 +9,13 @@ interface BusinessRule {
   entityType: string;
   severity: 'error' | 'warning' | 'info';
   enabled: boolean;
-  validationFn: (record: any, context?: any) => {
+  validationFn: (
+    record: Record<string, unknown>,
+    context?: Record<string, unknown>
+  ) => {
     passed: boolean;
     message?: string;
-    details?: any;
+    details?: unknown;
   };
 }
 
@@ -22,15 +25,20 @@ interface BusinessRule {
 export class DefaultBusinessRuleValidator extends BusinessRuleBaseValidator {
   private businessRules: BusinessRule[];
 
-  constructor(businessRules: BusinessRule[], contextData?: any, enabledRuleIds?: string[]) {
+  constructor(
+    businessRules: BusinessRule[],
+    contextData?: Record<string, unknown>,
+    enabledRuleIds?: string[]
+  ) {
     // Si no se proporcionan enabledRuleIds, usar las reglas habilitadas por defecto
-    const defaultEnabled = enabledRuleIds || businessRules.filter(r => r.enabled).map(r => r.id);
+    const defaultEnabled =
+      enabledRuleIds || businessRules.filter((r) => r.enabled).map((r) => r.id);
     super(contextData, defaultEnabled);
     this.businessRules = businessRules;
   }
 
   getBusinessRules(): BusinessRuleValidationRule[] {
-    return this.businessRules.map(rule => ({
+    return this.businessRules.map((rule) => ({
       id: rule.id,
       category: rule.category,
       name: rule.name,
@@ -40,10 +48,10 @@ export class DefaultBusinessRuleValidator extends BusinessRuleBaseValidator {
       entityType: rule.entityType,
       enabled: rule.enabled,
       validationFn: rule.validationFn,
-      validator: (data: Record<string, any[]>) => {
+      validator: () => {
         // Esta implementación será manejada por BusinessRuleBaseValidator
         throw new Error('Este método no debe ser llamado directamente');
-      }
+      },
     }));
   }
 
@@ -76,12 +84,12 @@ export const defaultBusinessRules: BusinessRule[] = [
           return {
             passed: false,
             message: `Tarifa con monto inválido: ${tarifa.monto}`,
-            details: { tarifa, tramo: tramo.nombre }
+            details: { tarifa, tramo: tramo.nombre },
           };
         }
       }
       return { passed: true };
-    }
+    },
   },
   {
     id: 'extra-valid-pricing',
@@ -96,11 +104,11 @@ export const defaultBusinessRules: BusinessRule[] = [
         return {
           passed: false,
           message: `Extra con precio inválido: ${extra.precioUnitario}`,
-          details: { extra: extra.nombre }
+          details: { extra: extra.nombre },
         };
       }
       return { passed: true };
-    }
+    },
   },
 
   // Reglas Operacionales
@@ -113,13 +121,16 @@ export const defaultBusinessRules: BusinessRule[] = [
     severity: 'warning',
     enabled: true,
     validationFn: (vehiculo) => {
-      const { tipoUnidad, capacidadKg, capacidadM3 } = vehiculo;
-      
+      const { tipoUnidad, capacidadKg } = vehiculo as Record<string, unknown>;
+
       // Reglas básicas por tipo de unidad
-      const capacityRules: Record<string, { minKg: number; maxKg: number; minM3?: number; maxM3?: number }> = {
-        'Camión': { minKg: 3000, maxKg: 50000, minM3: 10, maxM3: 100 },
-        'Camioneta': { minKg: 500, maxKg: 3000, minM3: 2, maxM3: 15 },
-        'Utilitario': { minKg: 200, maxKg: 1500, minM3: 1, maxM3: 8 },
+      const capacityRules: Record<
+        string,
+        { minKg: number; maxKg: number; minM3?: number; maxM3?: number }
+      > = {
+        Camión: { minKg: 3000, maxKg: 50000, minM3: 10, maxM3: 100 },
+        Camioneta: { minKg: 500, maxKg: 3000, minM3: 2, maxM3: 15 },
+        Utilitario: { minKg: 200, maxKg: 1500, minM3: 1, maxM3: 8 },
       };
 
       const rule = capacityRules[tipoUnidad];
@@ -128,13 +139,13 @@ export const defaultBusinessRules: BusinessRule[] = [
           return {
             passed: false,
             message: `Capacidad en kg inconsistente para ${tipoUnidad}: ${capacidadKg}kg`,
-            details: { expected: `${rule.minKg}-${rule.maxKg}kg`, actual: `${capacidadKg}kg` }
+            details: { expected: `${rule.minKg}-${rule.maxKg}kg`, actual: `${capacidadKg}kg` },
           };
         }
       }
-      
+
       return { passed: true };
-    }
+    },
   },
   {
     id: 'personal-driver-license',
@@ -148,32 +159,32 @@ export const defaultBusinessRules: BusinessRule[] = [
       if (personal.tipoPersonal === 'Chofer') {
         const documentacion = personal.documentacion || {};
         const licencia = documentacion.licenciaConducir;
-        
+
         if (!licencia || !licencia.numero) {
           return {
             passed: false,
             message: 'Chofer sin licencia de conducir',
-            details: { personal: `${personal.nombre} ${personal.apellido}` }
+            details: { personal: `${personal.nombre} ${personal.apellido}` },
           };
         }
 
         const vencimiento = new Date(licencia.vencimiento);
         const hoy = new Date();
-        
+
         if (vencimiento < hoy) {
           return {
             passed: false,
             message: 'Licencia de conducir vencida',
-            details: { 
+            details: {
               personal: `${personal.nombre} ${personal.apellido}`,
-              vencimiento: licencia.vencimiento 
-            }
+              vencimiento: licencia.vencimiento,
+            },
           };
         }
       }
-      
+
       return { passed: true };
-    }
+    },
   },
 
   // Reglas Temporales
@@ -186,18 +197,20 @@ export const defaultBusinessRules: BusinessRule[] = [
     severity: 'error',
     enabled: true,
     validationFn: (tramo) => {
-      const tarifas = (tramo.tarifas || []).filter((t: any) => t.activa);
-      
+      const tarifas = (
+        ((tramo as Record<string, unknown>).tarifas as Array<Record<string, unknown>>) || []
+      ).filter((t) => t.activa);
+
       for (let i = 0; i < tarifas.length; i++) {
         for (let j = i + 1; j < tarifas.length; j++) {
           const tarifa1 = tarifas[i];
           const tarifa2 = tarifas[j];
-          
+
           const inicio1 = new Date(tarifa1.fechaDesde);
           const fin1 = tarifa1.fechaHasta ? new Date(tarifa1.fechaHasta) : new Date('2099-12-31');
           const inicio2 = new Date(tarifa2.fechaDesde);
           const fin2 = tarifa2.fechaHasta ? new Date(tarifa2.fechaHasta) : new Date('2099-12-31');
-          
+
           // Verificar superposición
           if (inicio1 <= fin2 && inicio2 <= fin1) {
             return {
@@ -205,15 +218,15 @@ export const defaultBusinessRules: BusinessRule[] = [
               message: 'Superposición de fechas en tarifas',
               details: {
                 tarifa1: `${tarifa1.fechaDesde} - ${tarifa1.fechaHasta || 'indefinido'}`,
-                tarifa2: `${tarifa2.fechaDesde} - ${tarifa2.fechaHasta || 'indefinido'}`
-              }
+                tarifa2: `${tarifa2.fechaDesde} - ${tarifa2.fechaHasta || 'indefinido'}`,
+              },
             };
           }
         }
       }
-      
+
       return { passed: true };
-    }
+    },
   },
   {
     id: 'viaje-future-date',
@@ -228,17 +241,17 @@ export const defaultBusinessRules: BusinessRule[] = [
       const hoy = new Date();
       const unAñoEnFuturo = new Date();
       unAñoEnFuturo.setFullYear(hoy.getFullYear() + 1);
-      
+
       if (fechaViaje > unAñoEnFuturo) {
         return {
           passed: false,
           message: 'Fecha de viaje muy alejada en el futuro',
-          details: { fecha: viaje.fecha }
+          details: { fecha: viaje.fecha },
         };
       }
-      
+
       return { passed: true };
-    }
+    },
   },
 
   // Reglas de Capacidad
@@ -252,26 +265,26 @@ export const defaultBusinessRules: BusinessRule[] = [
     enabled: true,
     validationFn: (site) => {
       const { latitud, longitud } = site.coordenadas || {};
-      
+
       if (!latitud || !longitud) {
         return {
           passed: false,
           message: 'Site sin coordenadas',
-          details: { site: site.nombre }
+          details: { site: site.nombre },
         };
       }
-      
+
       // Validar rangos (Argentina aproximadamente)
       if (latitud < -55 || latitud > -21 || longitud < -73 || longitud > -53) {
         return {
           passed: false,
           message: 'Coordenadas fuera del rango esperado',
-          details: { latitud, longitud, site: site.nombre }
+          details: { latitud, longitud, site: site.nombre },
         };
       }
-      
+
       return { passed: true };
-    }
+    },
   },
 
   // Reglas de Documentación
@@ -286,18 +299,18 @@ export const defaultBusinessRules: BusinessRule[] = [
     validationFn: (vehiculo) => {
       const documentacion = vehiculo.documentacion || {};
       const requiredDocs = ['tarjetaVerde', 'seguro', 'vtv'];
-      
+
       for (const doc of requiredDocs) {
         if (!documentacion[doc] || !documentacion[doc].numero) {
           return {
             passed: false,
             message: `Falta documentación obligatoria: ${doc}`,
-            details: { vehiculo: vehiculo.patente }
+            details: { vehiculo: vehiculo.patente },
           };
         }
       }
-      
+
       return { passed: true };
-    }
-  }
+    },
+  },
 ];
