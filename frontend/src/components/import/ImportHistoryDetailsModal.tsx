@@ -40,127 +40,148 @@ interface ImportDetailsModalProps {
   onExportReport?: (importId: string) => void;
 }
 
-// Componente para información básica del import
-const ImportBasicInfo: React.FC<{ import: ImportRecord }> = ({ import: selectedImport }) => {
-  const successRate =
-    selectedImport.totalRecords > 0
-      ? Math.round((selectedImport.successfulRecords / selectedImport.totalRecords) * 100)
-      : 0;
+// Componente para información de archivo
+const FileInfoItem: React.FC<{ fileName: string; fileSize?: number }> = ({
+  fileName,
+  fileSize,
+}) => (
+  <div>
+    <Text size="sm" fw={600} c="dimmed">
+      Archivo:
+    </Text>
+    <Text fw={500} style={{ wordBreak: 'break-word' }}>
+      {fileName}
+    </Text>
+    {fileSize && (
+      <Text size="xs" c="dimmed">
+        {formatFileSize(fileSize)}
+      </Text>
+    )}
+  </div>
+);
+
+// Componente para estado del import
+const StatusItem: React.FC<{ status: string }> = ({ status }) => (
+  <div>
+    <Text size="sm" fw={600} c="dimmed">
+      Estado:
+    </Text>
+    <Badge
+      color={
+        status === 'completed'
+          ? 'green'
+          : status === 'failed'
+            ? 'red'
+            : status === 'processing'
+              ? 'blue'
+              : 'yellow'
+      }
+      variant="light"
+      leftSection={
+        status === 'completed' ? (
+          <IconCheck size={14} />
+        ) : status === 'failed' ? (
+          <IconX size={14} />
+        ) : null
+      }
+    >
+      {getStatusText(status)}
+    </Badge>
+  </div>
+);
+
+// Componente para tasa de éxito
+const SuccessRateItem: React.FC<{
+  totalRecords: number;
+  successfulRecords: number;
+}> = ({ totalRecords, successfulRecords }) => {
+  const successRate = totalRecords > 0 ? Math.round((successfulRecords / totalRecords) * 100) : 0;
 
   return (
-    <SimpleGrid cols={2} spacing="md">
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Archivo:
-        </Text>
-        <Text fw={500} style={{ wordBreak: 'break-word' }}>
-          {selectedImport.fileName}
-        </Text>
-        {selectedImport.fileSize && (
-          <Text size="xs" c="dimmed">
-            {formatFileSize(selectedImport.fileSize)}
-          </Text>
-        )}
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Tipo de Entidad:
-        </Text>
-        <Badge variant="outline" tt="capitalize">
-          {selectedImport.entityType}
-        </Badge>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Estado:
-        </Text>
-        <Badge
-          color={
-            selectedImport.status === 'completed'
-              ? 'green'
-              : selectedImport.status === 'failed'
-                ? 'red'
-                : selectedImport.status === 'processing'
-                  ? 'blue'
-                  : 'yellow'
-          }
-          variant="light"
-          leftSection={
-            selectedImport.status === 'completed' ? (
-              <IconCheck size={14} />
-            ) : selectedImport.status === 'failed' ? (
-              <IconX size={14} />
-            ) : null
-          }
-        >
-          {getStatusText(selectedImport.status)}
-        </Badge>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Usuario:
-        </Text>
-        <Text>{selectedImport.user}</Text>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Duración:
-        </Text>
-        <Text>{formatDuration(selectedImport.startTime, selectedImport.endTime || null)}</Text>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Fecha:
-        </Text>
-        <Text>
-          {selectedImport.timestamp.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Total de Registros:
-        </Text>
-        <Text fw={500}>{selectedImport.totalRecords}</Text>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Registros Exitosos:
-        </Text>
-        <Text c="green" fw={500}>
-          {selectedImport.successfulRecords}
-        </Text>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Registros Fallidos:
-        </Text>
-        <Text c="red" fw={500}>
-          {selectedImport.failedRecords}
-        </Text>
-      </div>
-      <div>
-        <Text size="sm" fw={600} c="dimmed">
-          Tasa de Éxito:
-        </Text>
-        <Group gap={8} align="center">
-          <Progress
-            value={successRate}
-            color={getProgressColor(successRate)}
-            size="sm"
-            style={{ width: 60 }}
-          />
-          <Text fw={500}>{successRate}%</Text>
-        </Group>
-      </div>
-    </SimpleGrid>
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Tasa de Éxito:
+      </Text>
+      <Group gap={8} align="center">
+        <Progress
+          value={successRate}
+          color={getProgressColor(successRate)}
+          size="sm"
+          style={{ width: 60 }}
+        />
+        <Text fw={500}>{successRate}%</Text>
+      </Group>
+    </div>
   );
 };
+
+// Componente para información básica del import
+const ImportBasicInfo: React.FC<{ import: ImportRecord }> = ({ import: selectedImport }) => (
+  <SimpleGrid cols={2} spacing="md">
+    <FileInfoItem fileName={selectedImport.fileName} fileSize={selectedImport.fileSize} />
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Tipo de Entidad:
+      </Text>
+      <Badge variant="outline" tt="capitalize">
+        {selectedImport.entityType}
+      </Badge>
+    </div>
+    <StatusItem status={selectedImport.status} />
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Usuario:
+      </Text>
+      <Text>{selectedImport.user}</Text>
+    </div>
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Duración:
+      </Text>
+      <Text>{formatDuration(selectedImport.startTime, selectedImport.endTime || null)}</Text>
+    </div>
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Fecha:
+      </Text>
+      <Text>
+        {selectedImport.timestamp.toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </Text>
+    </div>
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Total de Registros:
+      </Text>
+      <Text fw={500}>{selectedImport.totalRecords}</Text>
+    </div>
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Registros Exitosos:
+      </Text>
+      <Text c="green" fw={500}>
+        {selectedImport.successfulRecords}
+      </Text>
+    </div>
+    <div>
+      <Text size="sm" fw={600} c="dimmed">
+        Registros Fallidos:
+      </Text>
+      <Text c="red" fw={500}>
+        {selectedImport.failedRecords}
+      </Text>
+    </div>
+    <SuccessRateItem
+      totalRecords={selectedImport.totalRecords}
+      successfulRecords={selectedImport.successfulRecords}
+    />
+  </SimpleGrid>
+);
 
 // Componente para mostrar errores
 const ImportErrorsList: React.FC<{ errors: ImportError[] }> = ({ errors }) => {
