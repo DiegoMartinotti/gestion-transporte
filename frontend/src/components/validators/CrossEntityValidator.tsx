@@ -14,6 +14,8 @@ import {
   Title,
   Button,
 } from '@mantine/core';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import {
   IconAlertTriangle,
   IconCheck,
@@ -39,49 +41,255 @@ interface CrossEntityRuleConfig {
   severity: 'error' | 'warning' | 'info';
 }
 
-// Extensión de ValidationResult para incluir detalles cross-entity
-interface CrossEntityValidationResult extends BaseValidationResult {
-  ruleId: string;
+// Interfaces para tipado fuerte
+interface EntityRecord {
+  id?: string;
+  _id?: string;
+  [key: string]: unknown;
+}
+
+interface EntityData {
+  [entityType: string]: EntityRecord[];
+}
+
+interface ValidationDetail {
+  record: EntityRecord;
+  issue: string;
+}
+
+interface VehicleRecord {
+  vehiculoId: string;
+  [key: string]: unknown;
+}
+
+interface ValidationContext {
+  passed: boolean;
   affectedRecords: number;
-  details?: any[];
+  details: ValidationDetail[];
+}
+
+// Extensión de ValidationResult para incluir detalles cross-entity
+interface CrossEntityValidationResult {
+  ruleId: string;
+  passed: boolean;
+  message: string;
+  affectedRecords: number;
+  details?: ValidationDetail[];
 }
 
 interface CrossEntityValidatorProps {
-  data: Record<string, any[]>;
+  data: EntityData;
   rules?: CrossEntityRuleConfig[];
   onValidationComplete?: (results: CrossEntityValidationResult[]) => void;
   autoValidate?: boolean;
 }
 
 // Clase validadora que extiende BaseValidator
-class CrossEntityValidatorImpl extends BaseValidator<Record<string, any[]>> {
+class CrossEntityValidatorImpl extends BaseValidator<EntityData> {
+  private validationMap: Record<
+    string,
+    (entityData: EntityRecord[], dependencyData: EntityData, context: ValidationContext) => void
+  >;
+
   constructor(private rules: CrossEntityRuleConfig[]) {
     super();
+    this.validationMap = {
+      'cliente-site-relationship': this.validateClienteSiteRelationship.bind(this),
+      'empresa-personal-relationship': this.validateEmpresaPersonalRelationship.bind(this),
+      'empresa-vehiculo-relationship': this.validateEmpresaVehiculoRelationship.bind(this),
+      'tramo-site-relationship': this.validateTramoSiteRelationship.bind(this),
+      'tramo-cliente-relationship': this.validateTramoClienteRelationship.bind(this),
+      'viaje-tramo-relationship': this.validateViajeTramoRelationship.bind(this),
+      'viaje-vehiculo-relationship': this.validateViajeVehiculoRelationship.bind(this),
+      'extra-cliente-relationship': this.validateExtraClienteRelationship.bind(this),
+    };
   }
 
-  getValidationRules(): ValidationRule<Record<string, any[]>>[] {
-    return this.rules.map(rule => ({
+  getValidationRules(): ValidationRule<EntityData>[] {
+    return this.rules.map((rule) => ({
       id: rule.id,
       name: rule.name,
       description: rule.description,
       severity: rule.severity,
       category: 'Cross-Entity',
       required: rule.severity === 'error',
-      validator: (data: Record<string, any[]>) => this.validateRule(rule, data)
+      validator: (data: EntityData) => this.validateRule(rule, data),
     }));
   }
 
-  private validateRule(rule: CrossEntityRuleConfig, data: Record<string, any[]>): BaseValidationResult & { ruleId: string; affectedRecords: number; details?: any[] } {
+  private validateClienteSiteRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const clienteIds = new Set(dependencyData.clientes.map((c) => c.id || c._id));
+    entityData.forEach((site) => {
+      if (!clienteIds.has(site.clienteId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: site,
+          issue: `Cliente no encontrado: ${site.clienteId as string}`,
+        });
+      }
+    });
+  }
+
+  private validateEmpresaPersonalRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const empresaIds = new Set(dependencyData.empresas.map((e) => e.id || e._id));
+    entityData.forEach((personal) => {
+      if (!empresaIds.has(personal.empresaId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: personal,
+          issue: `Empresa no encontrada: ${personal.empresaId as string}`,
+        });
+      }
+    });
+  }
+
+  private validateEmpresaVehiculoRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const empresaVehiculoIds = new Set(dependencyData.empresas.map((e) => e.id || e._id));
+    entityData.forEach((vehiculo) => {
+      if (!empresaVehiculoIds.has(vehiculo.empresaId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: vehiculo,
+          issue: `Empresa no encontrada: ${vehiculo.empresaId as string}`,
+        });
+      }
+    });
+  }
+
+  private validateTramoSiteRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const siteIds = new Set(dependencyData.sites.map((s) => s.id || s._id));
+    entityData.forEach((tramo) => {
+      if (!siteIds.has(tramo.origenId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: tramo,
+          issue: `Site origen no encontrado: ${tramo.origenId as string}`,
+        });
+      }
+      if (!siteIds.has(tramo.destinoId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: tramo,
+          issue: `Site destino no encontrado: ${tramo.destinoId as string}`,
+        });
+      }
+    });
+  }
+
+  private validateTramoClienteRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const clienteTramoIds = new Set(dependencyData.clientes.map((c) => c.id || c._id));
+    entityData.forEach((tramo) => {
+      if (!clienteTramoIds.has(tramo.clienteId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: tramo,
+          issue: `Cliente no encontrado: ${tramo.clienteId as string}`,
+        });
+      }
+    });
+  }
+
+  private validateViajeTramoRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const tramoIds = new Set(dependencyData.tramos.map((t) => t.id || t._id));
+    entityData.forEach((viaje) => {
+      if (!tramoIds.has(viaje.tramoId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: viaje,
+          issue: `Tramo no encontrado: ${viaje.tramoId as string}`,
+        });
+      }
+    });
+  }
+
+  private validateViajeVehiculoRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const vehiculoIds = new Set(dependencyData.vehiculos.map((v) => v.id || v._id));
+    entityData.forEach((viaje) => {
+      const vehiculos = (viaje.vehiculos as VehicleRecord[]) || [];
+      vehiculos.forEach((vehiculo: VehicleRecord) => {
+        if (!vehiculoIds.has(vehiculo.vehiculoId)) {
+          context.passed = false;
+          context.affectedRecords++;
+          context.details.push({
+            record: viaje,
+            issue: `Vehículo no encontrado: ${vehiculo.vehiculoId}`,
+          });
+        }
+      });
+    });
+  }
+
+  private validateExtraClienteRelationship(
+    entityData: EntityRecord[],
+    dependencyData: EntityData,
+    context: ValidationContext
+  ): void {
+    const clienteExtraIds = new Set(dependencyData.clientes.map((c) => c.id || c._id));
+    entityData.forEach((extra) => {
+      if (!clienteExtraIds.has(extra.clienteId as string)) {
+        context.passed = false;
+        context.affectedRecords++;
+        context.details.push({
+          record: extra,
+          issue: `Cliente no encontrado: ${extra.clienteId as string}`,
+        });
+      }
+    });
+  }
+
+  private validateRule(
+    rule: CrossEntityRuleConfig,
+    data: EntityData
+  ): BaseValidationResult & {
+    ruleId: string;
+    affectedRecords: number;
+    details?: ValidationDetail[];
+  } {
     const entityData = data[rule.entityType] || [];
-    const dependencyData: Record<string, any[]> = {};
-    
-    rule.dependencies.forEach(dep => {
+    const dependencyData: EntityData = {};
+
+    rule.dependencies.forEach((dep) => {
       dependencyData[dep] = data[dep] || [];
     });
 
     // Verificar que las dependencias existan
-    const hasAllDependencies = rule.dependencies.every(dep => data[dep] && data[dep].length > 0);
-    
+    const hasAllDependencies = rule.dependencies.every((dep) => data[dep] && data[dep].length > 0);
+
     if (!hasAllDependencies || !data[rule.entityType]) {
       return {
         ruleId: rule.id,
@@ -91,143 +299,29 @@ class CrossEntityValidatorImpl extends BaseValidator<Record<string, any[]>> {
       };
     }
 
-    let passed = true;
-    let affectedRecords = 0;
-    const details: any[] = [];
+    const context: ValidationContext = {
+      passed: true,
+      affectedRecords: 0,
+      details: [],
+    };
 
-    switch (rule.id) {
-      case 'cliente-site-relationship':
-        const clienteIds = new Set(dependencyData.clientes.map(c => c.id || c._id));
-        entityData.forEach(site => {
-          if (!clienteIds.has(site.clienteId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: site,
-              issue: `Cliente no encontrado: ${site.clienteId}`,
-            });
-          }
-        });
-        break;
-
-      case 'empresa-personal-relationship':
-        const empresaIds = new Set(dependencyData.empresas.map(e => e.id || e._id));
-        entityData.forEach(personal => {
-          if (!empresaIds.has(personal.empresaId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: personal,
-              issue: `Empresa no encontrada: ${personal.empresaId}`,
-            });
-          }
-        });
-        break;
-
-      case 'empresa-vehiculo-relationship':
-        const empresaVehiculoIds = new Set(dependencyData.empresas.map(e => e.id || e._id));
-        entityData.forEach(vehiculo => {
-          if (!empresaVehiculoIds.has(vehiculo.empresaId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: vehiculo,
-              issue: `Empresa no encontrada: ${vehiculo.empresaId}`,
-            });
-          }
-        });
-        break;
-
-      case 'tramo-site-relationship':
-        const siteIds = new Set(dependencyData.sites.map(s => s.id || s._id));
-        entityData.forEach(tramo => {
-          if (!siteIds.has(tramo.origenId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: tramo,
-              issue: `Site origen no encontrado: ${tramo.origenId}`,
-            });
-          }
-          if (!siteIds.has(tramo.destinoId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: tramo,
-              issue: `Site destino no encontrado: ${tramo.destinoId}`,
-            });
-          }
-        });
-        break;
-
-      case 'tramo-cliente-relationship':
-        const clienteTramoIds = new Set(dependencyData.clientes.map(c => c.id || c._id));
-        entityData.forEach(tramo => {
-          if (!clienteTramoIds.has(tramo.clienteId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: tramo,
-              issue: `Cliente no encontrado: ${tramo.clienteId}`,
-            });
-          }
-        });
-        break;
-
-      case 'viaje-tramo-relationship':
-        const tramoIds = new Set(dependencyData.tramos.map(t => t.id || t._id));
-        entityData.forEach(viaje => {
-          if (!tramoIds.has(viaje.tramoId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: viaje,
-              issue: `Tramo no encontrado: ${viaje.tramoId}`,
-            });
-          }
-        });
-        break;
-
-      case 'viaje-vehiculo-relationship':
-        const vehiculoIds = new Set(dependencyData.vehiculos.map(v => v.id || v._id));
-        entityData.forEach(viaje => {
-          const vehiculos = viaje.vehiculos || [];
-          vehiculos.forEach((vehiculo: any) => {
-            if (!vehiculoIds.has(vehiculo.vehiculoId)) {
-              passed = false;
-              affectedRecords++;
-              details.push({
-                record: viaje,
-                issue: `Vehículo no encontrado: ${vehiculo.vehiculoId}`,
-              });
-            }
-          });
-        });
-        break;
-
-      case 'extra-cliente-relationship':
-        const clienteExtraIds = new Set(dependencyData.clientes.map(c => c.id || c._id));
-        entityData.forEach(extra => {
-          if (!clienteExtraIds.has(extra.clienteId)) {
-            passed = false;
-            affectedRecords++;
-            details.push({
-              record: extra,
-              issue: `Cliente no encontrado: ${extra.clienteId}`,
-            });
-          }
-        });
-        break;
+    const validator = this.validationMap[rule.id];
+    if (validator) {
+      validator(entityData, dependencyData, context);
     }
 
     return {
       ruleId: rule.id,
-      passed,
-      message: passed 
+      passed: context.passed,
+      message: context.passed
         ? `Validación exitosa: ${rule.name}`
-        : `${affectedRecords} registro(s) con problemas en ${rule.name}`,
-      affectedRecords,
-      details: details.length > 0 ? details : undefined,
+        : `${context.affectedRecords} registro(s) con problemas en ${rule.name}`,
+      affectedRecords: context.affectedRecords,
+      details: context.details.length > 0 ? context.details : undefined,
+    } as BaseValidationResult & {
+      ruleId: string;
+      affectedRecords: number;
+      details?: ValidationDetail[];
     };
   }
 }
@@ -299,6 +393,86 @@ const defaultRules: CrossEntityRuleConfig[] = [
   },
 ];
 
+const getRuleIcon = (result: CrossEntityValidationResult, rule: CrossEntityRuleConfig) =>
+  result.passed ? (
+    <IconCheck size={16} color="green" />
+  ) : (
+    <IconX size={16} color={rule.severity === 'error' ? 'red' : 'orange'} />
+  );
+
+const getBadgeColor = (severity: string) =>
+  severity === 'error' ? 'red' : severity === 'warning' ? 'yellow' : 'blue';
+
+const DetailsList: React.FC<{ details: ValidationDetail[] }> = ({ details }) => (
+  <List size="sm" withPadding>
+    {details.slice(0, 10).map((detail, idx) => (
+      <List.Item key={idx}>
+        <Text size="xs" c="red">
+          {detail.issue}
+        </Text>
+        <Text size="xs" c="dimmed">
+          Registro: {JSON.stringify(detail.record, null, 0).slice(0, 100)}...
+        </Text>
+      </List.Item>
+    ))}
+    {details.length > 10 && (
+      <List.Item>
+        <Text size="xs" c="dimmed">
+          ... y {details.length - 10} más
+        </Text>
+      </List.Item>
+    )}
+  </List>
+);
+
+const ValidationRuleCard: React.FC<{
+  result: CrossEntityValidationResult;
+  rule: CrossEntityRuleConfig;
+  isExpanded: boolean;
+  onToggle: (ruleId: string) => void;
+}> = ({ result, rule, isExpanded, onToggle }) => {
+  const hasDetails = Boolean(result.details && result.details.length > 0);
+
+  return (
+    <Card key={result.ruleId} withBorder>
+      <Group justify="space-between" align="flex-start">
+        <Group>
+          {getRuleIcon(result, rule)}
+          <Box>
+            <Group gap="xs">
+              <Text fw={500}>{rule.name}</Text>
+              <Badge size="xs" color={getBadgeColor(rule.severity)}>
+                {rule.severity}
+              </Badge>
+            </Group>
+            <Text size="sm" c="dimmed">
+              {rule.description}
+            </Text>
+            <Text size="sm" mt="xs">
+              {result.message}
+            </Text>
+          </Box>
+        </Group>
+
+        {hasDetails && (
+          <ActionIcon variant="subtle" onClick={() => onToggle(result.ruleId)}>
+            {isExpanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+          </ActionIcon>
+        )}
+      </Group>
+
+      <Collapse in={isExpanded && hasDetails}>
+        <Box mt="md" pt="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
+          <Text size="sm" fw={500} mb="xs">
+            Registros afectados ({result.details?.length}):
+          </Text>
+          {result.details && <DetailsList details={result.details} />}
+        </Box>
+      </Collapse>
+    </Card>
+  );
+};
+
 export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
   data,
   rules = defaultRules,
@@ -306,53 +480,50 @@ export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
   autoValidate = true,
 }) => {
   const [expandedRules, setExpandedRules] = useState<Set<string>>(new Set());
-  
-  // Crear instancia del validador
+
   const validatorInstance = new CrossEntityValidatorImpl(rules);
-  
-  // Usar el hook de validación
   const {
     validationResults: baseValidationResults,
     validationSummary,
-    runValidation
+    runValidation,
   } = useValidation(validatorInstance, data, autoValidate);
 
-  // Convertir resultados a formato CrossEntityValidationResult
-  const validationResults: CrossEntityValidationResult[] = Object.entries(baseValidationResults).map(([ruleId, result]) => {
-    const rule = rules.find(r => r.id === ruleId);
-    const extendedResult = result as BaseValidationResult & { ruleId?: string; affectedRecords?: number; details?: any[] };
-    
+  const validationResults: CrossEntityValidationResult[] = Object.entries(
+    baseValidationResults
+  ).map(([ruleId, result]) => {
+    const extendedResult = result as BaseValidationResult & {
+      ruleId?: string;
+      affectedRecords?: number;
+      details?: ValidationDetail[];
+    };
     return {
       ruleId,
-      passed: result.passed,
+      passed: Boolean(result.passed),
       message: result.message,
       affectedRecords: extendedResult.affectedRecords || 0,
-      details: extendedResult.details
+      details: extendedResult.details,
     };
   });
 
-  // Notificar resultados al callback cuando se complete la validación
   useEffect(() => {
     if (validationResults.length > 0 && onValidationComplete) {
       onValidationComplete(validationResults);
     }
-  }, [validationSummary.totalRules, onValidationComplete]);
+  }, [validationResults, onValidationComplete]);
 
   const toggleRuleExpansion = (ruleId: string) => {
-    const newExpanded = new Set(expandedRules);
-    if (newExpanded.has(ruleId)) {
-      newExpanded.delete(ruleId);
-    } else {
-      newExpanded.add(ruleId);
-    }
-    setExpandedRules(newExpanded);
+    setExpandedRules((prev) => {
+      const newExpanded = new Set(prev);
+      newExpanded.has(ruleId) ? newExpanded.delete(ruleId) : newExpanded.add(ruleId);
+      return newExpanded;
+    });
   };
 
   const summary = {
     total: validationSummary.totalRules,
     passed: validationSummary.passedRules,
     errors: validationSummary.errors.length,
-    warnings: validationSummary.warnings.length
+    warnings: validationSummary.warnings.length,
   };
 
   return (
@@ -360,23 +531,21 @@ export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
       <Card>
         <Group justify="space-between" mb="md">
           <Title order={4}>Validación Cross-Entity</Title>
-          <Button
-            leftSection={<IconRefresh size={16} />}
-            onClick={runValidation}
-            variant="light"
-          >
+          <Button leftSection={<IconRefresh size={16} />} onClick={runValidation} variant="light">
             Revalidar
           </Button>
         </Group>
 
         <Stack gap="sm" mb="lg">
           <Group>
-            <Text size="sm" c="dimmed">Progreso:</Text>
+            <Text size="sm" c="dimmed">
+              Progreso:
+            </Text>
             <Badge color={summary.errors > 0 ? 'red' : summary.warnings > 0 ? 'yellow' : 'green'}>
               {summary.passed}/{summary.total} reglas pasadas
             </Badge>
           </Group>
-          
+
           <Progress
             value={(summary.passed / summary.total) * 100}
             color={summary.errors > 0 ? 'red' : summary.warnings > 0 ? 'yellow' : 'green'}
@@ -397,74 +566,17 @@ export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
         </Stack>
 
         <Stack gap="xs">
-          {validationResults.map((result, index) => {
-            const rule = rules.find(r => r.id === result.ruleId);
-            if (!rule) return null;
-
-            const isExpanded = expandedRules.has(result.ruleId);
-
-            return (
-              <Card key={result.ruleId} withBorder>
-                <Group justify="space-between" align="flex-start">
-                  <Group>
-                    {result.passed ? (
-                      <IconCheck size={16} color="green" />
-                    ) : (
-                      <IconX size={16} color={rule.severity === 'error' ? 'red' : 'orange'} />
-                    )}
-                    <Box>
-                      <Group gap="xs">
-                        <Text fw={500}>{rule.name}</Text>
-                        <Badge 
-                          size="xs" 
-                          color={rule.severity === 'error' ? 'red' : rule.severity === 'warning' ? 'yellow' : 'blue'}
-                        >
-                          {rule.severity}
-                        </Badge>
-                      </Group>
-                      <Text size="sm" c="dimmed">{rule.description}</Text>
-                      <Text size="sm" mt="xs">{result.message}</Text>
-                    </Box>
-                  </Group>
-
-                  {result.details && result.details.length > 0 && (
-                    <ActionIcon
-                      variant="subtle"
-                      onClick={() => toggleRuleExpansion(result.ruleId)}
-                    >
-                      {isExpanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
-                    </ActionIcon>
-                  )}
-                </Group>
-
-                <Collapse in={isExpanded && !!(result.details && result.details.length > 0)}>
-                  <Box mt="md" pt="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
-                    <Text size="sm" fw={500} mb="xs">
-                      Registros afectados ({result.details?.length}):
-                    </Text>
-                    <List size="sm" withPadding>
-                      {result.details?.slice(0, 10).map((detail, idx) => (
-                        <List.Item key={idx}>
-                          <Text size="xs" c="red">
-                            {detail.issue}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            Registro: {JSON.stringify(detail.record, null, 0).slice(0, 100)}...
-                          </Text>
-                        </List.Item>
-                      ))}
-                      {result.details && result.details.length > 10 && (
-                        <List.Item>
-                          <Text size="xs" c="dimmed">
-                            ... y {result.details.length - 10} más
-                          </Text>
-                        </List.Item>
-                      )}
-                    </List>
-                  </Box>
-                </Collapse>
-              </Card>
-            );
+          {validationResults.map((result, _index) => {
+            const rule = rules.find((r) => r.id === result.ruleId);
+            return rule ? (
+              <ValidationRuleCard
+                key={result.ruleId}
+                result={result}
+                rule={rule}
+                isExpanded={expandedRules.has(result.ruleId)}
+                onToggle={toggleRuleExpansion}
+              />
+            ) : null;
           })}
         </Stack>
       </Card>
