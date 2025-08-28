@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 // Interfaces estándar unificadas
-export interface ValidationRule<T = any> {
+export interface ValidationRule<T = unknown> {
   id: string;
   category: string;
   name: string;
@@ -12,13 +12,16 @@ export interface ValidationRule<T = any> {
 }
 
 // Extensión para reglas de negocio multi-entidad
-export interface BusinessRuleValidationRule extends ValidationRule<Record<string, any[]>> {
+export interface BusinessRuleValidationRule extends ValidationRule<Record<string, unknown[]>> {
   entityType: string;
   enabled: boolean;
-  validationFn: (record: any, context?: any) => {
+  validationFn: (
+    record: unknown,
+    context?: unknown
+  ) => {
     passed: boolean;
     message?: string;
-    details?: any;
+    details?: unknown;
   };
 }
 
@@ -34,7 +37,7 @@ export interface BusinessRuleValidationResult extends ValidationResult {
   ruleId: string;
   affectedRecords: number;
   category: string;
-  entityDetails?: any[];
+  entityDetails?: unknown[];
 }
 
 export interface ValidationSummary {
@@ -66,11 +69,14 @@ export abstract class BaseValidator<T> {
   /**
    * Lógica común de runValidation extraída y centralizada
    */
-  runValidation(data: T, setValidationResults: (results: Record<string, ValidationResult>) => void): void {
+  runValidation(
+    data: T,
+    setValidationResults: (results: Record<string, ValidationResult>) => void
+  ): void {
     const rules = this.getValidationRules();
     const results: Record<string, ValidationResult> = {};
-    
-    rules.forEach(rule => {
+
+    rules.forEach((rule) => {
       try {
         results[rule.id] = rule.validator(data);
       } catch (error) {
@@ -87,12 +93,12 @@ export abstract class BaseValidator<T> {
    */
   private handleValidationError(ruleName: string, error: unknown): ValidationResult {
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-    
+
     return {
       passed: false,
       message: `Error al validar: ${ruleName}`,
       details: [errorMessage],
-      suggestion: 'Verifique los datos e intente nuevamente'
+      suggestion: 'Verifique los datos e intente nuevamente',
     };
   }
 
@@ -103,28 +109,30 @@ export abstract class BaseValidator<T> {
     validationResults: Record<string, ValidationResult>,
     validationRules: ValidationRule<T>[]
   ): ValidationSummary {
-    const rules = validationRules.map(rule => ({
-      rule,
-      result: validationResults[rule.id]
-    })).filter(({ result }) => result);
+    const rules = validationRules
+      .map((rule) => ({
+        rule,
+        result: validationResults[rule.id],
+      }))
+      .filter(({ result }) => result);
 
     const totalRules = rules.length;
     const passedRules = rules.filter(({ result }) => result.passed).length;
-    
+
     const errors = rules
       .filter(({ rule, result }) => rule.severity === 'error' && !result.passed)
       .map(({ result }) => result);
-    
+
     const warnings = rules
       .filter(({ rule, result }) => rule.severity === 'warning' && !result.passed)
       .map(({ result }) => result);
-    
+
     const infos = rules
       .filter(({ rule, result }) => rule.severity === 'info' && !result.passed)
       .map(({ result }) => result);
 
-    const requiredRules = validationRules.filter(rule => rule.required);
-    const passedRequiredRules = requiredRules.filter(rule => {
+    const requiredRules = validationRules.filter((rule) => rule.required);
+    const passedRequiredRules = requiredRules.filter((rule) => {
       const result = validationResults[rule.id];
       return result && result.passed;
     });
@@ -142,36 +150,36 @@ export abstract class BaseValidator<T> {
       infos,
       score,
       canSave,
-      canSubmit
+      canSubmit,
     };
   }
 
   /**
    * Utilidades comunes para validadores
    */
-  protected isRequired(value: any): boolean {
+  protected isRequired(value: unknown): boolean {
     return value !== null && value !== undefined && value !== '' && value !== 0;
   }
 
-  protected isValidDate(date: any): boolean {
+  protected isValidDate(date: unknown): boolean {
     return date instanceof Date && !isNaN(date.getTime());
   }
 
-  protected isValidNumber(value: any): boolean {
+  protected isValidNumber(value: unknown): boolean {
     return typeof value === 'number' && !isNaN(value) && isFinite(value);
   }
 
-  protected isValidArray(array: any): boolean {
+  protected isValidArray(array: unknown): boolean {
     return Array.isArray(array) && array.length > 0;
   }
 }
 
 // Clase especializada para validadores de reglas de negocio multi-entidad
-export abstract class BusinessRuleBaseValidator extends BaseValidator<Record<string, any[]>> {
-  protected contextData?: any;
+export abstract class BusinessRuleBaseValidator extends BaseValidator<Record<string, unknown[]>> {
+  protected contextData?: unknown;
   protected enabledRules: Set<string>;
 
-  constructor(contextData?: any, enabledRuleIds?: string[]) {
+  constructor(contextData?: unknown, enabledRuleIds?: string[]) {
     super();
     this.contextData = contextData;
     this.enabledRules = new Set(enabledRuleIds || []);
@@ -181,21 +189,23 @@ export abstract class BusinessRuleBaseValidator extends BaseValidator<Record<str
   abstract getBusinessRules(): BusinessRuleValidationRule[];
 
   // Implementar el método abstracto de BaseValidator
-  getValidationRules(): ValidationRule<Record<string, any[]>>[] {
+  getValidationRules(): ValidationRule<Record<string, unknown[]>>[] {
     return this.getBusinessRules()
-      .filter(rule => this.enabledRules.size === 0 || this.enabledRules.has(rule.id))
-      .map(rule => ({
+      .filter((rule) => this.enabledRules.size === 0 || this.enabledRules.has(rule.id))
+      .map((rule) => ({
         ...rule,
-        validator: (data: Record<string, any[]>) => this.validateBusinessRule(rule, data)
+        validator: (data: Record<string, unknown[]>) => this.validateBusinessRule(rule, data),
       }));
   }
 
-  private validateBusinessRule(rule: BusinessRuleValidationRule, data: Record<string, any[]>): BusinessRuleValidationResult {
+  private validateBusinessRule(
+    rule: BusinessRuleValidationRule,
+    data: Record<string, unknown[]>
+  ): BusinessRuleValidationResult {
     const entityData = data[rule.entityType] || [];
-    let passedCount = 0;
-    const entityDetails: any[] = [];
+    const entityDetails: unknown[] = [];
 
-    entityData.forEach(record => {
+    entityData.forEach((record) => {
       try {
         const result = rule.validationFn(record, this.contextData);
         if (result.passed) {
@@ -255,7 +265,7 @@ export abstract class BusinessRuleBaseValidator extends BaseValidator<Record<str
 export function useValidation<T>(
   validator: BaseValidator<T>,
   data: T,
-  autoValidate: boolean = true,
+  autoValidate = true,
   onValidationChange?: (validation: ValidationSummary) => void
 ) {
   const [validationResults, setValidationResults] = useState<Record<string, ValidationResult>>({});
@@ -289,7 +299,7 @@ export function useValidation<T>(
     validationResults,
     validationSummary,
     validationRules,
-    runValidation
+    runValidation,
   };
 }
 
@@ -307,31 +317,31 @@ export const ValidationUtils = {
   getCategoryIcon: (category: string) => {
     // Mapa de iconos por categoría (se puede extender)
     const iconMap: Record<string, React.ComponentType<{ size?: number }>> = {
-      'Datos Básicos': ({ size = 16 }) => <span>🚚</span>,
-      'Vehículos': ({ size = 16 }) => <span>🚛</span>,
-      'Personal': ({ size = 16 }) => <span>👤</span>,
-      'Programación': ({ size = 16 }) => <span>📅</span>,
-      'Cálculos': ({ size = 16 }) => <span>💰</span>,
-      'Compatibilidad': ({ size = 16 }) => <span>🔗</span>,
-      'Documentación': ({ size = 16 }) => <span>📄</span>,
-      'default': ({ size = 16 }) => <span>✅</span>
+      'Datos Básicos': () => <span>🚚</span>,
+      Vehículos: () => <span>🚛</span>,
+      Personal: () => <span>👤</span>,
+      Programación: () => <span>📅</span>,
+      Cálculos: () => <span>💰</span>,
+      Compatibilidad: () => <span>🔗</span>,
+      Documentación: () => <span>📄</span>,
+      default: () => <span>✅</span>,
     };
 
     const IconComponent = iconMap[category] || iconMap.default;
     return <IconComponent />;
   },
 
-  formatValidationMessage: (result: ValidationResult, includeDetails: boolean = false): string => {
+  formatValidationMessage: (result: ValidationResult, includeDetails = false): string => {
     let message = result.message;
-    
+
     if (includeDetails && result.details && result.details.length > 0) {
       message += '\n• ' + result.details.join('\n• ');
     }
-    
+
     if (result.suggestion) {
       message += `\n💡 ${result.suggestion}`;
     }
-    
+
     return message;
-  }
+  },
 };

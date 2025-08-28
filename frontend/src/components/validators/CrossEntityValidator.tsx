@@ -3,87 +3,35 @@ import {
   Box,
   Text,
   Alert,
-  List,
   Stack,
   Badge,
   Group,
-  ActionIcon,
-  Collapse,
   Progress,
-  Card,
   Title,
   Button,
+  Card,
 } from '@mantine/core';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import {
-  IconAlertTriangle,
-  IconCheck,
-  IconX,
-  IconChevronDown,
-  IconChevronUp,
-  IconRefresh,
-} from '@tabler/icons-react';
+import { IconAlertTriangle, IconRefresh, IconX } from '@tabler/icons-react';
 import {
   BaseValidator,
   ValidationRule,
   ValidationResult as BaseValidationResult,
   useValidation,
 } from './BaseValidator';
+import {
+  CrossEntityRuleConfig,
+  EntityRecord,
+  EntityData,
+  ValidationDetail,
+  VehicleRecord,
+  ValidationContext,
+  CrossEntityValidationResult,
+  CrossEntityValidatorProps,
+} from './CrossEntityValidatorTypes';
+import { defaultRules } from './CrossEntityValidatorRules';
+import { ValidationRuleCard } from './CrossEntityValidatorComponents';
 
-// Configuración simple para cross-entity rules
-interface CrossEntityRuleConfig {
-  id: string;
-  name: string;
-  description: string;
-  entityType: string;
-  dependencies: string[];
-  severity: 'error' | 'warning' | 'info';
-}
-
-// Interfaces para tipado fuerte
-interface EntityRecord {
-  id?: string;
-  _id?: string;
-  [key: string]: unknown;
-}
-
-interface EntityData {
-  [entityType: string]: EntityRecord[];
-}
-
-interface ValidationDetail {
-  record: EntityRecord;
-  issue: string;
-}
-
-interface VehicleRecord {
-  vehiculoId: string;
-  [key: string]: unknown;
-}
-
-interface ValidationContext {
-  passed: boolean;
-  affectedRecords: number;
-  details: ValidationDetail[];
-}
-
-// Extensión de ValidationResult para incluir detalles cross-entity
-interface CrossEntityValidationResult {
-  ruleId: string;
-  passed: boolean;
-  message: string;
-  affectedRecords: number;
-  details?: ValidationDetail[];
-}
-
-interface CrossEntityValidatorProps {
-  data: EntityData;
-  rules?: CrossEntityRuleConfig[];
-  onValidationComplete?: (results: CrossEntityValidationResult[]) => void;
-  autoValidate?: boolean;
-}
-
+// Interfaces imported from CrossEntityValidatorTypes.ts
 // Clase validadora que extiende BaseValidator
 class CrossEntityValidatorImpl extends BaseValidator<EntityData> {
   private validationMap: Record<
@@ -326,152 +274,9 @@ class CrossEntityValidatorImpl extends BaseValidator<EntityData> {
   }
 }
 
-const defaultRules: CrossEntityRuleConfig[] = [
-  {
-    id: 'cliente-site-relationship',
-    name: 'Relación Cliente-Site',
-    description: 'Verificar que todos los sites pertenezcan a clientes existentes',
-    entityType: 'sites',
-    dependencies: ['clientes'],
-    severity: 'error',
-  },
-  {
-    id: 'empresa-personal-relationship',
-    name: 'Relación Empresa-Personal',
-    description: 'Verificar que todo el personal pertenezca a empresas existentes',
-    entityType: 'personal',
-    dependencies: ['empresas'],
-    severity: 'error',
-  },
-  {
-    id: 'empresa-vehiculo-relationship',
-    name: 'Relación Empresa-Vehículo',
-    description: 'Verificar que todos los vehículos pertenezcan a empresas existentes',
-    entityType: 'vehiculos',
-    dependencies: ['empresas'],
-    severity: 'error',
-  },
-  {
-    id: 'tramo-site-relationship',
-    name: 'Relación Tramo-Site',
-    description: 'Verificar que origen y destino de tramos sean sites existentes',
-    entityType: 'tramos',
-    dependencies: ['sites'],
-    severity: 'error',
-  },
-  {
-    id: 'tramo-cliente-relationship',
-    name: 'Relación Tramo-Cliente',
-    description: 'Verificar que los tramos pertenezcan a clientes existentes',
-    entityType: 'tramos',
-    dependencies: ['clientes'],
-    severity: 'error',
-  },
-  {
-    id: 'viaje-tramo-relationship',
-    name: 'Relación Viaje-Tramo',
-    description: 'Verificar que los viajes usen tramos existentes',
-    entityType: 'viajes',
-    dependencies: ['tramos'],
-    severity: 'error',
-  },
-  {
-    id: 'viaje-vehiculo-relationship',
-    name: 'Relación Viaje-Vehículo',
-    description: 'Verificar que los viajes usen vehículos existentes',
-    entityType: 'viajes',
-    dependencies: ['vehiculos'],
-    severity: 'warning',
-  },
-  {
-    id: 'extra-cliente-relationship',
-    name: 'Relación Extra-Cliente',
-    description: 'Verificar que los extras pertenezcan a clientes existentes',
-    entityType: 'extras',
-    dependencies: ['clientes'],
-    severity: 'error',
-  },
-];
+// Rules and UI components imported from separate files
 
-const getRuleIcon = (result: CrossEntityValidationResult, rule: CrossEntityRuleConfig) =>
-  result.passed ? (
-    <IconCheck size={16} color="green" />
-  ) : (
-    <IconX size={16} color={rule.severity === 'error' ? 'red' : 'orange'} />
-  );
-
-const getBadgeColor = (severity: string) =>
-  severity === 'error' ? 'red' : severity === 'warning' ? 'yellow' : 'blue';
-
-const DetailsList: React.FC<{ details: ValidationDetail[] }> = ({ details }) => (
-  <List size="sm" withPadding>
-    {details.slice(0, 10).map((detail, idx) => (
-      <List.Item key={idx}>
-        <Text size="xs" c="red">
-          {detail.issue}
-        </Text>
-        <Text size="xs" c="dimmed">
-          Registro: {JSON.stringify(detail.record, null, 0).slice(0, 100)}...
-        </Text>
-      </List.Item>
-    ))}
-    {details.length > 10 && (
-      <List.Item>
-        <Text size="xs" c="dimmed">
-          ... y {details.length - 10} más
-        </Text>
-      </List.Item>
-    )}
-  </List>
-);
-
-const ValidationRuleCard: React.FC<{
-  result: CrossEntityValidationResult;
-  rule: CrossEntityRuleConfig;
-  isExpanded: boolean;
-  onToggle: (ruleId: string) => void;
-}> = ({ result, rule, isExpanded, onToggle }) => {
-  const hasDetails = Boolean(result.details && result.details.length > 0);
-
-  return (
-    <Card key={result.ruleId} withBorder>
-      <Group justify="space-between" align="flex-start">
-        <Group>
-          {getRuleIcon(result, rule)}
-          <Box>
-            <Group gap="xs">
-              <Text fw={500}>{rule.name}</Text>
-              <Badge size="xs" color={getBadgeColor(rule.severity)}>
-                {rule.severity}
-              </Badge>
-            </Group>
-            <Text size="sm" c="dimmed">
-              {rule.description}
-            </Text>
-            <Text size="sm" mt="xs">
-              {result.message}
-            </Text>
-          </Box>
-        </Group>
-
-        {hasDetails && (
-          <ActionIcon variant="subtle" onClick={() => onToggle(result.ruleId)}>
-            {isExpanded ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
-          </ActionIcon>
-        )}
-      </Group>
-
-      <Collapse in={isExpanded && hasDetails}>
-        <Box mt="md" pt="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
-          <Text size="sm" fw={500} mb="xs">
-            Registros afectados ({result.details?.length}):
-          </Text>
-          {result.details && <DetailsList details={result.details} />}
-        </Box>
-      </Collapse>
-    </Card>
-  );
-};
+// Components imported from CrossEntityValidatorComponents.tsx
 
 export const CrossEntityValidator: React.FC<CrossEntityValidatorProps> = ({
   data,
