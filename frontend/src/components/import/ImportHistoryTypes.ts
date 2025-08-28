@@ -26,6 +26,7 @@ export interface ImportRecord {
   errors?: ImportError[];
   logs?: ImportLog[];
   fileSize?: number;
+  user: string;
 }
 
 export interface ImportStats {
