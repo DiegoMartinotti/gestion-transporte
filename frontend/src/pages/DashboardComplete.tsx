@@ -1,4 +1,4 @@
-import { Container, Stack, Title, Group, SimpleGrid, Divider } from '@mantine/core';
+import { Container, Stack, Title, SimpleGrid, Divider } from '@mantine/core';
 import { MainDashboard } from '../components/dashboards/MainDashboard';
 import { ChartsContainer } from '../components/dashboards/ChartsContainer';
 import { QuickActions } from '../components/dashboards/QuickActions';
