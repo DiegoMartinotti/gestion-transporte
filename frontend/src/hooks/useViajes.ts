@@ -16,9 +16,9 @@ export function useViajes() {
       console.log('Response from ViajeService:', response);
       setViajes(response.data || []);
       console.log('Viajes set:', response.data?.length || 0);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching viajes:', err);
-      setError(err.message || 'Error al cargar los viajes');
+      setError((err as Error)?.message || 'Error al cargar los viajes');
     } finally {
       setLoading(false);
     }
@@ -28,9 +28,9 @@ export function useViajes() {
     setLoading(true);
     try {
       const nuevoViaje = await ViajeService.create(viajeData);
-      setViajes(prev => [...prev, nuevoViaje]);
-    } catch (err: any) {
-      setError(err.message || 'Error al crear el viaje');
+      setViajes((prev) => [...prev, nuevoViaje]);
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Error al crear el viaje');
       throw err;
     } finally {
       setLoading(false);
@@ -41,11 +41,9 @@ export function useViajes() {
     setLoading(true);
     try {
       const viajeActualizado = await ViajeService.update(id, viajeData);
-      setViajes(prev => prev.map(v => 
-        v._id === id ? viajeActualizado : v
-      ));
-    } catch (err: any) {
-      setError(err.message || 'Error al actualizar el viaje');
+      setViajes((prev) => prev.map((v) => (v._id === id ? viajeActualizado : v)));
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Error al actualizar el viaje');
       throw err;
     } finally {
       setLoading(false);
@@ -56,9 +54,9 @@ export function useViajes() {
     setLoading(true);
     try {
       await ViajeService.delete(id);
-      setViajes(prev => prev.filter(v => v._id !== id));
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar el viaje');
+      setViajes((prev) => prev.filter((v) => v._id !== id));
+    } catch (err: unknown) {
+      setError((err as Error)?.message || 'Error al eliminar el viaje');
       throw err;
     } finally {
       setLoading(false);
@@ -76,6 +74,6 @@ export function useViajes() {
     fetchViajes,
     createViaje,
     updateViaje,
-    deleteViaje
+    deleteViaje,
   };
 }

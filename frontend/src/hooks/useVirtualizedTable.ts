@@ -30,7 +30,7 @@ interface UseVirtualizedTableReturn<T> {
 }
 
 // Función auxiliar para manejar valores null/undefined
-function handleNullValues(aValue: any, bValue: any): number | null {
+function handleNullValues(aValue: unknown, bValue: unknown): number | null {
   if (aValue == null && bValue == null) return 0;
   if (aValue == null) return 1;
   if (bValue == null) return -1;
@@ -38,7 +38,7 @@ function handleNullValues(aValue: any, bValue: any): number | null {
 }
 
 // Función auxiliar para comparar valores según su tipo
-function compareValuesByType(aValue: any, bValue: any): number {
+function compareValuesByType(aValue: unknown, bValue: unknown): number {
   if (typeof aValue === 'string' && typeof bValue === 'string') {
     return aValue.localeCompare(bValue);
   } else if (aValue instanceof Date && bValue instanceof Date) {
@@ -49,13 +49,13 @@ function compareValuesByType(aValue: any, bValue: any): number {
 }
 
 // Función auxiliar para comparar valores y reducir complejidad ciclomática
-function compareValues(aValue: any, bValue: any): number {
+function compareValues(aValue: unknown, bValue: unknown): number {
   const nullCheck = handleNullValues(aValue, bValue);
   if (nullCheck !== null) return nullCheck;
   return compareValuesByType(aValue, bValue);
 }
 
-export function useVirtualizedTable<T = any>({
+export function useVirtualizedTable<T extends Record<string, unknown> = Record<string, unknown>>({
   data,
   initialPageSize = 500,
   enableLocalFiltering = true,
@@ -75,7 +75,7 @@ export function useVirtualizedTable<T = any>({
       const searchLower = search.toLowerCase();
       result = result.filter((item) => {
         // Buscar en todas las propiedades del objeto
-        return Object.values(item as any).some((value) =>
+        return Object.values(item).some((value) =>
           value?.toString().toLowerCase().includes(searchLower)
         );
       });
@@ -84,8 +84,8 @@ export function useVirtualizedTable<T = any>({
     // Ordenar (solo si está habilitado)
     if (enableLocalSorting && sortBy) {
       result.sort((a, b) => {
-        const aValue = (a as any)[sortBy];
-        const bValue = (b as any)[sortBy];
+        const aValue = a[sortBy as keyof T];
+        const bValue = b[sortBy as keyof T];
         const compareResult = compareValues(aValue, bValue);
         return sortOrder === 'asc' ? compareResult : -compareResult;
       });
@@ -101,9 +101,7 @@ export function useVirtualizedTable<T = any>({
 
     const searchLower = search.toLowerCase();
     return data.filter((item) =>
-      Object.values(item as any).some((value) =>
-        value?.toString().toLowerCase().includes(searchLower)
-      )
+      Object.values(item).some((value) => value?.toString().toLowerCase().includes(searchLower))
     ).length;
   }, [data, search, enableLocalFiltering]);
 
