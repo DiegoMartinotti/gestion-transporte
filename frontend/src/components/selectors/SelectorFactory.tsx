@@ -7,12 +7,12 @@ export interface SelectOption {
   label: string;
   disabled?: boolean;
   group?: string;
-  [key: string]: any; // Permitir propiedades adicionales para opciones complejas
+  [key: string]: unknown; // Permitir propiedades adicionales para opciones complejas
 }
 
 export interface BaseEntity {
   _id: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SelectorHookResult<T> {
@@ -25,8 +25,8 @@ export interface SelectorHookResult<T> {
 // Configuración para filtros
 export interface FilterConfig<T> {
   [key: string]: {
-    apply: (items: T[], value: any) => T[];
-    defaultValue?: any;
+    apply: (items: T[], value: unknown) => T[];
+    defaultValue?: unknown;
   };
 }
 
@@ -35,23 +35,23 @@ export interface SelectorConfig<T extends BaseEntity> {
   // Configuración de datos
   useDataHook: () => SelectorHookResult<T>;
   mapToOption: (item: T) => SelectOption;
-  
+
   // Filtros opcionales
   filters?: FilterConfig<T>;
-  
+
   // Configuración del componente
   searchable?: boolean;
   clearable?: boolean;
   groupBy?: (item: T) => string | undefined;
-  
+
   // Configuración avanzada
-  itemComponent?: React.ComponentType<any>;
-  dropdownComponent?: React.ComponentType<any>;
+  itemComponent?: React.ComponentType<Record<string, unknown>>;
+  dropdownComponent?: React.ComponentType<Record<string, unknown>>;
   maxDropdownHeight?: number;
-  
+
   // Validaciones
   validate?: (value: string | string[] | null) => string | null;
-  
+
   // Callbacks adicionales
   onItemSelect?: (item: T | T[] | null) => void;
   onSearch?: (query: string) => void;
@@ -72,127 +72,131 @@ export interface BaseSelectorProps {
   withAsterisk?: boolean;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   // Props adicionales para filtros dinámicos
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Factory principal
-export function createEntitySelector<T extends BaseEntity>(
-  config: SelectorConfig<T>
-) {
-  const EntitySelector = forwardRef<HTMLInputElement, BaseSelectorProps>(
-    (props, ref) => {
-      const {
-        value,
-        onChange,
-        label,
-        placeholder,
-        required = false,
-        clearable = config.clearable ?? true,
-        error,
-        disabled = false,
-        multiple = false,
-        description,
-        withAsterisk,
-        size = 'sm',
-        ...filterProps
-      } = props;
+export function createEntitySelector<T extends BaseEntity>(config: SelectorConfig<T>) {
+  const EntitySelector = forwardRef<HTMLInputElement, BaseSelectorProps>((props, ref) => {
+    const {
+      value,
+      onChange,
+      label,
+      placeholder,
+      required = false,
+      clearable = config.clearable ?? true,
+      error,
+      disabled = false,
+      multiple = false,
+      description,
+      withAsterisk,
+      size = 'sm',
+      ...filterProps
+    } = props;
 
-      // Cargar datos usando el hook proporcionado
-      const { data, loading, error: hookError } = config.useDataHook();
+    // Cargar datos usando el hook proporcionado
+    const { data, loading, error: hookError } = config.useDataHook();
 
-      // Aplicar filtros si están configurados
-      const filteredData = useMemo(() => {
-        if (!config.filters) return data;
+    // Aplicar filtros si están configurados
+    const filteredData = useMemo(() => {
+      if (!config.filters) return data;
 
-        return Object.entries(config.filters).reduce((filtered, [filterKey, filterConfig]) => {
-          const filterValue = filterProps[filterKey];
-          if (filterValue !== undefined && filterValue !== filterConfig.defaultValue) {
-            return filterConfig.apply(filtered, filterValue);
-          }
-          return filtered;
-        }, data);
-      }, [data, filterProps, config.filters]);
-
-      // Mapear datos a opciones
-      const options = useMemo(() => {
-        const mapped = filteredData.map(config.mapToOption);
-        
-        // Agrupar si está configurado
-        if (config.groupBy) {
-          const grouped = mapped.reduce((groups, option) => {
-            const originalItem = filteredData.find(item => item._id === option.value);
-            const group = originalItem ? config.groupBy!(originalItem) : undefined;
-            const groupName = group || 'Sin Categoría';
-            
-            if (!groups[groupName]) groups[groupName] = [];
-            groups[groupName].push(option);
-            
-            return groups;
-          }, {} as Record<string, SelectOption[]>);
-
-          return Object.entries(grouped).flatMap(([groupName, groupOptions]) =>
-            groupOptions.map(option => ({ ...option, group: groupName }))
-          );
+      return Object.entries(config.filters).reduce((filtered, [filterKey, filterConfig]) => {
+        const filterValue = filterProps[filterKey];
+        if (filterValue !== undefined && filterValue !== filterConfig.defaultValue) {
+          return filterConfig.apply(filtered, filterValue);
         }
+        return filtered;
+      }, data);
+    }, [data, filterProps]);
 
-        return mapped;
-      }, [filteredData, config.mapToOption, config.groupBy]);
+    // Funciones helper para evitar callbacks anidados
+    const groupOptionsByCategory = (mapped: SelectOption[], filteredData: T[]) => {
+      const grouped = mapped.reduce(
+        (groups, option) => {
+          const originalItem = filteredData.find((item) => item._id === option.value);
+          const group = originalItem && config.groupBy ? config.groupBy(originalItem) : undefined;
+          const groupName = group || 'Sin Categoría';
 
-      // Manejar cambios
-      const handleChange = (newValue: string | string[] | null) => {
-        // Validar si está configurado
-        if (config.validate) {
-          const validationError = config.validate(newValue);
-          if (validationError) {
-            // El error se manejará a través de la prop error
-            return;
-          }
-        }
+          if (!groups[groupName]) groups[groupName] = [];
+          groups[groupName].push(option);
 
-        onChange(newValue);
+          return groups;
+        },
+        {} as Record<string, SelectOption[]>
+      );
 
-        // Callback adicional si está configurado
-        if (config.onItemSelect) {
-          if (newValue === null) {
-            config.onItemSelect(null);
-          } else if (Array.isArray(newValue)) {
-            const selectedItems = filteredData.filter(item => newValue.includes(item._id));
-            config.onItemSelect(selectedItems);
-          } else {
-            const selectedItem = filteredData.find(item => item._id === newValue);
-            config.onItemSelect(selectedItem || null);
-          }
-        }
-      };
+      return Object.entries(grouped).flatMap(([groupName, groupOptions]) =>
+        groupOptions.map((option) => ({ ...option, group: groupName }))
+      );
+    };
 
-      const sharedProps = {
-        ref,
-        label,
-        placeholder,
-        data: options,
-        value,
-        onChange: handleChange,
-        required,
-        clearable,
-        error: error || hookError,
-        disabled: disabled || loading,
-        description,
-        withAsterisk,
-        size,
-        searchable: config.searchable ?? true,
-        maxDropdownHeight: config.maxDropdownHeight ?? 200,
-        ...(config.itemComponent && { itemComponent: config.itemComponent }),
-        ...(config.dropdownComponent && { dropdownComponent: config.dropdownComponent })
-      };
+    // Mapear datos a opciones
+    const options = useMemo(() => {
+      const mapped = filteredData.map(config.mapToOption);
 
-      // Renderizar componente apropiado
-      if (multiple) {
-        return <MultiSelect {...(sharedProps as MultiSelectProps)} />;
-      } else {
-        return <Select {...(sharedProps as SelectProps)} />;
+      // Agrupar si está configurado
+      if (config.groupBy) {
+        return groupOptionsByCategory(mapped, filteredData);
       }
+
+      return mapped;
+    }, [filteredData]);
+
+    // Manejar cambios
+    const handleChange = (newValue: string | string[] | null) => {
+      // Validar si está configurado
+      if (config.validate) {
+        const validationError = config.validate(newValue);
+        if (validationError) {
+          // El error se manejará a través de la prop error
+          return;
+        }
+      }
+
+      onChange(newValue);
+
+      // Callback adicional si está configurado
+      if (config.onItemSelect) {
+        if (newValue === null) {
+          config.onItemSelect(null);
+        } else if (Array.isArray(newValue)) {
+          const selectedItems = filteredData.filter((item) => newValue.includes(item._id));
+          config.onItemSelect(selectedItems);
+        } else {
+          const selectedItem = filteredData.find((item) => item._id === newValue);
+          config.onItemSelect(selectedItem || null);
+        }
+      }
+    };
+
+    const sharedProps = {
+      ref,
+      label,
+      placeholder,
+      data: options,
+      value,
+      onChange: handleChange,
+      required,
+      clearable,
+      error: error || hookError,
+      disabled: disabled || loading,
+      description,
+      withAsterisk,
+      size,
+      searchable: config.searchable ?? true,
+      maxDropdownHeight: config.maxDropdownHeight ?? 200,
+      ...(config.itemComponent && { itemComponent: config.itemComponent }),
+      ...(config.dropdownComponent && { dropdownComponent: config.dropdownComponent }),
+    };
+
+    // Renderizar componente apropiado
+    if (multiple) {
+      return <MultiSelect {...(sharedProps as MultiSelectProps)} />;
+    } else {
+      return <Select {...(sharedProps as SelectProps)} />;
     }
-  );
+  });
 
   EntitySelector.displayName = 'EntitySelector';
   return EntitySelector;
@@ -209,7 +213,7 @@ export function createSimpleSelector<T extends BaseEntity>(
     mapToOption,
     searchable: true,
     clearable: true,
-    ...options
+    ...options,
   });
 }
 
@@ -226,7 +230,7 @@ export function createFilterableSelector<T extends BaseEntity>(
     filters,
     searchable: true,
     clearable: true,
-    ...options
+    ...options,
   });
 }
 
@@ -235,27 +239,33 @@ export const CommonMappers = {
   // Mapeo básico con id y nombre
   nameOnly: <T extends BaseEntity & { nombre: string }>(item: T): SelectOption => ({
     value: item._id,
-    label: item.nombre
+    label: item.nombre,
   }),
 
   // Mapeo con nombre y apellido
-  fullName: <T extends BaseEntity & { nombre: string; apellido?: string }>(item: T): SelectOption => ({
+  fullName: <T extends BaseEntity & { nombre: string; apellido?: string }>(
+    item: T
+  ): SelectOption => ({
     value: item._id,
-    label: item.apellido ? `${item.nombre} ${item.apellido}` : item.nombre
+    label: item.apellido ? `${item.nombre} ${item.apellido}` : item.nombre,
   }),
 
   // Mapeo con código y descripción
-  codeDescription: <T extends BaseEntity & { codigo?: string; descripcion: string }>(item: T): SelectOption => ({
+  codeDescription: <T extends BaseEntity & { codigo?: string; descripcion: string }>(
+    item: T
+  ): SelectOption => ({
     value: item._id,
-    label: item.codigo ? `${item.codigo} - ${item.descripcion}` : item.descripcion
+    label: item.codigo ? `${item.codigo} - ${item.descripcion}` : item.descripcion,
   }),
 
   // Mapeo con estado activo/inactivo
-  withStatus: <T extends BaseEntity & { nombre: string; activo?: boolean }>(item: T): SelectOption => ({
+  withStatus: <T extends BaseEntity & { nombre: string; activo?: boolean }>(
+    item: T
+  ): SelectOption => ({
     value: item._id,
     label: item.nombre,
-    disabled: item.activo === false
-  })
+    disabled: item.activo === false,
+  }),
 };
 
 // Filtros comunes reutilizables
@@ -263,9 +273,10 @@ export const CommonFilters = {
   // Filtro por estado activo
   activos: <T extends BaseEntity & { activo?: boolean }>() => ({
     soloActivos: {
-      apply: (items: T[], value: boolean) => value ? items.filter(item => item.activo !== false) : items,
-      defaultValue: false
-    }
+      apply: (items: T[], value: boolean) =>
+        value ? items.filter((item) => item.activo !== false) : items,
+      defaultValue: false,
+    },
   }),
 
   // Filtro por tipo
@@ -274,25 +285,27 @@ export const CommonFilters = {
       apply: (items: T[], value: string | string[]) => {
         if (!value) return items;
         const tipos = Array.isArray(value) ? value : [value];
-        return items.filter(item => item.tipo && tipos.includes(item.tipo));
-      }
-    }
+        return items.filter((item) => item.tipo && tipos.includes(item.tipo));
+      },
+    },
   }),
 
   // Filtro por empresa
   empresa: <T extends BaseEntity & { empresa?: { _id: string } }>() => ({
     empresaId: {
-      apply: (items: T[], value: string) => value ? items.filter(item => item.empresa?._id === value) : items
-    }
+      apply: (items: T[], value: string) =>
+        value ? items.filter((item) => item.empresa?._id === value) : items,
+    },
   }),
 
   // Filtro de exclusión por IDs
   exclude: <T extends BaseEntity>() => ({
     excludeIds: {
-      apply: (items: T[], value: string[]) => value ? items.filter(item => !value.includes(item._id)) : items,
-      defaultValue: []
-    }
-  })
+      apply: (items: T[], value: string[]) =>
+        value ? items.filter((item) => !value.includes(item._id)) : items,
+      defaultValue: [],
+    },
+  }),
 };
 
 export default createEntitySelector;
