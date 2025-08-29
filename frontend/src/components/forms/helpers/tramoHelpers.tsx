@@ -1,14 +1,23 @@
 import { notifications } from '@mantine/notifications';
 import { tramoService } from '../../../services/tramoService';
 import { calculateHaversineDistance } from '../validation/tramoValidation';
+import type { Site } from '../../../types';
 
-export async function calculateDistance(
-  origen: string,
-  destino: string,
-  sitesFiltered: any[],
-  setCalculatingDistance: (value: boolean) => void,
-  onSuccess: (distance: number) => void
-) {
+interface CalculateDistanceParams {
+  origen: string;
+  destino: string;
+  sitesFiltered: Site[];
+  setCalculatingDistance: (value: boolean) => void;
+  onSuccess: (distance: number) => void;
+}
+
+export async function calculateDistance({
+  origen,
+  destino,
+  sitesFiltered,
+  setCalculatingDistance,
+  onSuccess,
+}: CalculateDistanceParams) {
   if (!origen || !destino) {
     notifications.show({
       title: 'Error',
@@ -61,11 +70,22 @@ export async function calculateDistance(
   }
 }
 
-export async function validateTarifaConflicts(
-  formValues: any,
-  setConflicts: (conflicts: any[]) => void,
-  setValidatingConflicts: (value: boolean) => void
-) {
+interface TarifaConflictsParams {
+  formValues: {
+    cliente: string;
+    origen: string;
+    destino: string;
+    tarifasHistoricas: unknown[];
+  };
+  setConflicts: (conflicts: unknown[]) => void;
+  setValidatingConflicts: (value: boolean) => void;
+}
+
+export async function validateTarifaConflicts({
+  formValues,
+  setConflicts,
+  setValidatingConflicts,
+}: TarifaConflictsParams) {
   if (!formValues.cliente || !formValues.origen || !formValues.destino) return;
 
   setValidatingConflicts(true);
@@ -85,21 +105,34 @@ export async function validateTarifaConflicts(
   }
 }
 
-export function filterSitesByClient(
-  clientId: string,
-  sites: any[],
-  form: any,
-  setSitesFiltered: (sites: any[]) => void
-) {
+interface FilterSitesByClientParams {
+  clientId: string;
+  sites: Site[];
+  form: {
+    values: {
+      origen: string;
+      destino: string;
+    };
+    setFieldValue: (field: string, value: unknown) => void;
+  };
+  setSitesFiltered: (sites: Site[]) => void;
+}
+
+export function filterSitesByClient({
+  clientId,
+  sites,
+  form,
+  setSitesFiltered,
+}: FilterSitesByClientParams) {
   if (clientId) {
     const filtered = sites.filter((site) => site.cliente === clientId);
     setSitesFiltered(filtered);
 
     // Limpiar origen y destino si no pertenecen al cliente seleccionado
-    if (form.values.origen && !filtered.find((s: any) => s._id === form.values.origen)) {
+    if (form.values.origen && !filtered.find((s) => s._id === form.values.origen)) {
       form.setFieldValue('origen', '');
     }
-    if (form.values.destino && !filtered.find((s: any) => s._id === form.values.destino)) {
+    if (form.values.destino && !filtered.find((s) => s._id === form.values.destino)) {
       form.setFieldValue('destino', '');
     }
   } else {
