@@ -1,17 +1,19 @@
-export const filterData = <T>(data: T[], search: string, enableLocalFiltering: boolean): T[] => {
+export const filterData = <T extends Record<string, unknown>>(
+  data: T[],
+  search: string,
+  enableLocalFiltering: boolean
+): T[] => {
   if (!enableLocalFiltering || !search) {
     return data;
   }
 
   const searchLower = search.toLowerCase();
   return data.filter((item) =>
-    Object.values(item as Record<string, unknown>).some((value) =>
-      value?.toString().toLowerCase().includes(searchLower)
-    )
+    Object.values(item).some((value) => value?.toString().toLowerCase().includes(searchLower))
   );
 };
 
-export const sortData = <T>(
+export const sortData = <T extends Record<string, unknown>>(
   data: T[],
   sortBy: string,
   sortOrder: 'asc' | 'desc',
@@ -22,8 +24,8 @@ export const sortData = <T>(
   }
 
   return [...data].sort((a, b) => {
-    const aValue = (a as Record<string, unknown>)[sortBy];
-    const bValue = (b as Record<string, unknown>)[sortBy];
+    const aValue = a[sortBy as keyof T];
+    const bValue = b[sortBy as keyof T];
 
     // Manejar valores null/undefined
     if (aValue == null && bValue == null) return 0;
@@ -56,7 +58,7 @@ interface ProcessTableDataOptions {
   enableLocalSorting: boolean;
 }
 
-export const processTableData = <T>(
+export const processTableData = <T extends Record<string, unknown>>(
   data: T[],
   options: ProcessTableDataOptions
 ): T[] => {
@@ -67,7 +69,7 @@ export const processTableData = <T>(
   return result.slice(0, options.pageSize);
 };
 
-export const calculateFilteredCount = <T>(
+export const calculateFilteredCount = <T extends Record<string, unknown>>(
   data: T[],
   search: string,
   enableLocalFiltering: boolean
