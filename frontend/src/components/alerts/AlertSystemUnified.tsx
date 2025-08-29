@@ -84,22 +84,14 @@ const DEFAULT_CONFIG: AlertSystemConfig = {
   },
 };
 
-export const AlertSystemUnified: React.FC<AlertSystemProps> = ({
-  alertas,
-  config = DEFAULT_CONFIG,
-  categoria,
-  onEditEntity,
-}) => {
+// Custom hook to manage alert data and filtering
+const useAlertData = (alertas: AlertData[], config: AlertSystemConfig, categoria?: string) => {
   const [filtroEntidad, setFiltroEntidad] = useState('todos');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroCategoria, setFiltroCategoria] = useState(categoria || 'todos');
 
-  // Fix: Wrap effectiveConfig in useMemo to prevent re-renders
   const effectiveConfig = useMemo(
-    () => ({
-      ...DEFAULT_CONFIG,
-      ...config,
-    }),
+    () => ({ ...DEFAULT_CONFIG, ...config }),
     [config]
   );
 
@@ -122,6 +114,25 @@ export const AlertSystemUnified: React.FC<AlertSystemProps> = ({
     return calculateAlertStatistics(alertasFiltradas);
   }, [alertasFiltradas]);
 
+  return {
+    effectiveConfig,
+    alertasConEstado,
+    alertasFiltradas,
+    estadisticas,
+    filtroEntidad,
+    filtroEstado,
+    filtroCategoria,
+    setFiltroEntidad,
+    setFiltroEstado,
+    setFiltroCategoria,
+  };
+};
+
+// Custom hook for UI interaction callbacks
+const useAlertCallbacks = (
+  effectiveConfig: AlertSystemConfig,
+  onEditEntity?: (entidadId: string, entidadTipo: AlertData['entidadTipo']) => void
+) => {
   const getEstadoColor = useCallback(
     (estado: string) => {
       const colores = effectiveConfig.colores as Record<string, string>;
@@ -152,59 +163,95 @@ export const AlertSystemUnified: React.FC<AlertSystemProps> = ({
     [onEditEntity]
   );
 
+  return { getEstadoColor, getEntidadIcon, handleAlertClick };
+};
+
+export const AlertSystemUnified: React.FC<AlertSystemProps> = ({
+  alertas,
+  config = DEFAULT_CONFIG,
+  categoria,
+  onEditEntity,
+}) => {
+  const {
+    effectiveConfig,
+    estadisticas,
+    setFiltroEntidad,
+    setFiltroEstado,
+    setFiltroCategoria,
+  } = useAlertData(alertas, config, categoria);
+
+  // Utility callbacks for UI interactions
+  const { getEstadoColor, getEntidadIcon, handleAlertClick } = useAlertCallbacks(
+    effectiveConfig,
+    onEditEntity
+  );
+
+  // Helper function for rendering individual stat cards
+  const renderStatCard = useCallback(
+    (tipo: 'vencidos' | 'criticos' | 'proximos' | 'vigentes', config: AlertSystemConfig, stats: { vencidos: number; criticos: number; proximos: number; vigentes: number }) => {
+      const cardConfigs = {
+        vencidos: {
+          value: stats.vencidos,
+          label: 'Vencidos',
+          color: config.colores?.vencido,
+        },
+        criticos: {
+          value: stats.criticos,
+          label: `Críticos (≤${config.diasCritico} días)`,
+          color: config.colores?.critico,
+        },
+        proximos: {
+          value: stats.proximos,
+          label: `Próximos (≤${config.diasProximo} días)`,
+          color: 'orange',
+        },
+        vigentes: {
+          value: stats.vigentes,
+          label: 'Vigentes',
+          color: config.colores?.vigente,
+        },
+      };
+
+      const cardConfig = cardConfigs[tipo];
+      return (
+        <Card key={tipo} withBorder p="sm" bg={`${cardConfig.color}.0`}>
+          <Text ta="center" fw={700} size="xl" c={cardConfig.color}>
+            {cardConfig.value}
+          </Text>
+          <Text ta="center" size="sm" c={cardConfig.color}>
+            {cardConfig.label}
+          </Text>
+        </Card>
+      );
+    },
+    []
+  );
+
   const renderEstadisticas = useCallback(() => {
     if (!effectiveConfig.mostrarEstadisticas) return null;
 
     return (
       <SimpleGrid cols={4} spacing="md" mb="md">
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.vencido}.0`}>
-          <Text ta="center" fw={700} size="xl" c={effectiveConfig.colores?.vencido}>
-            {estadisticas.vencidos}
-          </Text>
-          <Text ta="center" size="sm" c={effectiveConfig.colores?.vencido}>
-            Vencidos
-          </Text>
-        </Card>
-
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.critico}.0`}>
-          <Text ta="center" fw={700} size="xl" c={effectiveConfig.colores?.critico}>
-            {estadisticas.criticos}
-          </Text>
-          <Text ta="center" size="sm" c={effectiveConfig.colores?.critico}>
-            Críticos (≤{effectiveConfig.diasCritico} días)
-          </Text>
-        </Card>
-
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.proximo}.0`}>
-          <Text ta="center" fw={700} size="xl" c="orange">
-            {estadisticas.proximos}
-          </Text>
-          <Text ta="center" size="sm" c="orange">
-            Próximos (≤{effectiveConfig.diasProximo} días)
-          </Text>
-        </Card>
-
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.vigente}.0`}>
-          <Text ta="center" fw={700} size="xl" c={effectiveConfig.colores?.vigente}>
-            {estadisticas.vigentes}
-          </Text>
-          <Text ta="center" size="sm" c={effectiveConfig.colores?.vigente}>
-            Vigentes
-          </Text>
-        </Card>
+        {(['vencidos', 'criticos', 'proximos', 'vigentes'] as const).map(tipo =>
+          renderStatCard(tipo, effectiveConfig, estadisticas)
+        )}
       </SimpleGrid>
     );
-  }, [effectiveConfig, estadisticas]);
+  }, [effectiveConfig, estadisticas, renderStatCard]);
 
-  // Suppress unused variable warnings for now - these will be used in the actual render
-  void setFiltroEntidad;
-  void setFiltroEstado;
-  void setFiltroCategoria;
-  void getEstadoColor;
-  void getEntidadIcon;
-  void handleAlertClick;
+  const renderContent = useCallback(() => {
+    // Suppress unused variable warnings for now - these will be used in the actual render
+    void setFiltroEntidad;
+    void setFiltroEstado;
+    void setFiltroCategoria;
+    void getEstadoColor;
+    void getEntidadIcon;
+    void handleAlertClick;
 
-  return <Card>{renderEstadisticas()}</Card>;
+    return <Card>{renderEstadisticas()}</Card>;
+  }, [renderEstadisticas, setFiltroEntidad, setFiltroEstado, setFiltroCategoria, getEstadoColor, getEntidadIcon, handleAlertClick]);
+
+  return renderContent();
 };
 
 export default AlertSystemUnified;

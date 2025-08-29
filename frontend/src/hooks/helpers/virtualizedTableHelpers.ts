@@ -5,7 +5,7 @@ export const filterData = <T>(data: T[], search: string, enableLocalFiltering: b
 
   const searchLower = search.toLowerCase();
   return data.filter((item) =>
-    Object.values(item as any).some((value) =>
+    Object.values(item as Record<string, unknown>).some((value) =>
       value?.toString().toLowerCase().includes(searchLower)
     )
   );
@@ -22,8 +22,8 @@ export const sortData = <T>(
   }
 
   return [...data].sort((a, b) => {
-    const aValue = (a as any)[sortBy];
-    const bValue = (b as any)[sortBy];
+    const aValue = (a as Record<string, unknown>)[sortBy];
+    const bValue = (b as Record<string, unknown>)[sortBy];
 
     // Manejar valores null/undefined
     if (aValue == null && bValue == null) return 0;
@@ -35,7 +35,7 @@ export const sortData = <T>(
   });
 };
 
-const compareValues = (aValue: any, bValue: any): number => {
+const compareValues = (aValue: unknown, bValue: unknown): number => {
   if (typeof aValue === 'string' && typeof bValue === 'string') {
     return aValue.localeCompare(bValue);
   }
@@ -47,20 +47,24 @@ const compareValues = (aValue: any, bValue: any): number => {
   return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
 };
 
+interface ProcessTableDataOptions {
+  search: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  pageSize: number;
+  enableLocalFiltering: boolean;
+  enableLocalSorting: boolean;
+}
+
 export const processTableData = <T>(
   data: T[],
-  search: string,
-  sortBy: string,
-  sortOrder: 'asc' | 'desc',
-  pageSize: number,
-  enableLocalFiltering: boolean,
-  enableLocalSorting: boolean
+  options: ProcessTableDataOptions
 ): T[] => {
-  let result = filterData(data, search, enableLocalFiltering);
-  result = sortData(result, sortBy, sortOrder, enableLocalSorting);
+  let result = filterData(data, options.search, options.enableLocalFiltering);
+  result = sortData(result, options.sortBy, options.sortOrder, options.enableLocalSorting);
 
   // Limitar cantidad para performance
-  return result.slice(0, pageSize);
+  return result.slice(0, options.pageSize);
 };
 
 export const calculateFilteredCount = <T>(

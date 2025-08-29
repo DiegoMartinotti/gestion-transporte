@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -10,40 +10,26 @@ import {
   Select,
   Paper,
   Title,
-  ThemeIcon,
   Modal,
-  ScrollArea,
   Alert,
   Tabs,
   Button,
   SimpleGrid,
-  Progress,
   Timeline,
-  Collapse,
-  TextInput,
   NumberInput,
   Switch
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import {
   IconCalendar,
-  IconChevronLeft,
-  IconChevronRight,
-  IconFilter,
   IconTruck,
   IconUser,
-  IconFileText,
   IconAlertTriangle,
   IconEye,
   IconRefresh,
   IconBell,
-  IconBellOff,
-  IconChevronDown,
-  IconChevronUp,
   IconSettings,
-  IconCheck,
   IconX,
-  IconClock,
   IconHistory
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
@@ -53,6 +39,11 @@ import isBetween from 'dayjs/plugin/isBetween';
 
 dayjs.extend(isBetween);
 
+// Constantes para strings duplicados
+const ENTITY_TYPE_VEHICULO = 'vehiculo';
+const ENTITY_TYPE_PERSONAL = 'personal';
+const DATE_FORMAT_ISO = 'YYYY-MM-DD';
+
 // Interfaces unificadas
 export interface DocumentoVencimiento {
   _id: string;
@@ -61,7 +52,7 @@ export interface DocumentoVencimiento {
   fechaVencimiento: Date;
   fechaEmision?: Date;
   observaciones?: string;
-  entidadTipo: 'vehiculo' | 'personal';
+  entidadTipo: typeof ENTITY_TYPE_VEHICULO | typeof ENTITY_TYPE_PERSONAL;
   entidadId: string;
   entidadNombre: string;
   entidadDetalle: string; // Patente para vehículos, DNI para personal
@@ -81,7 +72,7 @@ export interface ExpirationConfig {
   frecuenciaNotificaciones?: 'diaria' | 'semanal' | 'personalizada';
   
   // Filtros permitidos
-  entidadesPermitidas?: ('vehiculo' | 'personal')[];
+  entidadesPermitidas?: (typeof ENTITY_TYPE_VEHICULO | typeof ENTITY_TYPE_PERSONAL)[];
   tiposDocumento?: string[];
   
   // Configuración visual
@@ -110,7 +101,7 @@ export interface ExpirationManagerProps {
   variant?: 'complete' | 'alerts-only' | 'calendar-only' | 'compact';
   
   // Callbacks
-  onEditEntity?: (entidadId: string, entidadTipo: 'vehiculo' | 'personal') => void;
+  onEditEntity?: (entidadId: string, entidadTipo: typeof ENTITY_TYPE_VEHICULO | typeof ENTITY_TYPE_PERSONAL) => void;
   onRefresh?: () => void;
   onConfigChange?: (config: ExpirationConfig) => void;
   
@@ -125,7 +116,7 @@ const DEFAULT_CONFIG: ExpirationConfig = {
   diasVigente: 90,
   notificacionesActivas: true,
   frecuenciaNotificaciones: 'diaria',
-  entidadesPermitidas: ['vehiculo', 'personal'],
+  entidadesPermitidas: [ENTITY_TYPE_VEHICULO, ENTITY_TYPE_PERSONAL],
   mostrarCalendario: true,
   mostrarAlertas: true,
   mostrarEstadisticas: true,
@@ -231,7 +222,7 @@ export const ExpirationManagerBase: React.FC<ExpirationManagerProps> = ({
     const grupos: Record<string, DocumentoVencimiento[]> = {};
     
     documentosFiltrados.forEach(doc => {
-      const fecha = dayjs(doc.fechaVencimiento).format('YYYY-MM-DD');
+      const fecha = dayjs(doc.fechaVencimiento).format(DATE_FORMAT_ISO);
       if (!grupos[fecha]) grupos[fecha] = [];
       grupos[fecha].push(doc);
     });
@@ -244,8 +235,8 @@ export const ExpirationManagerBase: React.FC<ExpirationManagerProps> = ({
     return effectiveConfig.colores?.[estado || 'vigente'] || 'gray';
   };
 
-  const getEntidadIcon = (tipo: 'vehiculo' | 'personal') => {
-    return tipo === 'vehiculo' ? <IconTruck size={16} /> : <IconUser size={16} />;
+  const getEntidadIcon = (tipo: typeof ENTITY_TYPE_VEHICULO | typeof ENTITY_TYPE_PERSONAL) => {
+    return tipo === ENTITY_TYPE_VEHICULO ? <IconTruck size={16} /> : <IconUser size={16} />;
   };
 
   const handleConfigSave = () => {
@@ -409,13 +400,13 @@ export const ExpirationManagerBase: React.FC<ExpirationManagerProps> = ({
           leftSection={<IconCalendar size={16} />}
         />
         
-        {selectedDate && documentosPorFecha[dayjs(selectedDate).format('YYYY-MM-DD')] && (
+        {selectedDate && documentosPorFecha[dayjs(selectedDate).format(DATE_FORMAT_ISO)] && (
           <Card withBorder mt="md">
             <Title order={6} mb="sm">
               Vencimientos del {dayjs(selectedDate).format('DD/MM/YYYY')}
             </Title>
             <Stack gap="xs">
-              {documentosPorFecha[dayjs(selectedDate).format('YYYY-MM-DD')].map(doc => (
+              {documentosPorFecha[dayjs(selectedDate).format(DATE_FORMAT_ISO)].map(doc => (
                 <Group key={doc._id} justify="space-between">
                   <Group gap="xs">
                     {getEntidadIcon(doc.entidadTipo)}
@@ -565,8 +556,8 @@ export const ExpirationManagerBase: React.FC<ExpirationManagerProps> = ({
             onChange={(value) => setFiltroEntidad(value || 'todos')}
             data={[
               { value: 'todos', label: 'Todas las entidades' },
-              { value: 'vehiculo', label: 'Vehículos' },
-              { value: 'personal', label: 'Personal' }
+              { value: ENTITY_TYPE_VEHICULO, label: 'Vehículos' },
+              { value: ENTITY_TYPE_PERSONAL, label: 'Personal' }
             ]}
             style={{ minWidth: 150 }}
           />

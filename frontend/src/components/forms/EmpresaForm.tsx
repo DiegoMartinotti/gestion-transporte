@@ -107,23 +107,14 @@ interface EmpresaFormData {
   observaciones: string;
 }
 
-export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: EmpresaFormProps) {
-  // Use custom hooks for form management
-  const { form, loading, setLoading } = useEmpresaForm(empresa);
-  const submitHandler = useEmpresaSubmit(empresa, mode, onSuccess);
-  const handleSubmit = useCallback(
-    (values: EmpresaFormData) => {
-      submitHandler(values, setLoading);
-    },
-    [submitHandler, setLoading]
-  );
+// Render components for EmpresaForm
+interface EmpresaFormRenderProps {
+  form: ReturnType<typeof useForm<EmpresaFormData>>;
+  loading: boolean;
+}
 
-  // Memoize computed values
-  const isEditing = useMemo(() => mode === 'edit', [mode]);
-  const title = useMemo(() => (isEditing ? 'Editar Empresa' : 'Nueva Empresa'), [isEditing]);
-
-  // Extract form sections for better organization
-  const renderBasicInfo = () => (
+function EmpresaBasicInfo({ form, loading }: EmpresaFormRenderProps) {
+  return (
     <>
       <Group grow>
         <FieldWrapper label="Nombre" required description="Nombre o razón social de la empresa">
@@ -153,8 +144,10 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
       </FieldWrapper>
     </>
   );
+}
 
-  const renderContactInfo = () => (
+function EmpresaContactInfo({ form, loading }: EmpresaFormRenderProps) {
+  return (
     <>
       <Group grow>
         <FieldWrapper label="Email" description="Email de contacto principal">
@@ -197,8 +190,10 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
       </Group>
     </>
   );
+}
 
-  const renderLegalInfo = () => (
+function EmpresaLegalInfo({ form, loading }: EmpresaFormRenderProps) {
+  return (
     <Group grow>
       <FieldWrapper
         label="CUIT"
@@ -212,8 +207,10 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
       </FieldWrapper>
     </Group>
   );
+}
 
-  const renderAdditionalInfo = () => (
+function EmpresaAdditionalInfo({ form, loading }: EmpresaFormRenderProps) {
+  return (
     <>
       <FieldWrapper label="Dirección" description="Dirección física de la empresa">
         <Textarea
@@ -242,16 +239,25 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
       </FieldWrapper>
     </>
   );
+}
 
-  const renderStatusAlert = () =>
-    !form.values.activa && (
-      <Alert icon={<IconAlertCircle size="1rem" />} color="yellow" variant="light">
-        <strong>Atención:</strong> Una empresa inactiva no podrá ser utilizada para asignar personal
-        o vehículos a viajes.
-      </Alert>
-    );
+function EmpresaStatusAlert({ form }: { form: ReturnType<typeof useForm<EmpresaFormData>> }) {
+  return !form.values.activa ? (
+    <Alert icon={<IconAlertCircle size="1rem" />} color="yellow" variant="light">
+      <strong>Atención:</strong> Una empresa inactiva no podrá ser utilizada para asignar personal
+      o vehículos a viajes.
+    </Alert>
+  ) : null;
+}
 
-  const renderActionButtons = () => (
+interface EmpresaActionButtonsProps {
+  onCancel?: () => void;
+  loading: boolean;
+  isEditing: boolean;
+}
+
+function EmpresaActionButtons({ onCancel, loading, isEditing }: EmpresaActionButtonsProps) {
+  return (
     <Group justify="flex-end" gap="sm">
       {onCancel && (
         <Button variant="outline" onClick={onCancel} disabled={loading}>
@@ -263,6 +269,22 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
       </Button>
     </Group>
   );
+}
+
+export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: EmpresaFormProps) {
+  // Use custom hooks for form management
+  const { form, loading, setLoading } = useEmpresaForm(empresa);
+  const submitHandler = useEmpresaSubmit(empresa, mode, onSuccess);
+  const handleSubmit = useCallback(
+    (values: EmpresaFormData) => {
+      submitHandler(values, setLoading);
+    },
+    [submitHandler, setLoading]
+  );
+
+  // Memoize computed values
+  const isEditing = useMemo(() => mode === 'edit', [mode]);
+  const title = useMemo(() => (isEditing ? 'Editar Empresa' : 'Nueva Empresa'), [isEditing]);
 
   return (
     <Paper p="lg" withBorder>
@@ -271,14 +293,14 @@ export function EmpresaForm({ empresa, onSuccess, onCancel, mode = 'create' }: E
           <Title order={3}>{title}</Title>
 
           <Stack gap="md">
-            {renderBasicInfo()}
-            {renderContactInfo()}
-            {renderLegalInfo()}
-            {renderAdditionalInfo()}
-            {renderStatusAlert()}
+            <EmpresaBasicInfo form={form} loading={loading} />
+            <EmpresaContactInfo form={form} loading={loading} />
+            <EmpresaLegalInfo form={form} loading={loading} />
+            <EmpresaAdditionalInfo form={form} loading={loading} />
+            <EmpresaStatusAlert form={form} />
           </Stack>
 
-          {renderActionButtons()}
+          <EmpresaActionButtons onCancel={onCancel} loading={loading} isEditing={isEditing} />
         </Stack>
       </form>
     </Paper>

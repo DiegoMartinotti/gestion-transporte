@@ -105,35 +105,55 @@ export const useTarifaSimulatorOperations = (
     setEscenarios([...escenarios, duplicado]);
   };
 
+  const createResultadoFromEscenario = (escenario: IEscenarioSimulacion): IResultadoSimulacion => {
+    const tarifaOriginal = escenario.valoresBase.tarifa || Math.random() * 30000 + 5000;
+    const peajeOriginal = escenario.valoresBase.peaje || Math.random() * 5000 + 1000;
+    const extrasOriginal = escenario.valoresBase.extras || Math.random() * 3000;
+    const totalOriginal = tarifaOriginal + peajeOriginal + extrasOriginal;
+
+    const tarifaFinal = tarifaOriginal * 1.1;
+    const peajeFinal = peajeOriginal * 1.05;
+    const extrasFinal = extrasOriginal * 1.15;
+    const totalFinal = totalOriginal * 1.1;
+
+    return {
+      escenario: escenario.nombre,
+      valoresOriginales: {
+        tarifa: tarifaOriginal,
+        peaje: peajeOriginal,
+        extras: extrasOriginal,
+        total: totalOriginal
+      },
+      valoresFinales: {
+        tarifa: tarifaFinal,
+        peaje: peajeFinal,
+        extras: extrasFinal,
+        total: totalFinal
+      },
+      reglasAplicadas: [
+        {
+          codigo: 'REG001',
+          nombre: 'Ajuste por distancia',
+          modificacion: 10
+        }
+      ],
+      diferencia: {
+        tarifa: tarifaFinal - tarifaOriginal,
+        peaje: peajeFinal - peajeOriginal,
+        extras: extrasFinal - extrasOriginal,
+        total: totalFinal - totalOriginal,
+        porcentaje: ((totalFinal - totalOriginal) / totalOriginal) * 100
+      }
+    };
+  };
+
   const ejecutarSimulacion = async (escenariosSeleccionados: IEscenarioSimulacion[]) => {
     setSimulando(true);
     try {
       // Simular delay para mostrar loading
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const resultados: IResultadoSimulacion[] = escenariosSeleccionados.map((escenario) => ({
-        id: `resultado-${escenario.id}`,
-        escenarioId: escenario.id!,
-        escenarioNombre: escenario.nombre,
-        fechaEjecucion: new Date().toISOString(),
-        metodoCalculo: 'DISTANCIA_PESO',
-        tarifaCalculada: Math.random() * 50000 + 10000,
-        desglose: {
-          tarifaBase: escenario.valoresBase.tarifa || Math.random() * 30000 + 5000,
-          peajes: escenario.valoresBase.peaje || Math.random() * 5000 + 1000,
-          extras: escenario.valoresBase.extras || Math.random() * 3000,
-          descuentos: Math.random() * 2000,
-          impuestos: Math.random() * 8000 + 2000,
-        },
-        parametros: {
-          distancia: escenario.contexto.distancia,
-          peso: escenario.contexto.palets * 25, // Asumiendo 25kg por palet
-          tipoVehiculo: escenario.contexto.vehiculo,
-          fecha: escenario.contexto.fecha,
-        },
-        observaciones: `Simulación ejecutada para ${escenario.nombre}`,
-        estado: 'completado',
-      }));
+      const resultados: IResultadoSimulacion[] = escenariosSeleccionados.map(createResultadoFromEscenario);
 
       setResultados(resultados);
       return resultados;

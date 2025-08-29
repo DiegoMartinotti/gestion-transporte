@@ -96,7 +96,11 @@ IMPORTANTE:
 
 ````markdown
 Mi proyecto utiliza Husky con hooks de pre-commit que ejecutan linters y tests.
-OBJETIVO: Corregir errores/warnings de `npm run lint` en el frontend usando sub-agentes en paralelo.
+OBJETIVO: Corregir errores/warnings de `npm run lint` en el frontend usando sub-agentes en paralelo (ejecutar solo 3 sub-agentes al mismo tiempo).
+
+CONTEXTO:
+
+- Hooks pre-commit estrictos (--max-warnings 0)
 
 TU TRABAJO (Claude Code - Sesión Principal):
 

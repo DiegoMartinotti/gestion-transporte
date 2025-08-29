@@ -7,9 +7,7 @@ import {
   Paper,
   Switch,
   Checkbox,
-  Select,
   Alert,
-  Divider,
   Badge,
   Box,
   ActionIcon,
@@ -17,14 +15,11 @@ import {
 } from '@mantine/core';
 import {
   IconDownload,
-  IconFileSpreadsheet,
-  IconSettings,
   IconInfoCircle,
   IconCheck,
   IconX,
 } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
-import * as XLSX from 'xlsx';
+import { useTemplateGenerator } from './hooks/useTemplateGenerator';
 
 export interface FieldConfig {
   key: string;
@@ -300,7 +295,7 @@ const ENTITY_TEMPLATES: Record<string, TemplateConfig> = {
 export interface ExcelTemplateGeneratorProps {
   entityType?: keyof typeof ENTITY_TEMPLATES;
   onTemplateGenerated?: (blob: Blob, filename: string) => void;
-  referenceData?: Record<string, any[]>;
+  referenceData?: Record<string, unknown[]>;
 }
 
 export const ExcelTemplateGenerator: React.FC<ExcelTemplateGeneratorProps> = ({
@@ -312,7 +307,7 @@ export const ExcelTemplateGenerator: React.FC<ExcelTemplateGeneratorProps> = ({
   const [selectedFields, setSelectedFields] = useState<string[]>(
     config.fields.filter(f => f.required).map(f => f.key)
   );
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { isGenerating, generateTemplate } = useTemplateGenerator();
 
   const handleFieldToggle = (fieldKey: string) => {
     const field = config.fields.find(f => f.key === fieldKey);
@@ -325,147 +320,12 @@ export const ExcelTemplateGenerator: React.FC<ExcelTemplateGeneratorProps> = ({
     );
   };
 
-  const generateTemplate = async () => {
-    setIsGenerating(true);
-    
-    try {
-      const workbook = XLSX.utils.book_new();
-      
-      // Crear hoja principal con plantilla
-      const templateData = createTemplateSheet();
-      const templateSheet = XLSX.utils.aoa_to_sheet(templateData);
-      
-      // Aplicar estilos y validaciones
-      applySheetFormatting(templateSheet);
-      
-      XLSX.utils.book_append_sheet(workbook, templateSheet, 'Plantilla');
-      
-      // Agregar hoja de instrucciones si está habilitada
-      if (config.includeInstructions) {
-        const instructionsSheet = createInstructionsSheet();
-        XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instrucciones');
-      }
-      
-      // Agregar hojas de referencia si está habilitada
-      if (config.includeReferenceData && Object.keys(referenceData).length > 0) {
-        Object.entries(referenceData).forEach(([key, data]) => {
-          const refSheet = createReferenceSheet(key, data);
-          XLSX.utils.book_append_sheet(workbook, refSheet, `Ref_${key}`);
-        });
-      }
-      
-      // Generar archivo
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([excelBuffer], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
-      
-      const filename = `plantilla_${config.entityType}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      
-      // Descargar archivo
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      onTemplateGenerated?.(blob, filename);
-      
-      notifications.show({
-        title: 'Plantilla generada',
-        message: `La plantilla de ${config.entityName} se descargó correctamente`,
-        color: 'green',
-        icon: <IconCheck size={16} />,
-      });
-      
-    } catch (error) {
-      console.error('Error generating template:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo generar la plantilla',
-        color: 'red',
-        icon: <IconX size={16} />,
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleGenerateTemplate = () => {
+    generateTemplate(config, selectedFields, referenceData, onTemplateGenerated);
   };
 
-  const createTemplateSheet = () => {
-    const selectedFieldConfigs = config.fields.filter(f => 
-      selectedFields.includes(f.key)
-    );
-    
-    const headers = selectedFieldConfigs.map(f => f.label);
-    const examples = config.includeExamples 
-      ? selectedFieldConfigs.map(f => f.example || '') 
-      : [];
-    
-    const data = [headers];
-    if (examples.length > 0) {
-      data.push(examples);
-    }
-    
-    return data;
   };
 
-  const createInstructionsSheet = () => {
-    const instructions = [
-      ['INSTRUCCIONES PARA IMPORTACIÓN DE ' + config.entityName.toUpperCase()],
-      [''],
-      ['1. Campos Obligatorios (marcados con *):'],
-      ...config.fields
-        .filter(f => f.required && selectedFields.includes(f.key))
-        .map(f => [`   - ${f.label}: ${f.description || ''}`]),
-      [''],
-      ['2. Campos Opcionales:'],
-      ...config.fields
-        .filter(f => !f.required && selectedFields.includes(f.key))
-        .map(f => [`   - ${f.label}: ${f.description || ''}`]),
-      [''],
-      ['3. Validaciones:'],
-      ...config.fields
-        .filter(f => f.validation && selectedFields.includes(f.key))
-        .map(f => [`   - ${f.label}: ${f.validation}`]),
-      [''],
-      ['4. Formato del archivo:'],
-      ['   - Usar solo la hoja "Plantilla"'],
-      ['   - No modificar los nombres de las columnas'],
-      ['   - Los campos obligatorios no pueden estar vacíos'],
-      ['   - Eliminar las filas de ejemplo antes de importar'],
-      [''],
-      ['5. Proceso de importación:'],
-      ['   - Completar todos los datos en la hoja "Plantilla"'],
-      ['   - Guardar el archivo en formato Excel (.xlsx)'],
-      ['   - Subir el archivo usando el sistema de importación'],
-    ];
-    
-    return XLSX.utils.aoa_to_sheet(instructions);
-  };
-
-  const createReferenceSheet = (entityType: string, data: any[]) => {
-    if (data.length === 0) return XLSX.utils.aoa_to_sheet([['Sin datos']]);
-    
-    const headers = Object.keys(data[0]);
-    const rows = data.map(item => headers.map(header => item[header] || ''));
-    
-    return XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  };
-
-  const applySheetFormatting = (sheet: XLSX.WorkSheet) => {
-    // Aplicar formato básico (esto es limitado en SheetJS sin la versión pro)
-    const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
-    
-    // Establecer anchos de columna
-    const colWidths = [];
-    for (let i = 0; i <= range.e.c; i++) {
-      colWidths.push({ width: 20 });
-    }
-    sheet['!cols'] = colWidths;
-  };
 
   const requiredCount = config.fields.filter(f => f.required).length;
   const selectedCount = selectedFields.length;
@@ -592,7 +452,7 @@ export const ExcelTemplateGenerator: React.FC<ExcelTemplateGeneratorProps> = ({
         <Button
           leftSection={<IconDownload size={16} />}
           size="md"
-          onClick={generateTemplate}
+          onClick={handleGenerateTemplate}
           loading={isGenerating}
           disabled={selectedCount === 0}
         >
