@@ -65,111 +65,16 @@ const resolveSegmentTitle = async (
   return title;
 };
 
-const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
-  const location = useLocation();
-  const { getClienteName, getEmpresaName } = useEntityNames();
-  const [resolvedBreadcrumbs, setResolvedBreadcrumbs] = useState<BreadcrumbItem[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // Generar breadcrumbs automáticamente basado en la ruta actual
-  const pathSegments = useMemo(
-    () => location.pathname.split('/').filter(Boolean),
-    [location.pathname]
-  );
-
-  // Efecto para resolver nombres de entidades
-  useEffect(() => {
-    const resolveBreadcrumbs = async () => {
-      setLoading(true);
-
-      const breadcrumbItems: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/' }];
-
-      let currentPath = '';
-      for (let index = 0; index < pathSegments.length; index++) {
-        const segment = pathSegments[index];
-        const previousSegment = index > 0 ? pathSegments[index - 1] : null;
-        currentPath += `/${segment}`;
-
-        const title = await resolveSegmentTitle(
-          segment,
-          previousSegment,
-          getClienteName,
-          getEmpresaName
-        );
-
-        // El último item no debe tener href (está activo)
-        const isLast = index === pathSegments.length - 1;
-        breadcrumbItems.push({
-          title,
-          href: isLast ? undefined : currentPath,
-        });
-      }
-
-      setResolvedBreadcrumbs(breadcrumbItems);
-      setLoading(false);
-    };
-
-    // Solo resolver breadcrumbs si no hay items personalizados y hay segmentos
-    if (!items && pathSegments.length > 0) {
-      resolveBreadcrumbs();
-    }
-  }, [location.pathname, getClienteName, getEmpresaName, pathSegments, items]);
-
-  // Si se proporcionan items personalizados, usarlos
-  if (items) {
-    return (
-      <MantineBreadcrumbs
-        separator={<IconChevronRight size={14} stroke={1.5} />}
-        separatorMargin="xs"
-        mb="md"
-      >
-        {items.map((item, index) => {
-          const isLast = index === items.length - 1;
-
-          if (isLast || !item.href) {
-            return (
-              <Text key={index} c="dimmed" size="sm">
-                {item.title}
-              </Text>
-            );
-          }
-
-          return (
-            <Anchor key={index} component={Link} to={item.href} size="sm">
-              {item.title}
-            </Anchor>
-          );
-        })}
-      </MantineBreadcrumbs>
-    );
-  }
-
-  // Si estamos en la raíz, no mostrar breadcrumbs
-  if (pathSegments.length === 0) {
-    return null;
-  }
-
-  if (loading && resolvedBreadcrumbs.length === 0) {
-    return (
-      <MantineBreadcrumbs
-        separator={<IconChevronRight size={14} stroke={1.5} />}
-        separatorMargin="xs"
-        mb="md"
-      >
-        <Skeleton height={16} width={80} />
-        <Skeleton height={16} width={100} />
-      </MantineBreadcrumbs>
-    );
-  }
-
+// Componente para renderizar breadcrumbs personalizados
+function CustomBreadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   return (
     <MantineBreadcrumbs
       separator={<IconChevronRight size={14} stroke={1.5} />}
       separatorMargin="xs"
       mb="md"
     >
-      {resolvedBreadcrumbs.map((item, index) => {
-        const isLast = index === resolvedBreadcrumbs.length - 1;
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1;
 
         if (isLast || !item.href) {
           return (
@@ -187,6 +92,100 @@ const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
       })}
     </MantineBreadcrumbs>
   );
+}
+
+// Componente para el estado de carga
+function LoadingBreadcrumbs() {
+  return (
+    <MantineBreadcrumbs
+      separator={<IconChevronRight size={14} stroke={1.5} />}
+      separatorMargin="xs"
+      mb="md"
+    >
+      <Skeleton height={16} width={80} />
+      <Skeleton height={16} width={100} />
+    </MantineBreadcrumbs>
+  );
+}
+
+// Función para resolver breadcrumbs automáticamente
+const buildAutomaticBreadcrumbs = async (
+  pathSegments: string[],
+  getClienteName: (id: string) => Promise<string>,
+  getEmpresaName: (id: string) => Promise<string>
+): Promise<BreadcrumbItem[]> => {
+  const breadcrumbItems: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/' }];
+
+  let currentPath = '';
+  for (let index = 0; index < pathSegments.length; index++) {
+    const segment = pathSegments[index];
+    const previousSegment = index > 0 ? pathSegments[index - 1] : null;
+    currentPath += `/${segment}`;
+
+    const title = await resolveSegmentTitle(
+      segment,
+      previousSegment,
+      getClienteName,
+      getEmpresaName
+    );
+
+    // El último item no debe tener href (está activo)
+    const isLast = index === pathSegments.length - 1;
+    breadcrumbItems.push({
+      title,
+      href: isLast ? undefined : currentPath,
+    });
+  }
+
+  return breadcrumbItems;
+};
+
+const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
+  const location = useLocation();
+  const { getClienteName, getEmpresaName } = useEntityNames();
+  const [resolvedBreadcrumbs, setResolvedBreadcrumbs] = useState<BreadcrumbItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Generar breadcrumbs automáticamente basado en la ruta actual
+  const pathSegments = useMemo(
+    () => location.pathname.split('/').filter(Boolean),
+    [location.pathname]
+  );
+
+  // Efecto para resolver nombres de entidades
+  useEffect(() => {
+    const resolveBreadcrumbs = async () => {
+      setLoading(true);
+      const breadcrumbItems = await buildAutomaticBreadcrumbs(
+        pathSegments,
+        getClienteName,
+        getEmpresaName
+      );
+      setResolvedBreadcrumbs(breadcrumbItems);
+      setLoading(false);
+    };
+
+    // Solo resolver breadcrumbs si no hay items personalizados y hay segmentos
+    if (!items && pathSegments.length > 0) {
+      resolveBreadcrumbs();
+    }
+  }, [location.pathname, getClienteName, getEmpresaName, pathSegments, items]);
+
+  // Si se proporcionan items personalizados, usarlos
+  if (items) {
+    return <CustomBreadcrumbs items={items} />;
+  }
+
+  // Si estamos en la raíz, no mostrar breadcrumbs
+  if (pathSegments.length === 0) {
+    return null;
+  }
+
+  if (loading && resolvedBreadcrumbs.length === 0) {
+    return <LoadingBreadcrumbs />;
+  }
+
+  return <CustomBreadcrumbs items={resolvedBreadcrumbs} />;
 };
 
 export default Breadcrumbs;
