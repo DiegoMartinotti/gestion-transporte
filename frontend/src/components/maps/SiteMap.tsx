@@ -14,6 +14,14 @@ import {
 } from '@mantine/core';
 import { IconMapPin, IconEye, IconRoute, IconCurrentLocation, IconMap } from '@tabler/icons-react';
 import { Site, Cliente } from '../../types';
+import { 
+  getMarkerIcon, 
+  createInfoWindowContent, 
+  getClienteName, 
+  filterSites, 
+  isValidCoordinates, 
+  adjustMapBounds 
+} from './SiteMapHelpers';
 
 interface SiteMapProps {
   sites: Site[];
@@ -25,69 +33,191 @@ interface SiteMapProps {
   clientes?: Cliente[];
 }
 
+interface GoogleMap {
+  setCenter: (position: { lat: number; lng: number }) => void;
+  setZoom: (zoom: number) => void;
+  fitBounds: (bounds: GoogleLatLngBounds, padding?: { top: number; right: number; bottom: number; left: number }) => void;
+}
+
+interface GoogleMarker {
+  setMap: (map: GoogleMap | null) => void;
+  getPosition: () => { lat: () => number; lng: () => number };
+  addListener: (event: string, callback: () => void) => void;
+}
+
+interface GoogleInfoWindow {
+  setContent: (content: string) => void;
+  open: (map: GoogleMap, marker: GoogleMarker) => void;
+}
+
+interface GoogleLatLngBounds {
+  extend: (position: { lat: number; lng: number }) => void;
+}
+
 declare global {
   interface Window {
-    google: any;
+    google: {
+      maps: {
+        Map: new (element: HTMLElement, options: unknown) => GoogleMap;
+        Marker: new (options: unknown) => GoogleMarker;
+        InfoWindow: new () => GoogleInfoWindow;
+        LatLngBounds: new () => GoogleLatLngBounds;
+        Size: new (width: number, height: number) => { width: number; height: number };
+        MapTypeId: { ROADMAP: string };
+      };
+    };
     initMap: () => void;
   }
 }
 
-// Constantes para literales duplicados
-const CLIENT_NOT_FOUND_TEXT = 'Cliente no encontrado';
-const NO_CLIENT_TEXT = 'Sin cliente';
 
-// Función helper para validar coordenadas
-const hasValidCoordinates = (site: Site): boolean => {
-  return !(!site.coordenadas || site.coordenadas.lat === 0 || site.coordenadas.lng === 0);
+// Componente para los filtros del mapa
+const SiteMapFilters = ({ 
+  showFilters, clientes, selectedCliente, setSelectedCliente, 
+  showInactiveSites, setShowInactiveSites, filteredSites, handleCenterMap 
+}: {
+  showFilters: boolean;
+  clientes: Cliente[];
+  selectedCliente: string;
+  setSelectedCliente: (value: string) => void;
+  showInactiveSites: boolean;
+  setShowInactiveSites: (value: boolean) => void;
+  filteredSites: Site[];
+  handleCenterMap: () => void;
+}) => {
+  if (!showFilters) return null;
+
+  return (
+    <Paper p="md" withBorder>
+      <Group justify="space-between" align="end">
+        <Group>
+          <Select
+            label="Cliente"
+            placeholder="Todos los clientes"
+            value={selectedCliente}
+            onChange={(value) => setSelectedCliente(value || '')}
+            data={[
+              { value: '', label: 'Todos los clientes' },
+              ...clientes.map((cliente) => ({
+                value: cliente._id,
+                label: cliente.nombre,
+              })),
+            ]}
+            clearable
+            style={{ minWidth: 200 }}
+          />
+          <Box>
+            <Switch
+              label="Mostrar sites inactivos"
+              checked={showInactiveSites}
+              onChange={(event) => setShowInactiveSites(event.currentTarget.checked)}
+            />
+          </Box>
+        </Group>
+
+        <Group>
+          <Badge variant="light" color="blue">
+            {filteredSites.length} sites
+          </Badge>
+          <Tooltip label="Centrar mapa">
+            <ActionIcon
+              variant="light"
+              onClick={handleCenterMap}
+              disabled={filteredSites.length === 0}
+            >
+              <IconCurrentLocation size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      </Group>
+    </Paper>
+  );
 };
 
-// Función helper para obtener nombre del cliente
-const getClienteName = (site: Site, clientes: Cliente[]): string => {
-  if (typeof site.cliente === 'string') {
-    return clientes.find((c) => c._id === site.cliente)?.nombre || CLIENT_NOT_FOUND_TEXT;
-  }
-  return site.cliente?.nombre || NO_CLIENT_TEXT;
+// Componente para la información del site seleccionado
+const SelectedSiteCard = ({ 
+  selectedSite, clientes, onSiteEdit 
+}: {
+  selectedSite: Site | undefined;
+  clientes: Cliente[];
+  onSiteEdit?: (site: Site) => void;
+}) => {
+  if (!selectedSite) return null;
+
+  const handleOpenInMaps = () => {
+    if (selectedSite.coordenadas) {
+      const url = `https://maps.google.com/?q=${selectedSite.coordenadas.lat},${selectedSite.coordenadas.lng}`;
+      window.open(url, '_blank');
+    }
+  };
+
+  return (
+    <Card withBorder>
+      <Group justify="space-between" align="start">
+        <Stack gap="xs" style={{ flex: 1 }}>
+          <Group>
+            <Text fw={600} size="lg">
+              {selectedSite.nombre}
+            </Text>
+            <Badge color={selectedSite.activo === false ? 'red' : 'green'} variant="light">
+              {selectedSite.activo === false ? 'Inactivo' : 'Activo'}
+            </Badge>
+          </Group>
+
+          <Text size="sm" c="dimmed">
+            <strong>Cliente:</strong> {getClienteName(selectedSite, clientes)}
+          </Text>
+
+          <Text size="sm">
+            {selectedSite.direccion}, {selectedSite.localidad || selectedSite.ciudad},{' '}
+            {selectedSite.provincia}
+          </Text>
+
+          <Text size="xs" c="dimmed">
+            Coordenadas: {selectedSite.coordenadas?.lat?.toFixed(6) || '0'},{' '}
+            {selectedSite.coordenadas?.lng?.toFixed(6) || '0'}
+          </Text>
+        </Stack>
+
+        <Group>
+          <Tooltip label="Ver detalles">
+            <ActionIcon variant="light" color="blue">
+              <IconEye size={16} />
+            </ActionIcon>
+          </Tooltip>
+          {onSiteEdit && (
+            <Tooltip label="Editar site">
+              <ActionIcon
+                variant="light"
+                color="orange"
+                onClick={() => onSiteEdit(selectedSite)}
+              >
+                <IconMapPin size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          <Tooltip label="Ver en Google Maps">
+            <ActionIcon
+              variant="light"
+              color="green"
+              onClick={handleOpenInMaps}
+            >
+              <IconRoute size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      </Group>
+    </Card>
+  );
 };
 
-// Función helper para crear contenido del infoWindow
-const createInfoWindowContent = (site: Site, clientes: Cliente[]): string => {
-  const clienteNombre = getClienteName(site, clientes);
-  const lat = site.coordenadas?.lat?.toFixed(6) || '0';
-  const lng = site.coordenadas?.lng?.toFixed(6) || '0';
-
-  return `
-    <div style="max-width: 300px; padding: 8px;">
-      <h3 style="margin: 0 0 8px 0; color: #228be6;">${site.nombre}</h3>
-      <p style="margin: 4px 0; color: #666;"><strong>Cliente:</strong> ${clienteNombre}</p>
-      <p style="margin: 4px 0; color: #666;"><strong>Dirección:</strong> ${site.direccion}</p>
-      <p style="margin: 4px 0; color: #666;"><strong>Ciudad:</strong> ${site.localidad || site.ciudad || 'N/A'}</p>
-      <p style="margin: 4px 0; color: #666;"><strong>Provincia:</strong> ${site.provincia}</p>
-      <p style="margin: 4px 0; color: #666;">
-        <strong>Estado:</strong> 
-        <span style="color: ${site.activo === false ? '#dc3545' : '#28a745'};">
-          ${site.activo === false ? 'Inactivo' : 'Activo'}
-        </span>
-      </p>
-      <p style="margin: 8px 0 4px 0; font-size: 12px; color: #999;">
-        Lat: ${lat}, Lng: ${lng}
-      </p>
-    </div>
-  `;
-};
-
-export default function SiteMap({
-  sites,
-  selectedSite,
-  onSiteSelect,
-  onSiteEdit,
-  height = 500,
-  showFilters = true,
-  clientes = [],
-}: SiteMapProps) {
+// Hook personalizado para el manejo del mapa de sites
+const useSiteMapLogic = (props: SiteMapProps) => {
+  const { sites } = props;
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<any>(null);
-  const [markers, setMarkers] = useState<any[]>([]);
-  const [infoWindow, setInfoWindow] = useState<any>(null);
+  const [map, setMap] = useState<GoogleMap | null>(null);
+  const [markers, setMarkers] = useState<GoogleMarker[]>([]);
+  const [infoWindow, setInfoWindow] = useState<GoogleInfoWindow | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [filteredSites, setFilteredSites] = useState(sites);
   const [selectedCliente, setSelectedCliente] = useState<string>('');
@@ -95,20 +225,7 @@ export default function SiteMap({
 
   // Filtrar sites
   useEffect(() => {
-    let filtered = sites;
-
-    if (selectedCliente) {
-      filtered = filtered.filter((site) =>
-        typeof site.cliente === 'string'
-          ? site.cliente === selectedCliente
-          : site.cliente._id === selectedCliente
-      );
-    }
-
-    if (!showInactiveSites) {
-      filtered = filtered.filter((site) => site.activo !== false);
-    }
-
+    const filtered = filterSites(sites, selectedCliente, showInactiveSites);
     setFilteredSites(filtered);
   }, [sites, selectedCliente, showInactiveSites]);
 
@@ -135,13 +252,38 @@ export default function SiteMap({
     loadGoogleMaps();
   }, []);
 
+  const handleCenterMap = () => {
+    if (!map || filteredSites.length === 0) return;
+    adjustMapBounds(map, filteredSites, window);
+  };
+
+  return {
+    mapRef, map, setMap, markers, setMarkers, infoWindow, setInfoWindow,
+    mapLoaded, filteredSites, selectedCliente, setSelectedCliente,
+    showInactiveSites, setShowInactiveSites, handleCenterMap
+  };
+};
+
+// Hook para manejo de efectos del mapa
+const useSiteMapEffects = (props: {
+  mapLoaded: boolean; mapRef: React.RefObject<HTMLDivElement>; map: GoogleMap | null;
+  setMap: (map: GoogleMap) => void; setInfoWindow: (infoWindow: GoogleInfoWindow) => void;
+  filteredSites: Site[]; markers: GoogleMarker[]; infoWindow: GoogleInfoWindow | null;
+  onSiteSelect: ((site: Site) => void) | undefined; clientes: Cliente[];
+  setMarkers: (markers: GoogleMarker[]) => void; selectedSite: Site | undefined;
+}) => {
+  const { 
+    mapLoaded, mapRef, map, setMap, setInfoWindow, filteredSites, markers,
+    infoWindow, onSiteSelect, clientes, setMarkers, selectedSite
+  } = props;
+
   // Inicializar mapa
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || map) return;
 
     const mapOptions = {
       zoom: 6,
-      center: { lat: -34.6037, lng: -58.3816 }, // Buenos Aires
+      center: { lat: -34.6037, lng: -58.3816 },
       mapTypeId: window.google.maps.MapTypeId.ROADMAP,
       zoomControl: true,
       mapTypeControl: true,
@@ -156,59 +298,36 @@ export default function SiteMap({
 
     setMap(newMap);
     setInfoWindow(newInfoWindow);
-  }, [mapLoaded, map]);
+  }, [mapLoaded, map, mapRef, setMap, setInfoWindow]);
 
-  // Actualizar marcadores cuando cambian los sites
+  // Actualizar marcadores
   useEffect(() => {
     if (!map || !window.google) return;
 
-    // Limpiar marcadores existentes
     markers.forEach((marker) => marker.setMap(null));
-
-    const newMarkers: any[] = [];
+    const newMarkers: GoogleMarker[] = [];
     const bounds = new window.google.maps.LatLngBounds();
 
     filteredSites.forEach((site) => {
-      if (!hasValidCoordinates(site)) {
-        return;
-      }
-
-      const position = {
-        lat: site.coordenadas!.lat,
-        lng: site.coordenadas!.lng,
-      };
-
+      if (!isValidCoordinates(site) || !site.coordenadas) return;
+      
+      const position = { lat: site.coordenadas.lat, lng: site.coordenadas.lng };
       const marker = new window.google.maps.Marker({
         position,
         map,
         title: site.nombre,
         icon: {
-          url:
-            site.activo === false
-              ? 'data:image/svg+xml;charset=UTF-8,' +
-                encodeURIComponent(`
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#dc3545"/>
-                <circle cx="12" cy="9" r="2.5" fill="white"/>
-              </svg>
-            `)
-              : 'data:image/svg+xml;charset=UTF-8,' +
-                encodeURIComponent(`
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#228be6"/>
-                <circle cx="12" cy="9" r="2.5" fill="white"/>
-              </svg>
-            `),
+          url: getMarkerIcon(site.activo !== false),
           scaledSize: new window.google.maps.Size(32, 32),
         },
       });
 
       const infoContent = createInfoWindowContent(site, clientes);
-
       marker.addListener('click', () => {
-        infoWindow.setContent(infoContent);
-        infoWindow.open(map, marker);
-
+        if (infoWindow) {
+          infoWindow.setContent(infoContent);
+          infoWindow.open(map, marker);
+        }
         if (onSiteSelect) {
           onSiteSelect(site);
         }
@@ -219,19 +338,8 @@ export default function SiteMap({
     });
 
     setMarkers(newMarkers);
-
-    // Ajustar vista para mostrar todos los marcadores
-    if (newMarkers.length > 0) {
-      if (newMarkers.length === 1) {
-        map.setCenter(newMarkers[0].getPosition());
-        map.setZoom(15);
-      } else {
-        map.fitBounds(bounds);
-        const padding = { top: 50, right: 50, bottom: 50, left: 50 };
-        map.fitBounds(bounds, padding);
-      }
-    }
-  }, [map, filteredSites, infoWindow, onSiteSelect, clientes, markers]);
+    adjustMapBounds(map, filteredSites, window);
+  }, [map, filteredSites, infoWindow, onSiteSelect, clientes, markers, setMarkers]);
 
   // Destacar site seleccionado
   useEffect(() => {
@@ -245,7 +353,7 @@ export default function SiteMap({
       );
     });
 
-    if (selectedMarker) {
+    if (selectedMarker && infoWindow) {
       map.setCenter(selectedMarker.getPosition());
       map.setZoom(15);
 
@@ -254,27 +362,20 @@ export default function SiteMap({
       infoWindow.open(map, selectedMarker);
     }
   }, [selectedSite, map, markers, infoWindow, clientes]);
+};
 
-  const handleCenterMap = () => {
-    if (!map || filteredSites.length === 0) return;
+export default function SiteMap(props: SiteMapProps) {
+  const { selectedSite, onSiteSelect, onSiteEdit, height = 500, showFilters = true, clientes = [] } = props;
+  const {
+    mapRef, map, setMap, markers, setMarkers, infoWindow, setInfoWindow,
+    mapLoaded, filteredSites, selectedCliente, setSelectedCliente,
+    showInactiveSites, setShowInactiveSites, handleCenterMap
+  } = useSiteMapLogic(props);
 
-    const bounds = new window.google.maps.LatLngBounds();
-    filteredSites.forEach((site) => {
-      if (site.coordenadas && site.coordenadas.lat !== 0 && site.coordenadas.lng !== 0) {
-        bounds.extend({ lat: site.coordenadas.lat, lng: site.coordenadas.lng });
-      }
-    });
-
-    if (filteredSites.length === 1) {
-      const site = filteredSites[0];
-      if (site.coordenadas) {
-        map.setCenter({ lat: site.coordenadas.lat, lng: site.coordenadas.lng });
-        map.setZoom(15);
-      }
-    } else {
-      map.fitBounds(bounds);
-    }
-  };
+  useSiteMapEffects({
+    mapLoaded, mapRef, map, setMap, setInfoWindow, filteredSites, markers,
+    infoWindow, onSiteSelect, clientes, setMarkers, selectedSite
+  });
 
   if (!mapLoaded) {
     return (
@@ -289,54 +390,17 @@ export default function SiteMap({
 
   return (
     <Stack gap="md">
-      {/* Filtros */}
-      {showFilters && (
-        <Paper p="md" withBorder>
-          <Group justify="space-between" align="end">
-            <Group>
-              <Select
-                label="Cliente"
-                placeholder="Todos los clientes"
-                value={selectedCliente}
-                onChange={(value) => setSelectedCliente(value || '')}
-                data={[
-                  { value: '', label: 'Todos los clientes' },
-                  ...clientes.map((cliente) => ({
-                    value: cliente._id,
-                    label: cliente.nombre,
-                  })),
-                ]}
-                clearable
-                style={{ minWidth: 200 }}
-              />
-              <Box>
-                <Switch
-                  label="Mostrar sites inactivos"
-                  checked={showInactiveSites}
-                  onChange={(event) => setShowInactiveSites(event.currentTarget.checked)}
-                />
-              </Box>
-            </Group>
+      <SiteMapFilters
+        showFilters={showFilters}
+        clientes={clientes}
+        selectedCliente={selectedCliente}
+        setSelectedCliente={setSelectedCliente}
+        showInactiveSites={showInactiveSites}
+        setShowInactiveSites={setShowInactiveSites}
+        filteredSites={filteredSites}
+        handleCenterMap={handleCenterMap}
+      />
 
-            <Group>
-              <Badge variant="light" color="blue">
-                {filteredSites.length} sites
-              </Badge>
-              <Tooltip label="Centrar mapa">
-                <ActionIcon
-                  variant="light"
-                  onClick={handleCenterMap}
-                  disabled={filteredSites.length === 0}
-                >
-                  <IconCurrentLocation size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-          </Group>
-        </Paper>
-      )}
-
-      {/* Mapa */}
       <Paper withBorder>
         <div
           ref={mapRef}
@@ -348,70 +412,11 @@ export default function SiteMap({
         />
       </Paper>
 
-      {/* Información del site seleccionado */}
-      {selectedSite && (
-        <Card withBorder>
-          <Group justify="space-between" align="start">
-            <Stack gap="xs" style={{ flex: 1 }}>
-              <Group>
-                <Text fw={600} size="lg">
-                  {selectedSite.nombre}
-                </Text>
-                <Badge color={selectedSite.activo === false ? 'red' : 'green'} variant="light">
-                  {selectedSite.activo === false ? 'Inactivo' : 'Activo'}
-                </Badge>
-              </Group>
-
-              <Text size="sm" c="dimmed">
-                <strong>Cliente:</strong> {getClienteName(selectedSite, clientes)}
-              </Text>
-
-              <Text size="sm">
-                {selectedSite.direccion}, {selectedSite.localidad || selectedSite.ciudad},{' '}
-                {selectedSite.provincia}
-              </Text>
-
-              <Text size="xs" c="dimmed">
-                Coordenadas: {selectedSite.coordenadas?.lat?.toFixed(6) || '0'},{' '}
-                {selectedSite.coordenadas?.lng?.toFixed(6) || '0'}
-              </Text>
-            </Stack>
-
-            <Group>
-              <Tooltip label="Ver detalles">
-                <ActionIcon variant="light" color="blue">
-                  <IconEye size={16} />
-                </ActionIcon>
-              </Tooltip>
-              {onSiteEdit && (
-                <Tooltip label="Editar site">
-                  <ActionIcon
-                    variant="light"
-                    color="orange"
-                    onClick={() => onSiteEdit(selectedSite)}
-                  >
-                    <IconMapPin size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
-              <Tooltip label="Ver en Google Maps">
-                <ActionIcon
-                  variant="light"
-                  color="green"
-                  onClick={() => {
-                    if (selectedSite.coordenadas) {
-                      const url = `https://maps.google.com/?q=${selectedSite.coordenadas.lat},${selectedSite.coordenadas.lng}`;
-                      window.open(url, '_blank');
-                    }
-                  }}
-                >
-                  <IconRoute size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Group>
-          </Group>
-        </Card>
-      )}
+      <SelectedSiteCard
+        selectedSite={selectedSite}
+        clientes={clientes}
+        onSiteEdit={onSiteEdit}
+      />
     </Stack>
   );
 }
