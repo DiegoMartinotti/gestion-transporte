@@ -1,0 +1,437 @@
+import React from 'react';
+import {
+  Card,
+  Group,
+  Stack,
+  Title,
+  Text,
+  Badge,
+  Table,
+  Button,
+  ActionIcon,
+  Divider,
+  Grid,
+  Tooltip,
+  Timeline,
+  ThemeIcon,
+} from '@mantine/core';
+import {
+  IconCalendar,
+  IconUser,
+  IconFileText,
+  IconCurrencyDollar,
+  IconMapPin,
+  IconTruck,
+  IconEdit,
+  IconTrash,
+  IconPlus,
+  IconEye,
+  IconDownload,
+  IconPrinter,
+  IconClock,
+  IconCheck,
+} from '@tabler/icons-react';
+import { EstadoPartidaIndicator } from '../indicators/EstadoPartidaIndicator';
+import type { OrdenCompra } from '../../types/ordenCompra';
+import type { Viaje } from '../../types/viaje';
+import type { Cliente } from '../../types/cliente';
+import { getOrigenText, getDestinoText, normalizeEstadoPartida } from '../../utils/viajeHelpers';
+
+interface OrdenCompraHeaderProps {
+  orden: OrdenCompra;
+  cliente: Cliente | null;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  actionLoading: boolean;
+}
+
+// Componente para los botones de acción
+function HeaderActions({
+  onEdit,
+  onDelete,
+  actionLoading,
+}: {
+  onEdit?: () => void;
+  onDelete?: () => void;
+  actionLoading: boolean;
+}) {
+  const handleDelete = () => {
+    if (onDelete && !actionLoading) {
+      onDelete();
+    }
+  };
+
+  return (
+    <Group>
+      {onEdit && (
+        <Tooltip label="Editar orden">
+          <ActionIcon
+            variant="light"
+            color="blue"
+            size="lg"
+            onClick={onEdit}
+            loading={actionLoading}
+          >
+            <IconEdit size={20} />
+          </ActionIcon>
+        </Tooltip>
+      )}
+
+      {onDelete && (
+        <Tooltip label="Eliminar orden">
+          <ActionIcon
+            variant="light"
+            color="red"
+            size="lg"
+            onClick={handleDelete}
+            loading={actionLoading}
+          >
+            <IconTrash size={20} />
+          </ActionIcon>
+        </Tooltip>
+      )}
+
+      <Tooltip label="Ver orden">
+        <ActionIcon variant="light" color="green" size="lg">
+          <IconEye size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Descargar PDF">
+        <ActionIcon variant="light" color="indigo" size="lg">
+          <IconDownload size={20} />
+        </ActionIcon>
+      </Tooltip>
+
+      <Tooltip label="Imprimir">
+        <ActionIcon variant="light" color="gray" size="lg">
+          <IconPrinter size={20} />
+        </ActionIcon>
+      </Tooltip>
+    </Group>
+  );
+}
+
+export function OrdenCompraHeader({
+  orden,
+  cliente,
+  onEdit,
+  onDelete,
+  actionLoading,
+}: OrdenCompraHeaderProps) {
+  return (
+    <Card padding="lg" withBorder>
+      <Group justify="space-between" mb="md">
+        <Title order={2}>Orden de Compra #{orden.numero}</Title>
+        <HeaderActions onEdit={onEdit} onDelete={onDelete} actionLoading={actionLoading} />
+      </Group>
+
+      <Grid>
+        <Grid.Col span={6}>
+          <Stack gap="xs">
+            <Group gap="xs">
+              <IconUser size={16} />
+              <Text fw={500} size="sm">
+                Cliente
+              </Text>
+            </Group>
+            <Text size="lg" fw={600}>
+              {cliente ? cliente.razonSocial : 'Cliente no encontrado'}
+            </Text>
+            {cliente && (
+              <Text size="sm" c="dimmed">
+                CUIT: {cliente.cuit}
+              </Text>
+            )}
+          </Stack>
+        </Grid.Col>
+
+        <Grid.Col span={6}>
+          <Stack gap="xs">
+            <Group gap="xs">
+              <IconCalendar size={16} />
+              <Text fw={500} size="sm">
+                Fecha
+              </Text>
+            </Group>
+            <Text size="lg">{new Date(orden.fecha).toLocaleDateString('es-AR')}</Text>
+
+            <Badge color={orden.estado === 'activa' ? 'green' : 'gray'} variant="light" size="lg">
+              {orden.estado === 'activa' ? 'Activa' : 'Inactiva'}
+            </Badge>
+          </Stack>
+        </Grid.Col>
+      </Grid>
+
+      <Divider my="md" />
+
+      {orden.observaciones && (
+        <Stack gap="xs">
+          <Group gap="xs">
+            <IconFileText size={16} />
+            <Text fw={500} size="sm">
+              Observaciones
+            </Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            {orden.observaciones}
+          </Text>
+        </Stack>
+      )}
+    </Card>
+  );
+}
+
+interface OrdenCompraStatsProps {
+  orden: OrdenCompra;
+  viajes: Map<string, Viaje>;
+}
+
+export function OrdenCompraStats({ orden, viajes }: OrdenCompraStatsProps) {
+  // Calcular estadísticas
+  const totalPartidas = orden.viajes.length;
+  const totalImporte = orden.viajes.reduce((sum, item) => sum + (item.importe || 0), 0);
+
+  const estadosPartidas = orden.viajes.reduce(
+    (acc, item) => {
+      const viaje = viajes.get(item.viaje);
+      if (viaje) {
+        const estadoNormalizado = normalizeEstadoPartida(viaje.estado);
+        acc[estadoNormalizado] = (acc[estadoNormalizado] || 0) + 1;
+      }
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  return (
+    <Card padding="lg" withBorder>
+      <Title order={3} mb="md">
+        Resumen
+      </Title>
+
+      <Grid>
+        <Grid.Col span={3}>
+          <Stack gap="xs" align="center">
+            <ThemeIcon size="xl" color="blue" variant="light">
+              <IconTruck size={24} />
+            </ThemeIcon>
+            <Text fw={700} size="xl">
+              {totalPartidas}
+            </Text>
+            <Text size="sm" c="dimmed" ta="center">
+              Total Partidas
+            </Text>
+          </Stack>
+        </Grid.Col>
+
+        <Grid.Col span={3}>
+          <Stack gap="xs" align="center">
+            <ThemeIcon size="xl" color="green" variant="light">
+              <IconCurrencyDollar size={24} />
+            </ThemeIcon>
+            <Text fw={700} size="xl">
+              ${totalImporte.toLocaleString('es-AR')}
+            </Text>
+            <Text size="sm" c="dimmed" ta="center">
+              Importe Total
+            </Text>
+          </Stack>
+        </Grid.Col>
+
+        <Grid.Col span={3}>
+          <Stack gap="xs" align="center">
+            <ThemeIcon size="xl" color="yellow" variant="light">
+              <IconClock size={24} />
+            </ThemeIcon>
+            <Text fw={700} size="xl">
+              {estadosPartidas.pendiente || 0}
+            </Text>
+            <Text size="sm" c="dimmed" ta="center">
+              Pendientes
+            </Text>
+          </Stack>
+        </Grid.Col>
+
+        <Grid.Col span={3}>
+          <Stack gap="xs" align="center">
+            <ThemeIcon size="xl" color="green" variant="light">
+              <IconCheck size={24} />
+            </ThemeIcon>
+            <Text fw={700} size="xl">
+              {estadosPartidas.completado || 0}
+            </Text>
+            <Text size="sm" c="dimmed" ta="center">
+              Completadas
+            </Text>
+          </Stack>
+        </Grid.Col>
+      </Grid>
+    </Card>
+  );
+}
+
+interface ViajesTableProps {
+  orden: OrdenCompra;
+  viajes: Map<string, Viaje>;
+  onViajeClick?: (viajeId: string) => void;
+}
+
+// Componente para una fila de la tabla de viajes
+function ViajeTableRow({
+  item,
+  viaje,
+  handleViajeClick,
+}: {
+  item: { viaje: string; importe?: number; observaciones?: string };
+  viaje: Viaje | undefined;
+  handleViajeClick: (viajeId: string) => void;
+}) {
+  return (
+    <Table.Tr
+      style={{ cursor: viaje ? 'pointer' : 'default' }}
+      onClick={() => viaje && handleViajeClick(viaje._id)}
+    >
+      <Table.Td>
+        <Group gap="xs">
+          <IconTruck size={16} />
+          <Text size="sm" fw={500}>
+            {viaje ? `#${viaje.numero || viaje._id.slice(-6)}` : 'Cargando...'}
+          </Text>
+        </Group>
+      </Table.Td>
+
+      <Table.Td>
+        <Group gap="xs">
+          <IconMapPin size={14} />
+          <Text size="sm">{viaje ? getOrigenText(viaje) : '-'}</Text>
+        </Group>
+      </Table.Td>
+
+      <Table.Td>
+        <Group gap="xs">
+          <IconMapPin size={14} />
+          <Text size="sm">{viaje ? getDestinoText(viaje) : '-'}</Text>
+        </Group>
+      </Table.Td>
+
+      <Table.Td>{viaje && <EstadoPartidaIndicator estado={viaje.estado} size="sm" />}</Table.Td>
+
+      <Table.Td>
+        <Text fw={500} size="sm">
+          ${(item.importe || 0).toLocaleString('es-AR')}
+        </Text>
+      </Table.Td>
+
+      <Table.Td>
+        <Text size="sm" c="dimmed" lineClamp={1}>
+          {item.observaciones || '-'}
+        </Text>
+      </Table.Td>
+
+      <Table.Td>
+        <Group gap="xs">
+          <Tooltip label="Ver detalle">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="blue"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (viaje) {
+                  handleViajeClick(viaje._id);
+                }
+              }}
+            >
+              <IconEye size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      </Table.Td>
+    </Table.Tr>
+  );
+}
+
+export function ViajesTable({ orden, viajes, onViajeClick }: ViajesTableProps) {
+  const handleViajeClick = (viajeId: string) => {
+    if (onViajeClick) {
+      onViajeClick(viajeId);
+    }
+  };
+
+  return (
+    <Card padding="lg" withBorder>
+      <Group justify="space-between" mb="md">
+        <Title order={3}>Partidas de Viajes</Title>
+        <Button leftSection={<IconPlus size={16} />} size="sm">
+          Agregar Partida
+        </Button>
+      </Group>
+
+      <Table>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Viaje</Table.Th>
+            <Table.Th>Origen</Table.Th>
+            <Table.Th>Destino</Table.Th>
+            <Table.Th>Estado</Table.Th>
+            <Table.Th>Importe</Table.Th>
+            <Table.Th>Observaciones</Table.Th>
+            <Table.Th width={100}>Acciones</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {orden.viajes.map((item, index) => {
+            const viaje = viajes.get(item.viaje);
+            return (
+              <ViajeTableRow
+                key={index}
+                item={item}
+                viaje={viaje}
+                handleViajeClick={handleViajeClick}
+              />
+            );
+          })}
+        </Table.Tbody>
+      </Table>
+    </Card>
+  );
+}
+
+interface TimelineEventsProps {
+  orden: OrdenCompra;
+}
+
+export function TimelineEvents({ orden }: TimelineEventsProps) {
+  const events = [
+    {
+      title: 'Orden creada',
+      description: `Orden de compra #${orden.numero} creada`,
+      time: new Date(orden.fecha),
+      icon: <IconPlus size={16} />,
+      color: 'blue',
+    },
+    // Aquí se pueden agregar más eventos según el historial
+  ];
+
+  return (
+    <Card padding="lg" withBorder>
+      <Title order={3} mb="md">
+        Historial
+      </Title>
+
+      <Timeline active={events.length - 1} bulletSize={24} lineWidth={2}>
+        {events.map((event, index) => (
+          <Timeline.Item key={index} bullet={event.icon} title={event.title} color={event.color}>
+            <Text size="xs" mt={4}>
+              {event.time.toLocaleString('es-AR')}
+            </Text>
+            <Text size="sm" c="dimmed">
+              {event.description}
+            </Text>
+          </Timeline.Item>
+        ))}
+      </Timeline>
+    </Card>
+  );
+}
