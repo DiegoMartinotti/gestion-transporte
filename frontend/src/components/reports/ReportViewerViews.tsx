@@ -7,9 +7,9 @@ import type { ReportData, ReportDefinition, TableState } from '../../types/repor
 interface TableViewProps {
   tableState: TableState;
   processedTableData: {
-    rows: any[][];
+    rows: (string | number)[][];
     totalPages: number;
-    visibleRows: any[][];
+    visibleRows: (string | number)[][];
   };
   data: ReportData;
   onSearch: (term: string) => void;
@@ -58,7 +58,7 @@ export const TableView: React.FC<TableViewProps> = ({
 
 interface ChartViewContainerProps {
   reportDefinition: ReportDefinition;
-  chartData: Record<string, any>[];
+  chartData: Record<string, string | number>[];
   selectedChart: number;
   onChartChange: (index: number) => void;
 }

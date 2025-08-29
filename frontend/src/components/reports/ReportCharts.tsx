@@ -34,7 +34,7 @@ const CHART_COLORS = [
 
 interface ReportChartProps {
   chartConfig: ChartConfig;
-  data: Record<string, any>[];
+  data: Record<string, string | number>[];
 }
 
 const ReportChart: React.FC<ReportChartProps> = ({ chartConfig, data }) => {
@@ -162,7 +162,7 @@ export const ChartSelector: React.FC<ChartSelectorProps> = ({
 
 interface ChartViewProps {
   chartConfigs: ChartConfig[];
-  data: Record<string, any>[];
+  data: Record<string, string | number>[];
   selectedChart: number;
 }
 
