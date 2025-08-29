@@ -1,35 +1,18 @@
-import {
-  Alert,
-  Stack,
-  Group,
-  Text,
-  Badge,
-  ActionIcon,
-  Card,
-  Timeline,
-  Button,
-  Modal,
-  Divider,
-  Box,
-  Progress,
-  Tooltip,
-} from '@mantine/core';
+import { Alert, Text } from '@mantine/core';
 import {
   IconAlertTriangle,
   IconCalendar,
   IconX,
   IconCheck,
-  IconEye,
-  IconEdit,
   IconTruck,
   IconUser,
-  IconBell,
-  IconBellOff,
 } from '@tabler/icons-react';
-import { format, differenceInDays, parseISO, isValid } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { notifications } from '@mantine/notifications';
+import { differenceInDays, parseISO, isValid } from 'date-fns';
+import { useState } from 'react';
+import { useDocumentExpiration } from './hooks/useDocumentExpiration';
+import { DocumentModal } from './components/DocumentModal';
+import { DocumentDetailedView } from './components/DocumentDetailedView';
+import { CompactDocumentView } from './components/CompactDocumentView';
 
 interface DocumentoVencimiento {
   id: string;
@@ -223,186 +206,7 @@ const getEntidadIcon = (entidad: DocumentoVencimiento['entidad']) => {
   return entidad === 'vehiculo' ? <IconTruck size={16} /> : <IconUser size={16} />;
 };
 
-// Componente auxiliar para alertas de estado
-const DocumentAlert: React.FC<{
-  count: number;
-  icon: React.ReactNode;
-  color: string;
-  messageKey: 'vencidos' | 'proximos' | 'vigente';
-}> = ({ count, icon, color, messageKey }) => {
-  const messages = {
-    vencidos: `${count} documento${count > 1 ? 's' : ''} vencido${count > 1 ? 's' : ''}`,
-    proximos: `${count} documento${count > 1 ? 's' : ''} próximo${count > 1 ? 's' : ''} a vencer`,
-    vigente: 'Toda la documentación está vigente',
-  };
-
-  return (
-    <Alert icon={icon} color={color} variant="light">
-      <Text size="sm" fw={500}>
-        {messages[messageKey]}
-      </Text>
-    </Alert>
-  );
-};
-
-// Componente auxiliar para botones de acción
-const CompactActions: React.FC<{
-  alertasHabilitadas: boolean;
-  setAlertasHabilitadas: (value: boolean) => void;
-  setDetailModalOpened: (value: boolean) => void;
-}> = ({ alertasHabilitadas, setAlertasHabilitadas, setDetailModalOpened }) => (
-  <Group gap="xs">
-    <Tooltip label={alertasHabilitadas ? 'Deshabilitar alertas' : 'Habilitar alertas'}>
-      <ActionIcon
-        variant="light"
-        color={alertasHabilitadas ? 'blue' : 'gray'}
-        onClick={() => setAlertasHabilitadas(!alertasHabilitadas)}
-      >
-        {alertasHabilitadas ? <IconBell size={16} /> : <IconBellOff size={16} />}
-      </ActionIcon>
-    </Tooltip>
-    <Button
-      variant="light"
-      size="xs"
-      leftSection={<IconEye size={14} />}
-      onClick={() => setDetailModalOpened(true)}
-    >
-      Ver Detalle
-    </Button>
-  </Group>
-);
-
-// Componente simplificado para vista compacta
-const CompactDocumentView: React.FC<{
-  vencidos: DocumentoVencimiento[];
-  proximos: DocumentoVencimiento[];
-  alertasHabilitadas: boolean;
-  setAlertasHabilitadas: (value: boolean) => void;
-  setDetailModalOpened: (value: boolean) => void;
-}> = ({ vencidos, proximos, alertasHabilitadas, setAlertasHabilitadas, setDetailModalOpened }) => {
-  const hasExpired = vencidos.length > 0;
-  const hasUpcoming = proximos.length > 0;
-  const allCurrent = !hasExpired && !hasUpcoming;
-
-  return (
-    <Card withBorder>
-      <Group justify="space-between" mb="md">
-        <Group>
-          <IconCalendar size={18} />
-          <Text fw={500}>Estado de Documentación</Text>
-        </Group>
-        <CompactActions
-          alertasHabilitadas={alertasHabilitadas}
-          setAlertasHabilitadas={setAlertasHabilitadas}
-          setDetailModalOpened={setDetailModalOpened}
-        />
-      </Group>
-
-      <Stack gap="xs">
-        {hasExpired && (
-          <DocumentAlert
-            count={vencidos.length}
-            icon={<IconX />}
-            color="red"
-            messageKey="vencidos"
-          />
-        )}
-        {hasUpcoming && (
-          <DocumentAlert
-            count={proximos.length}
-            icon={<IconAlertTriangle />}
-            color="yellow"
-            messageKey="proximos"
-          />
-        )}
-        {allCurrent && (
-          <DocumentAlert count={0} icon={<IconCheck />} color="green" messageKey="vigente" />
-        )}
-      </Stack>
-    </Card>
-  );
-};
-
 // Hook personalizado para la lógica de documentos
-const useDocumentExpiration = (
-  vehiculos: Vehiculo[],
-  personal: Personal[],
-  diasAlerta: number,
-  mostrarVencidos: boolean,
-  mostrarProximos: boolean,
-  mostrarVigentes: boolean
-) => {
-  const [alertasHabilitadas, setAlertasHabilitadas] = useState(true);
-  const notificationShownRef = useRef(false);
-
-  const documentos = useMemo(() => {
-    const docsVehiculos = procesarDocumentosVehiculos(vehiculos, diasAlerta);
-    const docsPersonal = procesarDocumentosPersonal(personal, diasAlerta);
-    const todosDocumentos = [...docsVehiculos, ...docsPersonal];
-
-    return todosDocumentos
-      .filter((doc) => {
-        if (doc.estado === 'vencido' && !mostrarVencidos) return false;
-        if (doc.estado === 'proximo' && !mostrarProximos) return false;
-        if (doc.estado === 'vigente' && !mostrarVigentes) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        if (a.estado !== b.estado) {
-          const orden = { vencido: 0, proximo: 1, vigente: 2 };
-          return orden[a.estado] - orden[b.estado];
-        }
-        return a.diasRestantes - b.diasRestantes;
-      });
-  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
-
-  const { vencidos, proximos } = useMemo(
-    () => ({
-      vencidos: documentos.filter((doc) => doc.estado === 'vencido'),
-      proximos: documentos.filter((doc) => doc.estado === 'proximo'),
-    }),
-    [documentos]
-  );
-
-  useEffect(() => {
-    notificationShownRef.current = false;
-  }, [vehiculos, personal, diasAlerta, mostrarVencidos, mostrarProximos, mostrarVigentes]);
-
-  useEffect(() => {
-    if (!alertasHabilitadas || notificationShownRef.current) return;
-
-    const vencidosCount = vencidos.length;
-    const proximosCount = proximos.length;
-
-    if (vencidosCount > 0) {
-      notifications.show({
-        title: 'Documentos Vencidos',
-        message: `${vencidosCount} documento${vencidosCount > 1 ? 's' : ''} vencido${vencidosCount > 1 ? 's' : ''}`,
-        color: 'red',
-        icon: <IconAlertTriangle />,
-        autoClose: 5000,
-      });
-      notificationShownRef.current = true;
-    } else if (proximosCount > 0) {
-      notifications.show({
-        title: 'Documentos por Vencer',
-        message: `${proximosCount} documento${proximosCount > 1 ? 's' : ''} próximo${proximosCount > 1 ? 's' : ''} a vencer`,
-        color: 'yellow',
-        icon: <IconAlertTriangle />,
-        autoClose: 5000,
-      });
-      notificationShownRef.current = true;
-    }
-  }, [documentos, alertasHabilitadas, vencidos.length, proximos.length]);
-
-  return {
-    documentos,
-    vencidos,
-    proximos,
-    alertasHabilitadas,
-    setAlertasHabilitadas,
-  };
-};
 
 export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
   vehiculos = [],
@@ -418,14 +222,16 @@ export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
   const [detailModalOpened, setDetailModalOpened] = useState(false);
 
   const { documentos, vencidos, proximos, alertasHabilitadas, setAlertasHabilitadas } =
-    useDocumentExpiration(
+    useDocumentExpiration({
       vehiculos,
       personal,
       diasAlerta,
       mostrarVencidos,
       mostrarProximos,
-      mostrarVigentes
-    );
+      mostrarVigentes,
+      procesarDocumentosVehiculos,
+      procesarDocumentosPersonal,
+    });
 
   if (documentos.length === 0) {
     return (
@@ -446,200 +252,32 @@ export const DocumentExpiration: React.FC<DocumentExpirationProps> = ({
           setDetailModalOpened={setDetailModalOpened}
         />
 
-        <Modal
+        <DocumentModal
           opened={detailModalOpened}
           onClose={() => setDetailModalOpened(false)}
-          title="Detalle de Vencimientos"
-          size="lg"
-          centered
-        >
-          <Stack gap="md">
-            <Group justify="space-around">
-              <Stack align="center" gap="xs">
-                <Text size="xl" fw={700} c="red">
-                  {vencidos.length}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  Vencidos
-                </Text>
-              </Stack>
-              <Stack align="center" gap="xs">
-                <Text size="xl" fw={700} c="yellow">
-                  {proximos.length}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  Próximos
-                </Text>
-              </Stack>
-              <Stack align="center" gap="xs">
-                <Text size="xl" fw={700} c="blue">
-                  {documentos.length}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  Total
-                </Text>
-              </Stack>
-            </Group>
-            <Divider />
-            <Box style={{ maxHeight: 400, overflowY: 'auto' }}>
-              <Timeline active={-1} bulletSize={16} lineWidth={1}>
-                {documentos.map((doc) => (
-                  <Timeline.Item
-                    key={doc.id}
-                    bullet={getEstadoIcon(doc.estado)}
-                    color={getEstadoColor(doc.estado)}
-                  >
-                    <Group justify="space-between" align="flex-start">
-                      <Stack gap={2}>
-                        <Group gap="xs">
-                          {getEntidadIcon(doc.entidad)}
-                          <Text fw={500} size="sm">
-                            {doc.entidadNombre}
-                          </Text>
-                          <Badge size="xs" variant="light">
-                            {doc.tipoDocumento}
-                          </Badge>
-                        </Group>
-                        <Text size="xs" c="dimmed">
-                          Vence: {format(doc.fechaVencimiento, 'dd/MM/yyyy', { locale: es })}
-                        </Text>
-                        {doc.numeroDocumento && (
-                          <Text size="xs" c="dimmed">
-                            Número: {doc.numeroDocumento}
-                          </Text>
-                        )}
-                        {doc.empresa && (
-                          <Text size="xs" c="dimmed">
-                            Empresa: {doc.empresa}
-                          </Text>
-                        )}
-                      </Stack>
-                      <Badge color={getEstadoColor(doc.estado)} variant="light" size="xs">
-                        {doc.estado === 'vencido'
-                          ? `${Math.abs(doc.diasRestantes)} días vencido`
-                          : doc.estado === 'proximo'
-                            ? `${doc.diasRestantes} días`
-                            : 'Vigente'}
-                      </Badge>
-                    </Group>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-            </Box>
-          </Stack>
-        </Modal>
+          vencidos={vencidos}
+          proximos={proximos}
+          documentos={documentos}
+          getEstadoIcon={getEstadoIcon}
+          getEstadoColor={getEstadoColor}
+          getEntidadIcon={getEntidadIcon}
+        />
       </>
     );
   }
 
-  // Vista expandida (implementación existente simplificada)
   return (
-    <Card withBorder>
-      <Card.Section withBorder inheritPadding py="xs">
-        <Group justify="space-between">
-          <Group>
-            <IconCalendar size={18} />
-            <Text fw={500}>Alertas de Vencimiento</Text>
-          </Group>
-          <Group gap="xs">
-            <Tooltip label={alertasHabilitadas ? 'Deshabilitar alertas' : 'Habilitar alertas'}>
-              <ActionIcon
-                variant="light"
-                color={alertasHabilitadas ? 'blue' : 'gray'}
-                onClick={() => setAlertasHabilitadas(!alertasHabilitadas)}
-              >
-                {alertasHabilitadas ? <IconBell size={16} /> : <IconBellOff size={16} />}
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        </Group>
-      </Card.Section>
-
-      <Card.Section inheritPadding py="md">
-        <Stack gap="md">
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              Total de alertas
-            </Text>
-            <Badge
-              color={vencidos.length > 0 ? 'red' : proximos.length > 0 ? 'yellow' : 'green'}
-              variant="light"
-            >
-              {documentos.length} documento{documentos.length !== 1 ? 's' : ''}
-            </Badge>
-          </Group>
-
-          <Progress.Root size="lg">
-            <Progress.Section value={(vencidos.length / documentos.length) * 100} color="red">
-              <Progress.Label>Vencidos: {vencidos.length}</Progress.Label>
-            </Progress.Section>
-            <Progress.Section value={(proximos.length / documentos.length) * 100} color="yellow">
-              <Progress.Label>Próximos: {proximos.length}</Progress.Label>
-            </Progress.Section>
-          </Progress.Root>
-
-          <Divider />
-
-          <Timeline active={-1} bulletSize={20} lineWidth={2}>
-            {documentos.map((doc) => (
-              <Timeline.Item
-                key={doc.id}
-                bullet={getEstadoIcon(doc.estado)}
-                color={getEstadoColor(doc.estado)}
-              >
-                <Group justify="space-between" mb="xs">
-                  <Group gap="xs">
-                    {getEntidadIcon(doc.entidad)}
-                    <Text fw={500} size="sm">
-                      {doc.entidadNombre}
-                    </Text>
-                    <Badge size="xs" variant="light">
-                      {doc.tipoDocumento}
-                    </Badge>
-                  </Group>
-                  <Group gap="xs">
-                    <Badge color={getEstadoColor(doc.estado)} variant="light" size="xs">
-                      {doc.estado === 'vencido'
-                        ? `${Math.abs(doc.diasRestantes)} días vencido`
-                        : `${doc.diasRestantes} días restantes`}
-                    </Badge>
-                    <ActionIcon
-                      size="xs"
-                      variant="light"
-                      color="blue"
-                      onClick={() => {
-                        if (doc.entidad === 'vehiculo' && onEditVehiculo) {
-                          onEditVehiculo(doc.entidadId);
-                        } else if (doc.entidad === 'personal' && onEditPersonal) {
-                          onEditPersonal(doc.entidadId);
-                        }
-                      }}
-                    >
-                      <IconEdit size={12} />
-                    </ActionIcon>
-                  </Group>
-                </Group>
-
-                <Text size="xs" c="dimmed" mb={5}>
-                  Vence: {format(doc.fechaVencimiento, 'dd/MM/yyyy', { locale: es })}
-                </Text>
-
-                {doc.numeroDocumento && (
-                  <Text size="xs" c="dimmed">
-                    Número: {doc.numeroDocumento}
-                  </Text>
-                )}
-
-                {doc.empresa && (
-                  <Text size="xs" c="dimmed">
-                    Empresa: {doc.empresa}
-                  </Text>
-                )}
-              </Timeline.Item>
-            ))}
-          </Timeline>
-        </Stack>
-      </Card.Section>
-    </Card>
+    <DocumentDetailedView
+      documentos={documentos}
+      vencidos={vencidos}
+      proximos={proximos}
+      alertasHabilitadas={alertasHabilitadas}
+      setAlertasHabilitadas={setAlertasHabilitadas}
+      getEstadoIcon={getEstadoIcon}
+      getEstadoColor={getEstadoColor}
+      getEntidadIcon={getEntidadIcon}
+      onEditVehiculo={onEditVehiculo}
+      onEditPersonal={onEditPersonal}
+    />
   );
 };
