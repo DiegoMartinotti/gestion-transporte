@@ -26,38 +26,46 @@ import {
   IconExclamationMark,
   IconChevronDown,
   IconChevronUp,
-  IconClock,
-  IconTruck,
-  IconRoute,
-  IconCoin,
-  IconCalendar
+  // IconClock,
+  // IconTruck,
+  // IconRoute,
+  // IconCoin,
+  // IconCalendar - unused
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { 
   BaseValidator, 
   ValidationRule, 
-  ValidationResult, 
+  // ValidationResult, - unused 
   BaseValidatorProps,
   useValidation,
   ValidationUtils
 } from './BaseValidator';
 
+// Constantes para categorías de validación
+const VALIDATION_CATEGORIES = {
+  DATOS_BASICOS: 'Datos Básicos',
+  VEHICULOS: 'Vehículos',
+  PERSONAL: 'Personal',
+  DOCUMENTACION: 'Documentación',
+} as const;
+
 interface ViajeData {
-  cliente?: any;
-  tramo?: any;
-  vehiculos?: any[];
-  personal?: any[];
+  cliente?: Record<string, unknown>;
+  tramo?: Record<string, unknown>;
+  vehiculos?: Record<string, unknown>[];
+  personal?: Record<string, unknown>[];
   fecha?: Date;
   palets?: number;
-  extras?: any[];
+  extras?: Record<string, unknown>[];
   observaciones?: string;
   estado?: string;
-  ordenCompra?: any;
+  ordenCompra?: Record<string, unknown>;
   tarifaCalculada?: number;
-  formulasAplicadas?: any[];
+  formulasAplicadas?: Record<string, unknown>[];
 }
 
-interface ViajeValidatorProps extends BaseValidatorProps<ViajeData> {}
+type ViajeValidatorProps = BaseValidatorProps<ViajeData>;
 
 // Clase validadora de viajes que extiende BaseValidator
 class ViajeValidatorService extends BaseValidator<ViajeData> {
@@ -66,7 +74,7 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
       // Reglas básicas requeridas
       {
         id: 'cliente-required',
-        category: 'Datos Básicos',
+        category: VALIDATION_CATEGORIES.DATOS_BASICOS,
         name: 'Cliente Requerido',
         description: 'El viaje debe tener un cliente asignado',
         severity: 'error',
@@ -79,7 +87,7 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
       },
       {
         id: 'tramo-required',
-        category: 'Datos Básicos',
+        category: VALIDATION_CATEGORIES.DATOS_BASICOS,
         name: 'Tramo Requerido',
         description: 'El viaje debe tener un tramo definido',
         severity: 'error',
@@ -92,7 +100,7 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
       },
       {
         id: 'fecha-required',
-        category: 'Datos Básicos',
+        category: VALIDATION_CATEGORIES.DATOS_BASICOS,
         name: 'Fecha Requerida',
         description: 'El viaje debe tener una fecha programada',
         severity: 'error',
@@ -105,7 +113,7 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
       },
       {
         id: 'palets-required',
-        category: 'Datos Básicos',
+        category: VALIDATION_CATEGORIES.DATOS_BASICOS,
         name: 'Cantidad de Palets',
         description: 'Debe especificar la cantidad de palets a transportar',
         severity: 'error',
@@ -149,13 +157,12 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
 
           const vehiculosConProblemas = data.vehiculos!.filter(vehiculo => {
             const documentos = vehiculo.documentacion || {};
-            const vencidos = Object.values(documentos).some((doc: any) => {
+            return Object.values(documentos).some((doc: Record<string, unknown>) => {
               if (doc.fechaVencimiento) {
-                return new Date(doc.fechaVencimiento) < new Date();
+                return new Date(doc.fechaVencimiento as string) < new Date();
               }
               return false;
             });
-            return vencidos;
           });
 
           return {

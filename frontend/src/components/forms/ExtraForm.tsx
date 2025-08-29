@@ -4,7 +4,6 @@ import {
   Group,
   Text,
   Button,
-  TextInput,
   Select,
   Textarea,
   NumberInput,
@@ -37,10 +36,11 @@ const TIPOS_EXTRA = [
   { value: 'OTROS', label: 'Otros' }
 ];
 
-export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
+// Custom hooks for ExtraForm
+function useExtraFormSetup(extraId?: string) {
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [, setClientes] = useState<Cliente[]>([]);
   const [vigenciaError, setVigenciaError] = useState<string>('');
 
   const form = useForm<ExtraFormData>({
@@ -70,13 +70,6 @@ export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
       }
     }
   });
-
-  useEffect(() => {
-    loadClientes();
-    if (extraId) {
-      loadExtra();
-    }
-  }, [extraId]);
 
   const loadClientes = async () => {
     try {
@@ -113,6 +106,36 @@ export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
     }
   };
 
+  useEffect(() => {
+    loadClientes();
+    if (extraId) {
+      loadExtra();
+    }
+  }, [extraId, loadExtra]);
+
+  return { 
+    form, 
+    loading, 
+    setLoading, 
+    validating, 
+    setValidating, 
+    vigenciaError, 
+    setVigenciaError,
+    loadClientes,
+    loadExtra
+  };
+}
+
+interface ExtraFormActionsConfig {
+  extraId?: string;
+  setLoading: (loading: boolean) => void;
+  setValidating: (validating: boolean) => void;
+  setVigenciaError: (error: string) => void;
+  onSuccess?: () => void;
+}
+
+function useExtraFormActions(config: ExtraFormActionsConfig) {
+  const { extraId, setLoading, setValidating, setVigenciaError, onSuccess } = config;
   const validateVigencia = async (values: ExtraFormData) => {
     if (!values.tipo || !values.cliente || !values.vigenciaDesde || !values.vigenciaHasta) {
       return true; // No validar si faltan campos básicos
@@ -131,8 +154,8 @@ export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
       });
       
       return true;
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Error validando vigencia';
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Error validando vigencia';
       setVigenciaError(message);
       return false;
     } finally {
@@ -141,7 +164,6 @@ export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
   };
 
   const handleSubmit = async (values: ExtraFormData) => {
-    // Validar vigencia antes de enviar
     const isValidVigencia = await validateVigencia(values);
     if (!isValidVigencia) return;
 
@@ -165,8 +187,8 @@ export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
       }
       
       onSuccess?.();
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Error al guardar el extra';
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Error al guardar el extra';
       showNotification({
         title: 'Error',
         message,
@@ -177,8 +199,29 @@ export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
     }
   };
 
+  return { handleSubmit, validateVigencia };
+}
+
+export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
+  const { 
+    form, 
+    loading, 
+    setLoading, 
+    validating, 
+    setValidating, 
+    vigenciaError, 
+    setVigenciaError
+  } = useExtraFormSetup(extraId);
+  
+  const { handleSubmit } = useExtraFormActions({ 
+    extraId, 
+    setLoading, 
+    setValidating, 
+    setVigenciaError, 
+    onSuccess 
+  });
+
   const handleVigenciaChange = () => {
-    // Limpiar error de vigencia cuando cambian las fechas
     if (vigenciaError) {
       setVigenciaError('');
     }

@@ -55,14 +55,23 @@ const getTrendColor = (trend?: 'up' | 'down' | 'neutral') => {
   }
 };
 
-const renderTrendSection = (
-  showTrend: boolean,
-  trend?: 'up' | 'down' | 'neutral',
-  trendValue?: string,
-  hasPreviousValue?: boolean,
-  previousValue?: string | number,
-  format?: 'number' | 'currency' | 'percentage'
-) => {
+interface TrendSectionProps {
+  showTrend: boolean;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  hasPreviousValue?: boolean;
+  previousValue?: string | number;
+  format?: 'number' | 'currency' | 'percentage';
+}
+
+const renderTrendSection = ({
+  showTrend,
+  trend,
+  trendValue,
+  hasPreviousValue,
+  previousValue,
+  format
+}: TrendSectionProps) => {
   if (!showTrend) return null;
 
   return (
@@ -153,14 +162,14 @@ export const KPICard = ({
             {displayValue}
           </Text>
 
-          {renderTrendSection(
+          {renderTrendSection({
             showTrend,
             trend,
             trendValue,
             hasPreviousValue,
             previousValue,
             format
-          )}
+          })}
         </Stack>
 
         {renderProgressSection(showProgress, progress, color)}

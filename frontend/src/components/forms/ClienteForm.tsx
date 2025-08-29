@@ -34,10 +34,9 @@ interface ClienteFormData {
   activo: boolean;
 }
 
-export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: ClienteFormProps) {
+// Component hooks
+function useClienteFormSetup(cliente?: Cliente, mode: 'create' | 'edit' = 'create') {
   const [loading, setLoading] = useState(false);
-
-  // Use imported validation rules
   const validationRules = useMemo(() => clienteValidationRules, []);
 
   const form = useForm<ClienteFormData>({
@@ -53,28 +52,43 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
     validate: validationRules,
   });
 
-  // Simplified submit handler using helpers
-  const handleSubmit = useCallback(
+  const isEditing = useMemo(() => mode === 'edit', [mode]);
+  const title = useMemo(() => (isEditing ? 'Editar Cliente' : 'Nuevo Cliente'), [isEditing]);
+
+  return { form, loading, setLoading, isEditing, title };
+}
+
+// Submit handler hook
+function useClienteSubmit(
+  mode: 'create' | 'edit',
+  clienteId?: string,
+  onSuccess?: (cliente: Cliente) => void,
+  setLoading: (loading: boolean) => void
+) {
+  return useCallback(
     async (values: ClienteFormData) => {
       try {
         setLoading(true);
-        const result = await saveCliente(values, mode, cliente?._id);
+        const result = await saveCliente(values, mode, clienteId);
         onSuccess?.(result);
-      } catch (error: any) {
+      } catch (error: unknown) {
         handleClienteError(error);
       } finally {
         setLoading(false);
       }
     },
-    [mode, cliente?._id, onSuccess]
+    [mode, clienteId, onSuccess, setLoading]
   );
+}
 
-  // Memoize computed values
-  const isEditing = useMemo(() => mode === 'edit', [mode]);
-  const title = useMemo(() => (isEditing ? 'Editar Cliente' : 'Nuevo Cliente'), [isEditing]);
+// Form field renderers
+interface ClienteFormRenderProps {
+  form: ReturnType<typeof useForm<ClienteFormData>>;
+  loading: boolean;
+}
 
-  // Extract form fields rendering
-  const renderBasicFields = () => (
+function ClienteBasicFields({ form, loading }: ClienteFormRenderProps) {
+  return (
     <>
       <FieldWrapper label="Nombre" required description="Nombre o razón social del cliente">
         <TextInput
@@ -89,8 +103,10 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
       </FieldWrapper>
     </>
   );
+}
 
-  const renderContactFields = () => (
+function ClienteContactFields({ form, loading }: ClienteFormRenderProps) {
+  return (
     <>
       <Group grow>
         <FieldWrapper label="Email" description="Email de contacto principal">
@@ -132,8 +148,10 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
       </FieldWrapper>
     </>
   );
+}
 
-  const renderStatusFields = () => (
+function ClienteStatusFields({ form, loading }: ClienteFormRenderProps) {
+  return (
     <>
       <FieldWrapper label="Estado" description="Define si el cliente está activo para operaciones">
         <Switch
@@ -151,8 +169,16 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
       )}
     </>
   );
+}
 
-  const renderActionButtons = () => (
+interface ClienteActionButtonsProps {
+  onCancel?: () => void;
+  loading: boolean;
+  isEditing: boolean;
+}
+
+function ClienteActionButtons({ onCancel, loading, isEditing }: ClienteActionButtonsProps) {
+  return (
     <Group justify="flex-end" gap="sm">
       {onCancel && (
         <Button variant="outline" onClick={onCancel} disabled={loading}>
@@ -164,6 +190,11 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
       </Button>
     </Group>
   );
+}
+
+export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: ClienteFormProps) {
+  const { form, loading, setLoading, isEditing, title } = useClienteFormSetup(cliente, mode);
+  const handleSubmit = useClienteSubmit(mode, cliente?._id, onSuccess, setLoading);
 
   return (
     <Paper p="lg" withBorder>
@@ -172,12 +203,12 @@ export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: C
           <Title order={3}>{title}</Title>
 
           <Stack gap="md">
-            {renderBasicFields()}
-            {renderContactFields()}
-            {renderStatusFields()}
+            <ClienteBasicFields form={form} loading={loading} />
+            <ClienteContactFields form={form} loading={loading} />
+            <ClienteStatusFields form={form} loading={loading} />
           </Stack>
 
-          {renderActionButtons()}
+          <ClienteActionButtons onCancel={onCancel} loading={loading} isEditing={isEditing} />
         </Stack>
       </form>
     </Paper>

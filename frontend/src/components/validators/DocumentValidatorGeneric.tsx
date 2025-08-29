@@ -8,21 +8,16 @@ import {
   Badge,
   Alert,
   Card,
-  Progress,
   Tabs,
   Button,
   ActionIcon,
   Table,
-  Collapse,
   Box,
-  Select,
   Switch,
   NumberInput,
   SimpleGrid,
   ThemeIcon,
-  Timeline,
-  Modal,
-  Textarea
+  Modal
 } from '@mantine/core';
 import {
   IconAlertTriangle,
@@ -31,21 +26,16 @@ import {
   IconFileText,
   IconTruck,
   IconUser,
-  IconCalendar,
-  IconClock,
   IconRefresh,
   IconSettings,
-  IconChevronDown,
-  IconChevronUp,
   IconEye,
   IconEdit,
-  IconShieldCheck,
-  IconInfoCircle
+  IconShieldCheck
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import dayjs from 'dayjs';
-import { BaseValidator, ValidationRule, ValidationResult, useValidation, BaseValidatorProps } from './BaseValidator';
+import { BaseValidator, ValidationRule, ValidationResult, useValidation } from './BaseValidator';
 
 // Tipos base para validación
 export interface DocumentoValidacion {
@@ -450,7 +440,7 @@ export const DocumentValidatorGeneric: React.FC<DocumentValidatorProps> = ({
   config = {},
   variant = 'complete',
   showConfig = true,
-  showActions = true,
+  showActions = true, // eslint-disable-line @typescript-eslint/no-unused-vars
   onValidationComplete,
   onAutoFix,
   onEditDocument,
