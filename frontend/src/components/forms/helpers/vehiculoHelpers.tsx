@@ -18,13 +18,21 @@ export async function loadEmpresas(setEmpresas: (empresas: Empresa[]) => void) {
   }
 }
 
-export async function submitVehiculo(
-  values: Vehiculo,
-  vehiculo: Vehiculo | null | undefined,
-  onSuccess: () => void,
-  onClose: () => void,
-  setLoading: (loading: boolean) => void
-) {
+interface SubmitVehiculoParams {
+  values: Vehiculo;
+  vehiculo: Vehiculo | null | undefined;
+  onSuccess: () => void;
+  onClose: () => void;
+  setLoading: (loading: boolean) => void;
+}
+
+export async function submitVehiculo({
+  values,
+  vehiculo,
+  onSuccess,
+  onClose,
+  setLoading,
+}: SubmitVehiculoParams) {
   try {
     setLoading(true);
 
@@ -49,10 +57,14 @@ export async function submitVehiculo(
 
     onSuccess();
     onClose();
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error && 'response' in error
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Error al guardar el vehículo';
     notifications.show({
       title: 'Error',
-      message: error.response?.data?.message || 'Error al guardar el vehículo',
+      message: errorMessage,
       color: 'red',
     });
   } finally {
