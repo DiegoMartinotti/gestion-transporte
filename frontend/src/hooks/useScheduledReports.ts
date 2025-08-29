@@ -19,6 +19,23 @@ interface ScheduleFormData {
   isActive: boolean;
 }
 
+// Helper functions extracted from main hook
+const showErrorNotification = (title: string, message: string) => {
+  notifications.show({
+    title,
+    message,
+    color: 'red',
+  });
+};
+
+const showSuccessNotification = (title: string, message: string) => {
+  notifications.show({
+    title,
+    message,
+    color: 'green',
+  });
+};
+
 export const useScheduledReports = () => {
   const [schedules, setSchedules] = useState<ScheduledReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,11 +47,7 @@ export const useScheduledReports = () => {
       setSchedules(data);
     } catch (error) {
       console.error('Error loading scheduled reports:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudieron cargar los reportes programados',
-        color: 'red',
-      });
+      showErrorNotification('Error', 'No se pudieron cargar los reportes programados');
     } finally {
       setLoading(false);
     }
@@ -44,19 +57,11 @@ export const useScheduledReports = () => {
     try {
       const newSchedule = await reportService.createScheduledReport(formData);
       setSchedules((prev) => [newSchedule, ...prev]);
-      notifications.show({
-        title: 'Reporte programado',
-        message: 'El reporte se programó correctamente',
-        color: 'green',
-      });
+      showSuccessNotification('Reporte programado', 'El reporte se programó correctamente');
       return newSchedule;
     } catch (error) {
       console.error('Error creating scheduled report:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo programar el reporte',
-        color: 'red',
-      });
+      showErrorNotification('Error', 'No se pudo programar el reporte');
       throw error;
     }
   }, []);
@@ -65,19 +70,14 @@ export const useScheduledReports = () => {
     try {
       const updatedSchedule = await reportService.updateScheduledReport(scheduleId, formData);
       setSchedules((prev) => prev.map((s) => (s.id === scheduleId ? updatedSchedule : s)));
-      notifications.show({
-        title: 'Reporte actualizado',
-        message: 'El reporte programado se actualizó correctamente',
-        color: 'green',
-      });
+      showSuccessNotification(
+        'Reporte actualizado',
+        'El reporte programado se actualizó correctamente'
+      );
       return updatedSchedule;
     } catch (error) {
       console.error('Error updating scheduled report:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo actualizar el reporte',
-        color: 'red',
-      });
+      showErrorNotification('Error', 'No se pudo actualizar el reporte');
       throw error;
     }
   }, []);
@@ -86,18 +86,13 @@ export const useScheduledReports = () => {
     try {
       await reportService.deleteScheduledReport(schedule.id);
       setSchedules((prev) => prev.filter((s) => s.id !== schedule.id));
-      notifications.show({
-        title: 'Reporte eliminado',
-        message: 'El reporte programado se eliminó correctamente',
-        color: 'green',
-      });
+      showSuccessNotification(
+        'Reporte eliminado',
+        'El reporte programado se eliminó correctamente'
+      );
     } catch (error) {
       console.error('Error deleting scheduled report:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo eliminar el reporte programado',
-        color: 'red',
-      });
+      showErrorNotification('Error', 'No se pudo eliminar el reporte programado');
     }
   }, []);
 
@@ -108,18 +103,13 @@ export const useScheduledReports = () => {
         isActive: !schedule.isActive,
       });
       setSchedules((prev) => prev.map((s) => (s.id === schedule.id ? updatedSchedule : s)));
-      notifications.show({
-        title: schedule.isActive ? 'Reporte pausado' : 'Reporte activado',
-        message: `El reporte se ${schedule.isActive ? 'pausó' : 'activó'} correctamente`,
-        color: 'green',
-      });
+      showSuccessNotification(
+        schedule.isActive ? 'Reporte pausado' : 'Reporte activado',
+        `El reporte se ${schedule.isActive ? 'pausó' : 'activó'} correctamente`
+      );
     } catch (error) {
       console.error('Error toggling schedule:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo cambiar el estado del reporte',
-        color: 'red',
-      });
+      showErrorNotification('Error', 'No se pudo cambiar el estado del reporte');
     }
   }, []);
 

@@ -1,17 +1,19 @@
-export const filterData = <T>(data: T[], search: string, enableLocalFiltering: boolean): T[] => {
+export const filterData = <T extends Record<string, unknown>>(
+  data: T[],
+  search: string,
+  enableLocalFiltering: boolean
+): T[] => {
   if (!enableLocalFiltering || !search) {
     return data;
   }
 
   const searchLower = search.toLowerCase();
   return data.filter((item) =>
-    Object.values(item as any).some((value) =>
-      value?.toString().toLowerCase().includes(searchLower)
-    )
+    Object.values(item).some((value) => value?.toString().toLowerCase().includes(searchLower))
   );
 };
 
-export const sortData = <T>(
+export const sortData = <T extends Record<string, unknown>>(
   data: T[],
   sortBy: string,
   sortOrder: 'asc' | 'desc',
@@ -22,8 +24,8 @@ export const sortData = <T>(
   }
 
   return [...data].sort((a, b) => {
-    const aValue = (a as any)[sortBy];
-    const bValue = (b as any)[sortBy];
+    const aValue = a[sortBy as keyof T];
+    const bValue = b[sortBy as keyof T];
 
     // Manejar valores null/undefined
     if (aValue == null && bValue == null) return 0;
@@ -35,7 +37,7 @@ export const sortData = <T>(
   });
 };
 
-const compareValues = (aValue: any, bValue: any): number => {
+const compareValues = (aValue: unknown, bValue: unknown): number => {
   if (typeof aValue === 'string' && typeof bValue === 'string') {
     return aValue.localeCompare(bValue);
   }
@@ -47,23 +49,27 @@ const compareValues = (aValue: any, bValue: any): number => {
   return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
 };
 
-export const processTableData = <T>(
+interface ProcessTableDataOptions {
+  search: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  pageSize: number;
+  enableLocalFiltering: boolean;
+  enableLocalSorting: boolean;
+}
+
+export const processTableData = <T extends Record<string, unknown>>(
   data: T[],
-  search: string,
-  sortBy: string,
-  sortOrder: 'asc' | 'desc',
-  pageSize: number,
-  enableLocalFiltering: boolean,
-  enableLocalSorting: boolean
+  options: ProcessTableDataOptions
 ): T[] => {
-  let result = filterData(data, search, enableLocalFiltering);
-  result = sortData(result, sortBy, sortOrder, enableLocalSorting);
+  let result = filterData(data, options.search, options.enableLocalFiltering);
+  result = sortData(result, options.sortBy, options.sortOrder, options.enableLocalSorting);
 
   // Limitar cantidad para performance
-  return result.slice(0, pageSize);
+  return result.slice(0, options.pageSize);
 };
 
-export const calculateFilteredCount = <T>(
+export const calculateFilteredCount = <T extends Record<string, unknown>>(
   data: T[],
   search: string,
   enableLocalFiltering: boolean

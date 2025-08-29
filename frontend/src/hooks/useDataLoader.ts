@@ -7,11 +7,11 @@ import { PaginatedResponse } from '../types';
  * @template T - Tipo de datos que se cargan
  * @template F - Tipo de filtros/parámetros para la función de carga
  */
-export interface UseDataLoaderOptions<T, F = any> {
+export interface UseDataLoaderOptions<T, F = Record<string, unknown>> {
   /** Función que obtiene los datos del servidor */
   fetchFunction: (params?: F) => Promise<PaginatedResponse<T>>;
   /** Dependencias que desencadenan la recarga automática */
-  dependencies?: any[];
+  dependencies?: React.DependencyList;
   /** Si comenzar cargando datos automáticamente */
   initialLoading?: boolean;
   /** Si habilitar funcionalidades de paginación */
@@ -23,7 +23,7 @@ export interface UseDataLoaderOptions<T, F = any> {
   /** Callback ejecutado después de cargar exitosamente */
   onSuccess?: (data: T[]) => void;
   /** Callback ejecutado en caso de error */
-  onError?: (error: any) => void;
+  onError?: (error: Error | unknown) => void;
 }
 
 /**
@@ -35,18 +35,18 @@ export interface UseDataLoaderReturn<T> {
   data: T[];
   loading: boolean;
   error: string | null;
-  
+
   // Funciones de control
   refresh: () => Promise<void>;
   reload: () => Promise<void>; // Alias para refresh
   setData: React.Dispatch<React.SetStateAction<T[]>>;
-  
+
   // Paginación (si está habilitada)
   totalItems: number;
   currentPage: number;
   totalPages: number;
   itemsPerPage: number;
-  
+
   // Funciones de paginación
   setCurrentPage: (page: number) => void;
   setItemsPerPage: (size: number) => void;
@@ -56,19 +56,19 @@ export interface UseDataLoaderReturn<T> {
 
 /**
  * Hook personalizado para manejo centralizado de carga de datos
- * 
+ *
  * Abstrae los patrones comunes de:
  * - Estados de loading, data, error
  * - Carga inicial automática con useEffect
  * - Manejo de errores con notifications
  * - Paginación opcional
  * - Funciones de refresh/reload
- * 
+ *
  * @template T - Tipo de entidad que se carga
  * @template F - Tipo de filtros/parámetros
  * @param options - Configuración del hook
  * @returns Estado y acciones para manejo de datos
- * 
+ *
  * @example
  * ```typescript
  * // Uso básico sin paginación
@@ -77,35 +77,35 @@ export interface UseDataLoaderReturn<T> {
  *   dependencies: [filtros],
  *   errorMessage: 'Error al cargar vehículos'
  * });
- * 
+ *
  * // Con paginación
- * const { 
- *   data: clientes, 
- *   loading, 
- *   totalItems, 
- *   currentPage, 
+ * const {
+ *   data: clientes,
+ *   loading,
+ *   totalItems,
+ *   currentPage,
  *   setCurrentPage,
- *   refresh 
+ *   refresh
  * } = useDataLoader({
  *   fetchFunction: clienteService.getAll,
  *   dependencies: [filters, currentPage, pageSize],
  *   enablePagination: true,
  *   errorMessage: 'Error al cargar clientes'
  * });
- * 
+ *
  * // Con múltiples datasets
  * const clientesLoader = useDataLoader({
  *   fetchFunction: clienteService.getAll,
  *   errorMessage: 'Error al cargar clientes'
  * });
- * 
+ *
  * const tramosLoader = useDataLoader({
  *   fetchFunction: tramoService.getAll,
  *   errorMessage: 'Error al cargar tramos'
  * });
  * ```
  */
-export function useDataLoader<T, F = any>(
+export function useDataLoader<T, F = Record<string, unknown>>(
   options: UseDataLoaderOptions<T, F>
 ): UseDataLoaderReturn<T> {
   const {
@@ -116,7 +116,7 @@ export function useDataLoader<T, F = any>(
     errorMessage = 'Error al cargar datos',
     showErrorNotifications = true,
     onSuccess,
-    onError
+    onError,
   } = options;
 
   // Estados principales
@@ -136,62 +136,81 @@ export function useDataLoader<T, F = any>(
   /**
    * Función principal de carga de datos
    */
-  const loadData = useCallback(async (extraParams?: any) => {
-    // Evitar llamadas duplicadas
-    if (loadingRef.current) return;
-    
-    try {
-      loadingRef.current = true;
-      setLoading(true);
-      setError(null);
+  const loadData = useCallback(
+    async (extraParams?: F) => {
+      // Evitar llamadas duplicadas
+      if (loadingRef.current) return;
 
-      // Construir parámetros con paginación si está habilitada
-      const params = enablePagination ? {
-        page: currentPage,
-        limit: itemsPerPage,
-        ...extraParams
-      } : extraParams;
+      try {
+        loadingRef.current = true;
+        setLoading(true);
+        setError(null);
 
-      const response = await fetchFunction(params);
-      
-      setData(response.data);
-      
-      if (enablePagination && response.pagination) {
-        setTotalItems(response.pagination.totalItems);
-        setCurrentPage(response.pagination.currentPage);
-        setTotalPages(response.pagination.totalPages);
-        setItemsPerPage(response.pagination.itemsPerPage);
+        // Construir parámetros con paginación si está habilitada
+        const params = enablePagination
+          ? {
+              page: currentPage,
+              limit: itemsPerPage,
+              ...extraParams,
+            }
+          : extraParams;
+
+        const response = await fetchFunction(params);
+
+        setData(response.data);
+
+        if (enablePagination && response.pagination) {
+          setTotalItems(response.pagination.totalItems);
+          setCurrentPage(response.pagination.currentPage);
+          setTotalPages(response.pagination.totalPages);
+          setItemsPerPage(response.pagination.itemsPerPage);
+        }
+
+        onSuccess?.(response.data);
+      } catch (err: unknown) {
+        const errorMsg =
+          (err as Error & { response?: { data?: { message?: string } } })?.response?.data
+            ?.message ||
+          (err as Error)?.message ||
+          errorMessage;
+        setError(errorMsg);
+
+        if (showErrorNotifications) {
+          notifications.show({
+            title: 'Error',
+            message: errorMsg,
+            color: 'red',
+          });
+        }
+
+        onError?.(err);
+        console.error('Error loading data:', err);
+      } finally {
+        setLoading(false);
+        loadingRef.current = false;
       }
-
-      onSuccess?.(response.data);
-      
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || err?.message || errorMessage;
-      setError(errorMsg);
-      
-      if (showErrorNotifications) {
-        notifications.show({
-          title: 'Error',
-          message: errorMsg,
-          color: 'red'
-        });
-      }
-      
-      onError?.(err);
-      console.error('Error loading data:', err);
-      
-    } finally {
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  }, [fetchFunction, enablePagination, currentPage, itemsPerPage, errorMessage, showErrorNotifications, onSuccess, onError]);
+    },
+    [
+      fetchFunction,
+      enablePagination,
+      currentPage,
+      itemsPerPage,
+      errorMessage,
+      showErrorNotifications,
+      onSuccess,
+      onError,
+    ]
+  );
 
   /**
    * Función de refresh que puede ser llamada externamente
    */
-  const refresh = useCallback(async (extraParams?: any) => {
-    await loadData(extraParams);
-  }, [loadData]);
+  const refresh = useCallback(
+    async (extraParams?: F) => {
+      await loadData(extraParams);
+    },
+    [loadData]
+  );
 
   /**
    * Funciones de paginación
@@ -214,36 +233,37 @@ export function useDataLoader<T, F = any>(
   }, [totalPages]);
 
   /**
-   * Efecto para carga automática
+   * Efecto para carga automática con dependencias personalizadas
    */
+  const dependenciesHash = JSON.stringify(dependencies);
   useEffect(() => {
     if (initialLoading) {
       loadData();
     }
-  }, [loadData, initialLoading, ...dependencies]);
+  }, [loadData, initialLoading, dependenciesHash]);
 
   return {
     // Estado de datos
     data,
     loading,
     error,
-    
+
     // Funciones de control
     refresh,
     reload: refresh, // Alias para compatibilidad
     setData,
-    
+
     // Paginación
     totalItems,
     currentPage,
     totalPages,
     itemsPerPage,
-    
+
     // Funciones de paginación
     setCurrentPage: setCurrentPageHandler,
     setItemsPerPage: setItemsPerPageHandler,
     goToFirstPage,
-    goToLastPage
+    goToLastPage,
   };
 }
 
