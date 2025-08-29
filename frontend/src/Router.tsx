@@ -62,6 +62,236 @@ function SuspenseRoute({
   return <Suspense fallback={fallback || <RouteLoader type="skeleton" />}>{children}</Suspense>;
 }
 
+// Componentes de rutas extraídos
+function ClientesRoutes() {
+  return (
+    <>
+      <Route
+        path="/clientes"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando clientes..." />}>
+            <ClientesPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/clientes/new"
+        element={
+          <SuspenseRoute fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}>
+            <ClienteFormPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/clientes/:id"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando detalles del cliente..." />}>
+            <ClienteDetailPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/clientes/:id/edit"
+        element={
+          <SuspenseRoute fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}>
+            <ClienteFormPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/clientes/:clienteId/sites"
+        element={
+          <Container>
+            <Text>Sites del Cliente - Coming Soon</Text>
+          </Container>
+        }
+      />
+      <Route
+        path="/clientes/:clienteId/tramos"
+        element={
+          <Container>
+            <Text>Tramos del Cliente - Coming Soon</Text>
+          </Container>
+        }
+      />
+    </>
+  );
+}
+
+function EmpresasRoutes() {
+  return (
+    <>
+      <Route
+        path="/empresas"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando empresas..." />}>
+            <EmpresasPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/empresas/:id"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando detalles de la empresa..." />}>
+            <EmpresaDetailPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/empresas/:id/edit"
+        element={
+          <Container>
+            <Text>Empresa Edit - Coming Soon</Text>
+          </Container>
+        }
+      />
+      <Route
+        path="/empresas/:id/personal"
+        element={
+          <Container>
+            <Text>Personal de la Empresa - Coming Soon</Text>
+          </Container>
+        }
+      />
+      <Route
+        path="/empresas/:id/vehiculos"
+        element={
+          <Container>
+            <Text>Vehículos de la Empresa - Coming Soon</Text>
+          </Container>
+        }
+      />
+    </>
+  );
+}
+
+function RecursosRoutes() {
+  return (
+    <>
+      <Route
+        path="/personal"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando personal..." />}>
+            <PersonalPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/sites"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando sitios..." />}>
+            <SitesPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/tramos"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando tramos..." />}>
+            <TramosPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/vehiculos"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando vehículos..." />}>
+            <VehiculosPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/extras"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando extras..." />}>
+            <ExtrasPage />
+          </SuspenseRoute>
+        }
+      />
+    </>
+  );
+}
+
+function ViajesRoutes() {
+  return (
+    <>
+      <Route
+        path="/viajes"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando viajes..." />}>
+            <ViajesPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/viajes/new"
+        element={
+          <SuspenseRoute fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}>
+            <ViajeFormPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/viajes/:id"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando detalles del viaje..." />}>
+            <ViajeDetailPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/viajes/:id/edit"
+        element={
+          <SuspenseRoute fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}>
+            <ViajeFormPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/ordenes-compra"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando órdenes de compra..." />}>
+            <OrdenesCompraPage />
+          </SuspenseRoute>
+        }
+      />
+    </>
+  );
+}
+
+function HerramientasRoutes() {
+  return (
+    <>
+      <Route
+        path="/calculadora"
+        element={
+          <SuspenseRoute
+            fallback={<RouteLoader type="minimal" message="Cargando calculadora..." />}
+          >
+            <CalculadoraPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/import"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando importador..." />}>
+            <ImportPage />
+          </SuspenseRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <SuspenseRoute fallback={<RouteLoader message="Cargando reportes..." />}>
+            <ReportsPage />
+          </SuspenseRoute>
+        }
+      />
+    </>
+  );
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -82,218 +312,11 @@ export default function AppRoutes() {
             </SuspenseRoute>
           }
         />
-
-        {/* Clientes routes */}
-        <Route
-          path="/clientes"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando clientes..." />}>
-              <ClientesPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/clientes/new"
-          element={
-            <SuspenseRoute
-              fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}
-            >
-              <ClienteFormPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/clientes/:id"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando detalles del cliente..." />}>
-              <ClienteDetailPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/clientes/:id/edit"
-          element={
-            <SuspenseRoute
-              fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}
-            >
-              <ClienteFormPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/clientes/:clienteId/sites"
-          element={
-            <Container>
-              <Text>Sites del Cliente - Coming Soon</Text>
-            </Container>
-          }
-        />
-        <Route
-          path="/clientes/:clienteId/tramos"
-          element={
-            <Container>
-              <Text>Tramos del Cliente - Coming Soon</Text>
-            </Container>
-          }
-        />
-
-        {/* Empresas routes */}
-        <Route
-          path="/empresas"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando empresas..." />}>
-              <EmpresasPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/empresas/:id"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando detalles de la empresa..." />}>
-              <EmpresaDetailPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/empresas/:id/edit"
-          element={
-            <Container>
-              <Text>Empresa Edit - Coming Soon</Text>
-            </Container>
-          }
-        />
-        <Route
-          path="/empresas/:id/personal"
-          element={
-            <Container>
-              <Text>Personal de la Empresa - Coming Soon</Text>
-            </Container>
-          }
-        />
-        <Route
-          path="/empresas/:id/vehiculos"
-          element={
-            <Container>
-              <Text>Vehículos de la Empresa - Coming Soon</Text>
-            </Container>
-          }
-        />
-
-        {/* Gestión de recursos */}
-        <Route
-          path="/personal"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando personal..." />}>
-              <PersonalPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/sites"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando sitios..." />}>
-              <SitesPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/tramos"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando tramos..." />}>
-              <TramosPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/vehiculos"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando vehículos..." />}>
-              <VehiculosPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/extras"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando extras..." />}>
-              <ExtrasPage />
-            </SuspenseRoute>
-          }
-        />
-
-        {/* Operaciones críticas - Viajes */}
-        <Route
-          path="/viajes"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando viajes..." />}>
-              <ViajesPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/viajes/new"
-          element={
-            <SuspenseRoute
-              fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}
-            >
-              <ViajeFormPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/viajes/:id"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando detalles del viaje..." />}>
-              <ViajeDetailPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/viajes/:id/edit"
-          element={
-            <SuspenseRoute
-              fallback={<RouteLoader type="minimal" message="Cargando formulario..." />}
-            >
-              <ViajeFormPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/ordenes-compra"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando órdenes de compra..." />}>
-              <OrdenesCompraPage />
-            </SuspenseRoute>
-          }
-        />
-
-        {/* Herramientas */}
-        <Route
-          path="/calculadora"
-          element={
-            <SuspenseRoute
-              fallback={<RouteLoader type="minimal" message="Cargando calculadora..." />}
-            >
-              <CalculadoraPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/import"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando importador..." />}>
-              <ImportPage />
-            </SuspenseRoute>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <SuspenseRoute fallback={<RouteLoader message="Cargando reportes..." />}>
-              <ReportsPage />
-            </SuspenseRoute>
-          }
-        />
+        <ClientesRoutes />
+        <EmpresasRoutes />
+        <RecursosRoutes />
+        <ViajesRoutes />
+        <HerramientasRoutes />
       </Route>
     </Routes>
   );

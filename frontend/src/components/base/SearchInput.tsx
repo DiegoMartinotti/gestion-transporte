@@ -22,7 +22,7 @@ export default function SearchInput({
   loading = false,
   disabled = false,
   size = 'sm',
-  width = 300
+  width = 300,
 }: SearchInputProps) {
   const [searchValue, setSearchValue] = useState(value);
   const [debouncedSearch] = useDebouncedValue(searchValue, debounceMs);
@@ -37,7 +37,7 @@ export default function SearchInput({
     if (value !== searchValue) {
       setSearchValue(value);
     }
-  }, [value]);
+  }, [value, searchValue]);
 
   const handleClear = () => {
     setSearchValue('');
@@ -48,7 +48,7 @@ export default function SearchInput({
     if (loading) {
       return <Loader size="xs" />;
     }
-    
+
     if (searchValue.length > 0) {
       return (
         <ActionIcon
@@ -62,7 +62,7 @@ export default function SearchInput({
         </ActionIcon>
       );
     }
-    
+
     return null;
   };
 
