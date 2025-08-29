@@ -11,11 +11,11 @@ export const useTableState = () => {
   });
 
   const handleSearch = (searchTerm: string) => {
-    setTableState(prev => ({ ...prev, searchTerm, page: 1 }));
+    setTableState((prev) => ({ ...prev, searchTerm, page: 1 }));
   };
 
   const handleSort = (column: string) => {
-    setTableState(prev => ({
+    setTableState((prev) => ({
       ...prev,
       sortBy: column,
       sortDirection: prev.sortBy === column && prev.sortDirection === 'asc' ? 'desc' : 'asc',
@@ -24,11 +24,11 @@ export const useTableState = () => {
   };
 
   const handlePageChange = (page: number) => {
-    setTableState(prev => ({ ...prev, page }));
+    setTableState((prev) => ({ ...prev, page }));
   };
 
   const handlePageSizeChange = (pageSize: number) => {
-    setTableState(prev => ({ ...prev, pageSize, page: 1 }));
+    setTableState((prev) => ({ ...prev, pageSize, page: 1 }));
   };
 
   return {
@@ -90,7 +90,7 @@ export const useChartData = (data: ReportData | null) => {
     if (!data || !data.rows.length) return [];
 
     return data.rows.slice(0, 20).map((row, index) => {
-      const item: Record<string, any> = { id: index };
+      const item: Record<string, string | number> = { id: index };
       data.headers.forEach((header, headerIndex) => {
         item[header] = row[headerIndex];
       });

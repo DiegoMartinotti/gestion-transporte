@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Stack,
   Group,
   Button,
   TextInput,
@@ -13,7 +12,6 @@ import {
   Pagination,
   Menu,
   Modal,
-  Tooltip,
 } from '@mantine/core';
 import {
   IconSearch,
@@ -84,7 +82,7 @@ export const TableControls: React.FC<TableControlsProps> = ({
 
 interface ReportTableProps {
   data: ReportData | null;
-  visibleRows: any[][];
+  visibleRows: (string | number)[][];
   tableState: TableState;
   onSort: (column: string) => void;
 }
@@ -101,11 +99,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({
         <Table.Thead>
           <Table.Tr>
             {data?.headers.map((header) => (
-              <Table.Th
-                key={header}
-                style={{ cursor: 'pointer' }}
-                onClick={() => onSort(header)}
-              >
+              <Table.Th key={header} style={{ cursor: 'pointer' }} onClick={() => onSort(header)}>
                 <Group gap="xs">
                   {header}
                   {tableState.sortBy === header && (
@@ -130,9 +124,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({
           {visibleRows.map((row, index) => (
             <Table.Tr key={index}>
               {row.map((cell, cellIndex) => (
-                <Table.Td key={cellIndex}>
-                  {String(cell)}
-                </Table.Td>
+                <Table.Td key={cellIndex}>{String(cell)}</Table.Td>
               ))}
             </Table.Tr>
           ))}
@@ -169,10 +161,7 @@ interface ReportActionsMenuProps {
   onFullscreen: () => void;
 }
 
-export const ReportActionsMenu: React.FC<ReportActionsMenuProps> = ({
-  onExport,
-  onFullscreen,
-}) => (
+export const ReportActionsMenu: React.FC<ReportActionsMenuProps> = ({ onExport, onFullscreen }) => (
   <Menu shadow="md">
     <Menu.Target>
       <ActionIcon variant="light">
