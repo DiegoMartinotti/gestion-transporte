@@ -1,11 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Card, Text, SimpleGrid } from '@mantine/core';
-import { IconTruck, IconUser, IconFileText, IconInfoCircle } from '@tabler/icons-react';
-import {
-  calculateAlertStatus,
-  filterAlerts,
-  calculateAlertStatistics,
-} from '../../utils/alerts/alertHelpers';
+import React, { useCallback } from 'react';
+import { Card } from '@mantine/core';
+import { useAlertSystem } from './hooks/useAlertSystem';
+import { AlertStatisticsComponent } from './components/AlertStatistics';
 
 export interface AlertData {
   _id: string;
@@ -62,86 +58,17 @@ export interface AlertSystemProps {
   error?: string;
 }
 
-const DEFAULT_CONFIG: AlertSystemConfig = {
-  diasCritico: 7,
-  diasProximo: 30,
-  diasVigente: 90,
-  notificacionesActivas: true,
-  frecuenciaNotificaciones: 'diaria',
-  entidadesPermitidas: ['vehiculo', 'personal', 'empresa', 'cliente'],
-  mostrarCalendario: true,
-  mostrarAlertas: true,
-  mostrarEstadisticas: true,
-  mostrarTimeline: true,
-  allowEdit: true,
-  allowRefresh: true,
-  allowNotificationToggle: true,
-  colores: {
-    vencido: 'red',
-    critico: 'red',
-    proximo: 'orange',
-    vigente: 'green',
-  },
-};
-
 export const AlertSystemUnified: React.FC<AlertSystemProps> = ({
   alertas,
-  config = DEFAULT_CONFIG,
+  config,
   categoria,
   onEditEntity,
 }) => {
-  const [filtroEntidad, setFiltroEntidad] = useState('todos');
-  const [filtroEstado, setFiltroEstado] = useState('todos');
-  const [filtroCategoria, setFiltroCategoria] = useState(categoria || 'todos');
-
-  // Fix: Wrap effectiveConfig in useMemo to prevent re-renders
-  const effectiveConfig = useMemo(
-    () => ({
-      ...DEFAULT_CONFIG,
-      ...config,
-    }),
-    [config]
+  const { effectiveConfig, estadisticas, getEntidadIcon } = useAlertSystem(
+    alertas,
+    config,
+    categoria
   );
-
-  const alertasConEstado = useMemo(() => {
-    return alertas.map((alerta) => ({
-      ...alerta,
-      ...calculateAlertStatus(alerta.fechaVencimiento, effectiveConfig),
-    }));
-  }, [alertas, effectiveConfig]);
-
-  const alertasFiltradas = useMemo(() => {
-    return filterAlerts(alertasConEstado, effectiveConfig, {
-      entidad: filtroEntidad,
-      estado: filtroEstado,
-      categoria: filtroCategoria,
-    });
-  }, [alertasConEstado, filtroEntidad, filtroEstado, filtroCategoria, effectiveConfig]);
-
-  const estadisticas = useMemo(() => {
-    return calculateAlertStatistics(alertasFiltradas);
-  }, [alertasFiltradas]);
-
-  const getEstadoColor = useCallback(
-    (estado: string) => {
-      const colores = effectiveConfig.colores as Record<string, string>;
-      return colores?.[estado || 'vigente'] || 'gray';
-    },
-    [effectiveConfig.colores]
-  );
-
-  const getEntidadIcon = useCallback((tipo: string) => {
-    switch (tipo) {
-      case 'vehiculo':
-        return <IconTruck size={16} />;
-      case 'personal':
-        return <IconUser size={16} />;
-      case 'empresa':
-        return <IconInfoCircle size={16} />;
-      default:
-        return <IconFileText size={16} />;
-    }
-  }, []);
 
   const handleAlertClick = useCallback(
     (alerta: AlertData) => {
@@ -152,59 +79,19 @@ export const AlertSystemUnified: React.FC<AlertSystemProps> = ({
     [onEditEntity]
   );
 
-  const renderEstadisticas = useCallback(() => {
-    if (!effectiveConfig.mostrarEstadisticas) return null;
-
-    return (
-      <SimpleGrid cols={4} spacing="md" mb="md">
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.vencido}.0`}>
-          <Text ta="center" fw={700} size="xl" c={effectiveConfig.colores?.vencido}>
-            {estadisticas.vencidos}
-          </Text>
-          <Text ta="center" size="sm" c={effectiveConfig.colores?.vencido}>
-            Vencidos
-          </Text>
-        </Card>
-
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.critico}.0`}>
-          <Text ta="center" fw={700} size="xl" c={effectiveConfig.colores?.critico}>
-            {estadisticas.criticos}
-          </Text>
-          <Text ta="center" size="sm" c={effectiveConfig.colores?.critico}>
-            Críticos (≤{effectiveConfig.diasCritico} días)
-          </Text>
-        </Card>
-
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.proximo}.0`}>
-          <Text ta="center" fw={700} size="xl" c="orange">
-            {estadisticas.proximos}
-          </Text>
-          <Text ta="center" size="sm" c="orange">
-            Próximos (≤{effectiveConfig.diasProximo} días)
-          </Text>
-        </Card>
-
-        <Card withBorder p="sm" bg={`${effectiveConfig.colores?.vigente}.0`}>
-          <Text ta="center" fw={700} size="xl" c={effectiveConfig.colores?.vigente}>
-            {estadisticas.vigentes}
-          </Text>
-          <Text ta="center" size="sm" c={effectiveConfig.colores?.vigente}>
-            Vigentes
-          </Text>
-        </Card>
-      </SimpleGrid>
-    );
-  }, [effectiveConfig, estadisticas]);
-
   // Suppress unused variable warnings for now - these will be used in the actual render
-  void setFiltroEntidad;
-  void setFiltroEstado;
-  void setFiltroCategoria;
-  void getEstadoColor;
   void getEntidadIcon;
   void handleAlertClick;
 
-  return <Card>{renderEstadisticas()}</Card>;
+  return (
+    <Card>
+      <AlertStatisticsComponent
+        estadisticas={estadisticas}
+        config={effectiveConfig}
+        show={effectiveConfig.mostrarEstadisticas || false}
+      />
+    </Card>
+  );
 };
 
 export default AlertSystemUnified;
