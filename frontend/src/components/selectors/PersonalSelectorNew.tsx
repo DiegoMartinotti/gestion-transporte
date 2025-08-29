@@ -1,4 +1,5 @@
-import { createFilterableSelector, CommonMappers, CommonFilters, type FilterConfig } from './SelectorFactory';
+import { createFilterableSelector, CommonFilters, type FilterConfig } from './SelectorFactory';
+import React from 'react';
 
 // Interfaz del personal (simplificada para el ejemplo)
 interface Personal {
@@ -18,6 +19,7 @@ interface Personal {
       vencimiento?: string;
     };
   };
+  [key: string]: unknown;
 }
 
 // Hook simulado - en la práctica usarías el hook real
@@ -26,7 +28,7 @@ function usePersonal() {
   return {
     data: [] as Personal[],
     loading: false,
-    error: undefined
+    error: undefined,
   };
 }
 
@@ -37,7 +39,7 @@ const personalMapper = (item: Personal) => ({
   // Propiedades adicionales para uso en componentes personalizados
   tipo: item.tipo,
   licencia: item.documentacion?.licenciaConducir?.numero,
-  empresa: item.empresa?.nombre
+  empresa: item.empresa?.nombre,
 });
 
 // Filtros específicos para personal
@@ -47,53 +49,50 @@ const personalFilters: FilterConfig<Personal> = {
   ...CommonFilters.tipo<Personal>(),
   ...CommonFilters.empresa<Personal>(),
   ...CommonFilters.exclude<Personal>(),
-  
+
   // Filtros específicos de personal
   soloChoferes: {
-    apply: (items: Personal[], value: boolean) => {
-      if (!value) return items;
-      return items.filter(item => 
-        item.tipo === 'chofer' || 
-        item.documentacion?.licenciaConducir?.numero
+    apply: (items: Personal[], value: unknown) => {
+      if (typeof value !== 'boolean' || !value) return items;
+      return items.filter(
+        (item) => item.tipo === 'chofer' || item.documentacion?.licenciaConducir?.numero
       );
     },
-    defaultValue: false
+    defaultValue: false,
   },
-  
+
   requireValidLicense: {
-    apply: (items: Personal[], value: boolean) => {
-      if (!value) return items;
-      return items.filter(item => {
+    apply: (items: Personal[], value: unknown) => {
+      if (typeof value !== 'boolean' || !value) return items;
+      return items.filter((item) => {
         const licencia = item.documentacion?.licenciaConducir;
         if (!licencia?.numero) return false;
-        
+
         // Verificar que no esté vencida
         if (licencia.vencimiento) {
           const vencimiento = new Date(licencia.vencimiento);
           const hoy = new Date();
           return vencimiento > hoy;
         }
-        
+
         return true;
       });
     },
-    defaultValue: false
+    defaultValue: false,
   },
-  
+
   requireSpecificCategory: {
-    apply: (items: Personal[], value: string) => {
-      if (!value) return items;
-      return items.filter(item => 
-        item.documentacion?.licenciaConducir?.categoria === value
-      );
-    }
-  }
+    apply: (items: Personal[], value: unknown) => {
+      if (typeof value !== 'string' || !value) return items;
+      return items.filter((item) => item.documentacion?.licenciaConducir?.categoria === value);
+    },
+  },
 };
 
 // Validación personalizada
 const validatePersonal = (value: string | string[] | null) => {
   if (!value) return null;
-  
+
   // Validaciones adicionales pueden ir aquí
   return null;
 };
@@ -112,7 +111,7 @@ export const PersonalSelector = createFilterableSelector(
     onItemSelect: (item) => {
       // Callback personalizado si es necesario
       console.log('Personal seleccionado:', item);
-    }
+    },
   }
 );
 
@@ -130,13 +129,18 @@ export const ChoferSelector = createFilterableSelector(
 );
 
 // HOC para aplicar filtros por defecto a ChoferSelector
-export const ChoferSelectorPreset: React.FC<any> = (props) => {
+interface ChoferSelectorPresetProps {
+  placeholder?: string;
+  [key: string]: unknown;
+}
+
+export const ChoferSelectorPreset: React.FC<ChoferSelectorPresetProps> = (props) => {
   return (
     <ChoferSelector
       {...props}
       soloChoferes={true}
       requireValidLicense={true}
-      placeholder={props.placeholder || "Selecciona un chofer"}
+      placeholder={props.placeholder || 'Selecciona un chofer'}
     />
   );
 };
