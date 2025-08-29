@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Stack,
   Group,
-  Button,
   TextInput,
   Text,
   Paper,
@@ -13,16 +12,210 @@ import {
   NumberInput
 } from '@mantine/core';
 import {
-  IconMapPin,
   IconSearch,
   IconCurrentLocation,
   IconCheck,
   IconX,
   IconCrosshair
 } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
-import MapView from './MapView';
-import type { MapMarker } from './MapView';
+import MapView, { type MapMarker } from './MapView';
+import {
+  searchAddressWithGeocoding,
+  getCurrentUserLocation,
+  handleMapClick,
+  applyManualCoordinates,
+  clearLocation,
+  DEFAULT_CENTER
+} from './LocationPickerHelpers';
+
+// Componente para mostrar la información de ubicación seleccionada
+interface LocationBadgeProps {
+  selectedLocation: { lat: number; lng: number } | null;
+}
+
+const LocationBadge: React.FC<LocationBadgeProps> = ({ selectedLocation }) => {
+  if (!selectedLocation) return null;
+  
+  return (
+    <Badge color="green" variant="light" size="sm">
+      Ubicación seleccionada
+    </Badge>
+  );
+};
+
+// Componente para los controles de búsqueda
+interface SearchControlsProps {
+  showSearch: boolean;
+  showCurrentLocation: boolean;
+  selectedLocation: { lat: number; lng: number } | null;
+  searchAddress: string;
+  searchLoading: boolean;
+  searchPlaceholder: string;
+  disabled: boolean;
+  onSearchChange: (value: string) => void;
+  onSearch: () => void;
+  onCurrentLocation: () => void;
+  onClear: () => void;
+}
+
+const SearchControls: React.FC<SearchControlsProps> = ({
+  showSearch,
+  showCurrentLocation,
+  selectedLocation,
+  searchAddress,
+  searchLoading,
+  searchPlaceholder,
+  disabled,
+  onSearchChange,
+  onSearch,
+  onCurrentLocation,
+  onClear
+}) => {
+  if (!(showSearch || showCurrentLocation || selectedLocation)) return null;
+
+  return (
+    <Group>
+      {showSearch && (
+        <TextInput
+          placeholder={searchPlaceholder}
+          value={searchAddress}
+          onChange={(e) => onSearchChange(e.target.value)}
+          rightSection={
+            <ActionIcon
+              onClick={onSearch}
+              loading={searchLoading}
+              disabled={!searchAddress.trim() || disabled}
+            >
+              <IconSearch size={16} />
+            </ActionIcon>
+          }
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !searchLoading) {
+              onSearch();
+            }
+          }}
+          disabled={disabled}
+          style={{ flex: 1 }}
+        />
+      )}
+
+      {showCurrentLocation && (
+        <Tooltip label="Usar mi ubicación">
+          <ActionIcon
+            onClick={onCurrentLocation}
+            disabled={disabled}
+            variant="light"
+          >
+            <IconCurrentLocation size={16} />
+          </ActionIcon>
+        </Tooltip>
+      )}
+
+      {selectedLocation && (
+        <Tooltip label="Borrar ubicación">
+          <ActionIcon
+            onClick={onClear}
+            disabled={disabled}
+            color="red"
+            variant="light"
+          >
+            <IconX size={16} />
+          </ActionIcon>
+        </Tooltip>
+      )}
+    </Group>
+  );
+};
+
+// Componente para mostrar/editar coordenadas
+interface CoordinatesDisplayProps {
+  showCoordinates: boolean;
+  selectedLocation: { lat: number; lng: number } | null;
+  manualMode: boolean;
+  manualLat: number;
+  manualLng: number;
+  disabled: boolean;
+  onManualModeToggle: (enabled: boolean) => void;
+  onManualLatChange: (value: number) => void;
+  onManualLngChange: (value: number) => void;
+  onManualApply: () => void;
+}
+
+const CoordinatesDisplay: React.FC<CoordinatesDisplayProps> = ({
+  showCoordinates,
+  selectedLocation,
+  manualMode,
+  manualLat,
+  manualLng,
+  disabled,
+  onManualModeToggle,
+  onManualLatChange,
+  onManualLngChange,
+  onManualApply
+}) => {
+  if (!showCoordinates) return null;
+
+  return (
+    <Paper p="sm" withBorder bg="gray.0">
+      {!manualMode ? (
+        <Group justify="space-between">
+          <Text size="sm" c="dimmed">
+            {selectedLocation
+              ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}`
+              : 'Sin ubicación seleccionada'
+            }
+          </Text>
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            onClick={() => onManualModeToggle(true)}
+            disabled={disabled}
+          >
+            <IconCrosshair size={14} />
+          </ActionIcon>
+        </Group>
+      ) : (
+        <Group>
+          <NumberInput
+            placeholder="Latitud"
+            value={manualLat || ''}
+            onChange={(val) => onManualLatChange(typeof val === 'number' ? val : 0)}
+            decimalScale={6}
+            step={0.000001}
+            style={{ flex: 1 }}
+            size="xs"
+            disabled={disabled}
+          />
+          <NumberInput
+            placeholder="Longitud"
+            value={manualLng || ''}
+            onChange={(val) => onManualLngChange(typeof val === 'number' ? val : 0)}
+            decimalScale={6}
+            step={0.000001}
+            style={{ flex: 1 }}
+            size="xs"
+            disabled={disabled}
+          />
+          <ActionIcon
+            size="sm"
+            color="green"
+            onClick={onManualApply}
+            disabled={disabled}
+          >
+            <IconCheck size={14} />
+          </ActionIcon>
+          <ActionIcon
+            size="sm"
+            onClick={() => onManualModeToggle(false)}
+            disabled={disabled}
+          >
+            <IconX size={14} />
+          </ActionIcon>
+        </Group>
+      )}
+    </Paper>
+  );
+};
 
 interface LocationPickerProps {
   value?: { lat: number; lng: number };
@@ -41,409 +234,183 @@ interface LocationPickerProps {
   error?: string;
 }
 
-export default function LocationPicker({
-  value,
-  onChange,
-  onAddressChange,
-  label = "Seleccionar ubicación",
-  placeholder = "Haga clic en el mapa para seleccionar ubicación",
-  required = false,
-  disabled = false,
-  height = 300,
-  showSearch = true,
-  showCoordinates = true,
-  showCurrentLocation = true,
-  initialZoom = 10,
-  searchPlaceholder = "Buscar dirección...",
-  error
-}: LocationPickerProps) {
+
+// Hook personalizado para manejar la lógica del LocationPicker
+const useLocationPicker = (props: LocationPickerProps) => {
+  const { value, onChange, onAddressChange } = props;
+  
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(value || null);
   const [searchAddress, setSearchAddress] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(() => {
-    return value || { lat: -34.6037, lng: -58.3816 }; // Buenos Aires por defecto
-  });
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(() => value || DEFAULT_CENTER);
   const [manualLat, setManualLat] = useState<number>(value?.lat || 0);
   const [manualLng, setManualLng] = useState<number>(value?.lng || 0);
   const [manualMode, setManualMode] = useState(false);
 
+  const updateLocation = useCallback((position: { lat: number; lng: number } | null) => {
+    setSelectedLocation(position);
+    if (position) {
+      setMapCenter(position);
+      setManualLat(position.lat);
+      setManualLng(position.lng);
+    }
+    onChange(position);
+  }, [onChange]);
+
+  const handleSearch = useCallback(async () => {
+    if (!searchAddress.trim() || searchLoading) return;
+    setSearchLoading(true);
+    const result = await searchAddressWithGeocoding(searchAddress, updateLocation, onAddressChange);
+    setSearchLoading(false);
+    if (result) setMapCenter(result);
+  }, [searchAddress, searchLoading, updateLocation, onAddressChange]);
+
+  const handleCurrentLocation = useCallback(() => {
+    getCurrentUserLocation(updateLocation);
+  }, [updateLocation]);
+
+  const handleMapClickAction = useCallback((position: { lat: number; lng: number }) => {
+    const result = handleMapClick(position, props.disabled, onChange);
+    if (result) updateLocation(result);
+  }, [props.disabled, onChange, updateLocation]);
+
+  const handleManualApply = useCallback(() => {
+    const result = applyManualCoordinates(manualLat, manualLng, onChange);
+    if (result) {
+      updateLocation(result);
+      setManualMode(false);
+    }
+  }, [manualLat, manualLng, onChange, updateLocation]);
+
+  const handleClear = useCallback(() => {
+    clearLocation(onChange);
+    setSelectedLocation(null);
+    setManualMode(false);
+    setManualLat(0);
+    setManualLng(0);
+  }, [onChange]);
+
   // Sincronizar con valor externo
   useEffect(() => {
     if (value && (value.lat !== selectedLocation?.lat || value.lng !== selectedLocation?.lng)) {
-      setSelectedLocation(value);
-      setMapCenter(value);
-      setManualLat(value.lat);
-      setManualLng(value.lng);
+      updateLocation(value);
     }
-  }, [value, selectedLocation]);
+  }, [value, selectedLocation, updateLocation]);
 
-  // Manejar click en el mapa
-  const handleMapClick = useCallback((position: { lat: number; lng: number }) => {
-    if (disabled) return;
-    
-    setSelectedLocation(position);
-    setManualLat(position.lat);
-    setManualLng(position.lng);
-    onChange(position);
-    
-    notifications.show({
-      title: 'Ubicación seleccionada',
-      message: `Lat: ${position.lat.toFixed(6)}, Lng: ${position.lng.toFixed(6)}`,
-      color: 'green',
-      autoClose: 2000
-    });
-  }, [disabled, onChange]);
+  return {
+    selectedLocation,
+    searchAddress,
+    setSearchAddress,
+    searchLoading,
+    mapCenter,
+    manualLat,
+    setManualLat,
+    manualLng,
+    setManualLng,
+    manualMode,
+    setManualMode,
+    handleSearch,
+    handleCurrentLocation,
+    handleMapClickAction,
+    handleManualApply,
+    handleClear
+  };
+};
 
-  // Buscar dirección
-  const handleSearchAddress = useCallback(async () => {
-    if (!searchAddress.trim() || searchLoading) return;
+export default function LocationPicker(props: LocationPickerProps) {
+  const {
+    label = "Seleccionar ubicación",
+    placeholder = "Haga clic en el mapa para seleccionar ubicación",
+    required = false,
+    disabled = false,
+    height = 300,
+    showSearch = true,
+    showCoordinates = true,
+    showCurrentLocation = true,
+    initialZoom = 10,
+    searchPlaceholder = "Buscar dirección...",
+    error
+  } = props;
 
-    setSearchLoading(true);
-    try {
-      // Simulación de geocoding - en producción usar service real
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchAddress)}&key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.results && data.results.length > 0) {
-          const location = data.results[0].geometry.location;
-          const newPosition = { lat: location.lat, lng: location.lng };
-          
-          setSelectedLocation(newPosition);
-          setMapCenter(newPosition);
-          setManualLat(newPosition.lat);
-          setManualLng(newPosition.lng);
-          onChange(newPosition);
-          
-          if (onAddressChange) {
-            onAddressChange(data.results[0].formatted_address);
-          }
-          
-          notifications.show({
-            title: 'Dirección encontrada',
-            message: data.results[0].formatted_address,
-            color: 'green'
-          });
-        } else {
-          notifications.show({
-            title: 'No encontrado',
-            message: 'No se pudo encontrar la dirección especificada',
-            color: 'orange'
-          });
-        }
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Error al buscar la dirección',
-        color: 'red'
-      });
-    } finally {
-      setSearchLoading(false);
-    }
-  }, [searchAddress, searchLoading, onChange, onAddressChange]);
+  const {
+    selectedLocation,
+    searchAddress,
+    setSearchAddress,
+    searchLoading,
+    mapCenter,
+    manualLat,
+    setManualLat,
+    manualLng,
+    setManualLng,
+    manualMode,
+    setManualMode,
+    handleSearch,
+    handleCurrentLocation,
+    handleMapClickAction,
+    handleManualApply,
+    handleClear
+  } = useLocationPicker(props);
 
-  // Obtener ubicación actual
-  const handleCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      notifications.show({
-        title: 'Error',
-        message: 'Geolocalización no disponible en este navegador',
-        color: 'red'
-      });
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const newPosition = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        
-        setSelectedLocation(newPosition);
-        setMapCenter(newPosition);
-        setManualLat(newPosition.lat);
-        setManualLng(newPosition.lng);
-        onChange(newPosition);
-        
-        notifications.show({
-          title: 'Ubicación actual',
-          message: 'Se obtuvo tu ubicación actual',
-          color: 'green'
-        });
-      },
-      (error) => {
-        let message = 'No se pudo obtener la ubicación actual';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = 'Permiso de ubicación denegado';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            message = 'Ubicación no disponible';
-            break;
-          case error.TIMEOUT:
-            message = 'Tiempo de espera agotado';
-            break;
-        }
-        
-        notifications.show({
-          title: 'Error',
-          message,
-          color: 'red'
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
-    );
-  }, [onChange]);
-
-  // Limpiar selección
-  const handleClearSelection = useCallback(() => {
-    setSelectedLocation(null);
-    setManualLat(0);
-    setManualLng(0);
-    onChange(null);
-    
-    notifications.show({
-      title: 'Ubicación eliminada',
-      message: 'Se eliminó la ubicación seleccionada',
-      color: 'blue'
-    });
-  }, [onChange]);
-
-  // Aplicar coordenadas manuales
-  const handleApplyManualCoordinates = useCallback(() => {
-    if (manualLat === 0 && manualLng === 0) {
-      notifications.show({
-        title: 'Error',
-        message: 'Ingrese coordenadas válidas',
-        color: 'red'
-      });
-      return;
-    }
-
-    if (manualLat < -90 || manualLat > 90 || manualLng < -180 || manualLng > 180) {
-      notifications.show({
-        title: 'Error',
-        message: 'Coordenadas fuera del rango válido',
-        color: 'red'
-      });
-      return;
-    }
-
-    const newPosition = { lat: manualLat, lng: manualLng };
-    setSelectedLocation(newPosition);
-    setMapCenter(newPosition);
-    onChange(newPosition);
-    setManualMode(false);
-    
-    notifications.show({
-      title: 'Coordenadas aplicadas',
-      message: `Lat: ${manualLat.toFixed(6)}, Lng: ${manualLng.toFixed(6)}`,
-      color: 'green'
-    });
-  }, [manualLat, manualLng, onChange]);
-
-  // Crear marcador para la ubicación seleccionada
-  const markers: MapMarker[] = selectedLocation ? [
-    {
-      id: 'selected-location',
-      position: selectedLocation,
-      title: 'Ubicación seleccionada',
-      icon: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#e03131"/>
-          <circle cx="12" cy="9" r="2.5" fill="white"/>
-        </svg>
-      `),
-      content: `
-        <div style="padding: 8px;">
-          <h4 style="margin: 0 0 4px 0;">Ubicación seleccionada</h4>
-          <p style="margin: 0; font-size: 12px;">
-            Lat: ${selectedLocation.lat.toFixed(6)}<br/>
-            Lng: ${selectedLocation.lng.toFixed(6)}
-          </p>
-        </div>
-      `
-    }
-  ] : [];
+  const markers: MapMarker[] = selectedLocation 
+    ? [{ id: 'selected', position: selectedLocation, title: 'Ubicación seleccionada', draggable: !disabled }] 
+    : [];
 
   return (
-    <Stack gap="md">
-      {/* Label */}
-      <Text size="sm" fw={500}>
-        {label}
-        {required && <Text component="span" c="red"> *</Text>}
-      </Text>
-
-      {/* Buscador de direcciones */}
-      {showSearch && (
-        <Group>
-          <TextInput
-            placeholder={searchPlaceholder}
-            value={searchAddress}
-            onChange={(e) => setSearchAddress(e.target.value)}
-            disabled={disabled}
-            style={{ flex: 1 }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleSearchAddress();
-              }
-            }}
-          />
-          <Button
-            variant="light"
-            leftSection={<IconSearch size={16} />}
-            onClick={handleSearchAddress}
-            loading={searchLoading}
-            disabled={disabled || !searchAddress.trim()}
-          >
-            Buscar
-          </Button>
-          {showCurrentLocation && (
-            <Tooltip label="Usar ubicación actual">
-              <ActionIcon
-                variant="light"
-                color="blue"
-                onClick={handleCurrentLocation}
-                disabled={disabled}
-              >
-                <IconCurrentLocation size={16} />
-              </ActionIcon>
-            </Tooltip>
-          )}
-        </Group>
-      )}
-
-      {/* Estado de la selección */}
-      <Group justify="space-between">
-        <Group>
-          {selectedLocation ? (
-            <Badge color="green" variant="light" leftSection={<IconCheck size={14} />}>
-              Ubicación seleccionada
-            </Badge>
-          ) : (
-            <Badge color="gray" variant="light" leftSection={<IconCrosshair size={14} />}>
-              Sin ubicación
-            </Badge>
-          )}
-        </Group>
-        
-        {selectedLocation && (
-          <Group gap="xs">
-            <Tooltip label="Eliminar ubicación">
-              <ActionIcon
-                variant="subtle"
-                color="red"
-                onClick={handleClearSelection}
-                disabled={disabled}
-              >
-                <IconX size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        )}
+    <Stack gap="sm">
+      <Group justify="space-between" align="flex-end">
+        <Text size="sm" fw={500}>
+          {label} {required && <span style={{ color: 'red' }}>*</span>}
+        </Text>
+        <LocationBadge selectedLocation={selectedLocation} />
       </Group>
 
-      {/* Mapa */}
+      <SearchControls
+        showSearch={showSearch}
+        showCurrentLocation={showCurrentLocation}
+        selectedLocation={selectedLocation}
+        searchAddress={searchAddress}
+        searchLoading={searchLoading}
+        searchPlaceholder={searchPlaceholder}
+        disabled={disabled}
+        onSearchChange={setSearchAddress}
+        onSearch={handleSearch}
+        onCurrentLocation={handleCurrentLocation}
+        onClear={handleClear}
+      />
+
+      <CoordinatesDisplay
+        showCoordinates={showCoordinates}
+        selectedLocation={selectedLocation}
+        manualMode={manualMode}
+        manualLat={manualLat}
+        manualLng={manualLng}
+        disabled={disabled}
+        onManualModeToggle={setManualMode}
+        onManualLatChange={setManualLat}
+        onManualLngChange={setManualLng}
+        onManualApply={handleManualApply}
+      />
+
+      {error && <Alert color="red" size="sm">{error}</Alert>}
+
       <Paper withBorder>
         <MapView
           height={height}
           center={mapCenter}
-          zoom={selectedLocation ? 15 : initialZoom}
+          zoom={initialZoom}
           markers={markers}
-          onMapClick={handleMapClick}
-          showCurrentLocation={false}
+          onMapClick={handleMapClickAction}
+          onMarkerDragEnd={(markerId, position) => {
+            if (markerId === 'selected') {
+              props.onChange(position);
+            }
+          }}
           disabled={disabled}
         />
       </Paper>
 
-      {/* Coordenadas manuales */}
-      {showCoordinates && (
-        <Paper p="md" withBorder>
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Text fw={500} size="sm">Coordenadas manuales</Text>
-              <Button
-                variant="subtle"
-                size="xs"
-                onClick={() => setManualMode(!manualMode)}
-              >
-                {manualMode ? 'Cancelar' : 'Editar'}
-              </Button>
-            </Group>
-            
-            {manualMode ? (
-              <Stack gap="sm">
-                <Group>
-                  <NumberInput
-                    label="Latitud"
-                    placeholder="-34.6037"
-                    value={manualLat}
-                    onChange={(val) => setManualLat(typeof val === 'number' ? val : 0)}
-                    decimalScale={6}
-                    step={0.000001}
-                    min={-90}
-                    max={90}
-                    disabled={disabled}
-                    style={{ flex: 1 }}
-                  />
-                  <NumberInput
-                    label="Longitud"
-                    placeholder="-58.3816"
-                    value={manualLng}
-                    onChange={(val) => setManualLng(typeof val === 'number' ? val : 0)}
-                    decimalScale={6}
-                    step={0.000001}
-                    min={-180}
-                    max={180}
-                    disabled={disabled}
-                    style={{ flex: 1 }}
-                  />
-                </Group>
-                <Group justify="flex-end">
-                  <Button
-                    variant="light"
-                    leftSection={<IconMapPin size={16} />}
-                    onClick={handleApplyManualCoordinates}
-                    disabled={disabled}
-                  >
-                    Aplicar coordenadas
-                  </Button>
-                </Group>
-              </Stack>
-            ) : (
-              <Group justify="space-between">
-                <Text size="sm" c="dimmed">
-                  {selectedLocation 
-                    ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}`
-                    : 'Sin coordenadas seleccionadas'
-                  }
-                </Text>
-              </Group>
-            )}
-          </Stack>
-        </Paper>
-      )}
-
-      {/* Placeholder text */}
-      {!selectedLocation && (
-        <Text size="sm" c="dimmed" ta="center">
-          {placeholder}
-        </Text>
-      )}
-
-      {/* Error */}
-      {error && (
-        <Alert color="red" variant="light">
-          {error}
-        </Alert>
+      {!selectedLocation && !disabled && (
+        <Text size="xs" c="dimmed" ta="center">{placeholder}</Text>
       )}
     </Stack>
   );
