@@ -1,5 +1,10 @@
 // Imports
-import { createSimpleSelector, CommonMappers, CommonFilters, createFilterableSelector } from './SelectorFactory';
+import {
+  createSimpleSelector,
+  CommonMappers,
+  CommonFilters,
+  createFilterableSelector,
+} from './SelectorFactory';
 
 // Factory Pattern para Selectores
 export {
@@ -13,7 +18,7 @@ export {
   type SelectOption,
   type BaseEntity,
   type SelectorHookResult,
-  type FilterConfig
+  type FilterConfig,
 } from './SelectorFactory';
 
 // Selectores refactorizados usando el factory
@@ -28,16 +33,12 @@ export { PersonalSelector, ChoferSelector } from './PersonalSelector';
 
 export function createQuickSelector<T extends { _id: string; nombre: string }>(
   useHook: () => { data: T[]; loading: boolean; error?: string },
-  placeholder: string = "Selecciona una opción"
+  _placeholder = 'Selecciona una opción'
 ) {
-  return createSimpleSelector(
-    useHook,
-    CommonMappers.nameOnly,
-    {
-      searchable: true,
-      clearable: true
-    }
-  );
+  return createSimpleSelector(useHook, CommonMappers.nameOnly, {
+    searchable: true,
+    clearable: true,
+  });
 }
 
 // Presets comunes para tipos específicos
@@ -46,25 +47,21 @@ export const SelectorPresets = {
   simple: <T extends { _id: string; nombre: string }>(
     useHook: () => { data: T[]; loading: boolean; error?: string }
   ) => createSimpleSelector(useHook, CommonMappers.nameOnly),
-  
+
   // Para entidades con estado activo/inactivo
   withStatus: <T extends { _id: string; nombre: string; activo?: boolean }>(
     useHook: () => { data: T[]; loading: boolean; error?: string }
-  ) => createFilterableSelector(
-    useHook,
-    CommonMappers.withStatus,
-    CommonFilters.activos<T>()
-  ),
-  
+  ) => createFilterableSelector(useHook, CommonMappers.withStatus, CommonFilters.activos<T>()),
+
   // Para entidades con personas (nombre + apellido)
   person: <T extends { _id: string; nombre: string; apellido?: string }>(
     useHook: () => { data: T[]; loading: boolean; error?: string }
   ) => createSimpleSelector(useHook, CommonMappers.fullName),
-  
+
   // Para entidades con código y descripción
   codeDescription: <T extends { _id: string; codigo?: string; descripcion: string }>(
     useHook: () => { data: T[]; loading: boolean; error?: string }
-  ) => createSimpleSelector(useHook, CommonMappers.codeDescription)
+  ) => createSimpleSelector(useHook, CommonMappers.codeDescription),
 } as const;
 
 // Ejemplos de uso rápido:

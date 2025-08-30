@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Title,
   Stack,
   Group,
   Text,
@@ -8,181 +7,20 @@ import {
   Button,
   ActionIcon,
   Table,
-  Alert,
   Card,
-  SimpleGrid,
   NumberInput,
   Select,
   TextInput,
   Collapse,
-  Box,
 } from '@mantine/core';
-import {
-  IconCalculator,
-  IconPlus,
-  IconTrash,
-  IconChevronDown,
-  IconChevronUp,
-  IconRefresh,
-  IconAlertTriangle,
-} from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { type CalculationItem } from '../../hooks/useCalculatorBase';
 
-// Type definitions
-export interface CalculatorState {
-  items: CalculationItem[];
-  result: CalculationResult;
-  loading: boolean;
-  error: string | null;
-  isValid: boolean;
-}
+// Re-export types and components from separate files
+export * from './types/calculatorTypes';
+export * from './components';
 
-export interface CalculatorActions {
-  formatValue: (value: number) => string;
-  recalculate: () => void;
-  addItem: (item: Omit<CalculationItem, 'id'>) => void;
-  removeItem: (id: string) => void;
-  setItems: (items: CalculationItem[]) => void;
-}
-
-export interface CalculationResult {
-  total: number;
-  subtotal: number;
-  recargos?: number;
-  descuentos?: number;
-  desglose: CalculationItem[];
-  metadatos?: {
-    itemCount?: number;
-    calculatedAt?: string;
-    precision?: number;
-  };
-}
-
-// Helper Components
-export interface CompactViewProps {
-  title: string;
-  state: CalculatorState;
-  actions: CalculatorActions;
-}
-
-export const CompactView: React.FC<CompactViewProps> = ({ title, state, actions }) => (
-  <Card withBorder>
-    <Group justify="space-between" mb="md">
-      <Group>
-        <IconCalculator size={20} />
-        <Text fw={500}>{title}</Text>
-      </Group>
-      <Badge size="lg" variant="filled" color="blue">
-        {actions.formatValue(state.result.total)}
-      </Badge>
-    </Group>
-    {state.error && (
-      <Alert icon={<IconAlertTriangle size={16} />} color="red">
-        {state.error}
-      </Alert>
-    )}
-    {!state.isValid && !state.error && (
-      <Alert icon={<IconAlertTriangle size={16} />} color="yellow">
-        Configuración incompleta
-      </Alert>
-    )}
-  </Card>
-);
-
-export interface HeaderSectionProps {
-  title: string;
-  subtitle?: string;
-  actions: CalculatorActions;
-}
-
-export const HeaderSection: React.FC<HeaderSectionProps> = ({ title, subtitle, actions }) => (
-  <Group justify="space-between" mb="md">
-    <Box>
-      <Group>
-        <IconCalculator size={24} />
-        <Title order={3}>{title}</Title>
-      </Group>
-      {subtitle && (
-        <Text size="sm" c="dimmed" mt={4}>
-          {subtitle}
-        </Text>
-      )}
-    </Box>
-    <Group>
-      <Button
-        variant="light"
-        leftSection={<IconRefresh size={16} />}
-        onClick={actions.recalculate}
-        size="sm"
-      >
-        Recalcular
-      </Button>
-    </Group>
-  </Group>
-);
-
-export interface AlertsSectionProps {
-  state: CalculatorState;
-}
-
-export const AlertsSection: React.FC<AlertsSectionProps> = ({ state }) => (
-  <>
-    {state.error && (
-      <Alert icon={<IconAlertTriangle size={16} />} color="red" mb="md">
-        {state.error}
-      </Alert>
-    )}
-    {!state.isValid && !state.error && (
-      <Alert icon={<IconAlertTriangle size={16} />} color="yellow" mb="md">
-        Configuración incompleta o valores inválidos
-      </Alert>
-    )}
-  </>
-);
-
-export interface TotalsSummaryProps {
-  state: CalculatorState;
-  actions: CalculatorActions;
-}
-
-export const TotalsSummary: React.FC<TotalsSummaryProps> = ({ state, actions }) => (
-  <SimpleGrid cols={state.result.descuentos || state.result.recargos ? 4 : 2} mb="md">
-    <Card withBorder p="sm">
-      <Text size="xs" c="dimmed" mb={4}>
-        Subtotal
-      </Text>
-      <Text fw={500}>{actions.formatValue(state.result.subtotal)}</Text>
-    </Card>
-    {state.result.recargos && (
-      <Card withBorder p="sm">
-        <Text size="xs" c="dimmed" mb={4}>
-          Recargos
-        </Text>
-        <Text fw={500} c="green">
-          +{actions.formatValue(state.result.recargos)}
-        </Text>
-      </Card>
-    )}
-    {state.result.descuentos && (
-      <Card withBorder p="sm">
-        <Text size="xs" c="dimmed" mb={4}>
-          Descuentos
-        </Text>
-        <Text fw={500} c="red">
-          -{actions.formatValue(state.result.descuentos)}
-        </Text>
-      </Card>
-    )}
-    <Card withBorder p="sm" bg="blue.0">
-      <Text size="xs" c="dimmed" mb={4}>
-        Total
-      </Text>
-      <Text fw={700} size="lg" c="blue">
-        {actions.formatValue(state.result.total)}
-      </Text>
-    </Card>
-  </SimpleGrid>
-);
+// Remaining large components
 
 export interface AddItemFormProps {
   readonly: boolean;
