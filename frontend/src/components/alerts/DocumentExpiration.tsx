@@ -176,7 +176,7 @@ const procesarDocumentosPersonal = (
   return documentos;
 };
 
-const getEstadoColor = (estado: DocumentoVencimiento['estado']) => {
+const getEstadoColor = (estado: string) => {
   switch (estado) {
     case 'vencido':
       return 'red';
@@ -189,7 +189,7 @@ const getEstadoColor = (estado: DocumentoVencimiento['estado']) => {
   }
 };
 
-const getEstadoIcon = (estado: DocumentoVencimiento['estado']) => {
+const getEstadoIcon = (estado: string) => {
   switch (estado) {
     case 'vencido':
       return <IconX size={16} />;
@@ -202,7 +202,7 @@ const getEstadoIcon = (estado: DocumentoVencimiento['estado']) => {
   }
 };
 
-const getEntidadIcon = (entidad: DocumentoVencimiento['entidad']) => {
+const getEntidadIcon = (entidad: string) => {
   return entidad === 'vehiculo' ? <IconTruck size={16} /> : <IconUser size={16} />;
 };
 
