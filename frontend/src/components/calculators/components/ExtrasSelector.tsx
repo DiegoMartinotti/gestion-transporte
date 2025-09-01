@@ -20,13 +20,15 @@ export const ExtrasSelector: React.FC<ExtrasSelectorProps> = ({
 }) => {
   const [selectedExtraId, setSelectedExtraId] = React.useState<string>('');
 
-  const extrasOptions = extrasDisponibles.map((extra) => ({
-    value: extra._id,
-    label: `${extra.nombre} - ${new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(extra.valor)}`,
-  }));
+  const extrasOptions = extrasDisponibles
+    .filter((extra): extra is Extra & { _id: string } => Boolean(extra._id))
+    .map((extra) => ({
+      value: extra._id,
+      label: `${extra.tipo} - ${new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+      }).format(extra.valor)}`,
+    }));
 
   const handleAddExtra = () => {
     if (selectedExtraId) {
