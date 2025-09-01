@@ -114,7 +114,7 @@ function VirtualizedDataTable<T = Record<string, unknown>>({
           itemData={rowData as RowData<unknown>}
           overscanCount={overscan}
         >
-          {VirtualizedRow as React.ComponentType<Record<string, unknown>>}
+          {VirtualizedRow}
         </List>
       </Paper>
     </Stack>
