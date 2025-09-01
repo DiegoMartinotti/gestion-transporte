@@ -12,7 +12,7 @@ import {
   LoadingSkeleton,
   SearchAndControls,
   PaginationControls,
-} from './DataTable';
+} from './DataTable/index';
 
 // Main DataTable props interface
 export interface DataTableProps<T> {
@@ -37,7 +37,7 @@ export interface DataTableProps<T> {
 }
 
 // Re-export DataTableColumn for external use
-export { DataTableColumn };
+export type { DataTableColumn };
 
 // Table header component
 const TableHeader = <T,>({
@@ -57,11 +57,7 @@ const TableHeader = <T,>({
     <Table.Tr>
       {multiSelect && (
         <Table.Th style={{ width: 40 }}>
-          <Checkbox
-            checked={allSelected}
-            onChange={onSelectAll}
-            aria-label="Seleccionar todo"
-          />
+          <Checkbox checked={allSelected} onChange={onSelectAll} aria-label="Seleccionar todo" />
         </Table.Th>
       )}
       {columns.map((column) => (
@@ -153,12 +149,12 @@ const TableBody = <T,>({
 };
 
 // Memoized comparison function
-const arePropsEqual = <T,>(
-  prevProps: DataTableProps<T>,
-  nextProps: DataTableProps<T>
-) => {
+const arePropsEqual = <T,>(prevProps: DataTableProps<T>, nextProps: DataTableProps<T>) => {
   return (
-    compareSimpleProps(prevProps, nextProps) &&
+    compareSimpleProps(
+      prevProps as unknown as Record<string, unknown>,
+      nextProps as unknown as Record<string, unknown>
+    ) &&
     compareArrays(prevProps.data, nextProps.data) &&
     compareColumns(prevProps.columns, nextProps.columns) &&
     compareArrays(prevProps.selectedIds, nextProps.selectedIds)
@@ -180,11 +176,11 @@ const useSelectionLogic = <T,>({
   const handleRowSelect = useCallback(
     (recordId: string) => {
       if (!onSelectionChange) return;
-      
+
       const newSelectedIds = selectedIds.includes(recordId)
-        ? selectedIds.filter(id => id !== recordId)
+        ? selectedIds.filter((id) => id !== recordId)
         : [...selectedIds, recordId];
-      
+
       onSelectionChange(newSelectedIds);
     },
     [selectedIds, onSelectionChange]
@@ -192,7 +188,7 @@ const useSelectionLogic = <T,>({
 
   const handleSelectAll = useCallback(() => {
     if (!onSelectionChange) return;
-    
+
     const allIds = data.map(keyExtractor);
     const newSelectedIds = selectedIds.length === allIds.length ? [] : allIds;
     onSelectionChange(newSelectedIds);
@@ -229,18 +225,14 @@ function DataTable<T = Record<string, unknown>>({
   onSelectionChange,
 }: DataTableProps<T>) {
   // Use custom hooks
-  const {
-    search,
-    totalPages,
-    pageSizeOptions,
-    handleSearchChange,
-    handleSort,
-  } = useDataTableState({
-    totalItems,
-    pageSize,
-    currentPage,
-    onFiltersChange,
-  });
+  const { search, totalPages, pageSizeOptions, handleSearchChange, handleSort } = useDataTableState(
+    {
+      totalItems,
+      pageSize,
+      currentPage,
+      onFiltersChange,
+    }
+  );
 
   const { handleRowSelect, handleSelectAll, allSelected } = useSelectionLogic({
     data,
@@ -273,7 +265,7 @@ function DataTable<T = Record<string, unknown>>({
             onSelectAll={handleSelectAll}
             handleSort={handleSort}
           />
-          
+
           {loading ? (
             <Table.Tbody>
               <LoadingSkeleton columns={columns} multiSelect={multiSelect} />
