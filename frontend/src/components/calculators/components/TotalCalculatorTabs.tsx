@@ -13,7 +13,7 @@ interface CalculatorState {
 
 interface TotalCalculatorTabsProps {
   selectedTab: string;
-  setSelectedTab: ((value: string) => void) | null;
+  setSelectedTab: ((value: string | null) => void) | null;
   showExtras: boolean;
   readonly: boolean;
   calculatorState: CalculatorState;
@@ -26,6 +26,63 @@ interface TotalCalculatorTabsProps {
   calcularTotalGeneral: (tarifaBase: number) => number;
   showTarifaBase: boolean;
 }
+
+const DetallesPanel: React.FC<{
+  showTarifaBase: boolean;
+  tarifaBase: number;
+  calculatorState: CalculatorState;
+  formatCurrency: (amount: number) => string;
+  calcularTotalGeneral: (tarifaBase: number) => number;
+}> = ({ showTarifaBase, tarifaBase, calculatorState, formatCurrency, calcularTotalGeneral }) => (
+  <Stack gap="md" mt="md">
+    {showTarifaBase && (
+      <Card withBorder>
+        <Group justify="space-between">
+          <Group gap="xs">
+            <IconTruck size={16} />
+            <Text fw={500}>Tarifa Base</Text>
+          </Group>
+          <Text fw={500}>{formatCurrency(tarifaBase)}</Text>
+        </Group>
+      </Card>
+    )}
+
+    {calculatorState.items.length > 0 && (
+      <Card withBorder>
+        <Text fw={500} mb="md">
+          Extras Detallados
+        </Text>
+        <Stack gap="xs">
+          {calculatorState.items.map((item, index) => (
+            <Group key={index} justify="space-between">
+              <Text size="sm">
+                {item.concepto} x {item.cantidad}
+              </Text>
+              <Text size="sm" fw={500}>
+                {formatCurrency((item.valor || 0) * (item.cantidad || 1))}
+              </Text>
+            </Group>
+          ))}
+        </Stack>
+      </Card>
+    )}
+
+    <Divider />
+
+    <Group
+      justify="space-between"
+      p="md"
+      style={{ backgroundColor: 'var(--mantine-color-blue-0)' }}
+    >
+      <Text size="lg" fw={700}>
+        Total Final
+      </Text>
+      <Text size="lg" fw={700} c="blue">
+        {formatCurrency(calcularTotalGeneral(tarifaBase))}
+      </Text>
+    </Group>
+  </Stack>
+);
 
 export const TotalCalculatorTabs: React.FC<TotalCalculatorTabsProps> = ({
   selectedTab,
@@ -83,54 +140,13 @@ export const TotalCalculatorTabs: React.FC<TotalCalculatorTabsProps> = ({
       )}
 
       <Tabs.Panel value="detalles">
-        <Stack gap="md" mt="md">
-          {showTarifaBase && (
-            <Card withBorder>
-              <Group justify="space-between">
-                <Group gap="xs">
-                  <IconTruck size={16} />
-                  <Text fw={500}>Tarifa Base</Text>
-                </Group>
-                <Text fw={500}>{formatCurrency(tarifaBase)}</Text>
-              </Group>
-            </Card>
-          )}
-
-          {calculatorState.items.length > 0 && (
-            <Card withBorder>
-              <Text fw={500} mb="md">
-                Extras Detallados
-              </Text>
-              <Stack gap="xs">
-                {calculatorState.items.map((item, index) => (
-                  <Group key={index} justify="space-between">
-                    <Text size="sm">
-                      {item.concepto} x {item.cantidad}
-                    </Text>
-                    <Text size="sm" fw={500}>
-                      {formatCurrency((item.valor || 0) * (item.cantidad || 1))}
-                    </Text>
-                  </Group>
-                ))}
-              </Stack>
-            </Card>
-          )}
-
-          <Divider />
-
-          <Group
-            justify="space-between"
-            p="md"
-            style={{ backgroundColor: 'var(--mantine-color-blue-0)' }}
-          >
-            <Text size="lg" fw={700}>
-              Total Final
-            </Text>
-            <Text size="lg" fw={700} c="blue">
-              {formatCurrency(calcularTotalGeneral(tarifaBase))}
-            </Text>
-          </Group>
-        </Stack>
+        <DetallesPanel
+          showTarifaBase={showTarifaBase}
+          tarifaBase={tarifaBase}
+          calculatorState={calculatorState}
+          formatCurrency={formatCurrency}
+          calcularTotalGeneral={calcularTotalGeneral}
+        />
       </Tabs.Panel>
     </Tabs>
   );
