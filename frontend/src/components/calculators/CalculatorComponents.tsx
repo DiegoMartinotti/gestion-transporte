@@ -15,6 +15,7 @@ import {
 } from '@mantine/core';
 import { IconPlus, IconTrash, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { type CalculationItem } from '../../hooks/useCalculatorBase';
+import { CalculatorState, CalculatorActions } from './types/calculatorTypes';
 
 // Re-export types and components from separate files
 export * from './types/calculatorTypes';
