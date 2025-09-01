@@ -9,7 +9,7 @@ interface TotalSummaryProps {
 }
 
 export const TotalSummary: React.FC<TotalSummaryProps> = ({ tarifaBase, items }) => {
-  const totalExtras = items.reduce((sum, item) => sum + item.total, 0);
+  const totalExtras = items.reduce((sum, item) => sum + item.valor, 0);
   const totalGeneral = tarifaBase + totalExtras;
 
   const formatCurrency = (amount: number) => {
