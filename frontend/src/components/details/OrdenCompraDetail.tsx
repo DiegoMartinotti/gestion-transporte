@@ -120,7 +120,11 @@ export function OrdenCompraDetail({ ordenId, onEdit, onDelete, _onClose }: Orden
   }, [loadOrdenDetail]);
 
   if (loading) {
-    return <LoadingOverlay message="Cargando detalles de la orden..." />;
+    return (
+      <LoadingOverlay loading={loading}>
+        <div />
+      </LoadingOverlay>
+    );
   }
 
   if (!orden) {

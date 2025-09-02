@@ -18,7 +18,6 @@ import {
 import {
   IconCalendar,
   IconUser,
-  IconFileText,
   IconCurrencyDollar,
   IconMapPin,
   IconTruck,
@@ -136,7 +135,7 @@ export function OrdenCompraHeader({
               </Text>
             </Group>
             <Text size="lg" fw={600}>
-              {cliente ? cliente.razonSocial : 'Cliente no encontrado'}
+              {cliente ? cliente.nombre : 'Cliente no encontrado'}
             </Text>
             {cliente && (
               <Text size="sm" c="dimmed">
@@ -156,28 +155,24 @@ export function OrdenCompraHeader({
             </Group>
             <Text size="lg">{new Date(orden.fecha).toLocaleDateString('es-AR')}</Text>
 
-            <Badge color={orden.estado === 'activa' ? 'green' : 'gray'} variant="light" size="lg">
-              {orden.estado === 'activa' ? 'Activa' : 'Inactiva'}
+            <Badge
+              color={
+                orden.estado === 'Pendiente'
+                  ? 'yellow'
+                  : orden.estado === 'Facturada'
+                    ? 'green'
+                    : 'red'
+              }
+              variant="light"
+              size="lg"
+            >
+              {orden.estado}
             </Badge>
           </Stack>
         </Grid.Col>
       </Grid>
 
       <Divider my="md" />
-
-      {orden.observaciones && (
-        <Stack gap="xs">
-          <Group gap="xs">
-            <IconFileText size={16} />
-            <Text fw={500} size="sm">
-              Observaciones
-            </Text>
-          </Group>
-          <Text size="sm" c="dimmed">
-            {orden.observaciones}
-          </Text>
-        </Stack>
-      )}
     </Card>
   );
 }
@@ -296,7 +291,7 @@ function ViajeTableRow({
         <Group gap="xs">
           <IconTruck size={16} />
           <Text size="sm" fw={500}>
-            {viaje ? `#${viaje.numero || viaje._id.slice(-6)}` : 'Cargando...'}
+            {viaje ? `#${viaje._id.slice(-6)}` : 'Cargando...'}
           </Text>
         </Group>
       </Table.Td>
@@ -315,7 +310,11 @@ function ViajeTableRow({
         </Group>
       </Table.Td>
 
-      <Table.Td>{viaje && <EstadoPartidaIndicator estado={viaje.estado} size="sm" />}</Table.Td>
+      <Table.Td>
+        {viaje && (
+          <EstadoPartidaIndicator estado={normalizeEstadoPartida(viaje.estado)} size="sm" />
+        )}
+      </Table.Td>
 
       <Table.Td>
         <Text fw={500} size="sm">
@@ -377,7 +376,7 @@ export function ViajesTable({ orden, viajes, onViajeClick }: ViajesTableProps) {
             <Table.Th>Estado</Table.Th>
             <Table.Th>Importe</Table.Th>
             <Table.Th>Observaciones</Table.Th>
-            <Table.Th width={100}>Acciones</Table.Th>
+            <Table.Th style={{ width: 100 }}>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
