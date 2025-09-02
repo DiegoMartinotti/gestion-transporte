@@ -1,17 +1,17 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import ViajeForm from '../ViajeForm';
-import { viajeService } from '../../../services/viajeService';
-import { clienteService } from '../../../services/clienteService';
-import { tramoService } from '../../../services/tramoService';
+import { ViajeForm } from '../../src/pages/viajes/ViajeForm';
+import { ViajeService } from '../../src/services/viajeService';
+import { clienteService } from '../../src/services/clienteService';
+import { tramoService } from '../../src/services/tramoService';
 
 // Mock de los servicios
-jest.mock('../../../services/viajeService');
-jest.mock('../../../services/clienteService');
-jest.mock('../../../services/tramoService');
+jest.mock('../../src/services/viajeService');
+jest.mock('../../src/services/clienteService');
+jest.mock('../../src/services/tramoService');
 
-const mockViajeService = viajeService as jest.Mocked<typeof viajeService>;
+const mockViajeService = ViajeService as jest.Mocked<typeof ViajeService>;
 const mockClienteService = clienteService as jest.Mocked<typeof clienteService>;
 const mockTramoService = tramoService as jest.Mocked<typeof tramoService>;
 
@@ -26,7 +26,7 @@ const renderWithProviders = (component: React.ReactNode) => {
 
 const mockClientes = [
   { _id: '1', codigo: 'CLI001', nombre: 'Cliente Test 1' },
-  { _id: '2', codigo: 'CLI002', nombre: 'Cliente Test 2' }
+  { _id: '2', codigo: 'CLI002', nombre: 'Cliente Test 2' },
 ];
 
 const mockTramos = [
@@ -37,15 +37,17 @@ const mockTramos = [
     origen: { _id: '1', denominacion: 'Origen' },
     destino: { _id: '2', denominacion: 'Destino' },
     distancia: 100,
-    tarifas: [{
-      _id: 'tar1',
-      vigenciaDesde: '2023-01-01',
-      vigenciaHasta: '2023-12-31',
-      tipoCalculo: 'POR_VIAJE',
-      importe: 50000,
-      activa: true
-    }]
-  }
+    tarifas: [
+      {
+        _id: 'tar1',
+        vigenciaDesde: '2023-01-01',
+        vigenciaHasta: '2023-12-31',
+        tipoCalculo: 'POR_VIAJE',
+        importe: 50000,
+        activa: true,
+      },
+    ],
+  },
 ];
 
 describe('ViajeForm Integration', () => {
@@ -66,15 +68,10 @@ describe('ViajeForm Integration', () => {
       vehiculos: [],
       choferes: [],
       estado: 'PENDIENTE',
-      montoTotal: 100000
+      montoTotal: 100000,
     });
 
-    renderWithProviders(
-      <ViajeForm
-        onSubmit={mockOnSuccess}
-        onCancel={() => {}}
-      />
-    );
+    renderWithProviders(<ViajeForm onSubmit={mockOnSuccess} onCancel={() => {}} />);
 
     // Esperar a que se carguen los clientes
     await waitFor(() => {
@@ -96,7 +93,7 @@ describe('ViajeForm Integration', () => {
 
     // Ingresar fecha
     fireEvent.change(screen.getByLabelText(/fecha/i), {
-      target: { value: '2023-06-01' }
+      target: { value: '2023-06-01' },
     });
 
     // Submit del formulario
@@ -107,7 +104,7 @@ describe('ViajeForm Integration', () => {
         expect.objectContaining({
           fecha: '2023-06-01',
           cliente: '1',
-          tramo: '1'
+          tramo: '1',
         })
       );
     });
@@ -116,12 +113,7 @@ describe('ViajeForm Integration', () => {
   });
 
   it('should load tramos when cliente is selected', async () => {
-    renderWithProviders(
-      <ViajeForm
-        onSubmit={() => {}}
-        onCancel={() => {}}
-      />
-    );
+    renderWithProviders(<ViajeForm onSubmit={() => {}} onCancel={() => {}} />);
 
     // Esperar a que se carguen los clientes
     await waitFor(() => {
@@ -144,12 +136,7 @@ describe('ViajeForm Integration', () => {
   });
 
   it('should calculate totals when tramo is selected', async () => {
-    renderWithProviders(
-      <ViajeForm
-        onSubmit={() => {}}
-        onCancel={() => {}}
-      />
-    );
+    renderWithProviders(<ViajeForm onSubmit={() => {}} onCancel={() => {}} />);
 
     // Seleccionar cliente y tramo
     await waitFor(() => {
@@ -178,12 +165,7 @@ describe('ViajeForm Integration', () => {
   });
 
   it('should show validation errors for required fields', async () => {
-    renderWithProviders(
-      <ViajeForm
-        onSubmit={() => {}}
-        onCancel={() => {}}
-      />
-    );
+    renderWithProviders(<ViajeForm onSubmit={() => {}} onCancel={() => {}} />);
 
     // Submit sin llenar campos requeridos
     fireEvent.click(screen.getByRole('button', { name: /guardar/i }));
@@ -198,19 +180,14 @@ describe('ViajeForm Integration', () => {
   });
 
   it('should validate fecha is not in the past', async () => {
-    renderWithProviders(
-      <ViajeForm
-        onSubmit={() => {}}
-        onCancel={() => {}}
-      />
-    );
+    renderWithProviders(<ViajeForm onSubmit={() => {}} onCancel={() => {}} />);
 
     // Ingresar fecha pasada
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     fireEvent.change(screen.getByLabelText(/fecha/i), {
-      target: { value: yesterday.toISOString().split('T')[0] }
+      target: { value: yesterday.toISOString().split('T')[0] },
     });
 
     fireEvent.blur(screen.getByLabelText(/fecha/i));
@@ -224,12 +201,7 @@ describe('ViajeForm Integration', () => {
     const mockOnSuccess = jest.fn();
     mockViajeService.create.mockRejectedValue(new Error('Error del servidor'));
 
-    renderWithProviders(
-      <ViajeForm
-        onSubmit={mockOnSuccess}
-        onCancel={() => {}}
-      />
-    );
+    renderWithProviders(<ViajeForm onSubmit={mockOnSuccess} onCancel={() => {}} />);
 
     // Llenar formulario con datos válidos
     await waitFor(() => {
@@ -247,7 +219,7 @@ describe('ViajeForm Integration', () => {
     fireEvent.click(screen.getByText('Tramo Test'));
 
     fireEvent.change(screen.getByLabelText(/fecha/i), {
-      target: { value: '2023-06-01' }
+      target: { value: '2023-06-01' },
     });
 
     // Submit del formulario
@@ -270,21 +242,17 @@ describe('ViajeForm Integration', () => {
       vehiculos: [],
       choferes: [],
       estado: 'PENDIENTE',
-      montoTotal: 100000
+      montoTotal: 100000,
     };
 
     const mockOnSuccess = jest.fn();
     mockViajeService.update.mockResolvedValue({
       ...existingViaje,
-      fecha: '2023-06-02'
+      fecha: '2023-06-02',
     });
 
     renderWithProviders(
-      <ViajeForm
-        viaje={existingViaje}
-        onSubmit={mockOnSuccess}
-        onCancel={() => {}}
-      />
+      <ViajeForm viaje={existingViaje} onSubmit={mockOnSuccess} onCancel={() => {}} />
     );
 
     // El formulario debería estar pre-llenado
@@ -292,7 +260,7 @@ describe('ViajeForm Integration', () => {
 
     // Cambiar fecha
     fireEvent.change(screen.getByLabelText(/fecha/i), {
-      target: { value: '2023-06-02' }
+      target: { value: '2023-06-02' },
     });
 
     // Submit del formulario
@@ -302,7 +270,7 @@ describe('ViajeForm Integration', () => {
       expect(mockViajeService.update).toHaveBeenCalledWith(
         '1',
         expect.objectContaining({
-          fecha: '2023-06-02'
+          fecha: '2023-06-02',
         })
       );
     });

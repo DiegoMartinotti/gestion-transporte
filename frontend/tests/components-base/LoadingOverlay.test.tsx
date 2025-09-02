@@ -1,13 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import LoadingOverlay from '../LoadingOverlay';
+import LoadingOverlay from '../../src/components/base/LoadingOverlay';
 
 const renderWithProvider = (component: React.ReactNode) => {
-  return render(
-    <MantineProvider>
-      {component}
-    </MantineProvider>
-  );
+  return render(<MantineProvider>{component}</MantineProvider>);
 };
 
 describe('LoadingOverlay', () => {
@@ -17,7 +13,7 @@ describe('LoadingOverlay', () => {
         <div>Content</div>
       </LoadingOverlay>
     );
-    
+
     expect(screen.getByTestId('loading-overlay')).toBeInTheDocument();
     expect(screen.getByText('Content')).toBeInTheDocument();
   });
@@ -28,7 +24,7 @@ describe('LoadingOverlay', () => {
         <div>Content</div>
       </LoadingOverlay>
     );
-    
+
     expect(screen.queryByTestId('loading-overlay')).not.toBeInTheDocument();
     expect(screen.getByText('Content')).toBeInTheDocument();
   });
@@ -39,7 +35,7 @@ describe('LoadingOverlay', () => {
         <div>Content</div>
       </LoadingOverlay>
     );
-    
+
     expect(screen.getByText('Cargando datos...')).toBeInTheDocument();
   });
 
@@ -49,7 +45,7 @@ describe('LoadingOverlay', () => {
         <div>Content</div>
       </LoadingOverlay>
     );
-    
+
     expect(screen.getByText('Cargando...')).toBeInTheDocument();
   });
 
@@ -60,7 +56,7 @@ describe('LoadingOverlay', () => {
         <span>Another element</span>
       </LoadingOverlay>
     );
-    
+
     expect(screen.getByText('Test Content')).toBeInTheDocument();
     expect(screen.getByText('Another element')).toBeInTheDocument();
   });

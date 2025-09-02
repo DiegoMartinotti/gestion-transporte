@@ -14,10 +14,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["@playwright/test"]
+    "types": ["@playwright/test", "node"]
   },
-  "include": [
-    "e2e/**/*",
-    "playwright.config.ts"
-  ]
+  "include": ["e2e/**/*", "playwright.config.ts"]
 }

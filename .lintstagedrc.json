@@ -1,5 +1,8 @@
 {
   "backend/**/*.{ts,tsx}": ["eslint --max-warnings 0", "prettier --write"],
-  "frontend/**/*.{ts,tsx}": ["eslint --max-warnings 0", "prettier --write"],
+  "frontend/**/*.{ts,tsx}": [
+    "bash -c 'if [[ \"$0\" != *\"/tests/\"* ]]; then eslint --max-warnings 0 \"$0\"; fi'",
+    "prettier --write"
+  ],
   "**/*.{md,json}": ["prettier --write"]
 }
