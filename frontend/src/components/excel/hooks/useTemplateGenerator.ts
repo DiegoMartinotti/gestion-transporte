@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { notifications } from '@mantine/notifications';
-import { TemplateConfig } from '../ExcelTemplateGenerator';
+import { TemplateConfig } from '../types/ExcelTemplateTypes';
 import {
   createTemplateSheet,
   createInstructionsSheet,
