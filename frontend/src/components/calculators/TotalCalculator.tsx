@@ -44,7 +44,6 @@ export const TotalCalculator: React.FC<TotalCalculatorProps> = ({
     error,
     calculatorState,
     setSelectedTab,
-    calculatorActions,
     calcularTotalGeneral,
     agregarExtra,
   } = useTotalCalculator({
@@ -86,12 +85,14 @@ export const TotalCalculator: React.FC<TotalCalculatorProps> = ({
         setSelectedTab={setSelectedTab}
         showExtras={showExtras}
         readonly={readonly}
-        calculatorState={calculatorState}
+        calculatorState={{
+          ...calculatorState,
+          total: calcularTotalGeneral(tarifaBase),
+        }}
         tarifaBase={tarifaBase}
         extrasDisponibles={extrasDisponibles}
         loading={loading}
         error={error}
-        calculatorActions={calculatorActions}
         onAddExtra={agregarExtra}
         formatCurrency={formatCurrency}
         calcularTotalGeneral={calcularTotalGeneral}
