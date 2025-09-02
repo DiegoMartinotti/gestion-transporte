@@ -37,9 +37,9 @@ export const extraService = {
   },
 
   // Obtener un extra por ID
-  async getExtraById(id: string) {
+  async getExtraById(id: string): Promise<Extra> {
     const response = await api.get(`/extras/${id}`);
-    return response.data;
+    return response.data as Extra;
   },
 
   // Crear un nuevo extra
@@ -61,14 +61,14 @@ export const extraService = {
   },
 
   // Obtener extras vigentes para un cliente específico
-  async getExtrasVigentesByCliente(clienteId: string) {
+  async getExtrasVigentesByCliente(clienteId: string): Promise<{ data: Extra[] }> {
     const response = await api.get('/extras', {
       params: {
         cliente: clienteId,
-        vigente: true
-      }
+        vigente: true,
+      },
     });
-    return response.data;
+    return response.data as { data: Extra[] };
   },
 
   // Validar fechas de vigencia (sin superposición)
@@ -81,5 +81,5 @@ export const extraService = {
   }) {
     const response = await api.post('/extras/validate-vigencia', data);
     return response.data;
-  }
+  },
 };

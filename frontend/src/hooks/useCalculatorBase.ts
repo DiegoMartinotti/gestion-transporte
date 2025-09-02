@@ -9,6 +9,7 @@ export interface CalculationItem {
   tipo?: 'FIJO' | 'VARIABLE' | 'PORCENTAJE';
   unidad?: string;
   cantidad?: number;
+  total?: number;
 }
 
 export interface CalculationResult {
@@ -50,16 +51,16 @@ export interface CalculatorBaseActions {
   updateItem: (id: string, updates: Partial<CalculationItem>) => void;
   clearItems: () => void;
   setItems: (items: CalculationItem[]) => void;
-  
+
   // Cálculos
   calculate: () => void;
   recalculate: () => void;
   reset: () => void;
-  
+
   // Utilidades
   formatValue: (value: number) => string;
   validateItems: () => boolean;
-  
+
   // Estado
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -84,7 +85,7 @@ function processCalculationItem(
   currentSubtotal: number
 ): { valorFinal: number; deltaSubtotal: number; deltaRecargos: number; deltaDescuentos: number } {
   let valorFinal = item.valor;
-  
+
   // Aplicar cantidad si existe
   if (item.cantidad !== undefined && item.cantidad !== 0) {
     valorFinal = item.valor * item.cantidad;
@@ -126,7 +127,7 @@ function createResultMetadata(
     itemCount,
     calculatedAt: new Date().toISOString(),
     precision,
-    currency
+    currency,
   };
 }
 
@@ -139,27 +140,27 @@ function handleCalculationError(
   const errorMessage = error instanceof Error ? error.message : 'Error en el cálculo';
   if (setError) setError(errorMessage);
   if (onError) onError(errorMessage);
-  
+
   return {
     subtotal: 0,
     total: 0,
     desglose: [],
-    metadatos: { error: errorMessage }
+    metadatos: { error: errorMessage },
   };
 }
 
 // Función principal de cálculo extraída
 function performCalculation(params: CalculationParams): CalculationResult {
-  const { 
-    items, 
-    validateItems, 
-    roundValue, 
-    precision, 
-    currency, 
-    onCalculate, 
-    onError, 
-    setLoading, 
-    setError 
+  const {
+    items,
+    validateItems,
+    roundValue,
+    precision,
+    currency,
+    onCalculate,
+    onError,
+    setLoading,
+    setError,
   } = params;
 
   try {
@@ -177,8 +178,10 @@ function performCalculation(params: CalculationParams): CalculationResult {
 
     // Procesar cada item
     for (const item of items) {
-      const { valorFinal, deltaSubtotal, deltaRecargos, deltaDescuentos } = 
-        processCalculationItem(item, subtotal);
+      const { valorFinal, deltaSubtotal, deltaRecargos, deltaDescuentos } = processCalculationItem(
+        item,
+        subtotal
+      );
 
       subtotal += deltaSubtotal;
       recargos += deltaRecargos;
@@ -187,7 +190,7 @@ function performCalculation(params: CalculationParams): CalculationResult {
       // Agregar al desglose
       desglose.push({
         ...item,
-        valor: roundValue(valorFinal)
+        valor: roundValue(valorFinal),
       });
     }
 
@@ -200,7 +203,7 @@ function performCalculation(params: CalculationParams): CalculationResult {
       descuentos: descuentos > 0 ? roundValue(descuentos) : undefined,
       recargos: recargos > 0 ? roundValue(recargos) : undefined,
       desglose,
-      metadatos: createResultMetadata(items.length, precision, currency)
+      metadatos: createResultMetadata(items.length, precision, currency),
     };
 
     // Callback de cálculo completado
@@ -221,15 +224,21 @@ function generateItemId(): string {
   return `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-function isValidValue(value: number, allowNegative: boolean, minValue: number, maxValue: number): boolean {
+function isValidValue(
+  value: number,
+  allowNegative: boolean,
+  minValue: number,
+  maxValue: number
+): boolean {
   if (!allowNegative && value < 0) return false;
   if (value < minValue || value > maxValue) return false;
   return true;
 }
 
-
 // Hook principal para calculadoras
-export function useCalculatorBase(config: CalculationConfig = {}): [CalculatorBaseState, CalculatorBaseActions] {
+export function useCalculatorBase(
+  config: CalculationConfig = {}
+): [CalculatorBaseState, CalculatorBaseActions] {
   const {
     precision = 2,
     currency = 'ARS',
@@ -239,7 +248,7 @@ export function useCalculatorBase(config: CalculationConfig = {}): [CalculatorBa
     maxValue = Number.MAX_SAFE_INTEGER,
     onCalculate,
     onError,
-    onValidate
+    onValidate,
   } = config;
 
   // Estado interno
@@ -248,27 +257,37 @@ export function useCalculatorBase(config: CalculationConfig = {}): [CalculatorBa
   const [error, setError] = useState<string | null>(null);
 
   // Funciones utilitarias
-  const roundValue = useCallback((value: number): number => {
-    return Number(value.toFixed(precision));
-  }, [precision]);
+  const roundValue = useCallback(
+    (value: number): number => {
+      return Number(value.toFixed(precision));
+    },
+    [precision]
+  );
 
-  const formatValue = useCallback((value: number): string => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: precision,
-      maximumFractionDigits: precision
-    }).format(value);
-  }, [currency, precision]);
+  const formatValue = useCallback(
+    (value: number): string => {
+      return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: precision,
+        maximumFractionDigits: precision,
+      }).format(value);
+    },
+    [currency, precision]
+  );
 
   // Función para validar items
   const validateItems = useCallback((): boolean => {
     try {
       for (const item of items) {
         if (!isValidValue(item.valor, allowNegative, minValue, maxValue)) return false;
-        if (item.cantidad !== undefined && !isValidValue(item.cantidad, allowNegative, minValue, maxValue)) return false;
+        if (
+          item.cantidad !== undefined &&
+          !isValidValue(item.cantidad, allowNegative, minValue, maxValue)
+        )
+          return false;
       }
-      
+
       if (onValidate && !onValidate(items)) return false;
       return true;
     } catch (err) {
@@ -288,7 +307,7 @@ export function useCalculatorBase(config: CalculationConfig = {}): [CalculatorBa
       onCalculate,
       onError,
       setLoading,
-      setError
+      setError,
     });
   }, [items, validateItems, roundValue, precision, currency, onCalculate, onError]);
 
@@ -301,7 +320,7 @@ export function useCalculatorBase(config: CalculationConfig = {}): [CalculatorBa
       subtotal: 0,
       total: 0,
       desglose: [],
-      metadatos: {}
+      metadatos: {},
     };
   }, [items, autoCalculate, calculate]);
 
@@ -310,17 +329,15 @@ export function useCalculatorBase(config: CalculationConfig = {}): [CalculatorBa
   // Acciones para gestión de items
   const addItem = useCallback((item: Omit<CalculationItem, 'id'>) => {
     const newItem: CalculationItem = { ...item, id: generateItemId() };
-    setItemsState(prev => [...prev, newItem]);
+    setItemsState((prev) => [...prev, newItem]);
   }, []);
 
   const removeItem = useCallback((id: string) => {
-    setItemsState(prev => prev.filter(item => item.id !== id));
+    setItemsState((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
   const updateItem = useCallback((id: string, updates: Partial<CalculationItem>) => {
-    setItemsState(prev => 
-      prev.map(item => item.id === id ? { ...item, ...updates } : item)
-    );
+    setItemsState((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   }, []);
 
   const clearItems = useCallback(() => {
@@ -347,53 +364,79 @@ export function useCalculatorBase(config: CalculationConfig = {}): [CalculatorBa
     }
   }, [items, autoCalculate, calculate]);
 
-  return [{ items, result, loading, error, isValid }, {
-    addItem, removeItem, updateItem, clearItems, setItems,
-    calculate, recalculate, reset, formatValue, validateItems,
-    setLoading, setError
-  }];
+  return [
+    { items, result, loading, error, isValid },
+    {
+      addItem,
+      removeItem,
+      updateItem,
+      clearItems,
+      setItems,
+      calculate,
+      recalculate,
+      reset,
+      formatValue,
+      validateItems,
+      setLoading,
+      setError,
+    },
+  ];
 }
 
 // Hook especializado para calculadoras de tarifas
-export function useTarifaCalculator(config: CalculationConfig & {
-  includeExtras?: boolean;
-  includeTaxes?: boolean;
-} = {}) {
+export function useTarifaCalculator(
+  config: CalculationConfig & {
+    includeExtras?: boolean;
+    includeTaxes?: boolean;
+  } = {}
+) {
   const [state, actions] = useCalculatorBase(config);
-  
+
   // Métodos específicos para tarifas
-  const addTarifaBase = useCallback((valor: number, concepto = 'Tarifa Base') => {
-    actions.addItem({
-      concepto,
-      valor,
-      tipo: 'FIJO'
-    });
-  }, [actions]);
+  const addTarifaBase = useCallback(
+    (valor: number, concepto = 'Tarifa Base') => {
+      actions.addItem({
+        concepto,
+        valor,
+        tipo: 'FIJO',
+      });
+    },
+    [actions]
+  );
 
-  const addExtra = useCallback((concepto: string, valor: number, cantidad = 1) => {
-    actions.addItem({
-      concepto,
-      valor,
-      cantidad,
-      tipo: 'VARIABLE'
-    });
-  }, [actions]);
+  const addExtra = useCallback(
+    (concepto: string, valor: number, cantidad = 1) => {
+      actions.addItem({
+        concepto,
+        valor,
+        cantidad,
+        tipo: 'VARIABLE',
+      });
+    },
+    [actions]
+  );
 
-  const addDescuento = useCallback((concepto: string, porcentaje: number) => {
-    actions.addItem({
-      concepto,
-      valor: -Math.abs(porcentaje),
-      tipo: 'PORCENTAJE'
-    });
-  }, [actions]);
+  const addDescuento = useCallback(
+    (concepto: string, porcentaje: number) => {
+      actions.addItem({
+        concepto,
+        valor: -Math.abs(porcentaje),
+        tipo: 'PORCENTAJE',
+      });
+    },
+    [actions]
+  );
 
-  const addRecargo = useCallback((concepto: string, porcentaje: number) => {
-    actions.addItem({
-      concepto,
-      valor: Math.abs(porcentaje),
-      tipo: 'PORCENTAJE'
-    });
-  }, [actions]);
+  const addRecargo = useCallback(
+    (concepto: string, porcentaje: number) => {
+      actions.addItem({
+        concepto,
+        valor: Math.abs(porcentaje),
+        tipo: 'PORCENTAJE',
+      });
+    },
+    [actions]
+  );
 
   return {
     ...state,
@@ -401,27 +444,29 @@ export function useTarifaCalculator(config: CalculationConfig & {
     addTarifaBase,
     addExtra,
     addDescuento,
-    addRecargo
+    addRecargo,
   };
 }
 
 // Hook especializado para calculadoras de totales
-export function useTotalCalculator(config: CalculationConfig & {
-  includeIVA?: boolean;
-  ivaRate?: number;
-} = {}) {
+export function useTotalCalculator(
+  config: CalculationConfig & {
+    includeIVA?: boolean;
+    ivaRate?: number;
+  } = {}
+) {
   const { includeIVA = false, ivaRate = 21, ...baseConfig } = config;
   const [state, actions] = useCalculatorBase(baseConfig);
 
   // Calcular IVA automáticamente
   useEffect(() => {
     if (includeIVA && state.result.subtotal > 0) {
-      const hasIVA = state.items.some(item => item.concepto.toLowerCase().includes('iva'));
+      const hasIVA = state.items.some((item) => item.concepto.toLowerCase().includes('iva'));
       if (!hasIVA) {
         actions.addItem({
           concepto: `IVA (${ivaRate}%)`,
           valor: ivaRate,
-          tipo: 'PORCENTAJE'
+          tipo: 'PORCENTAJE',
         });
       }
     }
