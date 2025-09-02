@@ -1,6 +1,34 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useCalculatorBase } from '../../../hooks/useCalculatorBase';
+import { useCalculatorBase, type CalculatorBaseActions } from '../../../hooks/useCalculatorBase';
 import { extraService, type Extra } from '../../../services/extraService';
+
+// Función auxiliar para cargar extras iniciales
+const loadExtrasInicialesHelper = async (
+  extrasIniciales: ExtrasIniciales[],
+  calculatorActions: CalculatorBaseActions
+) => {
+  if (extrasIniciales.length === 0) return;
+
+  try {
+    const extrasData = await Promise.all(
+      extrasIniciales.map(async (extraInicial) => {
+        const extra = await extraService.getExtraById(extraInicial.extraId);
+        return {
+          id: extra._id || '',
+          concepto: extra.tipo,
+          valor: extraInicial.valor || extra.valor,
+          cantidad: extraInicial.cantidad || 1,
+          categoria: 'extra' as const,
+        };
+      })
+    );
+
+    calculatorActions.setItems(extrasData);
+  } catch (err) {
+    console.error('Error cargando extras iniciales:', err);
+    throw new Error('Error al cargar extras iniciales');
+  }
+};
 
 interface ExtrasIniciales {
   extraId: string;
@@ -51,26 +79,10 @@ export const useTotalCalculator = ({
 
   // Cargar extras iniciales
   const loadExtrasIniciales = useCallback(async () => {
-    if (extrasIniciales.length === 0) return;
-
     try {
-      const extrasData = await Promise.all(
-        extrasIniciales.map(async (extraInicial) => {
-          const extra = await extraService.getExtraById(extraInicial.extraId);
-          return {
-            id: extra._id || '',
-            concepto: extra.tipo,
-            valor: extraInicial.valor || extra.valor,
-            cantidad: extraInicial.cantidad || 1,
-            categoria: 'extra' as const,
-          };
-        })
-      );
-
-      calculatorActions.setItems(extrasData);
+      await loadExtrasInicialesHelper(extrasIniciales, calculatorActions);
     } catch (err) {
       setError('Error al cargar extras iniciales');
-      console.error('Error cargando extras iniciales:', err);
     }
   }, [extrasIniciales, calculatorActions]);
 
@@ -118,6 +130,13 @@ export const useTotalCalculator = ({
     }
   }, [extrasIniciales.length, loadExtrasIniciales]);
 
+  // Crear wrapper para setSelectedTab que maneje null
+  const handleSetSelectedTab = useCallback((value: string | null) => {
+    if (value !== null) {
+      setSelectedTab(value);
+    }
+  }, []);
+
   return {
     // Estados
     selectedTab,
@@ -127,7 +146,7 @@ export const useTotalCalculator = ({
     calculatorState,
 
     // Acciones
-    setSelectedTab,
+    setSelectedTab: handleSetSelectedTab,
     calculatorActions,
     calcularTotalGeneral,
     agregarExtra,
