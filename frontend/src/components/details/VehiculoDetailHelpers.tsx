@@ -14,11 +14,14 @@ export const getDocumentosInfo = (vehiculo: Vehiculo): DocumentoInfo[] => {
   const hoy = new Date();
   const docs = vehiculo.documentacion;
 
-  const checkDocumento = (nombre: string, doc: Record<string, unknown> | null): DocumentoInfo => {
+  const checkDocumento = (
+    nombre: string,
+    doc: { numero?: string; vencimiento?: string; compania?: string } | undefined
+  ): DocumentoInfo => {
     if (!doc?.vencimiento) {
       return {
         nombre,
-        numero: doc?.numero || undefined,
+        numero: doc?.numero as string | undefined,
         vencimiento: undefined,
         estado: 'no_disponible',
         diasRestantes: 0,
@@ -26,12 +29,12 @@ export const getDocumentosInfo = (vehiculo: Vehiculo): DocumentoInfo[] => {
     }
 
     try {
-      const fecha = parseISO(doc.vencimiento);
+      const fecha = parseISO(doc.vencimiento as string);
       if (!isValid(fecha)) {
         return {
           nombre,
-          numero: doc.numero || undefined,
-          vencimiento: doc.vencimiento,
+          numero: doc.numero as string | undefined,
+          vencimiento: doc.vencimiento as string,
           estado: 'no_disponible',
           diasRestantes: 0,
         };
@@ -50,16 +53,16 @@ export const getDocumentosInfo = (vehiculo: Vehiculo): DocumentoInfo[] => {
 
       return {
         nombre,
-        numero: doc.numero || undefined,
-        vencimiento: doc.vencimiento,
+        numero: doc.numero as string | undefined,
+        vencimiento: doc.vencimiento as string,
         estado,
         diasRestantes,
       };
     } catch {
       return {
         nombre,
-        numero: doc?.numero || undefined,
-        vencimiento: doc?.vencimiento,
+        numero: doc?.numero as string | undefined,
+        vencimiento: doc?.vencimiento as string,
         estado: 'no_disponible',
         diasRestantes: 0,
       };
