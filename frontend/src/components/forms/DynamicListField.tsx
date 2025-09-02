@@ -18,7 +18,7 @@ interface DynamicListFieldProps<T = Record<string, unknown>> {
   canRemove?: (index: number) => boolean;
   itemLabel?: (index: number) => string;
   addButtonText?: string;
-  validation?: Record<string, (value: unknown) => string | null>;
+  _validation?: Record<string, (value: unknown) => string | null>;
 }
 
 export default function DynamicListField<T = Record<string, unknown>>({
