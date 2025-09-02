@@ -61,9 +61,9 @@ function useClienteFormSetup(cliente?: Cliente, mode: 'create' | 'edit' = 'creat
 // Submit handler hook
 function useClienteSubmit(
   mode: 'create' | 'edit',
+  setLoading: (loading: boolean) => void,
   clienteId?: string,
-  onSuccess?: (cliente: Cliente) => void,
-  setLoading: (loading: boolean) => void
+  onSuccess?: (cliente: Cliente) => void
 ) {
   return useCallback(
     async (values: ClienteFormData) => {
@@ -77,7 +77,7 @@ function useClienteSubmit(
         setLoading(false);
       }
     },
-    [mode, clienteId, onSuccess, setLoading]
+    [mode, setLoading, clienteId, onSuccess]
   );
 }
 
@@ -194,7 +194,7 @@ function ClienteActionButtons({ onCancel, loading, isEditing }: ClienteActionBut
 
 export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: ClienteFormProps) {
   const { form, loading, setLoading, isEditing, title } = useClienteFormSetup(cliente, mode);
-  const handleSubmit = useClienteSubmit(mode, cliente?._id, onSuccess, setLoading);
+  const handleSubmit = useClienteSubmit(mode, setLoading, cliente?._id, onSuccess);
 
   return (
     <Paper p="lg" withBorder>
