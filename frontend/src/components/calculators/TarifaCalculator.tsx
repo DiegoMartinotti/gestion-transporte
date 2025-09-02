@@ -56,15 +56,16 @@ interface CalculationResult {
 }
 
 // Helper functions
-const getClienteId = (tramo: Tramo | null) => {
+const getClienteId = (tramo: Tramo | undefined) => {
   return typeof tramo?.cliente === 'string' ? tramo.cliente : tramo?.cliente?._id || '';
 };
 
-const getSiteId = (site: { _id?: string } | null) => {
-  return site?._id || site || '';
+const getSiteId = (site: { _id?: string } | null | undefined): string => {
+  if (!site) return '';
+  return typeof site === 'string' ? site : site._id || '';
 };
 
-const initializeParams = (tramo: Tramo | null, tramoId?: string): CalculationParams => {
+const initializeParams = (tramo: Tramo | undefined, tramoId?: string): CalculationParams => {
   return {
     cliente: getClienteId(tramo),
     origen: getSiteId(tramo?.origen),
@@ -77,11 +78,12 @@ const initializeParams = (tramo: Tramo | null, tramoId?: string): CalculationPar
 };
 
 const updateAvailableTypes = (
-  tramo: Tramo | null,
+  tramo: Tramo | undefined,
   setAvailableTypes: React.Dispatch<React.SetStateAction<string[]>>,
   setParams: React.Dispatch<React.SetStateAction<CalculationParams>>
 ) => {
   if (
+    tramo &&
     tramo.tarifasHistoricas &&
     Array.isArray(tramo.tarifasHistoricas) &&
     tramo.tarifasHistoricas.length > 0
@@ -103,7 +105,7 @@ const updateAvailableTypes = (
 
 // Component for calculation parameters
 const ParametersSection: React.FC<{
-  tramo: Tramo | null;
+  tramo: Tramo | undefined;
   params: CalculationParams;
   availableTypes: string[];
   readonly: boolean;
@@ -185,7 +187,7 @@ const ParametersSection: React.FC<{
           label="Tipo de Tramo"
           placeholder="Seleccionar tipo"
           value={params.tipoTramo}
-          onChange={(value) => onParamChange('tipoTramo', value)}
+          onChange={(value) => onParamChange('tipoTramo', value || '')}
           data={availableTypes?.map((tipo) => ({ value: tipo, label: tipo })) || []}
           disabled={readonly}
         />
