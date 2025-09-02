@@ -61,13 +61,18 @@ function calculateAge(fechaNacimiento?: string): number | null {
 }
 
 // Helper para calcular días hasta vencimiento
-const calculateDaysUntilExpiry = (fecha: string): number => 
+const calculateDaysUntilExpiry = (fecha: string): number =>
   Math.ceil((new Date(fecha).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+// Helper para convertir Date a string
+const convertDateToString = (date: Date | undefined): string | undefined => {
+  return date ? date.toISOString() : undefined;
+};
 
 // Helper para obtener estado de documentos
 function getDocumentStatus(personal: Personal): DocumentStatus {
   const documents: DocumentInfo[] = [];
-  
+
   const addDocument = (vencimiento: string | undefined, name: string) => {
     if (vencimiento) {
       const days = calculateDaysUntilExpiry(vencimiento);
@@ -75,13 +80,22 @@ function getDocumentStatus(personal: Personal): DocumentStatus {
     }
   };
 
-  addDocument(personal.documentacion?.licenciaConducir?.vencimiento, 'Licencia');
-  addDocument(personal.documentacion?.carnetProfesional?.vencimiento, 'Carnet Prof.');
-  addDocument(personal.documentacion?.evaluacionMedica?.vencimiento, 'Eval. Médica');
-  addDocument(personal.documentacion?.psicofisico?.vencimiento, 'Psicofísico');
+  addDocument(
+    convertDateToString(personal.documentacion?.licenciaConducir?.vencimiento),
+    'Licencia'
+  );
+  addDocument(
+    convertDateToString(personal.documentacion?.carnetProfesional?.vencimiento),
+    'Carnet Prof.'
+  );
+  addDocument(
+    convertDateToString(personal.documentacion?.evaluacionMedica?.vencimiento),
+    'Eval. Médica'
+  );
+  addDocument(convertDateToString(personal.documentacion?.psicofisico?.vencimiento), 'Psicofísico');
 
-  const expired = documents.filter(d => d.expired).length;
-  const expiring = documents.filter(d => d.expiring).length;
+  const expired = documents.filter((d) => d.expired).length;
+  const expiring = documents.filter((d) => d.expiring).length;
   const total = documents.length;
   const valid = total - expired - expiring;
 
@@ -99,11 +113,16 @@ function getStatusColor(personal: Personal, documentStatus: DocumentStatus): str
 // Helper para obtener color del tipo
 function getTipoColor(tipo: string): string {
   switch (tipo) {
-    case 'Conductor': return 'blue';
-    case 'Administrativo': return 'green';
-    case 'Mecánico': return 'orange';
-    case 'Supervisor': return 'purple';
-    default: return 'gray';
+    case 'Conductor':
+      return 'blue';
+    case 'Administrativo':
+      return 'green';
+    case 'Mecánico':
+      return 'orange';
+    case 'Supervisor':
+      return 'purple';
+    default:
+      return 'gray';
   }
 }
 
@@ -146,11 +165,7 @@ function PersonalCardCompact({ personal, showActions, onView, onEdit }: Personal
           </div>
         </Group>
         <Group gap="xs">
-          <Badge
-            size="sm"
-            color={statusColor}
-            variant="light"
-          >
+          <Badge size="sm" color={statusColor} variant="light">
             {personal.activo ? 'Activo' : 'Inactivo'}
           </Badge>
           {showActions && (
@@ -163,7 +178,11 @@ function PersonalCardCompact({ personal, showActions, onView, onEdit }: Personal
 }
 
 // Componente para acciones en modo compacto
-function PersonalCardCompactActions({ personal, onView, onEdit }: Pick<PersonalCardProps, 'personal' | 'onView' | 'onEdit'>) {
+function PersonalCardCompactActions({
+  personal,
+  onView,
+  onEdit,
+}: Pick<PersonalCardProps, 'personal' | 'onView' | 'onEdit'>) {
   return (
     <Group gap={4}>
       {onView && (
@@ -214,13 +233,9 @@ function PersonalCardHeader({ personal }: { personal: Personal }) {
           </Group>
         </div>
       </Group>
-      
+
       <Group gap="xs">
-        <Badge
-          size="lg"
-          color={statusColor}
-          variant={personal.activo ? 'light' : 'outline'}
-        >
+        <Badge size="lg" color={statusColor} variant={personal.activo ? 'light' : 'outline'}>
           {personal.activo ? 'Activo' : 'Inactivo'}
         </Badge>
         {!employed && (
@@ -238,7 +253,7 @@ function PersonalCardHeader({ personal }: { personal: Personal }) {
 // Componente para información básica
 function PersonalCardBasicInfo({ personal }: { personal: Personal }) {
   const empresa = typeof personal.empresa === 'object' ? personal.empresa : null;
-  const age = calculateAge(personal.fechaNacimiento);
+  const age = calculateAge(convertDateToString(personal.fechaNacimiento));
 
   return (
     <Grid>
@@ -283,7 +298,13 @@ function PersonalCardBasicInfo({ personal }: { personal: Personal }) {
 }
 
 // Componente para estado de documentación
-function PersonalCardDocumentation({ personal, documentStatus }: { personal: Personal; documentStatus: DocumentStatus }) {
+function PersonalCardDocumentation({
+  personal,
+  documentStatus,
+}: {
+  personal: Personal;
+  documentStatus: DocumentStatus;
+}) {
   if (personal.tipo !== 'Conductor' || documentStatus.total === 0) return null;
 
   return (
@@ -295,11 +316,17 @@ function PersonalCardDocumentation({ personal, documentStatus }: { personal: Per
             <IconLicense size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />
             Estado de Documentación
           </Text>
-          <Text size="xs" color="dimmed">{documentStatus.valid}/{documentStatus.total} vigentes</Text>
+          <Text size="xs" color="dimmed">
+            {documentStatus.valid}/{documentStatus.total} vigentes
+          </Text>
         </Group>
-        
-        <Progress size="sm" value={(documentStatus.valid / documentStatus.total) * 100} color="green" />
-        
+
+        <Progress
+          size="sm"
+          value={(documentStatus.valid / documentStatus.total) * 100}
+          color="green"
+        />
+
         <Group gap="xs" mt="xs">
           {documentStatus.valid > 0 && (
             <Badge size="xs" color="green" variant="light">
@@ -307,7 +334,9 @@ function PersonalCardDocumentation({ personal, documentStatus }: { personal: Per
             </Badge>
           )}
           {documentStatus.expiring > 0 && (
-            <Badge size="xs" color="yellow" variant="light">{documentStatus.expiring} por vencer</Badge>
+            <Badge size="xs" color="yellow" variant="light">
+              {documentStatus.expiring} por vencer
+            </Badge>
           )}
           {documentStatus.expired > 0 && (
             <Badge size="xs" color="red" variant="light">
@@ -327,13 +356,17 @@ function PersonalCardAlerts({ documentStatus }: { documentStatus: DocumentStatus
       {documentStatus.expired > 0 && (
         <Group gap="xs">
           <IconAlertTriangle size={16} color="red" />
-          <Text size="sm" color="red">Tiene documentos vencidos que requieren atención inmediata</Text>
+          <Text size="sm" color="red">
+            Tiene documentos vencidos que requieren atención inmediata
+          </Text>
         </Group>
       )}
       {documentStatus.expiring > 0 && (
         <Group gap="xs">
           <IconAlertTriangle size={16} color="orange" />
-          <Text size="sm" color="orange">Tiene documentos que vencen en los próximos 30 días</Text>
+          <Text size="sm" color="orange">
+            Tiene documentos que vencen en los próximos 30 días
+          </Text>
         </Group>
       )}
     </>
@@ -341,14 +374,25 @@ function PersonalCardAlerts({ documentStatus }: { documentStatus: DocumentStatus
 }
 
 // Componente para acciones
-function PersonalCardActions({ personal, onView, onToggleActive, onEdit, onDelete }: PersonalCardProps) {
+function PersonalCardActions({
+  personal,
+  onView,
+  onToggleActive,
+  onEdit,
+  onDelete,
+}: PersonalCardProps) {
   return (
     <>
       <Divider />
       <Group justify="space-between">
         <Group gap="xs">
           {onView && (
-            <Button size="xs" variant="light" leftSection={<IconEye size={14} />} onClick={() => onView(personal)}>
+            <Button
+              size="xs"
+              variant="light"
+              leftSection={<IconEye size={14} />}
+              onClick={() => onView(personal)}
+            >
               Ver Detalles
             </Button>
           )}
@@ -356,7 +400,10 @@ function PersonalCardActions({ personal, onView, onToggleActive, onEdit, onDelet
         <Group gap="xs">
           {onToggleActive && (
             <Tooltip label={personal.activo ? 'Desactivar' : 'Activar'}>
-              <ActionIcon color={personal.activo ? 'red' : 'green'} onClick={() => onToggleActive(personal)}>
+              <ActionIcon
+                color={personal.activo ? 'red' : 'green'}
+                onClick={() => onToggleActive(personal)}
+              >
                 {personal.activo ? <IconX size={16} /> : <IconCheck size={16} />}
               </ActionIcon>
             </Tooltip>
@@ -392,7 +439,14 @@ export const PersonalCard: React.FC<PersonalCardProps> = ({
   compact = false,
 }) => {
   if (compact) {
-    return <PersonalCardCompact personal={personal} showActions={showActions} onView={onView} onEdit={onEdit} />;
+    return (
+      <PersonalCardCompact
+        personal={personal}
+        showActions={showActions}
+        onView={onView}
+        onEdit={onEdit}
+      />
+    );
   }
 
   const documentStatus = getDocumentStatus(personal);
@@ -404,7 +458,7 @@ export const PersonalCard: React.FC<PersonalCardProps> = ({
         <PersonalCardBasicInfo personal={personal} />
         <PersonalCardDocumentation personal={personal} documentStatus={documentStatus} />
         <PersonalCardAlerts documentStatus={documentStatus} />
-        
+
         {showActions && (
           <PersonalCardActions
             personal={personal}
@@ -414,11 +468,13 @@ export const PersonalCard: React.FC<PersonalCardProps> = ({
             onDelete={onDelete}
           />
         )}
-        
+
         {personal.observaciones && (
           <>
             <Divider />
-            <Text size="sm" color="dimmed"><strong>Observaciones:</strong> {personal.observaciones}</Text>
+            <Text size="sm" color="dimmed">
+              <strong>Observaciones:</strong> {personal.observaciones}
+            </Text>
           </>
         )}
       </Stack>
