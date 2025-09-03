@@ -1,21 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  Box,
-  Paper,
-  Stack,
-  Text,
-  Loader,
-  Alert,
-  Group,
-  ActionIcon,
-  Tooltip
-} from '@mantine/core';
+import { Box, Paper, Stack, Text, Loader, Alert, Group, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconMap,
   IconCurrentLocation,
   IconRefresh,
   IconMaximize,
-  IconMinimize
+  IconMinimize,
 } from '@tabler/icons-react';
 import {
   useGoogleMapsLoader,
@@ -23,11 +13,16 @@ import {
   type GoogleMap,
   type GoogleMarker,
   type GoogleInfoWindow,
-  type GoogleMapEvent
+  type GoogleMapEvent,
 } from './MapViewHelpers';
 
 // Componentes de estado
-const LoadingView = ({ height, width, className, style }: {
+const LoadingView = ({
+  height,
+  width,
+  className,
+  style,
+}: {
   height: number;
   width: string;
   className?: string;
@@ -41,7 +36,13 @@ const LoadingView = ({ height, width, className, style }: {
   </Paper>
 );
 
-const ErrorView = ({ height, width, className, style, error }: {
+const ErrorView = ({
+  height,
+  width,
+  className,
+  style,
+  error,
+}: {
   height: number;
   width: string;
   className?: string;
@@ -57,7 +58,12 @@ const ErrorView = ({ height, width, className, style, error }: {
   </Paper>
 );
 
-const NotLoadedView = ({ height, width, className, style }: {
+const NotLoadedView = ({
+  height,
+  width,
+  className,
+  style,
+}: {
   height: number;
   width: string;
   className?: string;
@@ -72,14 +78,14 @@ const NotLoadedView = ({ height, width, className, style }: {
 );
 
 // Componente de controles
-const MapControls = ({ 
-  showControls, 
-  showCurrentLocation, 
-  markers, 
+const MapControls = ({
+  showControls,
+  showCurrentLocation,
+  markers,
   isFullscreen,
   onCurrentLocation,
   onFitToMarkers,
-  onToggleFullscreen 
+  onToggleFullscreen,
 }: {
   showControls: boolean;
   showCurrentLocation: boolean;
@@ -92,45 +98,26 @@ const MapControls = ({
   if (!showControls) return null;
 
   return (
-    <Paper
-      pos="absolute"
-      top={10}
-      right={10}
-      p="xs"
-      style={{ zIndex: 1000 }}
-      shadow="sm"
-    >
+    <Paper pos="absolute" top={10} right={10} p="xs" style={{ zIndex: 1000 }} shadow="sm">
       <Group gap="xs">
         {showCurrentLocation && (
           <Tooltip label="Mi ubicación">
-            <ActionIcon
-              variant="light"
-              color="blue"
-              onClick={onCurrentLocation}
-            >
+            <ActionIcon variant="light" color="blue" onClick={onCurrentLocation}>
               <IconCurrentLocation size={16} />
             </ActionIcon>
           </Tooltip>
         )}
-        
+
         {markers.length > 0 && (
           <Tooltip label="Ajustar a marcadores">
-            <ActionIcon
-              variant="light"
-              color="green"
-              onClick={onFitToMarkers}
-            >
+            <ActionIcon variant="light" color="green" onClick={onFitToMarkers}>
               <IconRefresh size={16} />
             </ActionIcon>
           </Tooltip>
         )}
-        
-        <Tooltip label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}>
-          <ActionIcon
-            variant="light"
-            color="gray"
-            onClick={onToggleFullscreen}
-          >
+
+        <Tooltip label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}>
+          <ActionIcon variant="light" color="gray" onClick={onToggleFullscreen}>
             {isFullscreen ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
           </ActionIcon>
         </Tooltip>
@@ -203,8 +190,10 @@ const createMapMarkers = (
         position: markerData.position,
         map,
         title: markerData.title || '',
-        icon: markerData.icon ? { url: markerData.icon, scaledSize: new window.google.maps.Size(24, 24) } : undefined,
-        clickable: markerData.clickable !== false
+        icon: markerData.icon
+          ? { url: markerData.icon, scaledSize: new window.google.maps.Size(24, 24) }
+          : undefined,
+        clickable: markerData.clickable !== false,
       });
 
       if (markerData.content || markerData.onClick) {
@@ -213,11 +202,11 @@ const createMapMarkers = (
             infoWindow.setContent(markerData.content);
             infoWindow.open(map, marker);
           }
-          
+
           if (markerData.onClick) {
             markerData.onClick(markerData);
           }
-          
+
           if (onMarkerClick) {
             onMarkerClick(markerData);
           }
@@ -231,6 +220,23 @@ const createMapMarkers = (
   });
 
   return newMarkers;
+};
+
+// Helper para ajustar vista a marcadores
+const fitMarkersToMap = (map: GoogleMap, markers: MapMarker[]) => {
+  if (!map || markers.length === 0) return;
+
+  const bounds = new window.google.maps.LatLngBounds();
+  markers.forEach((marker) => {
+    bounds.extend(marker.position);
+  });
+
+  if (markers.length === 1) {
+    map.setCenter(markers[0].position);
+    map.setZoom(15);
+  } else {
+    map.fitBounds(bounds);
+  }
 };
 
 export default function MapView({
@@ -248,114 +254,91 @@ export default function MapView({
   loading = false,
   error,
   className,
-  style
+  style,
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<GoogleMap | null>(null);
   const [mapMarkers, setMapMarkers] = useState<GoogleMarker[]>([]);
   const [infoWindow, setInfoWindow] = useState<GoogleInfoWindow | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   const { mapLoaded, mapError } = useGoogleMapsLoader();
   const { getCurrentLocation } = useCurrentLocation(map);
 
-  // Inicializar mapa
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || map || disabled) return;
 
-    try {
-      const mapOptions = {
-        zoom,
-        center,
-        mapTypeId: window.google.maps.MapTypeId[mapTypeId.toUpperCase()],
-        zoomControl: showControls,
-        mapTypeControl: showControls,
-        scaleControl: showControls,
-        streetViewControl: showControls,
-        rotateControl: false,
-        fullscreenControl: false,
-        gestureHandling: disabled ? 'none' : 'auto'
-      };
+    const mapOptions = {
+      zoom,
+      center,
+      mapTypeId: (window as any).google.maps.MapTypeId[mapTypeId.toUpperCase()],
+      zoomControl: showControls,
+      mapTypeControl: showControls,
+      scaleControl: showControls,
+      streetViewControl: showControls,
+      rotateControl: false,
+      fullscreenControl: false,
+      gestureHandling: disabled ? 'none' : 'auto',
+    };
 
-      const newMap = new window.google.maps.Map(mapRef.current, mapOptions);
-      const newInfoWindow = new window.google.maps.InfoWindow();
+    const newMap = new window.google.maps.Map(mapRef.current, mapOptions);
+    const newInfoWindow = new window.google.maps.InfoWindow();
 
-      // Click listener
-      if (onMapClick) {
-        newMap.addListener('click', (event: GoogleMapEvent) => {
-          onMapClick({
-            lat: event.latLng.lat(),
-            lng: event.latLng.lng()
-          });
+    if (onMapClick) {
+      newMap.addListener('click', (event: GoogleMapEvent) => {
+        onMapClick({
+          lat: event.latLng.lat(),
+          lng: event.latLng.lng(),
         });
-      }
-
-      setMap(newMap);
-      setInfoWindow(newInfoWindow);
-    } catch (error) {
-      setMapError('Error al inicializar el mapa');
+      });
     }
-  }, [mapLoaded, center, zoom, mapTypeId, showControls, onMapClick, disabled, map]);
 
-  // Actualizar marcadores
+    setMap(newMap);
+    setInfoWindow(newInfoWindow);
+  }, [mapLoaded, disabled, zoom, center, mapTypeId, showControls, onMapClick, map]);
+
   useEffect(() => {
     if (!map || !window.google || !infoWindow) return;
-
-    // Limpiar marcadores existentes
-    mapMarkers.forEach(marker => marker.setMap(null));
-    
+    mapMarkers.forEach((marker) => marker.setMap(null));
     const newMarkers = createMapMarkers(map, markers, infoWindow, onMarkerClick);
     setMapMarkers(newMarkers);
-  }, [map, markers, infoWindow, onMarkerClick, mapMarkers]);
+    if (center) map.setCenter(center);
+    if (zoom) map.setZoom(zoom);
+  }, [map, markers, infoWindow, onMarkerClick, mapMarkers, center, zoom]);
 
-  // Centrar mapa cuando cambia el centro
-  useEffect(() => {
-    if (map && center) {
-      map.setCenter(center);
-    }
-  }, [map, center]);
-
-  // Cambiar zoom
-  useEffect(() => {
-    if (map && zoom) {
-      map.setZoom(zoom);
-    }
-  }, [map, zoom]);
-
-
-  // Función para ajustar vista a marcadores
   const fitToMarkers = useCallback(() => {
-    if (!map || markers.length === 0) return;
-
-    const bounds = new window.google.maps.LatLngBounds();
-    markers.forEach(marker => {
-      bounds.extend(marker.position);
-    });
-
-    if (markers.length === 1) {
-      map.setCenter(markers[0].position);
-      map.setZoom(15);
-    } else {
-      map.fitBounds(bounds);
-    }
+    if (map) fitMarkersToMap(map, markers);
   }, [map, markers]);
 
-  // Toggle fullscreen
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen(!isFullscreen);
   }, [isFullscreen]);
 
-  if (loading) {
+  if (loading)
     return <LoadingView height={height} width={width} className={className} style={style} />;
-  }
-
-  if (error || mapError) {
-    return <ErrorView height={height} width={width} className={className} style={style} error={error || mapError} />;
-  }
-
-  if (!mapLoaded) {
+  if (error || mapError)
+    return (
+      <ErrorView
+        height={height}
+        width={width}
+        className={className}
+        style={style}
+        error={error || mapError}
+      />
+    );
+  if (!mapLoaded)
     return <NotLoadedView height={height} width={width} className={className} style={style} />;
-  }
+
+  const containerStyle = {
+    ...style,
+    ...(isFullscreen && { position: 'fixed' as const, top: 0, left: 0, zIndex: 9999 }),
+  };
+
+  const mapStyle = {
+    width: '100%',
+    height: '100%',
+    borderRadius: isFullscreen ? 0 : 8,
+  };
 
   return (
     <Box
@@ -363,15 +346,7 @@ export default function MapView({
       h={isFullscreen ? '100vh' : height}
       w={isFullscreen ? '100vw' : width}
       className={className}
-      style={{
-        ...style,
-        ...(isFullscreen && {
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          zIndex: 9999
-        })
-      }}
+      style={containerStyle}
     >
       <MapControls
         showControls={showControls}
@@ -383,15 +358,7 @@ export default function MapView({
         onToggleFullscreen={toggleFullscreen}
       />
 
-      {/* Mapa */}
-      <div
-        ref={mapRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: isFullscreen ? 0 : 8
-        }}
-      />
+      <div ref={mapRef} style={mapStyle} />
     </Box>
   );
 }
@@ -399,43 +366,54 @@ export default function MapView({
 // Hook personalizado para usar el mapa
 export const useMapView = () => {
   const [mapInstance, setMapInstance] = useState<GoogleMap | null>(null);
-  
-  const addMarker = useCallback((marker: MapMarker) => {
-    if (!mapInstance) return null;
-    
-    return new window.google.maps.Marker({
-      position: marker.position,
-      map: mapInstance,
-      title: marker.title || '',
-      icon: marker.icon ? { url: marker.icon, scaledSize: new window.google.maps.Size(24, 24) } : undefined,
-      clickable: marker.clickable !== false
-    });
-  }, [mapInstance]);
-  
+
+  const addMarker = useCallback(
+    (marker: MapMarker) => {
+      if (!mapInstance) return null;
+
+      return new window.google.maps.Marker({
+        position: marker.position,
+        map: mapInstance,
+        title: marker.title || '',
+        icon: marker.icon
+          ? { url: marker.icon, scaledSize: new window.google.maps.Size(24, 24) }
+          : undefined,
+        clickable: marker.clickable !== false,
+      });
+    },
+    [mapInstance]
+  );
+
   const removeMarker = useCallback((marker: GoogleMarker | null) => {
     if (marker) {
       marker.setMap(null);
     }
   }, []);
-  
-  const setCenter = useCallback((position: { lat: number; lng: number }) => {
-    if (mapInstance) {
-      mapInstance.setCenter(position);
-    }
-  }, [mapInstance]);
-  
-  const setZoom = useCallback((zoom: number) => {
-    if (mapInstance) {
-      mapInstance.setZoom(zoom);
-    }
-  }, [mapInstance]);
-  
+
+  const setCenter = useCallback(
+    (position: { lat: number; lng: number }) => {
+      if (mapInstance) {
+        mapInstance.setCenter(position);
+      }
+    },
+    [mapInstance]
+  );
+
+  const setZoom = useCallback(
+    (zoom: number) => {
+      if (mapInstance) {
+        mapInstance.setZoom(zoom);
+      }
+    },
+    [mapInstance]
+  );
+
   return {
     mapInstance,
     setMapInstance,
     addMarker,
     removeMarker,
     setCenter,
-    setZoom
+    setZoom,
   };
 };
