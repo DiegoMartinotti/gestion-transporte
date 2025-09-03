@@ -26,22 +26,41 @@ interface CoordinateInputProps {
   error?: string;
 }
 
-// Helper functions moved to custom hook
+// Helper functions
+function getDefaultProps(props: Partial<CoordinateInputProps>) {
+  return {
+    value: props.value || { lat: 0, lng: 0 },
+    label: props.label || 'Coordenadas GPS',
+    required: props.required || false,
+    disabled: props.disabled || false,
+    showValidation: props.showValidation !== undefined ? props.showValidation : true,
+    showMapLink: props.showMapLink !== undefined ? props.showMapLink : true,
+    showCopyPaste: props.showCopyPaste !== undefined ? props.showCopyPaste : true,
+    showCurrentLocation: props.showCurrentLocation !== undefined ? props.showCurrentLocation : true,
+    precision: props.precision || 6,
+  };
+}
 
-export default function CoordinateInput({
-  value = { lat: 0, lng: 0 },
-  onChange,
-  label = 'Coordenadas GPS',
-  description,
-  required = false,
-  disabled = false,
-  showValidation = true,
-  showMapLink = true,
-  showCopyPaste = true,
-  showCurrentLocation = true,
-  precision = 6,
-  error,
-}: CoordinateInputProps) {
+function getPaperBackgroundColor(error: string | undefined, isValid: boolean) {
+  if (error) return 'red.0';
+  if (isValid) return 'green.0';
+  return 'gray.0';
+}
+
+export default function CoordinateInput(props: CoordinateInputProps) {
+  const { onChange, description, error } = props;
+
+  const {
+    value,
+    label,
+    required,
+    disabled,
+    showValidation,
+    showMapLink,
+    showCopyPaste,
+    showCurrentLocation,
+    precision,
+  } = getDefaultProps(props);
   const {
     internalValue,
     isValid,
@@ -65,7 +84,7 @@ export default function CoordinateInput({
         value={internalValue}
       />
 
-      <Paper p="sm" withBorder radius="sm" bg={error ? 'red.0' : isValid ? 'green.0' : 'gray.0'}>
+      <Paper p="sm" withBorder radius="sm" bg={getPaperBackgroundColor(error, isValid)}>
         <Stack gap="sm">
           <CoordinateInputFields
             value={internalValue}
