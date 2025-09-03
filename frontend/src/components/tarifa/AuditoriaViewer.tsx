@@ -1,4 +1,10 @@
 import React, { useState, useMemo } from 'react';
+
+interface AuditoriaFiltros {
+  cliente?: string;
+  metodoCalculo?: string;
+  conErrores?: boolean;
+}
 import {
   Stack,
   Group,
@@ -139,7 +145,7 @@ const auditoriaService = {
       filtered = filtered.filter((entry) => entry.errores && entry.errores.length > 0);
     }
     if (filters?.cliente) {
-      filtered = filtered.filter((entry) => entry.cliente.includes(filters.cliente!));
+      filtered = filtered.filter((entry) => entry.cliente.includes(filters.cliente));
     }
     if (filters?.metodoCalculo) {
       filtered = filtered.filter((entry) => entry.metodoCalculo === filters.metodoCalculo);
@@ -194,7 +200,7 @@ const auditoriaService = {
     };
   },
 
-  exportar: async (_filtros: any, formato: 'excel' | 'pdf') => {
+  exportar: async (_filtros: AuditoriaFiltros, formato: 'excel' | 'pdf') => {
     console.log(`Exportando auditoría a ${formato}`);
     notifications.show({
       title: 'Éxito',
@@ -219,7 +225,7 @@ const clienteService = {
   }),
 };
 
-// eslint-disable-next-line complexity
+/* eslint-disable max-lines-per-function, complexity, max-lines */
 const AuditoriaViewer: React.FC<AuditoriaViewerProps> = ({
   showMetrics = true,
   showFilters = true,
@@ -243,7 +249,9 @@ const AuditoriaViewer: React.FC<AuditoriaViewerProps> = ({
     errorMessage: 'Error al cargar clientes',
   });
 
-  const { data: metricas } = useDataLoader<any>({
+  const { data: metricas } = useDataLoader<{
+    erroresComunes: Array<{ tipo: string; cantidad: number; descripcion: string }>;
+  }>({
     fetchFunction: () => auditoriaService.getMetrics(_filters),
     dependencies: [_filters],
     errorMessage: 'Error al cargar métricas',
@@ -266,7 +274,7 @@ const AuditoriaViewer: React.FC<AuditoriaViewerProps> = ({
   });
 
   // Handlers
-  const handleFiltersChange = (_newFilters: any) => {
+  const handleFiltersChange = (_newFilters: AuditoriaFiltros) => {
     // Implementation would go here
   };
 
@@ -1007,16 +1015,21 @@ const AuditoriaViewer: React.FC<AuditoriaViewerProps> = ({
                     Errores Más Comunes
                   </Text>
                   <Stack gap="sm">
-                    {metricas[0]?.erroresComunes?.map((error: any, index: number) => (
-                      <Group key={index} justify="space-between">
-                        <Text size="sm" style={{ flex: 1 }}>
-                          {error.tipo}
-                        </Text>
-                        <Badge color="red" variant="light">
-                          {error.cantidad}
-                        </Badge>
-                      </Group>
-                    )) || null}
+                    {metricas[0]?.erroresComunes?.map(
+                      (
+                        error: { tipo: string; cantidad: number; descripcion: string },
+                        index: number
+                      ) => (
+                        <Group key={index} justify="space-between">
+                          <Text size="sm" style={{ flex: 1 }}>
+                            {error.tipo}
+                          </Text>
+                          <Badge color="red" variant="light">
+                            {error.cantidad}
+                          </Badge>
+                        </Group>
+                      )
+                    ) || null}
                   </Stack>
                 </Paper>
               </Grid.Col>

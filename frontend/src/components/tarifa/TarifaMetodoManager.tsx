@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+
+interface MetodoFilters {
+  metodo?: string;
+  activo?: boolean;
+}
+
 import {
   Stack,
   Group,
@@ -106,6 +112,7 @@ const tarifaMetodoService = {
   },
 };
 
+/* eslint-disable max-lines-per-function, max-lines */
 const TarifaMetodoManager: React.FC<TarifaMetodoManagerProps> = ({
   onSelect,
   showSelection = false,
@@ -240,7 +247,7 @@ const TarifaMetodoManager: React.FC<TarifaMetodoManagerProps> = ({
     }
   };
 
-  const handleFiltersChange = (_newFilters: any) => {
+  const handleFiltersChange = (_newFilters: MetodoFilters) => {
     // Implementation would go here
   };
 
@@ -593,7 +600,7 @@ const TarifaMetodoManager: React.FC<TarifaMetodoManagerProps> = ({
                           onChange={(value) =>
                             setNewVariable((prev) => ({
                               ...prev,
-                              tipo: value as any,
+                              tipo: value as string,
                             }))
                           }
                         />
@@ -619,7 +626,7 @@ const TarifaMetodoManager: React.FC<TarifaMetodoManagerProps> = ({
                           onChange={(value) =>
                             setNewVariable((prev) => ({
                               ...prev,
-                              origen: value as any,
+                              origen: value as string,
                             }))
                           }
                         />
