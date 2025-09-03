@@ -79,6 +79,52 @@ export interface ExpirationManagerProps {
   error?: string;
 }
 
+// Función helper para preparar props del renderer
+const prepareRendererProps = (
+  managerState: ReturnType<typeof useExpirationManager>,
+  modalConfig: {
+    configModalOpened: boolean;
+    openConfigModal: () => void;
+    closeConfigModal: () => void;
+  },
+  callbacks: {
+    onEditEntity?: ExpirationManagerProps['onEditEntity'];
+    onRefresh?: () => void;
+    onConfigChange?: (config: ExpirationConfig) => void;
+  },
+  state: {
+    loading?: boolean;
+    error?: string;
+  }
+) => ({
+  ...managerState,
+  ...modalConfig,
+  ...callbacks,
+  ...state,
+});
+
+// Función helper para renderizar según variante
+const renderByVariant = (
+  variant: ExpirationManagerProps['variant'] = 'complete',
+  renderFunctions: {
+    renderCompactView: () => React.ReactElement;
+    renderAlertsOnlyView: () => React.ReactElement;
+    renderCalendarOnlyView: () => React.ReactElement;
+    renderFullView: () => React.ReactElement;
+  }
+) => {
+  switch (variant) {
+    case 'compact':
+      return renderFunctions.renderCompactView();
+    case 'alerts-only':
+      return renderFunctions.renderAlertsOnlyView();
+    case 'calendar-only':
+      return renderFunctions.renderCalendarOnlyView();
+    default:
+      return renderFunctions.renderFullView();
+  }
+};
+
 export const ExpirationManagerBase: React.FC<ExpirationManagerProps> = ({
   documentos,
   config,
@@ -89,40 +135,20 @@ export const ExpirationManagerBase: React.FC<ExpirationManagerProps> = ({
   loading = false,
   error,
 }) => {
-  // Hook personalizado que maneja el estado y lógica
   const managerState = useExpirationManager(documentos, config);
-
-  // Modal para configuración
   const [configModalOpened, { open: openConfigModal, close: closeConfigModal }] =
     useDisclosure(false);
 
-  // Hook de renderizado
-  const rendererProps = {
-    ...managerState,
-    configModalOpened,
-    openConfigModal,
-    closeConfigModal,
-    onEditEntity,
-    onRefresh,
-    onConfigChange,
-    loading,
-    error,
-  };
+  const rendererProps = prepareRendererProps(
+    managerState,
+    { configModalOpened, openConfigModal, closeConfigModal },
+    { onEditEntity, onRefresh, onConfigChange },
+    { loading, error }
+  );
 
-  const { renderCompactView, renderAlertsOnlyView, renderCalendarOnlyView, renderFullView } =
-    useExpirationRenderer(rendererProps);
+  const renderFunctions = useExpirationRenderer(rendererProps);
 
-  // Render según variante
-  switch (variant) {
-    case 'compact':
-      return renderCompactView();
-    case 'alerts-only':
-      return renderAlertsOnlyView();
-    case 'calendar-only':
-      return renderCalendarOnlyView();
-    default:
-      return renderFullView();
-  }
+  return renderByVariant(variant, renderFunctions);
 };
 
 export default ExpirationManagerBase;
