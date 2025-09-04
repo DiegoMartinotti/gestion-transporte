@@ -28,7 +28,6 @@ import {
 import { useValidation, BusinessRuleValidationResult } from './BaseValidator';
 import { DefaultBusinessRuleValidator, defaultBusinessRules } from './DefaultBusinessRuleValidator';
 
-// Interface legacy para compatibilidad con el código existente
 interface BusinessRule {
   id: string;
   name: string;
@@ -60,11 +59,26 @@ interface BusinessRuleValidatorProps {
   showSeverityFilter?: boolean;
 }
 
-// Helpers para severidad y estado de reglas
 const SEVERITY_COLORS = {
   error: 'red',
   warning: 'yellow',
   info: 'blue',
+} as const;
+
+const CATEGORY_COLORS = {
+  financial: 'green',
+  operational: 'blue',
+  temporal: 'orange',
+  capacity: 'violet',
+  documentation: 'teal',
+} as const;
+
+const CATEGORY_NAMES = {
+  financial: 'Financiero',
+  operational: 'Operativo',
+  temporal: 'Temporal',
+  capacity: 'Capacidad',
+  documentation: 'Documentación',
 } as const;
 
 const getStatusIcon = (
@@ -82,7 +96,6 @@ const getStatusIcon = (
   return <IconSettings size={16} color="gray" />;
 };
 
-// Componente para renderizar detalles expandidos de una regla
 interface RuleDetailsProps {
   result?: BusinessRuleValidationResult;
   isExpanded: boolean;
@@ -125,7 +138,6 @@ const RuleDetails: React.FC<RuleDetailsProps> = ({ result, isExpanded }) => {
   );
 };
 
-// Componente para renderizar una tarjeta de regla de negocio individual
 interface BusinessRuleCardProps {
   rule: BusinessRule;
   result?: BusinessRuleValidationResult;
@@ -154,8 +166,11 @@ const BusinessRuleCard: React.FC<BusinessRuleCardProps> = ({
           <Box>
             <Group gap="xs">
               <Text fw={500}>{rule.name}</Text>
-              <Badge size="xs" color={CATEGORY_COLORS[rule.category]}>
-                {CATEGORY_NAMES[rule.category]}
+              <Badge
+                size="xs"
+                color={CATEGORY_COLORS[rule.category as keyof typeof CATEGORY_COLORS]}
+              >
+                {CATEGORY_NAMES[rule.category as keyof typeof CATEGORY_NAMES]}
               </Badge>
               <Badge
                 size="xs"
@@ -196,7 +211,6 @@ const BusinessRuleCard: React.FC<BusinessRuleCardProps> = ({
   );
 };
 
-// Componente para mostrar el resumen de validación
 interface ValidationSummaryProps {
   summary: {
     total: number;
@@ -227,11 +241,11 @@ const ValidationSummary: React.FC<ValidationSummaryProps> = ({ summary }) => (
         .map(([category, stats]) => (
           <Badge
             key={category}
-            color={CATEGORY_COLORS[category]}
+            color={CATEGORY_COLORS[category as keyof typeof CATEGORY_COLORS]}
             variant={summary.byCategory[category]?.failed > 0 ? 'filled' : 'light'}
             size="sm"
           >
-            {CATEGORY_NAMES[category]}: {stats.passed}/{stats.total}
+            {CATEGORY_NAMES[category as keyof typeof CATEGORY_NAMES]}: {stats.passed}/{stats.total}
           </Badge>
         ))}
     </Group>
@@ -244,6 +258,121 @@ const ValidationSummary: React.FC<ValidationSummaryProps> = ({ summary }) => (
   </Stack>
 );
 
+const useBusinessRuleValidation = (
+  rules: BusinessRule[],
+  data: Record<string, unknown[]>,
+  contextData?: Record<string, unknown>,
+  autoValidate = true
+) => {
+  const validator = useMemo(() => {
+    const enabledRuleIds = rules.filter((r) => r.enabled).map((r) => r.id);
+    return new DefaultBusinessRuleValidator(rules, contextData, enabledRuleIds);
+  }, [rules, contextData]);
+
+  const { validationResults: baseValidationResults, runValidation } = useValidation(
+    validator,
+    data,
+    autoValidate
+  );
+
+  const validationResults = useMemo(() => {
+    return Object.entries(baseValidationResults)
+      .filter(([_, result]) => result)
+      .map(([_, result]) => result as BusinessRuleValidationResult);
+  }, [baseValidationResults]);
+
+  const toggleRule = useCallback(
+    (ruleId: string) => {
+      validator.toggleRule(ruleId);
+      setTimeout(() => runValidation(), 0);
+      return validator.isRuleEnabled(ruleId);
+    },
+    [validator, runValidation]
+  );
+
+  const getValidationSummary = useCallback(() => {
+    const byCategory = validationResults.reduce(
+      (acc, result) => {
+        const cat = result.category;
+        if (!acc[cat]) acc[cat] = { total: 0, passed: 0, failed: 0 };
+        acc[cat].total++;
+        result.passed ? acc[cat].passed++ : acc[cat].failed++;
+        return acc;
+      },
+      {} as Record<string, { total: number; passed: number; failed: number }>
+    );
+
+    const total = validationResults.length;
+    const passed = validationResults.filter((r) => r.passed).length;
+    return { total, passed, failed: total - passed, byCategory };
+  }, [validationResults]);
+
+  return {
+    validator,
+    validationResults,
+    toggleRule,
+    getValidationSummary,
+    runValidation,
+    isValidating: false,
+  };
+};
+
+interface ValidationControlsProps {
+  onRevalidate: () => void;
+  isValidating: boolean;
+}
+interface RulesListProps {
+  rules: BusinessRule[];
+  validationResults: BusinessRuleValidationResult[];
+  validator: DefaultBusinessRuleValidator;
+  expandedRules: Set<string>;
+  onToggleRule: (ruleId: string) => void;
+  onToggleExpansion: (ruleId: string) => void;
+}
+
+const ValidationControls: React.FC<ValidationControlsProps> = ({ onRevalidate, isValidating }) => (
+  <Group justify="space-between" mb="md">
+    <Title order={4}>Validación de Reglas de Negocio</Title>
+    <Button
+      leftSection={<IconRefresh size={16} />}
+      loading={isValidating}
+      onClick={onRevalidate}
+      variant="light"
+    >
+      Revalidar
+    </Button>
+  </Group>
+);
+
+const RulesList: React.FC<RulesListProps> = ({
+  rules,
+  validationResults,
+  validator,
+  expandedRules,
+  onToggleRule,
+  onToggleExpansion,
+}) => (
+  <Stack gap="xs">
+    {rules.map((rule) => {
+      const result = validationResults.find((r) => r.ruleId === rule.id);
+      const isExpanded = expandedRules.has(rule.id);
+      const isEnabled = validator.isRuleEnabled(rule.id);
+
+      return (
+        <BusinessRuleCard
+          key={rule.id}
+          rule={rule}
+          result={result}
+          isEnabled={isEnabled}
+          isExpanded={isExpanded}
+          onToggleRule={() => onToggleRule(rule.id)}
+          onToggleExpansion={() => onToggleExpansion(rule.id)}
+        />
+      );
+    })}
+  </Stack>
+);
+
 const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
   data,
   contextData,
@@ -252,30 +381,16 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
   onRuleToggle,
   autoValidate = true,
 }) => {
-  // Estados para la UI
   const [expandedRules, setExpandedRules] = useState<Set<string>>(new Set());
-  // Crear instancia del validador con configuración dinámica
-  const validator = useMemo(() => {
-    const enabledRuleIds = rules.filter((r) => r.enabled).map((r) => r.id);
-    return new DefaultBusinessRuleValidator(rules, contextData, enabledRuleIds);
-  }, [rules, contextData]);
-
-  // Usar el hook de validación
-  const { validationResults: baseValidationResults, runValidation } = useValidation(
+  const {
     validator,
-    data,
-    autoValidate
-  );
+    validationResults,
+    toggleRule,
+    getValidationSummary,
+    runValidation,
+    isValidating,
+  } = useBusinessRuleValidation(rules, data, contextData, autoValidate);
 
-  // Convertir resultados base a formato esperado por la UI
-  const validationResults = useMemo(() => {
-    return Object.entries(baseValidationResults)
-      .filter(([_, result]) => result)
-      .map(([_, result]) => result as BusinessRuleValidationResult);
-  }, [baseValidationResults]);
-
-  const isValidating = false; // El nuevo sistema es síncrono
-  // Notificar cambios de validación
   useEffect(() => {
     if (validationResults.length > 0) {
       onValidationComplete?.(validationResults);
@@ -285,111 +400,36 @@ const BusinessRuleValidator: React.FC<BusinessRuleValidatorProps> = ({
   const toggleRuleExpansion = useCallback(
     (ruleId: string) => {
       const newExpanded = new Set(expandedRules);
-      if (newExpanded.has(ruleId)) {
-        newExpanded.delete(ruleId);
-      } else {
-        newExpanded.add(ruleId);
-      }
+      newExpanded.has(ruleId) ? newExpanded.delete(ruleId) : newExpanded.add(ruleId);
       setExpandedRules(newExpanded);
     },
     [expandedRules]
   );
 
-  const toggleRule = useCallback(
+  const handleToggleRule = useCallback(
     (ruleId: string) => {
-      validator.toggleRule(ruleId);
-      onRuleToggle?.(ruleId, validator.isRuleEnabled(ruleId));
-      // Forzar revalidación después de cambiar las reglas habilitadas
-      setTimeout(() => runValidation(), 0);
+      const enabled = toggleRule(ruleId);
+      onRuleToggle?.(ruleId, enabled);
     },
-    [validator, onRuleToggle, runValidation]
+    [toggleRule, onRuleToggle]
   );
-
-  const getValidationSummary = useCallback(() => {
-    const byCategory = validationResults.reduce(
-      (acc, result) => {
-        const category = result.category;
-        if (!acc[category]) {
-          acc[category] = { total: 0, passed: 0, failed: 0 };
-        }
-        acc[category].total++;
-        if (result.passed) {
-          acc[category].passed++;
-        } else {
-          acc[category].failed++;
-        }
-        return acc;
-      },
-      {} as Record<string, { total: number; passed: number; failed: number }>
-    );
-
-    const total = validationResults.length;
-    const passed = validationResults.filter((r) => r.passed).length;
-    const failed = total - passed;
-
-    return { total, passed, failed, byCategory };
-  }, [validationResults]);
 
   const summary = getValidationSummary();
 
   return (
-    <Box>
-      <Card>
-        <Group justify="space-between" mb="md">
-          <Title order={4}>Validación de Reglas de Negocio</Title>
-          <Group>
-            <Button
-              leftSection={<IconRefresh size={16} />}
-              loading={isValidating}
-              onClick={runValidation}
-              variant="light"
-            >
-              Revalidar
-            </Button>
-          </Group>
-        </Group>
-
-        <ValidationSummary summary={summary} />
-
-        <Stack gap="xs">
-          {rules.map((rule) => {
-            const result = validationResults.find((r) => r.ruleId === rule.id);
-            const isExpanded = expandedRules.has(rule.id);
-            const isEnabled = validator.isRuleEnabled(rule.id);
-
-            return (
-              <BusinessRuleCard
-                key={rule.id}
-                rule={rule}
-                result={result}
-                isEnabled={isEnabled}
-                isExpanded={isExpanded}
-                onToggleRule={() => toggleRule(rule.id)}
-                onToggleExpansion={() => toggleRuleExpansion(rule.id)}
-              />
-            );
-          })}
-        </Stack>
-      </Card>
-    </Box>
+    <Card>
+      <ValidationControls onRevalidate={runValidation} isValidating={isValidating} />
+      <ValidationSummary summary={summary} />
+      <RulesList
+        rules={rules}
+        validationResults={validationResults}
+        validator={validator}
+        expandedRules={expandedRules}
+        onToggleRule={handleToggleRule}
+        onToggleExpansion={toggleRuleExpansion}
+      />
+    </Card>
   );
 };
 
-// Comparador para React.memo
-const arePropsEqual = (
-  prevProps: BusinessRuleValidatorProps,
-  nextProps: BusinessRuleValidatorProps
-): boolean => {
-  return (
-    prevProps.data?.length === nextProps.data?.length &&
-    prevProps.entityType === nextProps.entityType &&
-    prevProps.enabledByDefault === nextProps.enabledByDefault &&
-    prevProps.showCategoryFilter === nextProps.showCategoryFilter &&
-    prevProps.showSeverityFilter === nextProps.showSeverityFilter &&
-    JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data) &&
-    JSON.stringify(prevProps.contextData) === JSON.stringify(nextProps.contextData) &&
-    JSON.stringify(prevProps.rules) === JSON.stringify(nextProps.rules)
-  );
-};
-
-export default React.memo(BusinessRuleValidator, arePropsEqual);
+export default React.memo(BusinessRuleValidator);
