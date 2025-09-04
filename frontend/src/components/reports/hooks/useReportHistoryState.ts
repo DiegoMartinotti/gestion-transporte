@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ReportExecution, ExportFormat, ReportExecutionStatus } from '../../../types/reports';
 
-interface HistoryFilters {
+export interface HistoryFilters {
   reportId?: string;
   status?: ReportExecutionStatus;
   format?: ExportFormat;
@@ -9,9 +9,10 @@ interface HistoryFilters {
   endDate?: Date;
   createdBy?: string;
   searchTerm: string;
+  [key: string]: any;
 }
 
-interface HistoryState {
+export interface HistoryState {
   page: number;
   pageSize: number;
   sortBy: string;

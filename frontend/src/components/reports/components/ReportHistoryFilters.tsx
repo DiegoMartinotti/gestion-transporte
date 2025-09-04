@@ -3,16 +3,7 @@ import { Group, TextInput, Select, Button } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { IconSearch, IconRefresh } from '@tabler/icons-react';
 import { ReportDefinition, ExportFormat, ReportExecutionStatus } from '../../../types/reports';
-
-interface HistoryFilters {
-  reportId?: string;
-  status?: ReportExecutionStatus;
-  format?: ExportFormat;
-  startDate?: Date;
-  endDate?: Date;
-  createdBy?: string;
-  searchTerm: string;
-}
+import { HistoryFilters } from '../hooks/useReportHistoryState';
 
 interface ReportHistoryFiltersProps {
   filters: HistoryFilters;
@@ -85,7 +76,7 @@ export const ReportHistoryFilters: React.FC<ReportHistoryFiltersProps> = ({
     <DatePickerInput
       placeholder="Desde"
       value={filters.startDate}
-      onChange={(value) => onFiltersChange({ startDate: value || undefined })}
+      onChange={(value) => onFiltersChange({ startDate: (value as unknown as Date) || undefined })}
       clearable
       w={140}
     />
@@ -93,7 +84,7 @@ export const ReportHistoryFilters: React.FC<ReportHistoryFiltersProps> = ({
     <DatePickerInput
       placeholder="Hasta"
       value={filters.endDate}
-      onChange={(value) => onFiltersChange({ endDate: value || undefined })}
+      onChange={(value) => onFiltersChange({ endDate: (value as unknown as Date) || undefined })}
       clearable
       w={140}
     />

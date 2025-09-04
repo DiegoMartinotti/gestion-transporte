@@ -3,14 +3,7 @@ import { Table, Card, ScrollArea } from '@mantine/core';
 import { ReportExecution } from '../../../types/reports';
 import { ReportHistoryTableHeader } from './ReportHistoryTableHeader';
 import { ReportHistoryTableRow } from './ReportHistoryTableRow';
-
-interface HistoryState {
-  page: number;
-  pageSize: number;
-  sortBy: string;
-  sortDirection: 'asc' | 'desc';
-  filters: Record<string, string | undefined>;
-}
+import { HistoryState } from '../hooks/useReportHistoryState';
 
 interface ReportHistoryTableProps {
   executions: ReportExecution[];

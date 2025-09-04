@@ -75,7 +75,7 @@ const RowActions: React.FC<{
         {onRerun && (
           <Menu.Item
             leftSection={<IconRefresh size={14} />}
-            onClick={() => onRerun(execution.reportId)}
+            onClick={() => onRerun(execution.reportDefinitionId || execution.reportId!)}
           >
             Ejecutar nuevamente
           </Menu.Item>
@@ -152,8 +152,8 @@ export const ReportHistoryTableRow: React.FC<ReportHistoryTableRowProps> = ({
         <Text size="sm">{execution.createdBy}</Text>
       </Table.Td>
       <Table.Td>
-        {execution.fileSize && (
-          <Text size="sm">{(execution.fileSize / 1024 / 1024).toFixed(2)} MB</Text>
+        {execution.outputFile?.size && (
+          <Text size="sm">{(execution.outputFile.size / 1024 / 1024).toFixed(2)} MB</Text>
         )}
       </Table.Td>
       <Table.Td>
