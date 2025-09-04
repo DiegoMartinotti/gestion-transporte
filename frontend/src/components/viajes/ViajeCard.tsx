@@ -1,11 +1,7 @@
-import { useState } from 'react';
-import { Card, Stack, Alert } from '@mantine/core';
-import { IconAlertCircle } from '@tabler/icons-react';
 import { Viaje } from '../../types/viaje';
-import { notifications } from '@mantine/notifications';
+import { useViajeDelete } from '../../hooks/useViajeDelete';
 import { ViajeCardCompact } from './ViajeCard/ViajeCardCompact';
-import { ViajeCardHeader } from './ViajeCard/ViajeCardHeader';
-import { ViajeCardDetails } from './ViajeCard/ViajeCardDetails';
+import { ViajeCardContent } from './ViajeCard/ViajeCardContent';
 import { ViajeDeleteModal } from './ViajeCard/ViajeDeleteModal';
 
 interface ViajeCardProps {
@@ -27,28 +23,7 @@ export function ViajeCard({
   compact = false,
   showActions = true,
 }: ViajeCardProps) {
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  const handleDelete = async () => {
-    try {
-      if (onDelete) {
-        await onDelete(viaje);
-        notifications.show({
-          title: 'Viaje eliminado',
-          message: `El viaje #${viaje.numeroViaje} fue eliminado`,
-          color: 'green',
-        });
-      }
-    } catch {
-      notifications.show({
-        title: 'Error',
-        message: 'No se pudo eliminar el viaje',
-        color: 'red',
-      });
-    } finally {
-      setShowDeleteModal(false);
-    }
-  };
+  const { showDeleteModal, setShowDeleteModal, handleDelete } = useViajeDelete(onDelete);
 
   if (compact) {
     return <ViajeCardCompact viaje={viaje} onClick={onClick} />;
@@ -63,31 +38,20 @@ export function ViajeCard({
 
   return (
     <>
-      <Card {...cardProps} padding="md" withBorder>
-        <Stack gap="sm">
-          <ViajeCardHeader
-            viaje={viaje}
-            showActions={showActions}
-            onView={onView}
-            onEdit={onEdit}
-            onDeleteClick={() => setShowDeleteModal(true)}
-          />
-
-          <ViajeCardDetails viaje={viaje} />
-
-          {viaje.observaciones && (
-            <Alert icon={<IconAlertCircle size={14} />} color="blue" variant="light">
-              <div dangerouslySetInnerHTML={{ __html: viaje.observaciones.slice(0, 100) }} />
-            </Alert>
-          )}
-        </Stack>
-      </Card>
+      <ViajeCardContent
+        viaje={viaje}
+        cardProps={cardProps}
+        showActions={showActions}
+        onView={onView}
+        onEdit={onEdit}
+        onDeleteClick={() => setShowDeleteModal(true)}
+      />
 
       {onDelete && (
         <ViajeDeleteModal
           opened={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
-          onConfirm={handleDelete}
+          onConfirm={() => handleDelete(viaje)}
           viaje={viaje}
         />
       )}
