@@ -23,6 +23,73 @@ const excelServicesMap = {
   extras: extraExcelService,
 } as const;
 
+// Helper function for template download
+const createTemplateDownloader = (entityType: string) => async () => {
+  if (!entityType) return;
+
+  try {
+    const service = excelServicesMap[entityType as keyof typeof excelServicesMap];
+    if (!service) {
+      throw new Error(`Tipo de entidad no soportado: ${entityType}`);
+    }
+
+    const blob = await service.getTemplate();
+
+    // Crear URL para descarga
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `plantilla_${entityType}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error al descargar plantilla:', error);
+    throw error;
+  }
+};
+
+// Helper function for creating mock validation errors
+const createMockValidationErrors = (dataLength: number): ImportError[] => {
+  const errors: ImportError[] = [];
+
+  // Simular algunos errores de validación
+  if (dataLength > 0) {
+    errors.push({
+      row: 3,
+      field: 'email',
+      value: 'invalid-email',
+      error: 'Email inválido',
+      severity: 'error',
+    });
+
+    errors.push({
+      row: 5,
+      field: 'telefono',
+      value: '123',
+      error: 'Teléfono muy corto',
+      severity: 'warning',
+    });
+  }
+
+  return errors;
+};
+
+// Helper function for creating import result
+const createImportResult = (
+  entityType: string,
+  dataLength: number,
+  validationErrors: ImportError[]
+): ImportResult => ({
+  entityType,
+  total: dataLength,
+  success: dataLength - validationErrors.filter((e) => e.severity === 'error').length,
+  failed: validationErrors.filter((e) => e.severity === 'error').length,
+  errors: validationErrors,
+  timestamp: new Date(),
+});
+
 export const useImportWizard = (
   entityType: string,
   onComplete?: (result: ImportResult) => void
@@ -39,31 +106,7 @@ export const useImportWizard = (
   const nextStep = () => setActive((current) => (current < 5 ? current + 1 : current));
   const prevStep = () => setActive((current) => (current > 0 ? current - 1 : current));
 
-  const handleTemplateDownload = async () => {
-    if (!entityType) return;
-
-    try {
-      const service = excelServicesMap[entityType as keyof typeof excelServicesMap];
-      if (!service) {
-        throw new Error(`Tipo de entidad no soportado: ${entityType}`);
-      }
-
-      const blob = await service.getTemplate();
-
-      // Crear URL para descarga
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `plantilla_${entityType}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error al descargar plantilla:', error);
-      throw error;
-    }
-  };
+  const handleTemplateDownload = createTemplateDownloader(entityType);
 
   const handleFileUpload = useCallback((file: FileWithPath) => {
     // Procesar archivo Excel localmente (simulación)
@@ -88,26 +131,7 @@ export const useImportWizard = (
 
     // Simulación de validación - en producción esto llamaría al backend
     setTimeout(() => {
-      const errors: ImportError[] = [];
-
-      // Simular algunos errores de validación
-      if (importState.data.length > 0) {
-        errors.push({
-          row: 3,
-          field: 'email',
-          value: 'invalid-email',
-          error: 'Email inválido',
-          severity: 'error',
-        });
-
-        errors.push({
-          row: 5,
-          field: 'telefono',
-          value: '123',
-          error: 'Teléfono muy corto',
-          severity: 'warning',
-        });
-      }
+      const errors = createMockValidationErrors(importState.data.length);
 
       setImportState((prev) => ({
         ...prev,
@@ -124,16 +148,11 @@ export const useImportWizard = (
 
     // Simulación de importación - en producción esto llamaría al backend
     setTimeout(() => {
-      const result: ImportResult = {
+      const result = createImportResult(
         entityType,
-        total: importState.data.length,
-        success:
-          importState.data.length -
-          importState.validationErrors.filter((e) => e.severity === 'error').length,
-        failed: importState.validationErrors.filter((e) => e.severity === 'error').length,
-        errors: importState.validationErrors,
-        timestamp: new Date(),
-      };
+        importState.data.length,
+        importState.validationErrors
+      );
 
       setImportState((prev) => ({
         ...prev,
