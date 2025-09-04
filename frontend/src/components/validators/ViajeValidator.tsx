@@ -16,9 +16,9 @@ import {
   Divider,
   ActionIcon,
   Collapse,
-  Box
+  Box,
 } from '@mantine/core';
-import { 
+import {
   IconShieldCheck,
   IconAlertTriangle,
   IconCheck,
@@ -33,13 +33,13 @@ import {
   // IconCalendar - unused
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
-import { 
-  BaseValidator, 
-  ValidationRule, 
-  // ValidationResult, - unused 
+import {
+  BaseValidator,
+  ValidationRule,
+  // ValidationResult, - unused
   BaseValidatorProps,
   useValidation,
-  ValidationUtils
+  ValidationUtils,
 } from './BaseValidator';
 
 // Constantes para categorías de validación
@@ -69,9 +69,8 @@ type ViajeValidatorProps = BaseValidatorProps<ViajeData>;
 
 // Clase validadora de viajes que extiende BaseValidator
 class ViajeValidatorService extends BaseValidator<ViajeData> {
-  getValidationRules(): ValidationRule<ViajeData>[] {
+  private getBasicValidationRules(): ValidationRule<ViajeData>[] {
     return [
-      // Reglas básicas requeridas
       {
         id: 'cliente-required',
         category: VALIDATION_CATEGORIES.DATOS_BASICOS,
@@ -82,8 +81,8 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
         validator: (data) => ({
           passed: this.isRequired(data.cliente),
           message: data.cliente ? 'Cliente asignado correctamente' : 'Debe seleccionar un cliente',
-          suggestion: !data.cliente ? 'Seleccione un cliente de la lista' : undefined
-        })
+          suggestion: !data.cliente ? 'Seleccione un cliente de la lista' : undefined,
+        }),
       },
       {
         id: 'tramo-required',
@@ -95,8 +94,10 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
         validator: (data) => ({
           passed: this.isRequired(data.tramo),
           message: data.tramo ? 'Tramo asignado correctamente' : 'Debe seleccionar un tramo',
-          suggestion: !data.tramo ? 'Seleccione un tramo de la lista de rutas disponibles' : undefined
-        })
+          suggestion: !data.tramo
+            ? 'Seleccione un tramo de la lista de rutas disponibles'
+            : undefined,
+        }),
       },
       {
         id: 'fecha-required',
@@ -107,9 +108,11 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
         required: true,
         validator: (data) => ({
           passed: this.isValidDate(data.fecha),
-          message: data.fecha ? 'Fecha asignada correctamente' : 'Debe establecer una fecha para el viaje',
-          suggestion: !data.fecha ? 'Seleccione la fecha programada del viaje' : undefined
-        })
+          message: data.fecha
+            ? 'Fecha asignada correctamente'
+            : 'Debe establecer una fecha para el viaje',
+          suggestion: !data.fecha ? 'Seleccione la fecha programada del viaje' : undefined,
+        }),
       },
       {
         id: 'palets-required',
@@ -120,14 +123,21 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
         required: true,
         validator: (data) => ({
           passed: this.isValidNumber(data.palets) && data.palets! > 0,
-          message: data.palets && data.palets > 0 
-            ? `${data.palets} palets especificados` 
-            : 'Debe especificar una cantidad válida de palets',
-          suggestion: !data.palets || data.palets <= 0 ? 'Ingrese la cantidad de palets a transportar (mayor a 0)' : undefined
-        })
+          message:
+            data.palets && data.palets > 0
+              ? `${data.palets} palets especificados`
+              : 'Debe especificar una cantidad válida de palets',
+          suggestion:
+            !data.palets || data.palets <= 0
+              ? 'Ingrese la cantidad de palets a transportar (mayor a 0)'
+              : undefined,
+        }),
       },
+    ];
+  }
 
-      // Reglas de vehículos
+  private getVehicleValidationRules(): ValidationRule<ViajeData>[] {
+    return [
       {
         id: 'vehiculos-required',
         category: 'Vehículos',
@@ -137,11 +147,15 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
         required: true,
         validator: (data) => ({
           passed: this.isValidArray(data.vehiculos),
-          message: data.vehiculos && data.vehiculos.length > 0
-            ? `${data.vehiculos.length} vehículo(s) asignado(s)`
-            : 'Debe asignar al menos un vehículo',
-          suggestion: !data.vehiculos || data.vehiculos.length === 0 ? 'Seleccione los vehículos que realizarán el viaje' : undefined
-        })
+          message:
+            data.vehiculos && data.vehiculos.length > 0
+              ? `${data.vehiculos.length} vehículo(s) asignado(s)`
+              : 'Debe asignar al menos un vehículo',
+          suggestion:
+            !data.vehiculos || data.vehiculos.length === 0
+              ? 'Seleccione los vehículos que realizarán el viaje'
+              : undefined,
+        }),
       },
       {
         id: 'vehiculos-documentacion',
@@ -155,7 +169,7 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
             return { passed: false, message: 'No hay vehículos para validar' };
           }
 
-          const vehiculosConProblemas = data.vehiculos!.filter(vehiculo => {
+          const vehiculosConProblemas = data.vehiculos!.filter((vehiculo) => {
             const documentos = vehiculo.documentacion || {};
             return Object.values(documentos).some((doc: Record<string, unknown>) => {
               if (doc.fechaVencimiento) {
@@ -167,16 +181,25 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
 
           return {
             passed: vehiculosConProblemas.length === 0,
-            message: vehiculosConProblemas.length === 0
-              ? 'Documentación de vehículos vigente'
-              : `${vehiculosConProblemas.length} vehículo(s) con documentación vencida`,
-            details: vehiculosConProblemas.map(v => `${v.patente || v.nombre}: Documentación vencida`),
-            suggestion: vehiculosConProblemas.length > 0 ? 'Revise y actualice la documentación de los vehículos' : undefined
+            message:
+              vehiculosConProblemas.length === 0
+                ? 'Documentación de vehículos vigente'
+                : `${vehiculosConProblemas.length} vehículo(s) con documentación vencida`,
+            details: vehiculosConProblemas.map(
+              (v) => `${v.patente || v.nombre}: Documentación vencida`
+            ),
+            suggestion:
+              vehiculosConProblemas.length > 0
+                ? 'Revise y actualice la documentación de los vehículos'
+                : undefined,
           };
-        }
+        },
       },
+    ];
+  }
 
-      // Reglas de personal
+  private getPersonalValidationRules(): ValidationRule<ViajeData>[] {
+    return [
       {
         id: 'personal-required',
         category: 'Personal',
@@ -186,11 +209,15 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
         required: true,
         validator: (data) => ({
           passed: this.isValidArray(data.personal),
-          message: data.personal && data.personal.length > 0
-            ? `${data.personal.length} persona(s) asignada(s)`
-            : 'Debe asignar personal al viaje',
-          suggestion: !data.personal || data.personal.length === 0 ? 'Asigne al menos un chofer al viaje' : undefined
-        })
+          message:
+            data.personal && data.personal.length > 0
+              ? `${data.personal.length} persona(s) asignada(s)`
+              : 'Debe asignar personal al viaje',
+          suggestion:
+            !data.personal || data.personal.length === 0
+              ? 'Asigne al menos un chofer al viaje'
+              : undefined,
+        }),
       },
       {
         id: 'chofer-requerido',
@@ -204,18 +231,25 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
             return { passed: false, message: 'No hay personal asignado' };
           }
 
-          const choferes = data.personal!.filter(p => p.tipo === 'CHOFER' || p.tipoPersonal === 'CHOFER');
+          const choferes = data.personal!.filter(
+            (p) => p.tipo === 'CHOFER' || p.tipoPersonal === 'CHOFER'
+          );
           return {
             passed: choferes.length > 0,
-            message: choferes.length > 0
-              ? `${choferes.length} chofer(es) asignado(s)`
-              : 'Debe asignar al menos un chofer',
-            suggestion: choferes.length === 0 ? 'Asigne un chofer principal para el viaje' : undefined
+            message:
+              choferes.length > 0
+                ? `${choferes.length} chofer(es) asignado(s)`
+                : 'Debe asignar al menos un chofer',
+            suggestion:
+              choferes.length === 0 ? 'Asigne un chofer principal para el viaje' : undefined,
           };
-        }
+        },
       },
+    ];
+  }
 
-      // Reglas de fecha
+  private getSchedulingValidationRules(): ValidationRule<ViajeData>[] {
+    return [
       {
         id: 'fecha-futura',
         category: 'Programación',
@@ -230,13 +264,15 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
 
           const fechaViaje = new Date(data.fecha!);
           const ahora = new Date();
-          const diferenciaDias = Math.ceil((fechaViaje.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24));
+          const diferenciaDias = Math.ceil(
+            (fechaViaje.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24)
+          );
 
           if (diferenciaDias < 0) {
             return {
               passed: false,
               message: 'La fecha del viaje está en el pasado',
-              suggestion: 'Verifique si es correcto programar un viaje en fecha pasada'
+              suggestion: 'Verifique si es correcto programar un viaje en fecha pasada',
             };
           }
 
@@ -244,20 +280,24 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
             return {
               passed: false,
               message: 'La fecha del viaje está muy lejana',
-              suggestion: 'Verifique la fecha del viaje'
+              suggestion: 'Verifique la fecha del viaje',
             };
           }
 
           return {
             passed: true,
-            message: diferenciaDias === 0 
-              ? 'Viaje programado para hoy'
-              : `Viaje programado en ${diferenciaDias} día(s)`
+            message:
+              diferenciaDias === 0
+                ? 'Viaje programado para hoy'
+                : `Viaje programado en ${diferenciaDias} día(s)`,
           };
-        }
+        },
       },
+    ];
+  }
 
-      // Reglas de cálculo
+  private getCalculationValidationRules(): ValidationRule<ViajeData>[] {
+    return [
       {
         id: 'tarifa-calculada',
         category: 'Cálculos',
@@ -267,15 +307,21 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
         required: false,
         validator: (data) => ({
           passed: this.isValidNumber(data.tarifaCalculada) && data.tarifaCalculada! > 0,
-          message: data.tarifaCalculada && data.tarifaCalculada > 0
-            ? `Tarifa calculada: $${data.tarifaCalculada.toLocaleString()}`
-            : 'No hay tarifa calculada',
-          suggestion: !data.tarifaCalculada || data.tarifaCalculada <= 0 
-            ? 'Calcule la tarifa del viaje' : undefined
-        })
+          message:
+            data.tarifaCalculada && data.tarifaCalculada > 0
+              ? `Tarifa calculada: $${data.tarifaCalculada.toLocaleString()}`
+              : 'No hay tarifa calculada',
+          suggestion:
+            !data.tarifaCalculada || data.tarifaCalculada <= 0
+              ? 'Calcule la tarifa del viaje'
+              : undefined,
+        }),
       },
+    ];
+  }
 
-      // Reglas de compatibilidad
+  private getCompatibilityValidationRules(): ValidationRule<ViajeData>[] {
+    return [
       {
         id: 'cliente-tramo-compatibilidad',
         category: 'Compatibilidad',
@@ -288,19 +334,34 @@ class ViajeValidatorService extends BaseValidator<ViajeData> {
             return { passed: false, message: 'Faltan datos para validar compatibilidad' };
           }
 
-          const clienteId = typeof data.cliente === 'string' ? data.cliente : data.cliente._id;
-          const tramoClienteId = typeof data.tramo.cliente === 'string' ? data.tramo.cliente : data.tramo.cliente?._id;
+          const clienteId = typeof data.cliente === 'string' ? data.cliente : data.cliente?._id;
+          const tramoClienteId =
+            typeof data.tramo?.cliente === 'string' ? data.tramo.cliente : data.tramo?.cliente?._id;
 
           return {
             passed: clienteId === tramoClienteId,
-            message: clienteId === tramoClienteId
-              ? 'Cliente y tramo son compatibles'
-              : 'El tramo no pertenece al cliente seleccionado',
-            suggestion: clienteId !== tramoClienteId 
-              ? 'Seleccione un tramo que pertenezca al cliente elegido' : undefined
+            message:
+              clienteId === tramoClienteId
+                ? 'Cliente y tramo son compatibles'
+                : 'El tramo no pertenece al cliente seleccionado',
+            suggestion:
+              clienteId !== tramoClienteId
+                ? 'Seleccione un tramo que pertenezca al cliente elegido'
+                : undefined,
           };
-        }
-      }
+        },
+      },
+    ];
+  }
+
+  getValidationRules(): ValidationRule<ViajeData>[] {
+    return [
+      ...this.getBasicValidationRules(),
+      ...this.getVehicleValidationRules(),
+      ...this.getPersonalValidationRules(),
+      ...this.getSchedulingValidationRules(),
+      ...this.getCalculationValidationRules(),
+      ...this.getCompatibilityValidationRules(),
     ];
   }
 }
@@ -310,20 +371,20 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
   onValidationChange,
   autoValidate = true,
   showDetails = true,
-  readonly = false
+  readonly = false,
 }) => {
   const [detailsOpened, { toggle: toggleDetails }] = useDisclosure(showDetails);
-  
+
   // Instanciar el validador
   const validator = useMemo(() => new ViajeValidatorService(), []);
-  
+
   // Usar el hook de validación unificado
-  const {
-    validationResults,
-    validationSummary,
-    validationRules,
-    runValidation
-  } = useValidation(validator, data, autoValidate, onValidationChange);
+  const { validationResults, validationSummary, validationRules, runValidation } = useValidation(
+    validator,
+    data,
+    autoValidate,
+    onValidationChange
+  );
 
   return (
     <Paper p="md">
@@ -335,19 +396,15 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
           </Group>
         </Title>
         <Group gap="sm">
-          <Badge 
-            size="lg" 
+          <Badge
+            size="lg"
             color={ValidationUtils.getScoreColor(validationSummary.score)}
             variant="light"
           >
             {validationSummary.score.toFixed(0)}% Válido
           </Badge>
           {showDetails && (
-            <ActionIcon
-              variant="subtle"
-              onClick={toggleDetails}
-              aria-label="Toggle details"
-            >
+            <ActionIcon variant="subtle" onClick={toggleDetails} aria-label="Toggle details">
               {detailsOpened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
             </ActionIcon>
           )}
@@ -358,32 +415,48 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
       <Grid mb="md">
         <Grid.Col span={3}>
           <Card withBorder ta="center">
-            <Text size="sm" c="dimmed">Total</Text>
-            <Text size="lg" fw={600}>{validationSummary.totalRules}</Text>
+            <Text size="sm" c="dimmed">
+              Total
+            </Text>
+            <Text size="lg" fw={600}>
+              {validationSummary.totalRules}
+            </Text>
             <Text size="xs">Reglas</Text>
           </Card>
         </Grid.Col>
-        
+
         <Grid.Col span={3}>
           <Card withBorder ta="center">
-            <Text size="sm" c="dimmed">Pasadas</Text>
-            <Text size="lg" fw={600} c="green">{validationSummary.passedRules}</Text>
+            <Text size="sm" c="dimmed">
+              Pasadas
+            </Text>
+            <Text size="lg" fw={600} c="green">
+              {validationSummary.passedRules}
+            </Text>
             <Text size="xs">Validaciones</Text>
           </Card>
         </Grid.Col>
-        
+
         <Grid.Col span={3}>
           <Card withBorder ta="center">
-            <Text size="sm" c="dimmed">Errores</Text>
-            <Text size="lg" fw={600} c="red">{validationSummary.errors.length}</Text>
+            <Text size="sm" c="dimmed">
+              Errores
+            </Text>
+            <Text size="lg" fw={600} c="red">
+              {validationSummary.errors.length}
+            </Text>
             <Text size="xs">Críticos</Text>
           </Card>
         </Grid.Col>
-        
+
         <Grid.Col span={3}>
           <Card withBorder ta="center">
-            <Text size="sm" c="dimmed">Advertencias</Text>
-            <Text size="lg" fw={600} c="yellow">{validationSummary.warnings.length}</Text>
+            <Text size="sm" c="dimmed">
+              Advertencias
+            </Text>
+            <Text size="lg" fw={600} c="yellow">
+              {validationSummary.warnings.length}
+            </Text>
             <Text size="xs">Menores</Text>
           </Card>
         </Grid.Col>
@@ -392,13 +465,15 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
       {/* Barra de progreso */}
       <Box mb="md">
         <Group justify="space-between" mb="xs">
-          <Text size="sm" fw={500}>Progreso de Validación</Text>
+          <Text size="sm" fw={500}>
+            Progreso de Validación
+          </Text>
           <Text size="sm" c="dimmed">
             {validationSummary.passedRules}/{validationSummary.totalRules}
           </Text>
         </Group>
-        <Progress 
-          value={validationSummary.score} 
+        <Progress
+          value={validationSummary.score}
           color={ValidationUtils.getScoreColor(validationSummary.score)}
           size="lg"
         />
@@ -406,18 +481,24 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
 
       {/* Estado de guardado */}
       <Group mb="md">
-        <Badge 
+        <Badge
           color={validationSummary.canSave ? 'green' : 'red'}
           variant="light"
           leftSection={validationSummary.canSave ? <IconCheck size={12} /> : <IconX size={12} />}
         >
           {validationSummary.canSave ? 'Puede guardar' : 'No puede guardar'}
         </Badge>
-        
-        <Badge 
+
+        <Badge
           color={validationSummary.canSubmit ? 'green' : 'orange'}
           variant="light"
-          leftSection={validationSummary.canSubmit ? <IconCheck size={12} /> : <IconExclamationMark size={12} />}
+          leftSection={
+            validationSummary.canSubmit ? (
+              <IconCheck size={12} />
+            ) : (
+              <IconExclamationMark size={12} />
+            )
+          }
         >
           {validationSummary.canSubmit ? 'Puede enviar' : 'No puede enviar'}
         </Badge>
@@ -426,7 +507,9 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
       {/* Errores críticos */}
       {validationSummary.errors.length > 0 && (
         <Alert color="red" icon={<IconX size={16} />} mb="md">
-          <Text fw={500} mb="xs">Errores que deben corregirse:</Text>
+          <Text fw={500} mb="xs">
+            Errores que deben corregirse:
+          </Text>
           <List size="sm">
             {validationSummary.errors.map((error, index) => (
               <List.Item key={index}>
@@ -445,7 +528,9 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
       {/* Advertencias */}
       {validationSummary.warnings.length > 0 && (
         <Alert color="yellow" icon={<IconAlertTriangle size={16} />} mb="md">
-          <Text fw={500} mb="xs">Advertencias:</Text>
+          <Text fw={500} mb="xs">
+            Advertencias:
+          </Text>
           <List size="sm">
             {validationSummary.warnings.map((warning, index) => (
               <List.Item key={index}>
@@ -464,17 +549,22 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
       {/* Detalles completos */}
       <Collapse in={detailsOpened}>
         <Card withBorder>
-          <Title order={5} mb="md">Detalles de Validación</Title>
-          
+          <Title order={5} mb="md">
+            Detalles de Validación
+          </Title>
+
           <Stack gap="md">
             {Object.entries(
-              validationRules.reduce((acc, rule) => {
-                if (!acc[rule.category]) {
-                  acc[rule.category] = [];
-                }
-                acc[rule.category].push(rule);
-                return acc;
-              }, {} as Record<string, ValidationRule[]>)
+              validationRules.reduce(
+                (acc, rule) => {
+                  if (!acc[rule.category]) {
+                    acc[rule.category] = [];
+                  }
+                  acc[rule.category].push(rule);
+                  return acc;
+                },
+                {} as Record<string, ValidationRule[]>
+              )
             ).map(([category, rules]) => (
               <Box key={category}>
                 <Group mb="xs">
@@ -483,18 +573,20 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
                   </ThemeIcon>
                   <Text fw={500}>{category}</Text>
                 </Group>
-                
+
                 <Stack gap="xs" pl="md">
-                  {rules.map(rule => {
+                  {rules.map((rule) => {
                     const result = validationResults[rule.id];
                     if (!result) return null;
-                    
+
                     return (
                       <Group key={rule.id} justify="space-between">
                         <Group gap="xs">
-                          <ThemeIcon 
-                            size="xs" 
-                            color={result.passed ? 'green' : rule.severity === 'error' ? 'red' : 'yellow'}
+                          <ThemeIcon
+                            size="xs"
+                            color={
+                              result.passed ? 'green' : rule.severity === 'error' ? 'red' : 'yellow'
+                            }
                             variant="light"
                           >
                             {result.passed ? <IconCheck size={12} /> : <IconX size={12} />}
@@ -508,7 +600,7 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
                     );
                   })}
                 </Stack>
-                
+
                 <Divider mt="sm" />
               </Box>
             ))}
@@ -519,10 +611,7 @@ export const ViajeValidator: React.FC<ViajeValidatorProps> = ({
       {/* Botón de re-validación */}
       {!autoValidate && !readonly && (
         <Group justify="center" mt="md">
-          <Button
-            onClick={runValidation}
-            leftSection={<IconShieldCheck size={16} />}
-          >
+          <Button onClick={runValidation} leftSection={<IconShieldCheck size={16} />}>
             Validar Datos
           </Button>
         </Group>
