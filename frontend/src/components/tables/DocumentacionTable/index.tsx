@@ -1,13 +1,13 @@
 import React from 'react';
 import { Table, Card, Stack, Text } from '@mantine/core';
-import type { Personal } from '../../types';
-import { useDocumentosData } from './DocumentacionTable/hooks/useDocumentosData';
-import { useFilteredDocumentos } from './DocumentacionTable/hooks/useFilteredDocumentos';
-import { useDocumentStats } from './DocumentacionTable/hooks/useDocumentStats';
-import { StatisticsCard } from './DocumentacionTable/StatisticsCard';
-import { FiltersCard } from './DocumentacionTable/FiltersCard';
-import { AlertsSection } from './DocumentacionTable/AlertsSection';
-import { DocumentRow } from './DocumentacionTable/DocumentRow';
+import type { Personal } from '../../../types';
+import { useDocumentosData } from './hooks/useDocumentosData';
+import { useFilteredDocumentos } from './hooks/useFilteredDocumentos';
+import { useDocumentStats } from './hooks/useDocumentStats';
+import { StatisticsCard } from './StatisticsCard';
+import { FiltersCard } from './FiltersCard';
+import { AlertsSection } from './AlertsSection';
+import { DocumentRow } from './DocumentRow';
 
 interface DocumentacionTableProps {
   personal: Personal[];
