@@ -47,6 +47,42 @@ export interface ReferenceConfig {
   onlyActiveRecords: boolean;
 }
 
+// Helper function for generating reference sheets
+const handleGenerateReferenceSheets = (
+  entities: ReferenceEntity[],
+  config: ReferenceConfig,
+  targetEntity: string,
+  onDownload?: (config: ReferenceConfig) => void
+) => {
+  generateAndDownloadReferenceSheets(entities, config, targetEntity, onDownload);
+};
+
+// Help section component
+const HelpSection: React.FC = () => (
+  <Alert
+    icon={<IconInfoCircle size={16} />}
+    color="blue"
+    title="¿Cómo usar las hojas de referencia?"
+  >
+    <List size="sm" spacing="xs">
+      <List.Item>
+        <strong>Selecciona las entidades</strong> que necesitas como referencia para tu importación
+      </List.Item>
+      <List.Item>
+        <strong>Descarga el archivo Excel</strong> que contendrá hojas separadas con los datos
+        existentes
+      </List.Item>
+      <List.Item>
+        <strong>Usa los IDs</strong> de las hojas de referencia para completar campos de relación en
+        tu plantilla principal
+      </List.Item>
+      <List.Item>
+        <strong>Lee las instrucciones</strong> incluidas en el archivo para ejemplos específicos
+      </List.Item>
+    </List>
+  </Alert>
+);
+
 export const ReferenceDataSheets: React.FC<ReferenceDataSheetsProps> = ({
   entities,
   selectedEntities = [],
@@ -76,7 +112,7 @@ export const ReferenceDataSheets: React.FC<ReferenceDataSheetsProps> = ({
   });
 
   const generateReferenceSheets = () => {
-    generateAndDownloadReferenceSheets(entities, config, targetEntity, onDownload);
+    handleGenerateReferenceSheets(entities, config, targetEntity, onDownload);
   };
 
   return (
@@ -114,30 +150,7 @@ export const ReferenceDataSheets: React.FC<ReferenceDataSheetsProps> = ({
         onGenerate={generateReferenceSheets}
       />
 
-      {/* Help Section */}
-      <Alert
-        icon={<IconInfoCircle size={16} />}
-        color="blue"
-        title="¿Cómo usar las hojas de referencia?"
-      >
-        <List size="sm" spacing="xs">
-          <List.Item>
-            <strong>Selecciona las entidades</strong> que necesitas como referencia para tu
-            importación
-          </List.Item>
-          <List.Item>
-            <strong>Descarga el archivo Excel</strong> que contendrá hojas separadas con los datos
-            existentes
-          </List.Item>
-          <List.Item>
-            <strong>Usa los IDs</strong> de las hojas de referencia para completar campos de
-            relación en tu plantilla principal
-          </List.Item>
-          <List.Item>
-            <strong>Lee las instrucciones</strong> incluidas en el archivo para ejemplos específicos
-          </List.Item>
-        </List>
-      </Alert>
+      <HelpSection />
     </Stack>
   );
 };
