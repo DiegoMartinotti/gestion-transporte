@@ -1,14 +1,7 @@
 import React from 'react';
 import { Table, Group, ActionIcon, Checkbox } from '@mantine/core';
 import { IconSortAscending, IconSortDescending } from '@tabler/icons-react';
-
-interface HistoryState {
-  page: number;
-  pageSize: number;
-  sortBy: string;
-  sortDirection: 'asc' | 'desc';
-  filters: Record<string, string | undefined>;
-}
+import { HistoryState } from '../hooks/useReportHistoryState';
 
 interface ReportHistoryTableHeaderProps {
   selectedExecutionsSize: number;

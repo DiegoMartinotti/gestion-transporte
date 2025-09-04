@@ -63,22 +63,24 @@ export const ReportHistoryModal: React.FC<ReportHistoryModalProps> = ({
         </Card>
 
         {selectedExecutionDetail.execution.parameters &&
-          selectedExecutionDetail.execution.parameters.length > 0 && (
+          Object.keys(selectedExecutionDetail.execution.parameters).length > 0 && (
             <Card withBorder>
               <Text fw={500} mb="xs">
                 Parámetros
               </Text>
               <Stack gap="xs">
-                {selectedExecutionDetail.execution.parameters.map((param, index) => (
-                  <Group key={index} justify="space-between">
-                    <Text size="sm" c="dimmed">
-                      {param.name}:
-                    </Text>
-                    <Text size="sm" fw={500}>
-                      {String(param.value)}
-                    </Text>
-                  </Group>
-                ))}
+                {Object.entries(selectedExecutionDetail.execution.parameters).map(
+                  ([key, value], index) => (
+                    <Group key={index} justify="space-between">
+                      <Text size="sm" c="dimmed">
+                        {key}:
+                      </Text>
+                      <Text size="sm" fw={500}>
+                        {String(value)}
+                      </Text>
+                    </Group>
+                  )
+                )}
               </Stack>
             </Card>
           )}

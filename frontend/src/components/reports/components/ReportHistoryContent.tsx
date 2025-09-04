@@ -3,14 +3,7 @@ import { Card, Center, Stack, Text, Skeleton, Group } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { ReportExecution } from '../../../types/reports';
 import { ReportHistoryTable } from './ReportHistoryTable';
-
-interface HistoryState {
-  page: number;
-  pageSize: number;
-  sortBy: string;
-  sortDirection: 'asc' | 'desc';
-  filters: Record<string, string | undefined>;
-}
+import { HistoryState } from '../hooks/useReportHistoryState';
 
 interface ReportHistoryContentProps {
   loading: boolean;
