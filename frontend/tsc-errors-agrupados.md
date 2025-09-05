@@ -7,17 +7,6 @@ Generado automáticamente. Fuente: lint_output.txt y tsc-errors-raw.log.
 
 ## Tipo: max-lines
 
-- Grupo: components/maps (2)
-  - frontend/src/components/maps/DistanceCalculatorHelpers.tsx (1)
-  - frontend/src/components/maps/RouteVisualizer.old.tsx (1)
-- Grupo: components/selectors (2)
-  - frontend/src/components/selectors/ExtraSelector.tsx (1)
-  - frontend/src/components/selectors/TipoCalculoSelector.tsx (1)
-- Grupo: components/upload (1)
-  - frontend/src/components/upload/DocumentUpload.tsx (1)
-- Grupo: components/tarifa (2)
-  - frontend/src/components/tarifa/AuditoriaViewer.tsx (1)
-  - frontend/src/components/tarifa/TarifaMetodoManager.tsx (1)
 - Grupo: components/expiration (1)
   - frontend/src/components/expiration/ExpirationManagerBase.tsx (1)
 - Grupo: components/tables (1)
