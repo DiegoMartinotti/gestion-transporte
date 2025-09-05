@@ -2,119 +2,33 @@
 import React from 'react';
 import { Group, Text, Select, Paper, Stack, Button, Alert } from '@mantine/core';
 import { IconCalculator } from '@tabler/icons-react';
-import { Site } from '../../types';
 import {
-  DistanceResult,
-  CostCalculation,
   SiteSelector,
   ManualCoordinatesInput,
   DistanceResults,
   CostCalculator,
 } from './DistanceCalculatorComponents';
+import {
+  CostParams,
+  RequestConfig,
+  DistanceCalculatorState,
+  DistanceCalculatorUIProps,
+} from './types/DistanceCalculatorTypes';
+import {
+  getCoordinatesFromLocation,
+  validateCoordinates,
+  calculateTravelCosts,
+  createDistanceMatrixRequest,
+} from './utils/distanceCalculatorUtils';
 
-export interface CostParams {
-  fuelPrice: number;
-  fuelConsumption: number;
-  tollCosts: number;
-  driverCost: number;
-}
-
-export interface RequestConfig {
-  originCoords: { lat: number; lng: number };
-  destinationCoords: { lat: number; lng: number };
-  travelMode: string;
-  avoidHighways: boolean;
-  avoidTolls: boolean;
-}
-
-// Helper functions
-export const getCoordinatesFromLocation = (
-  location: { lat: number; lng: number } | Site | undefined
-) => {
-  if (!location) return null;
-
-  if ('coordenadas' in location) {
-    return location.coordenadas;
-  }
-
-  return location;
+// Re-export for compatibility
+export type { CostParams, RequestConfig, DistanceCalculatorState, DistanceCalculatorUIProps };
+export {
+  getCoordinatesFromLocation,
+  validateCoordinates,
+  calculateTravelCosts,
+  createDistanceMatrixRequest,
 };
-
-export const validateCoordinates = (coords: { lat: number; lng: number } | null) => {
-  return coords && coords.lat !== 0 && coords.lng !== 0;
-};
-
-export const calculateTravelCosts = (
-  result: DistanceResult,
-  params: CostParams
-): CostCalculation => {
-  const distanceKm = result.distance.value / 1000;
-  const durationHours = result.duration.value / 3600;
-
-  const fuelCost = ((distanceKm * params.fuelConsumption) / 100) * params.fuelPrice;
-  const driverTotalCost = durationHours * params.driverCost;
-  const totalCost = fuelCost + params.tollCosts + driverTotalCost;
-
-  return {
-    distance: distanceKm,
-    duration: durationHours,
-    fuelCost,
-    driverCost: driverTotalCost,
-    tollCosts: params.tollCosts,
-    totalCost,
-  };
-};
-
-export const createDistanceMatrixRequest = (config: RequestConfig) => ({
-  origins: [
-    new (window as any).google.maps.LatLng(config.originCoords.lat, config.originCoords.lng),
-  ],
-  destinations: [
-    new (window as any).google.maps.LatLng(
-      config.destinationCoords.lat,
-      config.destinationCoords.lng
-    ),
-  ],
-  travelMode: (window as any).google.maps.TravelMode[config.travelMode],
-  unitSystem: (window as any).google.maps.UnitSystem.METRIC,
-  avoidHighways: config.avoidHighways,
-  avoidTolls: config.avoidTolls,
-});
-
-// Interfaces para el componente UI
-export interface DistanceCalculatorState {
-  mode: 'sites' | 'manual';
-  selectedOriginSite: string;
-  selectedDestinationSite: string;
-  manualOrigin: { lat: number; lng: number };
-  manualDestination: { lat: number; lng: number };
-  setMode: (mode: 'sites' | 'manual') => void;
-  setSelectedOriginSite: (site: string) => void;
-  setSelectedDestinationSite: (site: string) => void;
-  setManualOrigin: (coords: { lat: number; lng: number }) => void;
-  setManualDestination: (coords: { lat: number; lng: number }) => void;
-  error: string;
-  result: DistanceResult | null;
-  loading: boolean;
-  fuelPrice: number;
-  fuelConsumption: number;
-  driverCost: number;
-  tollCosts: number;
-  setFuelPrice: (price: number) => void;
-  setFuelConsumption: (consumption: number) => void;
-  setDriverCost: (cost: number) => void;
-  setTollCosts: (costs: number) => void;
-}
-
-export interface DistanceCalculatorUIProps {
-  sites?: Site[];
-  showSiteSelector?: boolean;
-  showManualInput?: boolean;
-  showCostCalculator?: boolean;
-  travelMode?: string;
-  onOriginChange?: (location: { lat: number; lng: number } | Site | null) => void;
-  onDestinationChange?: (location: { lat: number; lng: number } | Site | null) => void;
-}
 
 // Componente para el header
 const CalculatorHeader = ({
