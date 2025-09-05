@@ -1,5 +1,24 @@
 import { Site, Cliente } from '../../types';
 
+// Interfaz local para evitar dependencias de Google Maps
+interface MapInstance {
+  setCenter: (center: { lat: number; lng: number }) => void;
+  setZoom: (zoom: number) => void;
+  fitBounds: (bounds: unknown, padding?: unknown) => void;
+}
+
+interface BoundsInstance {
+  extend: (point: { lat: number; lng: number }) => void;
+}
+
+interface ExtendedWindow extends Window {
+  google: {
+    maps: {
+      LatLngBounds: new () => BoundsInstance;
+    };
+  };
+}
+
 export const getMarkerIcon = (isActive: boolean): string => {
   const iconTemplate = (color: string) => `
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -70,7 +89,7 @@ export const isValidCoordinates = (site: Site): boolean => {
   return !!(site.coordenadas && site.coordenadas.lat !== 0 && site.coordenadas.lng !== 0);
 };
 
-export const adjustMapBounds = (map: any, sites: Site[], window: Window): void => {
+export const adjustMapBounds = (map: MapInstance, sites: Site[], window: ExtendedWindow): void => {
   if (sites.length === 0) return;
 
   if (sites.length === 1) {
@@ -84,8 +103,8 @@ export const adjustMapBounds = (map: any, sites: Site[], window: Window): void =
 
   const bounds = new window.google.maps.LatLngBounds();
   sites.forEach((site) => {
-    if (isValidCoordinates(site)) {
-      bounds.extend({ lat: site.coordenadas!.lat, lng: site.coordenadas!.lng });
+    if (isValidCoordinates(site) && site.coordenadas) {
+      bounds.extend({ lat: site.coordenadas.lat, lng: site.coordenadas.lng });
     }
   });
 

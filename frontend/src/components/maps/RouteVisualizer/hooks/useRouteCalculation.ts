@@ -7,6 +7,24 @@ import {
   GoogleDirectionsRenderer,
 } from '../types';
 
+// Helper para obtener mensaje de error según status
+const getErrorMessage = (status: string): string => {
+  switch (status) {
+    case 'NOT_FOUND':
+      return 'No se encontró una ruta entre los puntos especificados';
+    case 'ZERO_RESULTS':
+      return 'No se encontraron rutas entre origen y destino';
+    case 'OVER_QUERY_LIMIT':
+      return 'Se excedió el límite de consultas a la API';
+    case 'REQUEST_DENIED':
+      return 'Solicitud denegada por la API de Google Maps';
+    case 'INVALID_REQUEST':
+      return 'Solicitud inválida';
+    default:
+      return `Error: ${status}`;
+  }
+};
+
 interface UseRouteCalculationProps {
   directionsService: GoogleDirectionsService | null;
   directionsRenderer: GoogleDirectionsRenderer | null;
@@ -49,24 +67,6 @@ export const useRouteCalculation = ({
     []
   );
 
-  // Helper para obtener mensaje de error según status
-  const getErrorMessage = useCallback((status: string): string => {
-    switch (status) {
-      case 'NOT_FOUND':
-        return 'No se encontró una ruta entre los puntos especificados';
-      case 'ZERO_RESULTS':
-        return 'No se encontraron rutas entre origen y destino';
-      case 'OVER_QUERY_LIMIT':
-        return 'Se excedió el límite de consultas a la API';
-      case 'REQUEST_DENIED':
-        return 'Solicitud denegada por la API de Google Maps';
-      case 'INVALID_REQUEST':
-        return 'Solicitud inválida';
-      default:
-        return `Error: ${status}`;
-    }
-  }, []);
-
   // Helper para procesar resultado exitoso
   const processSuccessfulResult = useCallback(
     (result: RouteResult, showAlternatives: boolean) => {
@@ -86,15 +86,12 @@ export const useRouteCalculation = ({
   );
 
   // Helper para procesar resultado de error
-  const processErrorResult = useCallback(
-    (status: string) => {
-      const errorMessage = getErrorMessage(status);
-      setError(errorMessage);
-      setRoute(null);
-      setAlternativeRoutes([]);
-    },
-    [getErrorMessage]
-  );
+  const processErrorResult = useCallback((status: string) => {
+    const errorMessage = getErrorMessage(status);
+    setError(errorMessage);
+    setRoute(null);
+    setAlternativeRoutes([]);
+  }, []);
 
   // Handler principal para el resultado de la ruta
   const handleRouteResult = useCallback(
