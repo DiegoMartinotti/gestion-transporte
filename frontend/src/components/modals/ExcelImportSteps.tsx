@@ -13,14 +13,13 @@ import {
   Checkbox,
 } from '@mantine/core';
 import {
-  IconFileUpload,
   IconAlertCircle,
   IconCheck,
   IconRefresh,
   IconDownload,
   IconUpload,
 } from '@tabler/icons-react';
-import { ExcelUploadZone } from '../excel/ExcelUploadZone';
+import { FileUploadStep } from '../import/steps/FileUploadStep';
 import ExcelDataPreview from '../excel/ExcelDataPreview';
 import { ExcelValidationReport } from '../excel/ExcelValidationReport';
 import { ImportProgress } from '../import/ImportProgress';
@@ -38,29 +37,14 @@ interface UploadStepProps extends StepProps {
 
 export const UploadStep: React.FC<UploadStepProps> = ({
   entityType,
-  loading,
   onFileAccepted,
   onTemplateDownload,
 }) => (
-  <Stack gap="md">
-    <Alert icon={<IconFileUpload size="1rem" />} color="blue">
-      <Stack gap="xs">
-        <Text size="sm">Seleccione un archivo Excel (.xlsx) con los datos a importar.</Text>
-        <Text size="xs" c="dimmed">
-          Los archivos deben seguir el formato de la plantilla oficial.
-        </Text>
-      </Stack>
-    </Alert>
-
-    <ExcelUploadZone
-      onFileAccepted={onFileAccepted}
-      isProcessing={loading || false}
-      maxFileSize={10 * 1024 * 1024}
-      entityType={entityType}
-      onTemplateDownload={onTemplateDownload}
-      showTemplate={true}
-    />
-  </Stack>
+  <FileUploadStep
+    entityType={entityType}
+    onFileUpload={onFileAccepted}
+    onTemplateDownload={onTemplateDownload}
+  />
 );
 
 interface ValidationData {
@@ -187,48 +171,6 @@ const ValidationOptions: React.FC<{
   </Stack>
 );
 
-const ValidationStepContent: React.FC<{
-  validationResult: ValidationData;
-  previewData: PreviewData;
-  entityType: string;
-  isValid: boolean;
-}> = ({ validationResult, previewData, entityType, isValid }) => (
-  <>
-    <ValidationHeader isValid={isValid} />
-    <ValidationPreview previewData={previewData} entityType={entityType} />
-    <Divider />
-    <ValidationReport validationResult={validationResult} entityType={entityType} />
-  </>
-);
-
-const ValidationActions: React.FC<{
-  autoCorrect: boolean;
-  skipInvalidRows: boolean;
-  isValid: boolean;
-  onAutoCorrectChange: (value: boolean) => void;
-  onSkipInvalidRowsChange: (value: boolean) => void;
-  onReview: () => void;
-}> = ({
-  autoCorrect,
-  skipInvalidRows,
-  isValid,
-  onAutoCorrectChange,
-  onSkipInvalidRowsChange,
-  onReview,
-}) => (
-  <>
-    <ValidationOptions
-      autoCorrect={autoCorrect}
-      skipInvalidRows={skipInvalidRows}
-      onAutoCorrectChange={onAutoCorrectChange}
-      onSkipInvalidRowsChange={onSkipInvalidRowsChange}
-    />
-    <Button onClick={onReview} disabled={!isValid && !skipInvalidRows} fullWidth>
-      Continuar con la importación
-    </Button>
-  </>
-);
-
 export const ValidationStep: React.FC<ValidationStepProps> = ({
   validationResult,
   previewData,
@@ -243,20 +185,19 @@ export const ValidationStep: React.FC<ValidationStepProps> = ({
 
   return (
     <Stack gap="md">
-      <ValidationStepContent
-        validationResult={validationResult}
-        previewData={previewData}
-        entityType={entityType}
-        isValid={isValid}
-      />
-      <ValidationActions
+      <ValidationHeader isValid={isValid} />
+      <ValidationPreview previewData={previewData} entityType={entityType} />
+      <Divider />
+      <ValidationReport validationResult={validationResult} entityType={entityType} />
+      <ValidationOptions
         autoCorrect={autoCorrect}
         skipInvalidRows={skipInvalidRows}
-        isValid={isValid}
         onAutoCorrectChange={onAutoCorrectChange}
         onSkipInvalidRowsChange={onSkipInvalidRowsChange}
-        onReview={onReview}
       />
+      <Button onClick={onReview} disabled={!isValid && !skipInvalidRows} fullWidth>
+        Continuar con la importación
+      </Button>
     </Stack>
   );
 };
@@ -265,7 +206,7 @@ interface ImportStepProps extends StepProps {
   importProgress: number;
 }
 
-const ImportStepContent: React.FC<{ importProgress: number }> = ({ importProgress }) => {
+export const ImportStep: React.FC<ImportStepProps> = ({ importProgress }) => {
   const stats = {
     processed: Math.floor(importProgress),
     total: 100,
@@ -274,17 +215,14 @@ const ImportStepContent: React.FC<{ importProgress: number }> = ({ importProgres
   };
 
   return (
-    <>
+    <Stack gap="md">
       <Alert icon={<IconAlertCircle size="1rem" />} color="blue">
         Importando datos, por favor espere...
       </Alert>
-
       <Progress value={importProgress} animated />
-
       <Text size="sm" c="dimmed" ta="center">
         {importProgress}% completado
       </Text>
-
       <ImportProgress
         total={stats.total}
         processed={stats.processed}
@@ -292,15 +230,9 @@ const ImportStepContent: React.FC<{ importProgress: number }> = ({ importProgres
         warnings={0}
         isProcessing={importProgress < 100}
       />
-    </>
+    </Stack>
   );
 };
-
-export const ImportStep: React.FC<ImportStepProps> = ({ importProgress }) => (
-  <Stack gap="md">
-    <ImportStepContent importProgress={importProgress} />
-  </Stack>
-);
 
 interface ImportResultData {
   hasMissingData?: boolean;
@@ -318,48 +250,6 @@ interface ResultStepProps extends StepProps {
   onRetryImport?: () => void;
   onClose?: () => void;
 }
-
-const ResultAlert: React.FC<{ hasMissingData: boolean }> = ({ hasMissingData }) => (
-  <Alert
-    icon={hasMissingData ? <IconAlertCircle size="1rem" /> : <IconCheck size="1rem" />}
-    color={hasMissingData ? 'orange' : 'green'}
-    title={hasMissingData ? '¡Importación Parcial!' : '¡Importación Exitosa!'}
-  >
-    {hasMissingData ? (
-      <Text size="sm">
-        Algunos registros se importaron correctamente, pero otros requieren datos adicionales.
-      </Text>
-    ) : (
-      <Text size="sm">Todos los registros se importaron correctamente.</Text>
-    )}
-  </Alert>
-);
-
-const ResultSummary: React.FC<{ summary?: ImportResultData['summary'] }> = ({ summary }) => {
-  if (!summary) return null;
-  return (
-    <Stack gap="xs">
-      <Group justify="space-between">
-        <Text size="sm">Registros procesados:</Text>
-        <Badge>{summary.totalRows || 0}</Badge>
-      </Group>
-      <Group justify="space-between">
-        <Text size="sm" c="green">
-          Importados exitosamente:
-        </Text>
-        <Badge color="green">{summary.insertedRows || 0}</Badge>
-      </Group>
-      {(summary.errorRows || 0) > 0 && (
-        <Group justify="space-between">
-          <Text size="sm" c="red">
-            Con errores:
-          </Text>
-          <Badge color="red">{summary.errorRows}</Badge>
-        </Group>
-      )}
-    </Stack>
-  );
-};
 
 const CorrectionActions: React.FC<{
   onDownloadMissingData?: () => void;
@@ -403,6 +293,48 @@ const CorrectionActions: React.FC<{
     )}
   </Stack>
 );
+
+const ResultAlert: React.FC<{ hasMissingData: boolean }> = ({ hasMissingData }) => (
+  <Alert
+    icon={hasMissingData ? <IconAlertCircle size="1rem" /> : <IconCheck size="1rem" />}
+    color={hasMissingData ? 'orange' : 'green'}
+    title={hasMissingData ? '¡Importación Parcial!' : '¡Importación Exitosa!'}
+  >
+    {hasMissingData ? (
+      <Text size="sm">
+        Algunos registros se importaron correctamente, pero otros requieren datos adicionales.
+      </Text>
+    ) : (
+      <Text size="sm">Todos los registros se importaron correctamente.</Text>
+    )}
+  </Alert>
+);
+
+const ResultSummary: React.FC<{ summary?: ImportResultData['summary'] }> = ({ summary }) => {
+  if (!summary) return null;
+  return (
+    <Stack gap="xs">
+      <Group justify="space-between">
+        <Text size="sm">Registros procesados:</Text>
+        <Badge>{summary.totalRows || 0}</Badge>
+      </Group>
+      <Group justify="space-between">
+        <Text size="sm" c="green">
+          Importados exitosamente:
+        </Text>
+        <Badge color="green">{summary.insertedRows || 0}</Badge>
+      </Group>
+      {(summary.errorRows || 0) > 0 && (
+        <Group justify="space-between">
+          <Text size="sm" c="red">
+            Con errores:
+          </Text>
+          <Badge color="red">{summary.errorRows}</Badge>
+        </Group>
+      )}
+    </Stack>
+  );
+};
 
 export const ResultStep: React.FC<ResultStepProps> = ({
   importResult,
