@@ -17,7 +17,7 @@ export const ReportHistoryHelpers = {
         sortDirection: historyState.sortDirection,
         ...historyState.filters,
       });
-      return data.executions || [];
+      return data || [];
     } catch (error) {
       console.error('Error loading report executions:', error);
       notifications.show({
@@ -31,7 +31,7 @@ export const ReportHistoryHelpers = {
 
   async deleteExecution(id: string) {
     try {
-      await reportService.deleteReportExecution(id);
+      await reportService.deleteReportExecutions([id]);
       notifications.show({
         title: 'Éxito',
         message: 'Ejecución eliminada correctamente',
@@ -50,9 +50,7 @@ export const ReportHistoryHelpers = {
 
   async deleteMultipleExecutions(selectedExecutions: Set<string>) {
     try {
-      await Promise.all(
-        Array.from(selectedExecutions).map((id) => reportService.deleteReportExecution(id))
-      );
+      await Promise.all([reportService.deleteReportExecutions(Array.from(selectedExecutions))]);
       notifications.show({
         title: 'Éxito',
         message: `${selectedExecutions.size} ejecuciones eliminadas correctamente`,

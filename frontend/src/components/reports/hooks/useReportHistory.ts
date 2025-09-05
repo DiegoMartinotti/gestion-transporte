@@ -54,7 +54,10 @@ export const useReportHistory = (_reportDefinitions: ReportDefinition[]) => {
         (execution) =>
           execution.reportName?.toLowerCase().includes(term) ||
           execution.createdBy?.toLowerCase().includes(term) ||
-          execution.parameters?.some((p) => p.value?.toString().toLowerCase().includes(term))
+          (execution.parameters &&
+            Object.values(execution.parameters).some((value) =>
+              value?.toString().toLowerCase().includes(term)
+            ))
       );
     }
 
