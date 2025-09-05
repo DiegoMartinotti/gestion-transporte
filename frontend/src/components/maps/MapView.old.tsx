@@ -9,12 +9,74 @@ import {
 } from '@tabler/icons-react';
 import {
   useGoogleMapsLoader,
-  useCurrentLocation,
+  useMapLogic,
   type GoogleMap,
   type GoogleMarker,
   type GoogleInfoWindow,
-  type GoogleMapEvent,
+  type MapMarkerData,
 } from './MapViewHelpers';
+
+// Container del mapa
+const MapContainer = ({
+  isFullscreen,
+  height,
+  width,
+  className,
+  style,
+  showControls,
+  showCurrentLocation,
+  markers,
+  onCurrentLocation,
+  onFitToMarkers,
+  onToggleFullscreen,
+  mapRef,
+}: {
+  isFullscreen: boolean;
+  height: number;
+  width: string;
+  className?: string;
+  style?: React.CSSProperties;
+  showControls: boolean;
+  showCurrentLocation: boolean;
+  markers: MapMarkerData[];
+  onCurrentLocation: () => void;
+  onFitToMarkers: () => void;
+  onToggleFullscreen: () => void;
+  mapRef: React.RefObject<HTMLDivElement>;
+}) => {
+  const containerStyle = {
+    ...style,
+    ...(isFullscreen && { position: 'fixed' as const, top: 0, left: 0, zIndex: 9999 }),
+  };
+
+  const mapStyle = {
+    width: '100%',
+    height: '100%',
+    borderRadius: isFullscreen ? 0 : 8,
+  };
+
+  return (
+    <Box
+      pos="relative"
+      h={isFullscreen ? '100vh' : height}
+      w={isFullscreen ? '100vw' : width}
+      className={className}
+      style={containerStyle}
+    >
+      <MapControls
+        showControls={showControls}
+        showCurrentLocation={showCurrentLocation}
+        markers={markers}
+        isFullscreen={isFullscreen}
+        onCurrentLocation={onCurrentLocation}
+        onFitToMarkers={onFitToMarkers}
+        onToggleFullscreen={onToggleFullscreen}
+      />
+
+      <div ref={mapRef} style={mapStyle} />
+    </Box>
+  );
+};
 
 // Componentes de estado
 const LoadingView = ({
@@ -89,7 +151,7 @@ const MapControls = ({
 }: {
   showControls: boolean;
   showCurrentLocation: boolean;
-  markers: MapMarker[];
+  markers: MapMarkerData[];
   isFullscreen: boolean;
   onCurrentLocation: () => void;
   onFitToMarkers: () => void;
@@ -133,7 +195,7 @@ export interface MapMarker {
   icon?: string;
   content?: string;
   clickable?: boolean;
-  onClick?: (marker: MapMarker) => void;
+  onClick?: (marker: MapMarkerData) => void;
 }
 
 interface MapViewProps {
@@ -141,9 +203,9 @@ interface MapViewProps {
   width?: string;
   center?: { lat: number; lng: number };
   zoom?: number;
-  markers?: MapMarker[];
+  markers?: MapMarkerData[];
   onMapClick?: (position: { lat: number; lng: number }) => void;
-  onMarkerClick?: (marker: MapMarker) => void;
+  onMarkerClick?: (marker: MapMarkerData) => void;
   showCurrentLocation?: boolean;
   showControls?: boolean;
   mapTypeId?: 'roadmap' | 'satellite' | 'hybrid' | 'terrain';
@@ -175,145 +237,48 @@ declare global {
   }
 }
 
-// Helper para crear marcadores
-const createMapMarkers = (
-  map: GoogleMap,
-  markers: MapMarker[],
-  infoWindow: GoogleInfoWindow,
-  onMarkerClick?: (marker: MapMarker) => void
-): GoogleMarker[] => {
-  const newMarkers: GoogleMarker[] = [];
+export default function MapView(props: MapViewProps) {
+  const {
+    height = 400,
+    width = '100%',
+    center = { lat: -34.6037, lng: -58.3816 }, // Buenos Aires por defecto
+    zoom = 10,
+    markers = [],
+    onMapClick,
+    onMarkerClick,
+    showCurrentLocation = true,
+    showControls = true,
+    mapTypeId = 'roadmap',
+    disabled = false,
+    loading = false,
+    error,
+    className,
+    style,
+  } = props;
 
-  markers.forEach((markerData) => {
-    try {
-      const marker = new window.google.maps.Marker({
-        position: markerData.position,
-        map,
-        title: markerData.title || '',
-        icon: markerData.icon
-          ? { url: markerData.icon, scaledSize: new window.google.maps.Size(24, 24) }
-          : undefined,
-        clickable: markerData.clickable !== false,
-      });
-
-      if (markerData.content || markerData.onClick) {
-        marker.addListener('click', () => {
-          if (markerData.content) {
-            infoWindow.setContent(markerData.content);
-            infoWindow.open(map, marker);
-          }
-
-          if (markerData.onClick) {
-            markerData.onClick(markerData);
-          }
-
-          if (onMarkerClick) {
-            onMarkerClick(markerData);
-          }
-        });
-      }
-
-      newMarkers.push(marker);
-    } catch (error) {
-      console.error('Error creando marcador:', error);
-    }
-  });
-
-  return newMarkers;
-};
-
-// Helper para ajustar vista a marcadores
-const fitMarkersToMap = (map: GoogleMap, markers: MapMarker[]) => {
-  if (!map || markers.length === 0) return;
-
-  const bounds = new window.google.maps.LatLngBounds();
-  markers.forEach((marker) => {
-    bounds.extend(marker.position);
-  });
-
-  if (markers.length === 1) {
-    map.setCenter(markers[0].position);
-    map.setZoom(15);
-  } else {
-    map.fitBounds(bounds);
-  }
-};
-
-export default function MapView({
-  height = 400,
-  width = '100%',
-  center = { lat: -34.6037, lng: -58.3816 }, // Buenos Aires por defecto
-  zoom = 10,
-  markers = [],
-  onMapClick,
-  onMarkerClick,
-  showCurrentLocation = true,
-  showControls = true,
-  mapTypeId = 'roadmap',
-  disabled = false,
-  loading = false,
-  error,
-  className,
-  style,
-}: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<GoogleMap | null>(null);
-  const [mapMarkers, setMapMarkers] = useState<GoogleMarker[]>([]);
-  const [infoWindow, setInfoWindow] = useState<GoogleInfoWindow | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
   const { mapLoaded, mapError } = useGoogleMapsLoader();
-  const { getCurrentLocation } = useCurrentLocation(map);
-
-  useEffect(() => {
-    if (!mapLoaded || !mapRef.current || map || disabled) return;
-
-    const mapOptions = {
-      zoom,
+  const { isFullscreen, initializeMap, getCurrentLocation, fitToMarkers, toggleFullscreen } =
+    useMapLogic({
+      mapLoaded,
+      disabled,
+      markers,
       center,
-      mapTypeId: (window as any).google.maps.MapTypeId[mapTypeId.toUpperCase()],
-      zoomControl: showControls,
-      mapTypeControl: showControls,
-      scaleControl: showControls,
-      streetViewControl: showControls,
-      rotateControl: false,
-      fullscreenControl: false,
-      gestureHandling: disabled ? 'none' : 'auto',
-    };
+      zoom,
+      mapTypeId,
+      showControls,
+      onMapClick,
+      onMarkerClick,
+    });
 
-    const newMap = new window.google.maps.Map(mapRef.current, mapOptions);
-    const newInfoWindow = new window.google.maps.InfoWindow();
-
-    if (onMapClick) {
-      newMap.addListener('click', (event: GoogleMapEvent) => {
-        onMapClick({
-          lat: event.latLng.lat(),
-          lng: event.latLng.lng(),
-        });
-      });
-    }
-
-    setMap(newMap);
-    setInfoWindow(newInfoWindow);
-  }, [mapLoaded, disabled, zoom, center, mapTypeId, showControls, onMapClick, map]);
-
+  // Initialize map when ref is available
   useEffect(() => {
-    if (!map || !window.google || !infoWindow) return;
-    mapMarkers.forEach((marker) => marker.setMap(null));
-    const newMarkers = createMapMarkers(map, markers, infoWindow, onMarkerClick);
-    setMapMarkers(newMarkers);
-    if (center) map.setCenter(center);
-    if (zoom) map.setZoom(zoom);
-  }, [map, markers, infoWindow, onMarkerClick, mapMarkers, center, zoom]);
+    if (mapRef.current) {
+      initializeMap(mapRef.current);
+    }
+  }, [initializeMap]);
 
-  const fitToMarkers = useCallback(() => {
-    if (map) fitMarkersToMap(map, markers);
-  }, [map, markers]);
-
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen(!isFullscreen);
-  }, [isFullscreen]);
-
+  // Early returns for different states
   if (loading)
     return <LoadingView height={height} width={width} className={className} style={style} />;
   if (error || mapError)
@@ -329,46 +294,30 @@ export default function MapView({
   if (!mapLoaded)
     return <NotLoadedView height={height} width={width} className={className} style={style} />;
 
-  const containerStyle = {
-    ...style,
-    ...(isFullscreen && { position: 'fixed' as const, top: 0, left: 0, zIndex: 9999 }),
-  };
-
-  const mapStyle = {
-    width: '100%',
-    height: '100%',
-    borderRadius: isFullscreen ? 0 : 8,
-  };
-
   return (
-    <Box
-      pos="relative"
-      h={isFullscreen ? '100vh' : height}
-      w={isFullscreen ? '100vw' : width}
+    <MapContainer
+      isFullscreen={isFullscreen}
+      height={height}
+      width={width}
       className={className}
-      style={containerStyle}
-    >
-      <MapControls
-        showControls={showControls}
-        showCurrentLocation={showCurrentLocation}
-        markers={markers}
-        isFullscreen={isFullscreen}
-        onCurrentLocation={getCurrentLocation}
-        onFitToMarkers={fitToMarkers}
-        onToggleFullscreen={toggleFullscreen}
-      />
-
-      <div ref={mapRef} style={mapStyle} />
-    </Box>
+      style={style}
+      showControls={showControls}
+      showCurrentLocation={showCurrentLocation}
+      markers={markers}
+      onCurrentLocation={getCurrentLocation}
+      onFitToMarkers={fitToMarkers}
+      onToggleFullscreen={toggleFullscreen}
+      mapRef={mapRef}
+    />
   );
 }
 
 // Hook personalizado para usar el mapa
 export const useMapView = () => {
-  const [mapInstance, setMapInstance] = useState<GoogleMap | null>(null);
+  const [mapInstance] = useState<GoogleMap | null>(null);
 
   const addMarker = useCallback(
-    (marker: MapMarker) => {
+    (marker: MapMarkerData) => {
       if (!mapInstance) return null;
 
       return new window.google.maps.Marker({

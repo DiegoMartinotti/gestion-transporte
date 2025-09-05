@@ -29,6 +29,15 @@ export interface GoogleLatLngBounds {
   extend: (position: { lat: number; lng: number }) => void;
 }
 
+export interface MapMarkerData {
+  position: { lat: number; lng: number };
+  title?: string;
+  content?: string;
+  icon?: string;
+  clickable?: boolean;
+  onClick?: (marker: MapMarkerData) => void;
+}
+
 // Función helper para cargar Google Maps
 export const loadGoogleMaps = (onLoad: () => void, onError: (message: string) => void) => {
   if (window.google?.maps) {
@@ -63,10 +72,10 @@ export const createCurrentLocationIcon = () => {
       <circle cx="12" cy="12" r="3" fill="white"/>
     </svg>
   `;
-  
+
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgIcon),
-    scaledSize: new window.google.maps.Size(24, 24)
+    scaledSize: new window.google.maps.Size(24, 24),
   };
 };
 
@@ -101,7 +110,7 @@ export const useCurrentLocation = (map: GoogleMap | null) => {
       (position) => {
         const pos = {
           lat: position.coords.latitude,
-          lng: position.coords.longitude
+          lng: position.coords.longitude,
         };
 
         map.setCenter(pos);
@@ -117,7 +126,7 @@ export const useCurrentLocation = (map: GoogleMap | null) => {
           map,
           title: 'Tu ubicación actual',
           icon: createCurrentLocationIcon(),
-          clickable: false
+          clickable: false,
         });
 
         setCurrentLocationMarker(marker);
@@ -150,9 +159,9 @@ export const useCurrentLocation = (map: GoogleMap | null) => {
 // Helper para crear marcadores
 const createMapMarkers = (
   map: GoogleMap,
-  markers: any[],
+  markers: MapMarkerData[],
   infoWindow: GoogleInfoWindow,
-  onMarkerClick?: (marker: any) => void
+  onMarkerClick?: (marker: MapMarkerData) => void
 ): GoogleMarker[] => {
   const newMarkers: GoogleMarker[] = [];
 
@@ -162,8 +171,10 @@ const createMapMarkers = (
         position: markerData.position,
         map,
         title: markerData.title || '',
-        icon: markerData.icon ? { url: markerData.icon, scaledSize: new window.google.maps.Size(24, 24) } : undefined,
-        clickable: markerData.clickable !== false
+        icon: markerData.icon
+          ? { url: markerData.icon, scaledSize: new window.google.maps.Size(24, 24) }
+          : undefined,
+        clickable: markerData.clickable !== false,
       });
 
       if (markerData.content || markerData.onClick) {
@@ -172,11 +183,11 @@ const createMapMarkers = (
             infoWindow.setContent(markerData.content);
             infoWindow.open(map, marker);
           }
-          
+
           if (markerData.onClick) {
             markerData.onClick(markerData);
           }
-          
+
           if (onMarkerClick) {
             onMarkerClick(markerData);
           }
@@ -202,68 +213,74 @@ export const useMapLogic = ({
   mapTypeId,
   showControls,
   onMapClick,
-  onMarkerClick
+  onMarkerClick,
 }: {
   mapLoaded: boolean;
   disabled: boolean;
-  markers: any[];
+  markers: MapMarkerData[];
   center: { lat: number; lng: number };
   zoom: number;
   mapTypeId: string;
   showControls: boolean;
   onMapClick?: (position: { lat: number; lng: number }) => void;
-  onMarkerClick?: (marker: any) => void;
+  onMarkerClick?: (marker: MapMarkerData) => void;
 }) => {
   const [map, setMap] = useState<GoogleMap | null>(null);
   const [mapMarkers, setMapMarkers] = useState<GoogleMarker[]>([]);
   const [infoWindow, setInfoWindow] = useState<GoogleInfoWindow | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+
   const { getCurrentLocation } = useCurrentLocation(map);
 
   // Inicializar mapa
-  const initializeMap = useCallback((mapRef: HTMLDivElement) => {
-    if (!mapLoaded || map || disabled) return;
+  const initializeMap = useCallback(
+    (mapRef: HTMLDivElement) => {
+      if (!mapLoaded || map || disabled) return;
 
-    try {
-      const newMap = new window.google.maps.Map(mapRef, {
-        zoom,
-        center,
-        mapTypeId: window.google.maps.MapTypeId[mapTypeId.toUpperCase() as keyof typeof window.google.maps.MapTypeId],
-        zoomControl: showControls,
-        mapTypeControl: showControls,
-        scaleControl: showControls,
-        streetViewControl: showControls,
-        rotateControl: false,
-        fullscreenControl: false,
-        gestureHandling: disabled ? 'none' : 'auto'
-      });
-
-      const newInfoWindow = new window.google.maps.InfoWindow();
-
-      if (onMapClick) {
-        newMap.addListener('click', (event: GoogleMapEvent) => {
-          onMapClick({
-            lat: event.latLng.lat(),
-            lng: event.latLng.lng()
-          });
+      try {
+        const newMap = new window.google.maps.Map(mapRef, {
+          zoom,
+          center,
+          mapTypeId:
+            window.google.maps.MapTypeId[
+              mapTypeId.toUpperCase() as keyof typeof window.google.maps.MapTypeId
+            ],
+          zoomControl: showControls,
+          mapTypeControl: showControls,
+          scaleControl: showControls,
+          streetViewControl: showControls,
+          rotateControl: false,
+          fullscreenControl: false,
+          gestureHandling: disabled ? 'none' : 'auto',
         });
-      }
 
-      setMap(newMap);
-      setInfoWindow(newInfoWindow);
-    } catch {
-      // Error will be handled by parent component
-    }
-  }, [mapLoaded, center, zoom, mapTypeId, showControls, onMapClick, disabled, map]);
+        const newInfoWindow = new window.google.maps.InfoWindow();
+
+        if (onMapClick) {
+          newMap.addListener('click', (event: GoogleMapEvent) => {
+            onMapClick({
+              lat: event.latLng.lat(),
+              lng: event.latLng.lng(),
+            });
+          });
+        }
+
+        setMap(newMap);
+        setInfoWindow(newInfoWindow);
+      } catch {
+        // Error will be handled by parent component
+      }
+    },
+    [mapLoaded, center, zoom, mapTypeId, showControls, onMapClick, disabled, map]
+  );
 
   // Actualizar marcadores
   useEffect(() => {
     if (!map || !window.google || !infoWindow) return;
 
     // Limpiar marcadores existentes
-    mapMarkers.forEach(marker => marker.setMap(null));
-    
+    mapMarkers.forEach((marker) => marker.setMap(null));
+
     const newMarkers = createMapMarkers(map, markers, infoWindow, onMarkerClick);
     setMapMarkers(newMarkers);
   }, [map, markers, infoWindow, onMarkerClick, mapMarkers]);
@@ -290,7 +307,7 @@ export const useMapLogic = ({
       map.setZoom(15);
     } else {
       const bounds = new window.google.maps.LatLngBounds();
-      markers.forEach(marker => bounds.extend(marker.position));
+      markers.forEach((marker) => bounds.extend(marker.position));
       map.fitBounds(bounds);
     }
   }, [map, markers]);
@@ -305,6 +322,6 @@ export const useMapLogic = ({
     initializeMap,
     getCurrentLocation,
     fitToMarkers,
-    toggleFullscreen
+    toggleFullscreen,
   };
 };
