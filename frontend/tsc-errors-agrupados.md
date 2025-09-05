@@ -1,211 +1,168 @@
-# Errores agrupados (TypeScript/ESLint)
+# Errores de TypeScript y ESLint agrupados por funcionalidad
 
-Generado automáticamente. Fuente: lint_output.txt y tsc-errors-raw.log.
+Generado: 2025-09-05T19:15:03.531Z
 
-- Total de problemas: 326
-- Reglas/tipos detectados: 18
+Total de errores TS: 1
+Total de issues ESLint: 106
+Archivos con errores TS: 1
+Archivos con issues ESLint: 33
 
-## Tipo: max-lines
+## Componentes/Mapas
 
-- Grupo: components/expiration (1)
-  - frontend/src/components/expiration/ExpirationManagerBase.tsx (1)
-- Grupo: components/tables (1)
-  - frontend/src/components/tables/DocumentacionTable.tsx (1)
-- Grupo: components/viajes (2)
-  - frontend/src/components/viajes/ConfigurationPreview.tsx (1)
-  - frontend/src/components/viajes/VehicleTypeDetector.tsx (1)
-- Grupo: components/validators (3)
-  - frontend/src/components/validators/ExampleValidatorUsage.tsx (1)
-  - frontend/src/components/validators/ViajeValidator.tsx (1)
-  - frontend/src/components/validators/DocumentValidatorGeneric.tsx (1)
-- Grupo: components/excel (1)
-  - frontend/src/components/excel/ReferenceDataSheets.tsx (1)
-- Grupo: pages/reports (1)
-  - frontend/src/pages/reports/ReportsPage.tsx (1)
-- Grupo: components/preview (1)
-  - frontend/src/components/preview/TarifaPreview.tsx (1)
+- ESLint (10)
+  - `src/components/maps/MapView.old.tsx:242:16` - WARNING `max-lines-per-function`: Function 'MapView' has too many lines (109). Maximum allowed is 100
+  - `src/components/maps/MapView.old.tsx:274:29` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/maps/MapViewHelpers.tsx:153:12` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/maps/MapViewHelpers.tsx:155:28` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/maps/MapViewHelpers.tsx:209:12` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/maps/MapViewHelpers.tsx:215:28` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/maps/RouteVisualizer/hooks/useRouteCalculation.ts:29:36` - WARNING `max-lines-per-function`: Arrow function has too many lines (115). Maximum allowed is 100
+  - `src/components/maps/SiteMapHelpers.tsx:73:38` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/maps/SiteMapHelpers.tsx:88:28` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/maps/SiteMapHelpers.tsx:88:56` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
 
-## Tipo: sonarjs/cognitive-complexity (2)
+## Componentes/Previsualización
 
-- Grupo: components/viajes (2)
-  - frontend/src/components/viajes/ConfigurationPreview.tsx (1)
-  - frontend/src/components/viajes/VehicleTypeDetector.tsx (1)
+- ESLint (4)
+  - `src/components/preview/TarifaPreview.tsx:120:60` - WARNING `max-lines-per-function`: Arrow function has too many lines (308). Maximum allowed is 100
+  - `src/components/preview/TarifaPreview.tsx:166:75` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/preview/TarifaPreview.tsx:212:6` - WARNING `react-hooks/exhaustive-deps`: React Hook useEffect has missing dependencies: 'previewMutation' and 'scenarios'. Either include them or remove the dependency array
+  - `src/components/preview/TarifaPreview.tsx:439:1` - WARNING `max-lines`: File has too many lines (420). Maximum allowed is 400
 
-## Tipo: @typescript-eslint/no-unused-vars (84)
+## Componentes/Reportes
 
-- Grupo: components/calculators (10)
-  - frontend/src/components/calculators/TotalCalculator.tsx (8)
-  - frontend/src/components/calculators/FormulaProcessor.tsx (2)
-- Grupo: components/maps (15)
-  - frontend/src/components/maps/RouteVisualizer.old.tsx (15)
-- Grupo: components/selectors (1)
-  - frontend/src/components/selectors/index.ts (1)
-- Grupo: components/upload (8)
-  - frontend/src/components/upload/DocumentUpload.tsx (8)
-- Grupo: components/inputs (2)
-  - frontend/src/components/inputs/CoordinateInput.tsx (2)
-- Grupo: components/tables (3)
-  - frontend/src/components/tables/GenericDocumentTable/components.tsx (3)
-- Grupo: pages/ordenes-compra (3)
-  - frontend/src/pages/ordenes-compra/OrdenesCompraPageOriginal.tsx (3)
-- Grupo: components/viajes (23)
-  - frontend/src/components/viajes/ConfigurationPreview.tsx (6)
-  - frontend/src/components/viajes/ViajeCard.tsx (4)
-  - frontend/src/components/viajes/VehiculoAssigner.tsx (5)
-- Grupo: components/excel (4)
-  - frontend/src/components/excel/ReferenceDataSheets.tsx (4)
-- Grupo: components/validators (14)
-  - frontend/src/components/validators/ExampleValidatorUsage.tsx (8)
-  - frontend/src/components/validators/DocumentValidatorGeneric.tsx (6)
+- ESLint (5)
+  - `src/components/reports/components/ChartsTab.tsx:37:40` - WARNING `max-lines-per-function`: Arrow function has too many lines (117). Maximum allowed is 100
+  - `src/components/reports/components/ReportHistoryTableRow.tsx:78:68` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/reports/hooks/useReportHistoryState.ts:12:18` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/reports/ReportHistoryHelpers.tsx:161:64` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/reports/ReportHistoryHelpers.tsx:165:64` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
 
-## Tipo: sonarjs/no-duplicate-string (7)
+## Componentes/Tablas
 
-- Grupo: components/expiration (1)
-  - frontend/src/components/expiration/ExpirationManagerBase.tsx (1)
-- Grupo: components/validators (6)
-  - frontend/src/components/validators/ExampleValidatorUsage.tsx (2)
-  - frontend/src/components/validators/DocumentValidatorGeneric.tsx (4)
+- ESLint (14)
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentosData.ts:22:60` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentosData.ts:30:48` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentosData.ts:45:16` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentosData.ts:70:16` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentosData.ts:94:16` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentosData.ts:118:61` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentosData.ts:141:22` - ERROR `sonarjs/prefer-immediate-return`: Immediately return this expression instead of assigning it to the temporary variable "documentos"
+  - `src/components/tables/DocumentacionTable/hooks/useDocumentStats.ts:12:17` - ERROR `sonarjs/prefer-immediate-return`: Immediately return this expression instead of assigning it to the temporary variable "stats"
+  - `src/components/tables/DocumentacionTable/hooks/useFilteredDocumentos.ts:10:30` - ERROR `sonarjs/prefer-immediate-return`: Immediately return this expression instead of assigning it to the temporary variable "filteredDocumentos"
+  - `src/components/tables/DocumentTableComponents.tsx:194:41` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/tables/FormulaHistorialTable.tsx:46:76` - WARNING `max-lines-per-function`: Arrow function has too many lines (310). Maximum allowed is 100
+  - `src/components/tables/FormulaHistorialTable.tsx:65:6` - WARNING `react-hooks/exhaustive-deps`: React Hook useEffect has a missing dependency: 'loadFormulas'. Either include it or remove the dependency array
+  - `src/components/tables/FormulaHistorialTable.tsx:99:21` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/tables/GenericDocumentTable/helpers.ts:53:24` - WARNING `max-params`: Arrow function has too many parameters (5). Maximum allowed is 4
 
-## Tipo: max-nested-callbacks (1)
+## Componentes/Tarifa
 
-- Grupo: components/upload (1)
-  - frontend/src/components/upload/DocumentUpload.tsx (1)
+- ESLint (6)
+  - `src/components/tarifa/components/DetalleResultadoModal.tsx:20:69` - WARNING `max-lines-per-function`: Arrow function has too many lines (162). Maximum allowed is 100
+  - `src/components/tarifa/components/DetalleResultadoModal.tsx:20:69` - ERROR `complexity`: Arrow function has a complexity of 11. Maximum allowed is 10
+  - `src/components/tarifa/components/EscenarioFormModal.tsx:42:63` - WARNING `max-lines-per-function`: Arrow function has too many lines (128). Maximum allowed is 100
+  - `src/components/tarifa/components/EscenarioModal.tsx:34:55` - WARNING `max-lines-per-function`: Arrow function has too many lines (121). Maximum allowed is 100
+  - `src/components/tarifa/components/EscenariosTable.tsx:31:57` - WARNING `max-lines-per-function`: Arrow function has too many lines (102). Maximum allowed is 100
+  - `src/components/tarifa/components/VariablesPanel.tsx:13:55` - WARNING `max-lines-per-function`: Arrow function has too many lines (127). Maximum allowed is 100
 
-## Tipo: sonarjs/prefer-immediate-return (1)
+## Componentes/Tarjetas
 
-- Grupo: components/maps (1)
-  - frontend/src/components/maps/RouteVisualizer.old.tsx (1)
+- ESLint (1)
+  - `src/components/cards/PersonalCard.tsx:446:1` - WARNING `max-lines`: File has too many lines (434). Maximum allowed is 400
 
-## Tipo: sonarjs/no-identical-functions (1)
+## Componentes/Validators
 
-- Grupo: components/viajes (1)
-  - frontend/src/components/viajes/ViajeCard.tsx (1)
+- ESLint (42)
+  - `src/components/validators/DocumentValidatorGeneric.tsx:257:9` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/validators/DocumentValidatorGeneric.tsx:290:9` - ERROR `sonarjs/no-duplicate-string`: Define a constant instead of duplicating this literal 3 times
+  - `src/components/validators/DocumentValidatorGeneric.tsx:318:84` - ERROR `sonarjs/no-duplicate-string`: Define a constant instead of duplicating this literal 4 times
+  - `src/components/validators/DocumentValidatorGeneric.tsx:343:9` - ERROR `sonarjs/no-duplicate-string`: Define a constant instead of duplicating this literal 3 times
+  - `src/components/validators/DocumentValidatorGeneric.tsx:352:28` - ERROR `@typescript-eslint/no-unused-vars`: 'config' is defined but never used. Allowed unused args must match /^\_/u
+  - `src/components/validators/DocumentValidatorGeneric.tsx:400:9` - ERROR `sonarjs/no-duplicate-string`: Define a constant instead of duplicating this literal 3 times
+  - `src/components/validators/DocumentValidatorGeneric.tsx:479:1` - WARNING `max-lines`: File has too many lines (849). Maximum allowed is 400
+  - `src/components/validators/DocumentValidatorGeneric.tsx:513:79` - ERROR `complexity`: Arrow function has a complexity of 11. Maximum allowed is 10
+  - `src/components/validators/DocumentValidatorGeneric.tsx:577:75` - WARNING `max-lines-per-function`: Arrow function has too many lines (360). Maximum allowed is 100
+  - `src/components/validators/DocumentValidatorGeneric.tsx:600:10` - ERROR `@typescript-eslint/no-unused-vars`: '\_detailsOpened' is assigned a value but never used
+  - `src/components/validators/DocumentValidatorGeneric.tsx:600:36` - ERROR `@typescript-eslint/no-unused-vars`: '\_toggleDetails' is assigned a value but never used
+  - `src/components/validators/DocumentValidatorGeneric.tsx:614:24` - ERROR `@typescript-eslint/no-unused-vars`: '\_validationResults' is assigned a value but never used
+  - `src/components/validators/DocumentValidatorGeneric.tsx:616:20` - ERROR `@typescript-eslint/no-unused-vars`: '\_runValidation' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:38:13` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:39:11` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:42:15` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:43:14` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:124:34` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:140:33` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:158:12` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:250:80` - ERROR `complexity`: Arrow function has a complexity of 12. Maximum allowed is 10
+  - `src/components/validators/ExampleValidatorUsage.tsx:254:3` - ERROR `@typescript-eslint/no-unused-vars`: 'showDetails' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:255:3` - ERROR `@typescript-eslint/no-unused-vars`: 'readonly' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:259:5` - ERROR `@typescript-eslint/no-unused-vars`: 'validationResults' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:261:5` - ERROR `@typescript-eslint/no-unused-vars`: 'validationRules' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:271:46` - ERROR `sonarjs/no-duplicate-string`: Define a constant instead of duplicating this literal 3 times
+  - `src/components/validators/ExampleValidatorUsage.tsx:352:24` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:353:34` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/validators/ExampleValidatorUsage.tsx:357:5` - ERROR `@typescript-eslint/no-unused-vars`: 'validationResults' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:359:5` - ERROR `@typescript-eslint/no-unused-vars`: 'runValidation' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:392:5` - ERROR `@typescript-eslint/no-unused-vars`: 'validationResults' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:394:5` - ERROR `@typescript-eslint/no-unused-vars`: 'runValidation' is assigned a value but never used
+  - `src/components/validators/ExampleValidatorUsage.tsx:460:35` - ERROR `sonarjs/no-duplicate-string`: Define a constant instead of duplicating this literal 4 times
+  - `src/components/validators/ExampleValidatorUsage.tsx:481:1` - WARNING `max-lines`: File has too many lines (434). Maximum allowed is 400
+  - `src/components/validators/ViajeValidator.tsx:125:54` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/validators/ViajeValidator.tsx:172:41` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/validators/ViajeValidator.tsx:234:28` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/validators/ViajeValidator.tsx:265:39` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/validators/ViajeValidator.tsx:309:63` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/components/validators/ViajeValidator.tsx:369:62` - WARNING `max-lines-per-function`: Arrow function has too many lines (233). Maximum allowed is 100
+  - `src/components/validators/ViajeValidator.tsx:369:62` - ERROR `complexity`: Arrow function has a complexity of 13. Maximum allowed is 10
+  - `src/components/validators/ViajeValidator.tsx:436:1` - WARNING `max-lines`: File has too many lines (573). Maximum allowed is 400
 
-## Tipo: max-params (1)
+## Componentes/Viajes
 
-- Grupo: components/tables (1)
-  - frontend/src/components/tables/GenericDocumentTable/helpers.ts (1)
+- ESLint (18)
+  - `src/components/viajes/ConfigurationPreview/VehicleDetailsSection.tsx:30:8` - WARNING `max-lines-per-function`: Function 'VehicleDetailsSection' has too many lines (143). Maximum allowed is 100
+  - `src/components/viajes/ConfigurationPreview/VehicleDetailsSection.tsx:69:32` - ERROR `complexity`: Arrow function has a complexity of 15. Maximum allowed is 10
+  - `src/components/viajes/VehicleTypeDetector.tsx:10:3` - ERROR `@typescript-eslint/no-unused-vars`: 'NumberInput' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:13:3` - ERROR `@typescript-eslint/no-unused-vars`: 'ActionIcon' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:14:3` - ERROR `@typescript-eslint/no-unused-vars`: 'Tooltip' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:16:3` - ERROR `@typescript-eslint/no-unused-vars`: 'Box' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:19:3` - ERROR `@typescript-eslint/no-unused-vars`: 'IconTruck' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:20:3` - ERROR `@typescript-eslint/no-unused-vars`: 'IconScale' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:21:3` - ERROR `@typescript-eslint/no-unused-vars`: 'IconRuler' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:22:3` - ERROR `@typescript-eslint/no-unused-vars`: 'IconUsers' is defined but never used
+  - `src/components/viajes/VehicleTypeDetector.tsx:83:8` - WARNING `max-lines-per-function`: Function 'VehicleTypeDetector' has too many lines (338). Maximum allowed is 100
+  - `src/components/viajes/VehicleTypeDetector.tsx:83:8` - ERROR `complexity`: Function 'VehicleTypeDetector' has a complexity of 11. Maximum allowed is 10
+  - `src/components/viajes/VehicleTypeDetector.tsx:98:6` - WARNING `react-hooks/exhaustive-deps`: React Hook useEffect has a missing dependency: 'performDetection'. Either include it or remove the dependency array
+  - `src/components/viajes/VehicleTypeDetector.tsx:127:26` - ERROR `complexity`: Arrow function has a complexity of 18. Maximum allowed is 10
+  - `src/components/viajes/VehicleTypeDetector.tsx:127:31` - ERROR `sonarjs/cognitive-complexity`: Refactor this function to reduce its Cognitive Complexity from 22 to the 15 allowed
+  - `src/components/viajes/VehicleTypeDetector.tsx:457:1` - WARNING `max-lines`: File has too many lines (414). Maximum allowed is 400
+  - `src/components/viajes/VehiculoAssigner/AssignmentCard.tsx:14:11` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
+  - `src/components/viajes/ViajeCard/ViajeCardContent.tsx:9:29` - WARNING `@typescript-eslint/no-explicit-any`: Unexpected any. Specify a different type
 
-## Tipo: @typescript-eslint/no-empty-function (5)
+## Constantes
 
-- Grupo: components/maps (5)
-  - frontend/src/components/maps/RouteVisualizer.old.tsx (5)
+- ESLint (1)
+  - `src/constants/vehiculos.tsx:144:42` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
 
-## Tipo: TS1128 (1)
+## Contextos
 
-- Grupo: otros (1)
-  - src/pages/viajes/ViajeFormOriginal.tsx (1)
+- ESLint (2)
+  - `src/contexts/EntityNamesContext.tsx:20:14` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
+  - `src/contexts/EntityNamesContext.tsx:36:14` - WARNING `@typescript-eslint/no-non-null-assertion`: Forbidden non-null assertion
 
-## Tipo: parsing-error (3)
+## Hooks/CalculatorBase
 
-- Grupo: pages/viajes (1)
-  - frontend/src/pages/viajes/ViajeFormOriginal.tsx (1)
-- Grupo: components/excel (2)
-  - frontend/src/components/excel/hooks/useTemplateGenerator.ts (1)
-  - frontend/src/components/excel/ExcelTemplateGenerator.tsx (1)
+- ESLint (1)
+  - `src/hooks/useCalculatorBase.ts:239:8` - WARNING `max-lines-per-function`: Function 'useCalculatorBase' has too many lines (122). Maximum allowed is 100
 
-## Tipo: complexity (16)
+## Hooks/TarifaManager
 
-- Grupo: components/calculators (2)
-  - frontend/src/components/calculators/TotalCalculator.tsx (1)
-  - frontend/src/components/calculators/FormulaProcessor.tsx (1)
-- Grupo: components/maps (1)
-  - frontend/src/components/maps/RouteVisualizer.old.tsx (1)
-- Grupo: components/upload (1)
-  - frontend/src/components/upload/DocumentUpload.tsx (1)
-- Grupo: components/tarifa (1)
-  - frontend/src/components/tarifa/components/DetalleResultadoModal.tsx (1)
-- Grupo: components/inputs (1)
-  - frontend/src/components/inputs/CoordinateInput.tsx (1)
-- Grupo: components/tables (1)
-  - frontend/src/components/tables/GenericDocumentTable/components.tsx (1)
-- Grupo: components/viajes (6)
-  - frontend/src/components/viajes/ViajeCard.tsx (1)
-  - frontend/src/components/viajes/ConfigurationPreview.tsx (3)
-  - frontend/src/components/viajes/VehicleTypeDetector.tsx (2)
-- Grupo: components/validators (3)
-  - frontend/src/components/validators/ExampleValidatorUsage.tsx (1)
-  - frontend/src/components/validators/ViajeValidator.tsx (1)
-  - frontend/src/components/validators/DocumentValidatorGeneric.tsx (1)
+- ESLint (1)
+  - `src/hooks/useTarifaManager.ts:44:33` - WARNING `max-lines-per-function`: Arrow function has too many lines (144). Maximum allowed is 100
 
-## Tipo: @typescript-eslint/no-non-null-assertion (20)
+## Páginas/Viajes
 
-- Grupo: components/cards (1)
-  - frontend/src/components/cards/VehiculoCard.tsx (1)
-- Grupo: components/calculators (1)
-  - frontend/src/components/calculators/TotalCalculator.tsx (1)
-- Grupo: components/maps (2)
-  - frontend/src/components/maps/SiteMapHelpers.tsx (2)
-- Grupo: contexts (2)
-  - frontend/src/contexts/EntityNamesContext.tsx (2)
-- Grupo: components/expiration (2)
-  - frontend/src/components/expiration/ExpirationManagerBase.tsx (2)
-- Grupo: components/tarifa (1)
-  - frontend/src/components/tarifa/AuditoriaViewer.tsx (1)
-- Grupo: components/tables (2)
-  - frontend/src/components/tables/GenericDocumentTable/components.tsx (1)
-  - frontend/src/components/tables/DocumentTableComponents.tsx (1)
-- Grupo: constants (1)
-  - frontend/src/constants/vehiculos.tsx (1)
-- Grupo: components/validators (6)
-  - frontend/src/components/validators/ViajeValidator.tsx (5)
-  - frontend/src/components/validators/DocumentValidatorGeneric.tsx (1)
-- Grupo: components/reports (2)
-  - frontend/src/components/reports/ReportHistoryHelpers.tsx (2)
-
-## Tipo: @typescript-eslint/no-inferrable-types (1)
-
-- Grupo: components/selectors (1)
-  - frontend/src/components/selectors/index.ts (1)
-
-## Tipo: @typescript-eslint/no-explicit-any (54)
-
-- Grupo: components/modals (8)
-  - frontend/src/components/modals/CorrectionUploadModal.tsx (8)
-- Grupo: components/maps (12)
-  - frontend/src/components/maps/MapViewHelpers.tsx (4)
-  - frontend/src/components/maps/RouteVisualizer.old.tsx (7)
-  - frontend/src/components/maps/SiteMapHelpers.tsx (1)
-- Grupo: pages/calculadora (1)
-  - frontend/src/pages/calculadora/CalculadoraPage.tsx (1)
-- Grupo: pages/clientes (2)
-  - frontend/src/pages/clientes/ClienteFormPage.tsx (1)
-  - frontend/src/pages/clientes/ClientesPage.tsx (1)
-- Grupo: components/expiration (1)
-  - frontend/src/components/expiration/ExpirationManagerBase.tsx (1)
-- Grupo: components/tarifa (7)
-  - frontend/src/components/tarifa/AuditoriaViewer.tsx (4)
-  - frontend/src/components/tarifa/TarifaMetodoManager.tsx (3)
-- Grupo: components/tables (7)
-  - frontend/src/components/tables/FormulaHistorialTable.tsx (1)
-  - frontend/src/components/tables/DocumentacionTable.tsx (6)
-- Grupo: components/viajes (2)
-  - frontend/src/components/viajes/ConfigurationPreview.tsx (2)
-- Grupo: components/validators (10)
-  - frontend/src/components/validators/ExampleValidatorUsage.tsx (9)
-  - frontend/src/components/validators/DocumentValidatorGeneric.tsx (1)
-- Grupo: components/excel (1)
-  - frontend/src/components/excel/ReferenceDataSheets.tsx (1)
-- Grupo: pages/empresas (2)
-  - frontend/src/pages/empresas/EmpresaDetailPage.tsx (2)
-- Grupo: components/preview (1)
-  - frontend/src/components/preview/TarifaPreview.tsx (1)
-
-## Tipo: react-hooks/exhaustive-deps (12)
-
-- Grupo: components/calculators (5)
-  - frontend/src/components/calculators/PartidaCalculator.tsx (1)
-  - frontend/src/components/calculators/TotalCalculator.tsx (2)
-  - frontend/src/components/calculators/FormulaProcessor.tsx (2)
-- Grupo: components/forms (1)
-  - frontend/src/components/forms/ExtraForm.tsx (1)
-- Grupo: components/expiration (1)
-  - frontend/src/components/expiration/ExpirationManagerBase.tsx (1)
-- Grupo: components/tables (2)
-  - frontend/src/components/tables/FormulaHistorialTable.tsx (1)
-  - frontend/src/components/tables/DocumentacionTable.tsx (1)
-- Grupo: components/viajes (2)
-  - frontend/src/components/viajes/VehiculoAssigner.tsx (1)
-  - frontend/src/components/viajes/VehicleTypeDetector.tsx (1)
-- Grupo: components/preview (1)
-  - frontend/src/components/preview/TarifaPreview.tsx (1)
+- TypeScript (1)
+  - `src/pages/viajes/ViajeFormOriginal.tsx:59:1` - `TS1128`: Declaration or statement expected.
+- ESLint (1)
+  - `src/pages/viajes/ViajeFormOriginal.tsx:59:0` - ERROR `expected`: Parsing error: Declaration or statement
