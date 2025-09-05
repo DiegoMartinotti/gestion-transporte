@@ -1,15 +1,4 @@
-export interface TarifaVersion {
-  _id: string;
-  version: number;
-  fechaVigenciaInicio: string;
-  fechaVigenciaFin?: string;
-  tipoCalculo: string;
-  tarifasPorTipo: {
-    semi: number;
-    acoplado: number;
-  };
-  activa: boolean;
-}
+import { TarifaVersion } from '../../../services/tarifaService';
 
 export interface VersionStatus {
   label: string;
@@ -58,3 +47,15 @@ export const sortVersionsByDate = (versions: TarifaVersion[]): TarifaVersion[] =
     (a, b) => new Date(b.fechaVigenciaInicio).getTime() - new Date(a.fechaVigenciaInicio).getTime()
   );
 };
+
+export const getDefaultVersion = (): Partial<TarifaVersion> => ({
+  fechaVigenciaInicio: new Date().toISOString().split('T')[0],
+  tipoCalculo: 'peso',
+  tarifasPorTipo: {
+    chico: 0,
+    semi: 0,
+    acoplado: 0,
+    bitrén: 0,
+  },
+  activa: true,
+});
