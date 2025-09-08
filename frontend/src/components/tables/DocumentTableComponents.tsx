@@ -27,54 +27,52 @@ export const getDocumentStatus = (fechaVencimiento?: Date) => {
 
   const today = new Date();
   const vencimiento = new Date(fechaVencimiento);
-  const diasRestantes = Math.ceil((vencimiento.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const diasRestantes = Math.ceil(
+    (vencimiento.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
 
   if (diasRestantes < 0) {
-    return { 
-      status: 'vencido', 
-      color: COLOR_RED, 
-      label: `Vencido hace ${Math.abs(diasRestantes)} días` 
+    return {
+      status: 'vencido',
+      color: COLOR_RED,
+      label: `Vencido hace ${Math.abs(diasRestantes)} días`,
     };
   } else if (diasRestantes <= 30) {
-    return { 
-      status: 'por-vencer', 
-      color: COLOR_ORANGE, 
-      label: `Vence en ${diasRestantes} días` 
+    return {
+      status: 'por-vencer',
+      color: COLOR_ORANGE,
+      label: `Vence en ${diasRestantes} días`,
     };
   } else {
-    return { 
-      status: 'vigente', 
-      color: COLOR_GREEN, 
-      label: `Vigente (${diasRestantes} días)` 
+    return {
+      status: 'vigente',
+      color: COLOR_GREEN,
+      label: `Vigente (${diasRestantes} días)`,
     };
   }
 };
 
 // Document Alerts Component
-export const DocumentAlerts: React.FC<{ 
-  vencidosCount: number; 
-  porVencerCount: number; 
+export const DocumentAlerts: React.FC<{
+  vencidosCount: number;
+  porVencerCount: number;
 }> = ({ vencidosCount, porVencerCount }) => (
   <>
     {vencidosCount > 0 && (
-      <Alert 
-        icon={<IconAlertTriangle size={16} />} 
-        color={COLOR_RED} 
+      <Alert
+        icon={<IconAlertTriangle size={16} />}
+        color={COLOR_RED}
         mb="md"
         variant={LIGHT_VARIANT}
       >
         <Text size={SMALL_SIZE}>
-          {vencidosCount} documento{vencidosCount > 1 ? 's' : ''} vencido{vencidosCount > 1 ? 's' : ''}
+          {vencidosCount} documento{vencidosCount > 1 ? 's' : ''} vencido
+          {vencidosCount > 1 ? 's' : ''}
         </Text>
       </Alert>
     )}
     {porVencerCount > 0 && (
-      <Alert 
-        icon={<IconCalendar size={16} />} 
-        color={COLOR_ORANGE} 
-        mb="md"
-        variant={LIGHT_VARIANT}
-      >
+      <Alert icon={<IconCalendar size={16} />} color={COLOR_ORANGE} mb="md" variant={LIGHT_VARIANT}>
         <Text size={SMALL_SIZE}>
           {porVencerCount} documento{porVencerCount > 1 ? 's' : ''} por vencer en 30 días
         </Text>
@@ -89,7 +87,7 @@ export const AddDocumentButton: React.FC<{
   readOnly: boolean;
 }> = ({ onClick, readOnly }) => {
   if (readOnly) return null;
-  
+
   return (
     <Button onClick={onClick} leftSection={<IconFileText size={16} />}>
       Agregar Documento
@@ -107,7 +105,7 @@ export const DocumentRow: React.FC<{
   onUpload?: (doc: Documento, file: File) => void;
 }> = ({ documento, readOnly, onEdit, onDelete, onDownload, onUpload }) => {
   const status = getDocumentStatus(documento.fechaVencimiento);
-  
+
   const handleFileUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -134,10 +132,9 @@ export const DocumentRow: React.FC<{
       </td>
       <td>
         <Text size={SMALL_SIZE}>
-          {documento.fechaVencimiento 
+          {documento.fechaVencimiento
             ? new Date(documento.fechaVencimiento).toLocaleDateString('es-AR')
-            : '-'
-          }
+            : '-'}
         </Text>
         {documento.fechaVencimiento && (
           <Text size={SMALL_SIZE}>
@@ -151,10 +148,10 @@ export const DocumentRow: React.FC<{
         <Group gap="xs">
           {onDownload && documento.archivo && (
             <Tooltip label="Descargar">
-              <ActionIcon 
-                variant="subtle" 
+              <ActionIcon
+                variant="subtle"
                 color="blue"
-                size={SMALL_SIZE} 
+                size={SMALL_SIZE}
                 onClick={() => onDownload(documento)}
               >
                 <IconDownload size={14} />
@@ -163,10 +160,10 @@ export const DocumentRow: React.FC<{
           )}
           {onUpload && !readOnly && (
             <Tooltip label="Subir archivo">
-              <ActionIcon 
-                variant="subtle" 
+              <ActionIcon
+                variant="subtle"
                 color={COLOR_GREEN}
-                size={SMALL_SIZE} 
+                size={SMALL_SIZE}
                 onClick={handleFileUpload}
               >
                 <IconUpload size={14} />
@@ -175,10 +172,10 @@ export const DocumentRow: React.FC<{
           )}
           {!readOnly && (
             <Tooltip label="Editar">
-              <ActionIcon 
-                variant="subtle" 
+              <ActionIcon
+                variant="subtle"
                 color="blue"
-                size={SMALL_SIZE} 
+                size={SMALL_SIZE}
                 onClick={() => onEdit(documento)}
               >
                 <IconEdit size={14} />
@@ -187,11 +184,11 @@ export const DocumentRow: React.FC<{
           )}
           {!readOnly && (
             <Tooltip label="Eliminar">
-              <ActionIcon 
-                variant="subtle" 
+              <ActionIcon
+                variant="subtle"
                 color={COLOR_RED}
-                size={SMALL_SIZE} 
-                onClick={() => onDelete(documento._id!)}
+                size={SMALL_SIZE}
+                onClick={() => documento._id && onDelete(documento._id)}
               >
                 <IconTrash size={14} />
               </ActionIcon>

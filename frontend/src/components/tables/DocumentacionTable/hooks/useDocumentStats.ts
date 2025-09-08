@@ -9,7 +9,7 @@ export interface DocumentStats {
 }
 
 export const useDocumentStats = (documentos: DocumentoInfo[]): DocumentStats => {
-  const stats = useMemo(() => {
+  return useMemo(() => {
     const total = documentos.length;
     const expired = documentos.filter((d) => d.status === 'expired').length;
     const expiring = documentos.filter((d) => d.status === 'expiring').length;
@@ -17,6 +17,4 @@ export const useDocumentStats = (documentos: DocumentoInfo[]): DocumentStats => 
 
     return { total, expired, expiring, valid };
   }, [documentos]);
-
-  return stats;
 };

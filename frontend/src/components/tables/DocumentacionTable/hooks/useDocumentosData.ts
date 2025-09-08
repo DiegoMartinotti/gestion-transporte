@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Personal } from '../../../../types';
+import type { Personal, Empresa } from '../../../../types';
 
 export interface DocumentoInfo {
   personalId: string;
@@ -19,7 +19,7 @@ export interface DocumentoInfo {
 
 const SIN_EMPRESA = 'Sin empresa';
 
-const createBaseDocument = (person: Personal, empresaInfo: any) => ({
+const createBaseDocument = (person: Personal, empresaInfo: Empresa | null) => ({
   personalId: person._id,
   personalNombre: `${person.nombre} ${person.apellido}`,
   dni: person.dni,
@@ -27,7 +27,7 @@ const createBaseDocument = (person: Personal, empresaInfo: any) => ({
   tipo: person.tipo,
 });
 
-const calculateDaysUntilExpiry = (vencimiento: any, now: Date) => {
+const calculateDaysUntilExpiry = (vencimiento: Date | string | undefined, now: Date) => {
   return vencimiento
     ? Math.ceil((new Date(vencimiento).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     : Infinity;
@@ -42,7 +42,7 @@ function getDocumentStatus(daysUntilExpiry: number): 'expired' | 'expiring' | 'v
 
 const procesarLicenciaConducir = (
   person: Personal,
-  empresaInfo: any,
+  empresaInfo: Empresa | null,
   now: Date
 ): DocumentoInfo[] => {
   const docs: DocumentoInfo[] = [];
@@ -67,7 +67,7 @@ const procesarLicenciaConducir = (
 
 const procesarCarnetProfesional = (
   person: Personal,
-  empresaInfo: any,
+  empresaInfo: Empresa | null,
   now: Date
 ): DocumentoInfo[] => {
   const docs: DocumentoInfo[] = [];
@@ -91,7 +91,7 @@ const procesarCarnetProfesional = (
 
 const procesarEvaluacionMedica = (
   person: Personal,
-  empresaInfo: any,
+  empresaInfo: Empresa | null,
   now: Date
 ): DocumentoInfo[] => {
   const docs: DocumentoInfo[] = [];
@@ -115,7 +115,11 @@ const procesarEvaluacionMedica = (
   return docs;
 };
 
-const procesarPsicofisico = (person: Personal, empresaInfo: any, now: Date): DocumentoInfo[] => {
+const procesarPsicofisico = (
+  person: Personal,
+  empresaInfo: Empresa | null,
+  now: Date
+): DocumentoInfo[] => {
   const docs: DocumentoInfo[] = [];
   const { documentacion } = person;
 
@@ -138,7 +142,7 @@ const procesarPsicofisico = (person: Personal, empresaInfo: any, now: Date): Doc
 };
 
 export const useDocumentosData = (personal: Personal[]) => {
-  const documentos = useMemo(() => {
+  return useMemo(() => {
     const docs: DocumentoInfo[] = [];
     const now = new Date();
 
@@ -157,6 +161,4 @@ export const useDocumentosData = (personal: Personal[]) => {
 
     return docs;
   }, [personal]);
-
-  return documentos;
 };

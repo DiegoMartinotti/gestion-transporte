@@ -7,7 +7,7 @@ export const useFilteredDocumentos = (
   tipoFilter: string,
   maxExpireDays: number
 ) => {
-  const filteredDocumentos = useMemo(() => {
+  return useMemo(() => {
     return documentos.filter((doc) => {
       // Filter by status
       if (statusFilter !== 'all' && doc.status !== statusFilter) return false;
@@ -21,6 +21,4 @@ export const useFilteredDocumentos = (
       return true;
     });
   }, [documentos, statusFilter, tipoFilter, maxExpireDays]);
-
-  return filteredDocumentos;
 };
