@@ -1,22 +1,6 @@
 import React from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Group,
-  ActionIcon,
-  Badge,
-  Text,
-  Stack,
-  Alert,
-} from '@mantine/core';
-import {
-  IconPlay,
-  IconEdit,
-  IconTrash,
-  IconCopy,
-  IconInfoCircle,
-} from '@tabler/icons-react';
+import { Card, Table, Button, Group, ActionIcon, Badge, Text, Stack, Alert } from '@mantine/core';
+import { IconPlay, IconEdit, IconTrash, IconCopy, IconInfoCircle } from '@tabler/icons-react';
 import type { IEscenarioSimulacion } from '../../../types/tarifa';
 
 interface EscenariosTableProps {
@@ -28,6 +12,80 @@ interface EscenariosTableProps {
   simulando: boolean;
 }
 
+const calculateTotal = (valores: { tarifa?: number; peaje?: number; extras?: number }): number =>
+  (valores.tarifa || 0) + (valores.peaje || 0) + (valores.extras || 0);
+
+const formatTotal = (valores: { tarifa?: number; peaje?: number; extras?: number }): string =>
+  `$${calculateTotal(valores).toLocaleString()}`;
+
+interface EscenarioRowProps {
+  escenario: IEscenarioSimulacion;
+  index: number;
+  onEdit: (escenario: IEscenarioSimulacion) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (escenario: IEscenarioSimulacion) => void;
+}
+
+const EscenarioRow: React.FC<EscenarioRowProps> = ({
+  escenario,
+  index,
+  onEdit,
+  onDelete,
+  onDuplicate,
+}) => (
+  <Table.Tr key={index}>
+    <Table.Td>
+      <Text fw={500}>{escenario.nombre}</Text>
+    </Table.Td>
+    <Table.Td>
+      <Text size="sm">{String(escenario.contexto.clienteNombre || 'No especificado')}</Text>
+    </Table.Td>
+    <Table.Td>
+      <Text size="sm">{String(escenario.contexto.tramoNombre || 'No especificado')}</Text>
+    </Table.Td>
+    <Table.Td>
+      <Badge variant="outline">{escenario.contexto.palets || 0}</Badge>
+    </Table.Td>
+    <Table.Td style={{ textAlign: 'right' }}>
+      <Text fw={500}>{formatTotal(escenario.valoresBase)}</Text>
+    </Table.Td>
+    <Table.Td>
+      <Group gap="xs" justify="center">
+        <ActionIcon variant="light" color="blue" onClick={() => onEdit(escenario)} title="Editar">
+          <IconEdit size={16} />
+        </ActionIcon>
+        <ActionIcon
+          variant="light"
+          color="green"
+          onClick={() => onDuplicate(escenario)}
+          title="Duplicar"
+        >
+          <IconCopy size={16} />
+        </ActionIcon>
+        <ActionIcon
+          variant="light"
+          color="red"
+          onClick={() => {
+            const id = (escenario as { id?: string }).id;
+            if (id) onDelete(id);
+          }}
+          title="Eliminar"
+        >
+          <IconTrash size={16} />
+        </ActionIcon>
+      </Group>
+    </Table.Td>
+  </Table.Tr>
+);
+
+const EmptyState: React.FC = () => (
+  <Alert variant="light" color="blue" icon={<IconInfoCircle size={16} />}>
+    <Text>
+      No hay escenarios creados aún. Crea tu primer escenario para comenzar la simulación.
+    </Text>
+  </Alert>
+);
+
 const EscenariosTable: React.FC<EscenariosTableProps> = ({
   escenarios,
   onEdit,
@@ -37,13 +95,7 @@ const EscenariosTable: React.FC<EscenariosTableProps> = ({
   simulando,
 }) => {
   if (escenarios.length === 0) {
-    return (
-      <Alert variant="light" color="blue" icon={<IconInfoCircle size={16} />}>
-        <Text>
-          No hay escenarios creados aún. Crea tu primer escenario para comenzar la simulación.
-        </Text>
-      </Alert>
-    );
+    return <EmptyState />;
   }
 
   return (
@@ -74,57 +126,14 @@ const EscenariosTable: React.FC<EscenariosTableProps> = ({
           </Table.Thead>
           <Table.Tbody>
             {escenarios.map((escenario, index) => (
-              <Table.Tr key={index}>
-                <Table.Td>
-                  <Text fw={500}>{escenario.nombre}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm">{escenario.contexto.clienteNombre || 'No especificado'}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm">{escenario.contexto.tramoNombre || 'No especificado'}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Badge variant="outline">{escenario.contexto.palets || 0}</Badge>
-                </Table.Td>
-                <Table.Td style={{ textAlign: 'right' }}>
-                  <Text fw={500}>
-                    ${(
-                      (escenario.valoresBase.tarifa || 0) +
-                      (escenario.valoresBase.peaje || 0) +
-                      (escenario.valoresBase.extras || 0)
-                    ).toLocaleString()}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs" justify="center">
-                    <ActionIcon
-                      variant="light"
-                      color="blue"
-                      onClick={() => onEdit(escenario)}
-                      title="Editar"
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="light"
-                      color="green"
-                      onClick={() => onDuplicate(escenario)}
-                      title="Duplicar"
-                    >
-                      <IconCopy size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="light"
-                      color="red"
-                      onClick={() => escenario.id && onDelete(escenario.id)}
-                      title="Eliminar"
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
+              <EscenarioRow
+                key={index}
+                escenario={escenario}
+                index={index}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onDuplicate={onDuplicate}
+              />
             ))}
           </Table.Tbody>
         </Table>
