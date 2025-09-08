@@ -158,11 +158,13 @@ export const filterExecutions = (
   }
 
   if (filters.startDate) {
-    filtered = filtered.filter((e) => new Date(e.createdAt) >= filters.startDate!);
+    filtered = filtered.filter(
+      (e) => filters.startDate && new Date(e.createdAt) >= filters.startDate
+    );
   }
 
   if (filters.endDate) {
-    filtered = filtered.filter((e) => new Date(e.createdAt) <= filters.endDate!);
+    filtered = filtered.filter((e) => filters.endDate && new Date(e.createdAt) <= filters.endDate);
   }
 
   if (filters.searchTerm) {

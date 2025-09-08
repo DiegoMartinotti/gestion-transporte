@@ -75,7 +75,7 @@ const RowActions: React.FC<{
         {onRerun && (
           <Menu.Item
             leftSection={<IconRefresh size={14} />}
-            onClick={() => onRerun(execution.reportDefinitionId || execution.reportId!)}
+            onClick={() => onRerun(execution.reportDefinitionId || execution.reportId || '')}
           >
             Ejecutar nuevamente
           </Menu.Item>

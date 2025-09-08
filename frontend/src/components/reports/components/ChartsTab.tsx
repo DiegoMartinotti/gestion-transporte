@@ -42,6 +42,12 @@ const ChartsTab = memo<ChartsTabProps>(({ form, availableFields, onAddChart, onR
     }));
   }, [availableFields]);
 
+  const updateChart = (index: number, updates: Partial<ChartConfig>) => {
+    const charts = [...(form.values.charts || [])];
+    charts[index] = { ...charts[index], ...updates };
+    form.setFieldValue('charts', charts);
+  };
+
   return (
     <Stack gap="md">
       <Group justify="space-between">
@@ -69,11 +75,7 @@ const ChartsTab = memo<ChartsTabProps>(({ form, availableFields, onAddChart, onR
               <TextInput
                 label="Título"
                 value={chart.title}
-                onChange={(e) => {
-                  const charts = [...(form.values.charts || [])];
-                  charts[index] = { ...charts[index], title: e.target.value };
-                  form.setFieldValue('charts', charts);
-                }}
+                onChange={(e) => updateChart(index, { title: e.target.value })}
               />
             </Grid.Col>
             <Grid.Col span={6}>
@@ -81,11 +83,9 @@ const ChartsTab = memo<ChartsTabProps>(({ form, availableFields, onAddChart, onR
                 label="Tipo de Gráfico"
                 data={CHART_TYPES}
                 value={chart.type}
-                onChange={(value: string | null) => {
-                  const charts = [...(form.values.charts || [])];
-                  charts[index] = { ...charts[index], type: value as ChartType };
-                  form.setFieldValue('charts', charts);
-                }}
+                onChange={(value: string | null) =>
+                  updateChart(index, { type: value as ChartType })
+                }
               />
             </Grid.Col>
             <Grid.Col span={6}>
@@ -93,11 +93,7 @@ const ChartsTab = memo<ChartsTabProps>(({ form, availableFields, onAddChart, onR
                 label="Eje X"
                 data={getFieldOptions}
                 value={chart.xAxis}
-                onChange={(value: string | null) => {
-                  const charts = [...(form.values.charts || [])];
-                  charts[index] = { ...charts[index], xAxis: value || '' };
-                  form.setFieldValue('charts', charts);
-                }}
+                onChange={(value: string | null) => updateChart(index, { xAxis: value || '' })}
               />
             </Grid.Col>
             <Grid.Col span={6}>
@@ -105,11 +101,7 @@ const ChartsTab = memo<ChartsTabProps>(({ form, availableFields, onAddChart, onR
                 label="Eje Y"
                 data={getFieldOptions}
                 value={chart.yAxis}
-                onChange={(values) => {
-                  const charts = [...(form.values.charts || [])];
-                  charts[index] = { ...charts[index], yAxis: values };
-                  form.setFieldValue('charts', charts);
-                }}
+                onChange={(values) => updateChart(index, { yAxis: values })}
               />
             </Grid.Col>
           </Grid>
@@ -118,29 +110,17 @@ const ChartsTab = memo<ChartsTabProps>(({ form, availableFields, onAddChart, onR
             <Checkbox
               label="Mostrar Leyenda"
               checked={chart.showLegend}
-              onChange={(e) => {
-                const charts = [...(form.values.charts || [])];
-                charts[index] = { ...charts[index], showLegend: e.target.checked };
-                form.setFieldValue('charts', charts);
-              }}
+              onChange={(e) => updateChart(index, { showLegend: e.target.checked })}
             />
             <Checkbox
               label="Mostrar Grilla"
               checked={chart.showGrid}
-              onChange={(e) => {
-                const charts = [...(form.values.charts || [])];
-                charts[index] = { ...charts[index], showGrid: e.target.checked };
-                form.setFieldValue('charts', charts);
-              }}
+              onChange={(e) => updateChart(index, { showGrid: e.target.checked })}
             />
             <Checkbox
               label="Mostrar Tooltip"
               checked={chart.showTooltip}
-              onChange={(e) => {
-                const charts = [...(form.values.charts || [])];
-                charts[index] = { ...charts[index], showTooltip: e.target.checked };
-                form.setFieldValue('charts', charts);
-              }}
+              onChange={(e) => updateChart(index, { showTooltip: e.target.checked })}
             />
           </Group>
         </Card>

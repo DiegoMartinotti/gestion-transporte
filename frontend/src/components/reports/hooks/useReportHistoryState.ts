@@ -9,7 +9,7 @@ export interface HistoryFilters {
   endDate?: Date;
   createdBy?: string;
   searchTerm: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface HistoryState {
