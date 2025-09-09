@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
-import { useModal } from './useModal';
+import { useModal, ModalReturn } from './useModal';
 import { useDataLoader } from './useDataLoader';
 
 interface MetodoTarifa {
@@ -41,29 +41,11 @@ const mockService = {
   },
 };
 
-export const useTarifaManager = () => {
-  const [selectedMetodo, setSelectedMetodo] = useState<MetodoTarifa | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newVariable, setNewVariable] = useState<VariableFormData>({
-    nombre: '',
-    descripcion: '',
-    tipo: 'number',
-    origen: 'input',
-    valorDefault: 0,
-  });
-
-  const editModal = useModal();
-  const deleteModal = useModal();
-
-  const {
-    data: metodos = [],
-    loading,
-    refresh,
-  } = useDataLoader({
-    fetchFunction: mockService.getAll,
-    errorMessage: 'Error al cargar métodos de tarifa',
-  });
-
+const useTarifaOperations = (
+  refresh: () => void,
+  editModal: ModalReturn,
+  deleteModal: ModalReturn
+) => {
   const handleCreate = async (data: Partial<MetodoTarifa>) => {
     try {
       await mockService.create(data);
@@ -73,7 +55,6 @@ export const useTarifaManager = () => {
         color: 'green',
       });
       refresh();
-      setShowAddForm(false);
     } catch (error) {
       notifications.show({
         title: 'Error',
@@ -139,7 +120,18 @@ export const useTarifaManager = () => {
     }
   };
 
-  const addVariable = () => {
+  return {
+    handleCreate,
+    handleUpdate,
+    handleDelete,
+    handleTestFormula,
+  };
+};
+const useVariableOperations = (
+  selectedMetodo: MetodoTarifa | null,
+  setSelectedMetodo: (metodo: MetodoTarifa | null) => void
+) => {
+  const addVariable = (newVariable: VariableFormData) => {
     if (!newVariable.nombre || !newVariable.descripcion) {
       notifications.show({
         title: 'Error',
@@ -155,13 +147,6 @@ export const useTarifaManager = () => {
         variables: [...(selectedMetodo.variables || []), { ...newVariable }],
       };
       setSelectedMetodo(updatedMetodo);
-      setNewVariable({
-        nombre: '',
-        descripcion: '',
-        tipo: 'number',
-        origen: 'input',
-        valorDefault: 0,
-      });
     }
   };
 
@@ -173,6 +158,58 @@ export const useTarifaManager = () => {
       };
       setSelectedMetodo(updatedMetodo);
     }
+  };
+
+  return {
+    addVariable,
+    removeVariable,
+  };
+};
+export const useTarifaManager = () => {
+  const [selectedMetodo, setSelectedMetodo] = useState<MetodoTarifa | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newVariable, setNewVariable] = useState<VariableFormData>({
+    nombre: '',
+    descripcion: '',
+    tipo: 'number',
+    origen: 'input',
+    valorDefault: 0,
+  });
+
+  const editModal = useModal();
+  const deleteModal = useModal();
+
+  const {
+    data: metodos = [],
+    loading,
+    refresh,
+  } = useDataLoader({
+    fetchFunction: mockService.getAll,
+    errorMessage: 'Error al cargar métodos de tarifa',
+  });
+
+  const { handleCreate, handleUpdate, handleDelete, handleTestFormula } = useTarifaOperations(
+    refresh,
+    editModal,
+    deleteModal
+  );
+
+  const { addVariable, removeVariable } = useVariableOperations(selectedMetodo, setSelectedMetodo);
+
+  const handleAddVariable = () => {
+    addVariable(newVariable);
+    setNewVariable({
+      nombre: '',
+      descripcion: '',
+      tipo: 'number',
+      origen: 'input',
+      valorDefault: 0,
+    });
+  };
+
+  const handleCreateWithCallback = async (data: Partial<MetodoTarifa>) => {
+    await handleCreate(data);
+    setShowAddForm(false);
   };
 
   return {
@@ -193,11 +230,11 @@ export const useTarifaManager = () => {
     setNewVariable,
 
     // Handlers
-    handleCreate,
+    handleCreate: handleCreateWithCallback,
     handleUpdate,
     handleDelete,
     handleTestFormula,
-    addVariable,
+    addVariable: handleAddVariable,
     removeVariable,
     refresh,
   };
