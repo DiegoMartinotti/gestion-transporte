@@ -6,7 +6,7 @@ import { ViajeCardDetails } from './ViajeCardDetails';
 
 interface ViajeCardContentProps {
   viaje: Viaje;
-  cardProps: Record<string, any>;
+  cardProps: Partial<React.ComponentPropsWithoutRef<'div'>>;
   showActions: boolean;
   onView?: (viaje: Viaje) => void;
   onEdit?: (viaje: Viaje) => void;

@@ -11,7 +11,7 @@ interface AssignmentCardProps {
   status: {
     color: string;
     label: string;
-    icon: any;
+    icon: React.ComponentType<{ size?: number; color?: string }>;
   };
   vehiculos: Vehiculo[];
   conductores: Personal[];
