@@ -235,6 +235,65 @@ function isValidValue(
   return true;
 }
 
+// Hook interno para acciones CRUD de items
+function useCalculatorActions({
+  setItemsState,
+  calculate,
+  setError,
+  setLoading,
+}: {
+  setItemsState: React.Dispatch<React.SetStateAction<CalculationItem[]>>;
+  calculate: () => CalculationResult;
+  setError: (error: string | null) => void;
+  setLoading: (loading: boolean) => void;
+}) {
+  const addItem = useCallback(
+    (item: Omit<CalculationItem, 'id'>) => {
+      const newItem: CalculationItem = { ...item, id: generateItemId() };
+      setItemsState((prev) => [...prev, newItem]);
+    },
+    [setItemsState]
+  );
+
+  const removeItem = useCallback(
+    (id: string) => {
+      setItemsState((prev) => prev.filter((item) => item.id !== id));
+    },
+    [setItemsState]
+  );
+
+  const updateItem = useCallback(
+    (id: string, updates: Partial<CalculationItem>) => {
+      setItemsState((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
+      );
+    },
+    [setItemsState]
+  );
+
+  const clearItems = useCallback(() => {
+    setItemsState([]);
+    setError(null);
+  }, [setItemsState, setError]);
+
+  const setItems = useCallback(
+    (newItems: CalculationItem[]) => {
+      setItemsState(newItems);
+    },
+    [setItemsState]
+  );
+
+  const reset = useCallback(() => {
+    setItemsState([]);
+    setError(null);
+    setLoading(false);
+  }, [setItemsState, setError, setLoading]);
+
+  const recalculate = useCallback(() => calculate(), [calculate]);
+
+  return { addItem, removeItem, updateItem, clearItems, setItems, reset, recalculate };
+}
+
 // Hook principal para calculadoras
 export function useCalculatorBase(
   config: CalculationConfig = {}
@@ -258,9 +317,7 @@ export function useCalculatorBase(
 
   // Funciones utilitarias
   const roundValue = useCallback(
-    (value: number): number => {
-      return Number(value.toFixed(precision));
-    },
+    (value: number): number => Number(value.toFixed(precision)),
     [precision]
   );
 
@@ -287,7 +344,6 @@ export function useCalculatorBase(
         )
           return false;
       }
-
       if (onValidate && !onValidate(items)) return false;
       return true;
     } catch (err) {
@@ -311,51 +367,18 @@ export function useCalculatorBase(
     });
   }, [items, validateItems, roundValue, precision, currency, onCalculate, onError]);
 
+  // Acciones CRUD
+  const actions = useCalculatorActions({ setItemsState, calculate, setError, setLoading });
+
   // Resultado calculado reactivamente
   const result = useMemo(() => {
     if (autoCalculate && items.length > 0) {
       return calculate();
     }
-    return {
-      subtotal: 0,
-      total: 0,
-      desglose: [],
-      metadatos: {},
-    };
+    return { subtotal: 0, total: 0, desglose: [], metadatos: {} };
   }, [items, autoCalculate, calculate]);
 
   const isValid = useMemo(() => error === null && validateItems(), [error, validateItems]);
-
-  // Acciones para gestión de items
-  const addItem = useCallback((item: Omit<CalculationItem, 'id'>) => {
-    const newItem: CalculationItem = { ...item, id: generateItemId() };
-    setItemsState((prev) => [...prev, newItem]);
-  }, []);
-
-  const removeItem = useCallback((id: string) => {
-    setItemsState((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const updateItem = useCallback((id: string, updates: Partial<CalculationItem>) => {
-    setItemsState((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
-  }, []);
-
-  const clearItems = useCallback(() => {
-    setItemsState([]);
-    setError(null);
-  }, []);
-
-  const setItems = useCallback((newItems: CalculationItem[]) => {
-    setItemsState(newItems);
-  }, []);
-
-  const reset = useCallback(() => {
-    setItemsState([]);
-    setError(null);
-    setLoading(false);
-  }, []);
-
-  const recalculate = useCallback(() => calculate(), [calculate]);
 
   // Auto-cálculo cuando cambian los items
   useEffect(() => {
@@ -367,14 +390,8 @@ export function useCalculatorBase(
   return [
     { items, result, loading, error, isValid },
     {
-      addItem,
-      removeItem,
-      updateItem,
-      clearItems,
-      setItems,
+      ...actions,
       calculate,
-      recalculate,
-      reset,
       formatValue,
       validateItems,
       setLoading,
