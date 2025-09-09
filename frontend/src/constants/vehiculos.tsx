@@ -141,7 +141,7 @@ export const createVehiculosColumns = (
           size="sm"
           variant="subtle"
           color="red"
-          onClick={() => openDeleteModal(vehiculo._id!, vehiculo.dominio)}
+          onClick={() => vehiculo._id && openDeleteModal(vehiculo._id, vehiculo.dominio)}
         >
           <IconTrash size={16} />
         </ActionIcon>
