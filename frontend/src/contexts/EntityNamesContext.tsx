@@ -17,7 +17,7 @@ const empresaNamesCache = new Map<string, string>();
 export const EntityNamesProvider = ({ children }: { children: ReactNode }) => {
   const getClienteName = useCallback(async (id: string): Promise<string> => {
     if (clienteNamesCache.has(id)) {
-      return clienteNamesCache.get(id)!;
+      return clienteNamesCache.get(id) ?? id;
     }
 
     try {
@@ -33,7 +33,7 @@ export const EntityNamesProvider = ({ children }: { children: ReactNode }) => {
 
   const getEmpresaName = useCallback(async (id: string): Promise<string> => {
     if (empresaNamesCache.has(id)) {
-      return empresaNamesCache.get(id)!;
+      return empresaNamesCache.get(id) ?? id;
     }
 
     try {
