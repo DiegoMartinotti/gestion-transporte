@@ -204,6 +204,7 @@ export abstract class BusinessRuleBaseValidator extends BaseValidator<Record<str
   ): BusinessRuleValidationResult {
     const entityData = data[rule.entityType] || [];
     const entityDetails: unknown[] = [];
+    let passedCount = 0;
 
     entityData.forEach((record) => {
       try {
@@ -234,7 +235,7 @@ export abstract class BusinessRuleBaseValidator extends BaseValidator<Record<str
       passed,
       message: passed
         ? `Todos los registros pasaron la validación (${totalRecords})`
-        : `${entityDetails.length} de ${totalRecords} registros fallaron la validación`,
+        : `${entityDetails.length} de ${totalRecords} registros fallaron la validación (${passedCount} pasaron)`,
       affectedRecords: entityDetails.length,
       entityDetails: entityDetails.length > 0 ? entityDetails : undefined,
       category: rule.category,
