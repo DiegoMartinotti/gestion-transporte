@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm } from '@mantine/form';
-import { UseFormReturnType } from '@mantine/form';
+import { useForm, UseFormReturnType } from '@mantine/form';
 import { ViajeFormData, Viaje } from '../../../types/viaje';
 import { Cliente } from '../../../types/cliente';
 import { Tramo } from '../../../types/index';
@@ -101,15 +100,15 @@ export const getInitialFormValues = (viaje?: Viaje): ViajeFormData => ({
 });
 
 // Validation helpers
-export const validateBasicInfo = (values: ViajeFormData) => {
+export const validateBasicInfo = (_values: ViajeFormData) => {
   return {};
 };
 
-export const validateVehicleInfo = (values: ViajeFormData) => {
+export const validateVehicleInfo = (_values: ViajeFormData) => {
   return {};
 };
 
-export const validateCargoInfo = (values: ViajeFormData) => {
+export const validateCargoInfo = (_values: ViajeFormData) => {
   return {};
 };
 

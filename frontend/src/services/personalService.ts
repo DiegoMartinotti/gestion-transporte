@@ -8,14 +8,14 @@ export const personalService = {
     const params = new URLSearchParams();
 
     const paramMappings: Array<[keyof PersonalFilters, (value: unknown) => string]> = [
-      ['search', (v) => v],
-      ['tipo', (v) => v],
-      ['empresa', (v) => v],
+      ['search', (v) => v as string],
+      ['tipo', (v) => v as string],
+      ['empresa', (v) => v as string],
       ['activo', (v) => v.toString()],
       ['page', (v) => v.toString()],
       ['limit', (v) => v.toString()],
-      ['sortBy', (v) => v],
-      ['sortOrder', (v) => v],
+      ['sortBy', (v) => v as string],
+      ['sortOrder', (v) => v as string],
     ];
 
     paramMappings.forEach(([key, transformer]) => {
@@ -133,7 +133,7 @@ export const personalService = {
     if (Array.isArray(response)) {
       return response;
     }
-    return 'data' in response ? response.data || [] : [];
+    return 'data' in response && response.data ? response.data : [];
   },
 
   // Get conductores (drivers) only
@@ -151,7 +151,7 @@ export const personalService = {
     if (Array.isArray(response)) {
       return response;
     }
-    return 'data' in response ? response.data || [] : [];
+    return 'data' in response && response.data ? response.data : [];
   },
 
   // Get personal with expiring documents
@@ -238,7 +238,7 @@ export const personalService = {
     return await validateExcelFile(file);
   },
 
-  processExcelFile: async (file: File, options: unknown): Promise<unknown> => {
+  processExcelFile: async (file: File, options: Record<string, unknown>): Promise<unknown> => {
     return await processExcelFile(file, {
       ...options,
       endpoint: '/personal/import',
