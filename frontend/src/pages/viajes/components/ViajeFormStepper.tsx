@@ -1,97 +1,87 @@
-import React from 'react';
-import { Card, Group, Button, Stepper, Modal } from '@mantine/core';
+import { Group, Button } from '@mantine/core';
 import { UseFormReturnType } from '@mantine/form';
-import { TarifaCalculator } from '../../../components/calculation/TarifaCalculator';
 import { ViajeFormData } from '../../../types/viaje';
 import { Cliente } from '../../../types/cliente';
-import { Tramo } from '../../../types/tramo';
-import { ViajeFormStep1 } from './ViajeFormStep1';
-import { ViajeFormStep2 } from './ViajeFormStep2';
-import { ViajeFormStep3 } from './ViajeFormStep3';
-import { ViajeFormStep4 } from './ViajeFormStep4';
+import { Tramo } from '../../../types/index';
+import { ViajeStepperContent } from './ViajeStepperContent';
 
 interface ViajeFormStepperProps {
+  activeStep: number;
+  setActiveStep: (step: number) => void;
   form: UseFormReturnType<ViajeFormData>;
-  stepperStep: number;
-  setStepperStep: (step: number) => void;
-  clientes: Cliente[];
-  tramos: Tramo[];
-  nextStep: () => void;
-  prevStep: () => void;
-  isLastStep: boolean;
-  canGoNext: boolean;
-  calculationModalOpened: boolean;
-  setCalculationModalOpened: (opened: boolean) => void;
-  handleCalculateTarifa: () => Promise<void>;
-  isCalculating: boolean;
+  selectedTramo: Tramo | null;
+  selectedCliente: Cliente | null;
+  calculating: boolean;
+  calculationResult: {
+    montoBase: number;
+    montoExtras: number;
+    montoTotal: number;
+  } | null;
+  handleCalculateTarifa: () => void;
+  handleAddExtra: () => void;
+  handleRemoveExtra: (index: number) => void;
+  setShowTarifaDetails: (value: boolean) => void;
+  getFormErrorAsString: (error: unknown) => string | undefined;
+  isArrayValue: (value: unknown) => string[];
+  getNumberValue: (value: unknown) => number;
+  formatCurrency: (value: number) => string;
 }
 
-export const ViajeFormStepper = ({
+export function ViajeFormStepper({
+  activeStep,
+  setActiveStep,
   form,
-  stepperStep,
-  setStepperStep,
-  clientes,
-  tramos,
-  nextStep,
-  prevStep,
-  isLastStep,
-  canGoNext,
-  calculationModalOpened,
-  setCalculationModalOpened,
+  selectedTramo,
+  selectedCliente: _selectedCliente,
+  calculating,
+  calculationResult,
   handleCalculateTarifa,
-  isCalculating,
-}: ViajeFormStepperProps) => {
+  handleAddExtra,
+  handleRemoveExtra,
+  setShowTarifaDetails,
+  getFormErrorAsString,
+  isArrayValue,
+  getNumberValue,
+  formatCurrency,
+}: ViajeFormStepperProps) {
+  const handleNextStep = () => {
+    const errors = form.validate();
+    if (Object.keys(errors.errors).length === 0) {
+      setActiveStep(activeStep + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setActiveStep(activeStep - 1);
+  };
+
   return (
     <>
-      <Card>
-        <Stepper active={stepperStep} onStepClick={setStepperStep} breakpoint="sm">
-          <Stepper.Step label="Información Básica" description="Cliente, tramo y fecha">
-            <ViajeFormStep1 form={form} clientes={clientes} tramos={tramos} />
-          </Stepper.Step>
+      <ViajeStepperContent
+        activeStep={activeStep}
+        setActiveStep={setActiveStep}
+        form={form}
+        selectedTramo={selectedTramo}
+        calculating={calculating}
+        calculationResult={calculationResult}
+        handleCalculateTarifa={handleCalculateTarifa}
+        handleAddExtra={handleAddExtra}
+        handleRemoveExtra={handleRemoveExtra}
+        setShowTarifaDetails={setShowTarifaDetails}
+        getFormErrorAsString={getFormErrorAsString}
+        isArrayValue={isArrayValue}
+        getNumberValue={getNumberValue}
+        formatCurrency={formatCurrency}
+      />
 
-          <Stepper.Step label="Vehículos y Personal" description="Asignar recursos">
-            <ViajeFormStep2 form={form} />
-          </Stepper.Step>
-
-          <Stepper.Step label="Carga y Distancia" description="Detalles del transporte">
-            <ViajeFormStep3 form={form} />
-          </Stepper.Step>
-
-          <Stepper.Step label="Revisión Final" description="Confirmar información">
-            <ViajeFormStep4 form={form} />
-          </Stepper.Step>
-        </Stepper>
-
-        <Group justify="center" mt="xl">
-          {stepperStep > 0 && (
-            <Button variant="default" onClick={prevStep}>
-              Anterior
-            </Button>
-          )}
-          {!isLastStep && (
-            <Button onClick={nextStep} disabled={!canGoNext}>
-              Siguiente
-            </Button>
-          )}
-        </Group>
-      </Card>
-
-      <Modal
-        opened={calculationModalOpened}
-        onClose={() => setCalculationModalOpened(false)}
-        title="Calculadora de Tarifa"
-        size="lg"
-      >
-        <TarifaCalculator
-          cliente={form.values.cliente}
-          tramo={form.values.tramo}
-          carga={form.values.carga}
-          vehiculos={form.values.vehiculos}
-          distancia={form.values.distanciaKm}
-          onCalculate={handleCalculateTarifa}
-          loading={isCalculating}
-        />
-      </Modal>
+      <Group justify="center" mt="xl">
+        <Button variant="default" onClick={handlePrevStep} disabled={activeStep === 0}>
+          Anterior
+        </Button>
+        <Button onClick={handleNextStep} disabled={activeStep === 3}>
+          Siguiente
+        </Button>
+      </Group>
     </>
   );
-};
+}
