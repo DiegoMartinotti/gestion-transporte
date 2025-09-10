@@ -113,8 +113,9 @@ export function evaluarFormula(
  */
 function evaluarAlternativo(expresion: string): number {
   try {
+    // Simplificar operadores ternarios básicos
     const expresionSimplificada = expresion.replace(
-      /\(([^?]{1,50}+)\s*\?\s*([^:]{1,50}+)\s*:\s*([^)]{1,50}+)\)/g,
+      /\((\d+(?:\.\d+)?)\s*\?\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\)/g,
       (match, condicion, valorVerdadero, valorFalso) => {
         const condNumero = parseFloat(condicion);
         return condNumero > 0 ? valorVerdadero : valorFalso;

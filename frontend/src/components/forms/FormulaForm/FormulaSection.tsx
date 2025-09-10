@@ -55,10 +55,10 @@ export const FormulaSection: React.FC<FormulaSectionProps> = ({
         </Alert>
       )}
 
-      {showHelper && <FormulaValidator />}
+      {showHelper && <FormulaValidator result={validationResult} />}
 
       {form.values.formula && validationResult?.isValid && (
-        <FormulaPreview formula={form.values.formula} />
+        <FormulaPreview formula={form.values.formula} tipoUnidad="TRMC" />
       )}
     </>
   );

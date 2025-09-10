@@ -20,42 +20,42 @@ export interface FormulaContext {
   Valor: number;
   Peaje: number;
   Cantidad: number;
-  Palets?: number;
+  Palets?: number | undefined;
 
   // Variables de distancia y ubicación
-  Distancia?: number;
-  DistanciaReal?: number;
-  DistanciaAerea?: number;
+  Distancia?: number | undefined;
+  DistanciaReal?: number | undefined;
+  DistanciaAerea?: number | undefined;
 
   // Variables de tiempo
-  Fecha?: Date;
-  DiaSemana?: number;
-  Mes?: number;
-  Trimestre?: number;
-  EsFinDeSemana?: boolean;
-  EsFeriado?: boolean;
-  HoraDelDia?: number;
+  Fecha?: Date | undefined;
+  DiaSemana?: number | undefined;
+  Mes?: number | undefined;
+  Trimestre?: number | undefined;
+  EsFinDeSemana?: boolean | undefined;
+  EsFeriado?: boolean | undefined;
+  HoraDelDia?: number | undefined;
 
   // Variables del vehículo
-  TipoUnidad?: string;
-  CapacidadMaxima?: number;
-  PesoMaximo?: number;
-  CantidadVehiculos?: number;
+  TipoUnidad?: string | undefined;
+  CapacidadMaxima?: number | undefined;
+  PesoMaximo?: number | undefined;
+  CantidadVehiculos?: number | undefined;
 
   // Variables del cliente
-  TipoCliente?: string;
-  CategoriaCliente?: string;
-  DescuentoCliente?: number;
+  TipoCliente?: string | undefined;
+  CategoriaCliente?: string | undefined;
+  DescuentoCliente?: number | undefined;
 
   // Variables adicionales
-  Peso?: number;
-  Volumen?: number;
-  CantidadBultos?: number;
-  TipoCarga?: string;
-  Urgencia?: string;
+  Peso?: number | undefined;
+  Volumen?: number | undefined;
+  CantidadBultos?: number | undefined;
+  TipoCarga?: string | undefined;
+  Urgencia?: string | undefined;
 
   // Variables personalizadas
-  [key: string]: FormulaValueType;
+  [key: string]: FormulaValueType | undefined;
 }
 
 /**
