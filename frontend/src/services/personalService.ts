@@ -8,14 +8,14 @@ export const personalService = {
     const params = new URLSearchParams();
 
     const paramMappings: Array<[keyof PersonalFilters, (value: unknown) => string]> = [
-      ['search', (v) => v as string],
-      ['tipo', (v) => v as string],
-      ['empresa', (v) => v as string],
-      ['activo', (v) => v.toString()],
-      ['page', (v) => v.toString()],
-      ['limit', (v) => v.toString()],
-      ['sortBy', (v) => v as string],
-      ['sortOrder', (v) => v as string],
+      ['search', (v: unknown) => v as string],
+      ['tipo', (v: unknown) => v as string],
+      ['empresa', (v: unknown) => v as string],
+      ['activo', (v: unknown) => (v as boolean).toString()],
+      ['page', (v: unknown) => (v as number).toString()],
+      ['limit', (v: unknown) => (v as number).toString()],
+      ['sortBy', (v: unknown) => v as string],
+      ['sortOrder', (v: unknown) => v as string],
     ];
 
     paramMappings.forEach(([key, transformer]) => {
@@ -52,7 +52,7 @@ export const personalService = {
     }
 
     // Handle ApiResponse format
-    if ('data' in response && response.data) {
+    if ('data' in response && Array.isArray(response.data)) {
       return {
         data: response.data,
         pagination: personalService.createDefaultPagination(response.data, filters),
@@ -133,7 +133,7 @@ export const personalService = {
     if (Array.isArray(response)) {
       return response;
     }
-    return 'data' in response && response.data ? response.data : [];
+    return 'data' in response && Array.isArray(response.data) ? response.data : [];
   },
 
   // Get conductores (drivers) only
@@ -151,7 +151,7 @@ export const personalService = {
     if (Array.isArray(response)) {
       return response;
     }
-    return 'data' in response && response.data ? response.data : [];
+    return 'data' in response && Array.isArray(response.data) ? response.data : [];
   },
 
   // Get personal with expiring documents
@@ -241,8 +241,7 @@ export const personalService = {
   processExcelFile: async (file: File, options: Record<string, unknown>): Promise<unknown> => {
     return await processExcelFile(file, {
       ...options,
-      endpoint: '/personal/import',
-      entityType: 'personal',
+      entityType: 'personal' as const,
     });
   },
 

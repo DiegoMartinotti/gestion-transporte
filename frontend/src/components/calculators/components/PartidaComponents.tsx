@@ -95,7 +95,7 @@ export const EstadisticasGrid: React.FC<EstadisticasGridProps> = ({ estadisticas
           Pendiente
         </Text>
         <Text size="xl" fw={700} c="orange">
-          {formatCurrency(estadisticas.montePendiente)}
+          {formatCurrency(estadisticas.montoPendiente)}
         </Text>
       </Card>
     </Grid.Col>

@@ -30,32 +30,32 @@ export interface PersonalFormData extends Record<string, unknown> {
   }>;
   documentacion?: {
     licenciaConducir?: {
-      numero: string;
-      categoria: string;
-      vencimiento: Date | null;
-      fecha: Date | null;
-      resultado: string;
+      numero?: string;
+      categoria?: string;
+      vencimiento?: Date | null;
+      fecha?: Date | null;
+      resultado?: string;
     };
     carnetProfesional?: {
-      numero: string;
-      categoria: string;
-      vencimiento: Date | null;
-      fecha: Date | null;
-      resultado: string;
+      numero?: string;
+      categoria?: string;
+      vencimiento?: Date | null;
+      fecha?: Date | null;
+      resultado?: string;
     };
     evaluacionMedica?: {
-      numero: string;
-      categoria: string;
-      fecha: Date | null;
-      vencimiento: Date | null;
-      resultado: string;
+      numero?: string;
+      categoria?: string;
+      fecha?: Date | null;
+      vencimiento?: Date | null;
+      resultado?: string;
     };
     psicofisico?: {
-      numero: string;
-      categoria: string;
-      fecha: Date | null;
-      vencimiento: Date | null;
-      resultado: string;
+      numero?: string;
+      categoria?: string;
+      fecha?: Date | null;
+      vencimiento?: Date | null;
+      resultado?: string;
     };
   };
   datosLaborales?: {
