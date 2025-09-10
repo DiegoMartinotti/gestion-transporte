@@ -23,39 +23,39 @@ export interface PersonalFormData extends Record<string, unknown> {
   empresa: string;
   numeroLegajo?: string;
   periodosEmpleo: Array<{
-    fechaIngreso: Date | null;
-    fechaEgreso?: Date | null;
-    motivo?: string;
-    categoria?: string;
+    fechaIngreso: Date;
+    fechaEgreso: Date | null;
+    motivo: string;
+    categoria: string;
   }>;
   documentacion?: {
     licenciaConducir?: {
-      numero?: string;
-      categoria?: string;
-      vencimiento?: Date | null;
-      fecha?: Date | null;
-      resultado?: string;
+      numero: string;
+      categoria: string;
+      vencimiento: Date | null;
+      fecha: Date | null;
+      resultado: string;
     };
     carnetProfesional?: {
-      numero?: string;
-      categoria?: string;
-      vencimiento?: Date | null;
-      fecha?: Date | null;
-      resultado?: string;
+      numero: string;
+      categoria: string;
+      vencimiento: Date | null;
+      fecha: Date | null;
+      resultado: string;
     };
     evaluacionMedica?: {
-      numero?: string;
-      categoria?: string;
-      fecha?: Date | null;
-      vencimiento?: Date | null;
-      resultado?: string;
+      numero: string;
+      categoria: string;
+      fecha: Date | null;
+      vencimiento: Date | null;
+      resultado: string;
     };
     psicofisico?: {
-      numero?: string;
-      categoria?: string;
-      fecha?: Date | null;
-      vencimiento?: Date | null;
-      resultado?: string;
+      numero: string;
+      categoria: string;
+      fecha: Date | null;
+      vencimiento: Date | null;
+      resultado: string;
     };
   };
   datosLaborales?: {
@@ -63,18 +63,18 @@ export interface PersonalFormData extends Record<string, unknown> {
     obraSocial?: string;
     art?: string;
   };
-  capacitaciones?: Array<{
-    nombre?: string;
-    fecha?: Date | null;
-    vencimiento?: Date | null;
-    institucion?: string;
-    certificado?: string;
+  capacitaciones: Array<{
+    nombre: string;
+    fecha: Date | null;
+    vencimiento: Date | null;
+    institucion: string;
+    certificado: string;
   }>;
-  incidentes?: Array<{
-    fecha?: Date | null;
-    tipo?: 'Accidente' | 'Infracción' | 'Otro';
-    descripcion?: string;
-    consecuencias?: string;
+  incidentes: Array<{
+    fecha: Date;
+    tipo: string;
+    descripcion: string;
+    consecuencias: string;
   }>;
   activo: boolean;
   observaciones?: string;

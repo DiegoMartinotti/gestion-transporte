@@ -156,7 +156,7 @@ export const PersonalForm: React.FC<PersonalFormProps> = ({
   });
 
   const { validatingDNI, validatingCUIL, handleDNIValidation, handleCUILValidation } =
-    useValidation(form, personal?._id);
+    useValidation(form as unknown as PersonalFormType, personal?._id);
 
   const handleSubmit = usePersonalSubmit(personal, onSubmit);
 
@@ -168,10 +168,10 @@ export const PersonalForm: React.FC<PersonalFormProps> = ({
         {personal ? 'Editar Personal' : 'Nuevo Personal'}
       </Title>
 
-      <form onSubmit={form.onSubmit(handleSubmit)}>
+      <form onSubmit={form.onSubmit((values) => handleSubmit(values as PersonalFormData))}>
         <Stack gap="md">
           <BasicDataSection
-            form={form}
+            form={form as unknown as PersonalFormType}
             empresas={empresas}
             loadingEmpresas={loadingEmpresas}
             validatingDNI={validatingDNI}
@@ -180,21 +180,21 @@ export const PersonalForm: React.FC<PersonalFormProps> = ({
             onCUILBlur={handleCUILValidation}
           />
 
-          <AddressSection form={form} />
+          <AddressSection form={form as unknown as PersonalFormType} />
 
-          <ContactSection form={form} />
+          <ContactSection form={form as unknown as PersonalFormType} />
 
-          <DocumentationSection form={form} />
+          <DocumentationSection form={form as unknown as PersonalFormType} />
 
-          <EmploymentPeriodsSection form={form} />
+          <EmploymentPeriodsSection form={form as unknown as PersonalFormType} />
 
-          <LaboralDataSection form={form} />
+          <LaboralDataSection form={form as unknown as PersonalFormType} />
 
-          <TrainingSection form={form} />
+          <TrainingSection form={form as unknown as PersonalFormType} />
 
-          <IncidentsSection form={form} />
+          <IncidentsSection form={form as unknown as PersonalFormType} />
 
-          <ObservationsSection form={form} />
+          <ObservationsSection form={form as unknown as PersonalFormType} />
 
           {/* Botones de acción */}
           <Group justify="flex-end" gap="sm">
