@@ -7,11 +7,35 @@ import { FormulaContext } from './formulaParser';
  * Procesa las funciones SI() en una expresión y las convierte a operadores ternarios
  */
 export function procesarFuncionSI(expresion: string): string {
-  // Patrón para detectar SI(condicion;valorVerdadero;valorFalso) - sin backtracking
-  const patron = /SI\s*\(\s*([^;]{1,50}+);\s*([^;]{1,50}+);\s*([^)]{1,50}+)\s*\)/;
+  // Implementación sin regex vulnerable - buscar y reemplazar manualmente
+  const siIndex = expresion.indexOf('SI(');
+  if (siIndex === -1) return expresion;
 
-  // Reemplazar cada ocurrencia por el equivalente ternario
-  return expresion.replace(patron, '($1 ? $2 : $3)');
+  const start = siIndex + 3;
+  let level = 0;
+  let end = start;
+
+  // Encontrar el cierre del paréntesis balanceado
+  for (let i = start; i < expresion.length; i++) {
+    if (expresion[i] === '(') level++;
+    else if (expresion[i] === ')') {
+      if (level === 0) {
+        end = i;
+        break;
+      }
+      level--;
+    }
+  }
+
+  const contenido = expresion.substring(start, end);
+  const partes = contenido.split(';');
+
+  if (partes.length === 3) {
+    const reemplazo = `(${partes[0].trim()} ? ${partes[1].trim()} : ${partes[2].trim()})`;
+    return expresion.substring(0, siIndex) + reemplazo + expresion.substring(end + 1);
+  }
+
+  return expresion;
 }
 
 /**
@@ -31,14 +55,32 @@ export function procesarFuncionREDONDEAR(expresion: string): string {
  * Procesa la función PROMEDIO para calcular el promedio
  */
 export function procesarFuncionPROMEDIO(expresion: string): string {
-  // PROMEDIO(valor1;valor2;...;valorN) - sin backtracking
-  const patron = /PROMEDIO\s*\(\s*([^)]{1,200}+)\s*\)/;
+  // Implementación sin regex vulnerable - buscar y reemplazar manualmente
+  const promedioIndex = expresion.indexOf('PROMEDIO(');
+  if (promedioIndex === -1) return expresion;
 
-  return expresion.replace(patron, (match, valores) => {
-    const valoresArray = valores.split(';').map((v: string) => v.trim());
-    const suma = valoresArray.join(' + ');
-    return `((${suma}) / ${valoresArray.length})`;
-  });
+  const start = promedioIndex + 9;
+  let level = 0;
+  let end = start;
+
+  // Encontrar el cierre del paréntesis balanceado
+  for (let i = start; i < expresion.length; i++) {
+    if (expresion[i] === '(') level++;
+    else if (expresion[i] === ')') {
+      if (level === 0) {
+        end = i;
+        break;
+      }
+      level--;
+    }
+  }
+
+  const contenido = expresion.substring(start, end);
+  const valoresArray = contenido.split(';').map((v: string) => v.trim());
+  const suma = valoresArray.join(' + ');
+  const reemplazo = `((${suma}) / ${valoresArray.length})`;
+
+  return expresion.substring(0, promedioIndex) + reemplazo + expresion.substring(end + 1);
 }
 
 /**

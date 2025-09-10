@@ -74,8 +74,8 @@ function calcularTarifaConContexto(contexto: FormulaContext, formula: string): T
       formula,
       contexto: Object.keys(contexto).reduce(
         (acc, key) => {
-          acc[key] =
-            typeof contexto[key] === 'object' ? JSON.stringify(contexto[key]) : contexto[key];
+          const value = contexto[key];
+          acc[key] = typeof value === 'object' ? JSON.stringify(value) : (value ?? 0);
           return acc;
         },
         {} as Record<string, FormulaValueType>
