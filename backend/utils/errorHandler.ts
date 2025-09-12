@@ -15,6 +15,7 @@ interface ExtendedError extends Error {
 /**
  * Tipo para una función de controlador
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ControllerFunction = (req: Request, res: Response, next: NextFunction) => Promise<any>;
 
 /**
@@ -22,26 +23,29 @@ type ControllerFunction = (req: Request, res: Response, next: NextFunction) => P
  * @param fn - Función async del controlador
  * @returns Función de middleware con manejo de errores
  */
-const tryCatch = (fn: ControllerFunction) => async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tryCatch =
+  (fn: ControllerFunction) =>
+  async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        await fn(req, res, next);
+      await fn(req, res, next);
     } catch (error) {
-        const err = error as ExtendedError;
-        logger.error('Error capturado:', err);
-        
-        if (err.name === 'ValidationError' && err.errors) {
-            return res.status(400).json({
-                success: false,
-                message: 'Error de validación',
-                errors: Object.values(err.errors).map(e => e.message)
-            });
-        }
+      const err = error as ExtendedError;
+      logger.error('Error capturado:', err);
 
-        return res.status(err.status || 500).json({
-            success: false,
-            message: err.message || 'Error del servidor'
+      if (err.name === 'ValidationError' && err.errors) {
+        return res.status(400).json({
+          success: false,
+          message: 'Error de validación',
+          errors: Object.values(err.errors).map((e) => e.message),
         });
-    }
-};
+      }
 
-export { tryCatch }; 
+      return res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Error del servidor',
+      });
+    }
+  };
+
+export { tryCatch };

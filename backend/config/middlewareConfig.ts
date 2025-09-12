@@ -134,7 +134,6 @@ function configureErrorHandling(app: Application): void {
   app.use(errorHandler);
 
   // Middleware específico para errores de parsing JSON
-  // @ts-expect-error - Error handler para parsing JSON con tipado temporal
   app.use((err: Error & { body?: unknown }, req: Request, res: Response, next: NextFunction) => {
     if (err instanceof SyntaxError && 'body' in err) {
       logger.error(`Error al analizar JSON: ${err.message}`);
