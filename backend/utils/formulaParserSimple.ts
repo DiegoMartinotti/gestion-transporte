@@ -83,7 +83,7 @@ function calcularTarifaConContexto(contexto: FormulaContext, formula: string): T
     });
 
     // Evaluar la fórmula con el contexto completo
-    const total = evaluarFormula(formula, contexto, contexto);
+    const total = evaluarFormula(formula, contexto as Record<string, FormulaValueType>, contexto);
 
     // Determinar componentes
     let tarifaBase = total;

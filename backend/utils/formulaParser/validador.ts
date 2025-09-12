@@ -4,7 +4,7 @@
  */
 
 import { evaluarFormula } from './evaluador';
-import { FormulaContext } from './types';
+import { FormulaContext, FormulaValueType } from './types';
 
 /**
  * Prepara el contexto de validación con variables estándar y funciones conocidas
@@ -105,7 +105,11 @@ export function validarEjecucionFormula(
     HoraDelDia: 12,
   };
 
-  const resultado = evaluarFormula(formula, contextosPrueba, contextosPrueba);
+  const resultado = evaluarFormula(
+    formula,
+    contextosPrueba as Record<string, FormulaValueType>,
+    contextosPrueba
+  );
 
   if (isNaN(resultado) || !isFinite(resultado)) {
     return {

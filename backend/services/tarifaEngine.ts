@@ -223,7 +223,7 @@ export class TarifaEngine {
    * Obtiene estadísticas de la cache
    */
   public obtenerEstadisticasCache(): Record<string, unknown> {
-    return calculoCache.getStats();
+    return calculoCache.getStats() as unknown as Record<string, unknown>;
   }
 }
 
