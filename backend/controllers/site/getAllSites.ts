@@ -53,7 +53,7 @@ interface ApiResponse {
 const getAllSites = tryCatch(async (req: Request<{}, ApiResponse, {}, GetSitesQuery>, res: Response<ApiResponse>): Promise<void> => {
     const { cliente } = req.query;
     
-    let query: any = {};
+    const query: any = {};
     
     if (cliente) {
         // Buscar por ID del cliente, no por nombre

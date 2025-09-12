@@ -43,7 +43,7 @@ const bulkCreateSites = tryCatch(async (req: express.Request, res: express.Respo
         errores: []
     };
 
-    for (let siteData of sites) {
+    for (const siteData of sites) {
         try {
             // Convertir coordenadas al formato GeoJSON
             const location = siteData.coordenadas ? {

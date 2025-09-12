@@ -29,8 +29,7 @@ async function calcularDistanciaRuta(origen: Coordinates, destino: Coordinates):
 
         if (response.data.routes && response.data.routes.length > 0) {
             // La distancia viene en metros, convertir a kilómetros y redondear a 2 decimales
-            const distanciaKm = Math.round((response.data.routes[0].distance / 1000) * 100) / 100;
-            return distanciaKm;
+            return Math.round((response.data.routes[0].distance / 1000) * 100) / 100;
         }
 
         throw new Error('No se pudo calcular la ruta');

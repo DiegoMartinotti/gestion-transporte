@@ -314,8 +314,8 @@ class VehiculoService extends BaseService<IVehiculo> {
    */
   async createVehiculosBulk(vehiculosData: VehiculoBulkData[], options: TransactionOptions = {}): Promise<BulkResult> {
     const session = options.session;
-    let insertados = 0;
-    let actualizados = 0;
+    const insertados = 0;
+    const actualizados = 0;
     const errores: BulkResult['errores'] = [];
     const operations: any[] = [];
 

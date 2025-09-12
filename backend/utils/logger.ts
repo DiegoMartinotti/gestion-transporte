@@ -105,7 +105,7 @@ process.on('uncaughtException', (err: Error) => {
 });
 
 // Interceptar promesas rechazadas no capturadas
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+process.on('unhandledRejection', (reason: any, _promise: Promise<any>) => {
   critical('Promesa rechazada no capturada:', reason);
 });
 

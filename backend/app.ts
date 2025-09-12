@@ -104,7 +104,7 @@ app.use(errorHandler);
 
 // Middleware global para manejo de errores
 // Este middleware debe colocarse después de todas las rutas y otros middleware
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     // Loguear el error
     logger.error('Error no controlado:', err);
     

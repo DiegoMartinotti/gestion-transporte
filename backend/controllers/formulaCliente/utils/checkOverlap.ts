@@ -47,6 +47,5 @@ export async function checkOverlap(
     query._id = { $ne: excludeId };
   }
 
-  const overlappingFormula = await FormulasPersonalizadasCliente.findOne(query);
-  return overlappingFormula;
+  return await FormulasPersonalizadasCliente.findOne(query);
 }

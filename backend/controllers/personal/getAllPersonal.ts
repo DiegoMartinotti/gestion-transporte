@@ -40,7 +40,7 @@ export const getAllPersonal = async (req: AuthenticatedRequest, res: Response<IP
     try {
         const { empresaId } = req.query;
         
-        let query: any = {};
+        const query: any = {};
         if (empresaId && typeof empresaId === 'string') {
             query.empresa = empresaId;
         }

@@ -330,7 +330,7 @@ class SiteService extends BaseService<ISite> {
                         _id: 0
                     }
                 },
-                { $sort: { provincia: 1 as 1, localidad: 1 as 1 } }
+                { $sort: { provincia: 1 as const, localidad: 1 as const } }
             ];
 
             const resultado = await this.model.aggregate(agregacion);

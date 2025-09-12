@@ -292,8 +292,8 @@ class TramoService extends BaseService<ITramo> {
         tramoData.tarifaHistorica.tipo = tramoData.tarifaHistorica.tipo?.toUpperCase() || 'TRMC';
         
         // Procesar fechas
-        let fechaDesde = new Date(tramoData.tarifaHistorica.vigenciaDesde);
-        let fechaHasta = new Date(tramoData.tarifaHistorica.vigenciaHasta);
+        const fechaDesde = new Date(tramoData.tarifaHistorica.vigenciaDesde);
+        const fechaHasta = new Date(tramoData.tarifaHistorica.vigenciaHasta);
         
         // Validar fechas
         if (isNaN(fechaDesde.getTime()) || isNaN(fechaHasta.getTime())) {

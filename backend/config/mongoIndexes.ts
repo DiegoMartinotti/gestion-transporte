@@ -221,7 +221,6 @@ export async function createIndexes(): Promise<void> {
       
       // Verificar si el índice ya existe
       const existingIndexes = await collection.indexes();
-      const indexName = indexDef.options?.name || Object.keys(indexDef.index).join('_');
       
       const indexExists = existingIndexes.some(idx => {
         const keys = Object.keys(idx.key || {});
@@ -258,11 +257,9 @@ export async function analyzeIndexUsage(collectionName: string): Promise<any> {
   }
   
   const collection = db.collection(collectionName);
-  const stats = await collection.aggregate([
+  return await collection.aggregate([
     { $indexStats: {} }
   ]).toArray();
-  
-  return stats;
 }
 
 /**
@@ -278,7 +275,6 @@ export async function getIndexSizes(): Promise<Record<string, any>> {
   const result: Record<string, any> = {};
   
   for (const indexDef of recommendedIndexes) {
-    const collection = db.collection(indexDef.collection);
     const stats = await db.command({ collStats: indexDef.collection });
     
     if (!result[indexDef.collection]) {
