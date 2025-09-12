@@ -14,13 +14,13 @@ import {
 } from '@mantine/core';
 import { IconMapPin, IconEye, IconRoute, IconCurrentLocation, IconMap } from '@tabler/icons-react';
 import { Site, Cliente } from '../../types';
-import { 
-  getMarkerIcon, 
-  createInfoWindowContent, 
-  getClienteName, 
-  filterSites, 
-  isValidCoordinates, 
-  adjustMapBounds 
+import {
+  getMarkerIcon,
+  createInfoWindowContent,
+  getClienteName,
+  filterSites,
+  isValidCoordinates,
+  adjustMapBounds,
 } from './SiteMapHelpers';
 
 interface SiteMapProps {
@@ -36,7 +36,10 @@ interface SiteMapProps {
 interface GoogleMap {
   setCenter: (position: { lat: number; lng: number }) => void;
   setZoom: (zoom: number) => void;
-  fitBounds: (bounds: GoogleLatLngBounds, padding?: { top: number; right: number; bottom: number; left: number }) => void;
+  fitBounds: (
+    bounds: GoogleLatLngBounds,
+    padding?: { top: number; right: number; bottom: number; left: number }
+  ) => void;
 }
 
 interface GoogleMarker {
@@ -70,11 +73,16 @@ declare global {
   }
 }
 
-
 // Componente para los filtros del mapa
-const SiteMapFilters = ({ 
-  showFilters, clientes, selectedCliente, setSelectedCliente, 
-  showInactiveSites, setShowInactiveSites, filteredSites, handleCenterMap 
+const SiteMapFilters = ({
+  showFilters,
+  clientes,
+  selectedCliente,
+  setSelectedCliente,
+  showInactiveSites,
+  setShowInactiveSites,
+  filteredSites,
+  handleCenterMap,
 }: {
   showFilters: boolean;
   clientes: Cliente[];
@@ -135,8 +143,10 @@ const SiteMapFilters = ({
 };
 
 // Componente para la información del site seleccionado
-const SelectedSiteCard = ({ 
-  selectedSite, clientes, onSiteEdit 
+const SelectedSiteCard = ({
+  selectedSite,
+  clientes,
+  onSiteEdit,
 }: {
   selectedSite: Site | undefined;
   clientes: Cliente[];
@@ -187,21 +197,13 @@ const SelectedSiteCard = ({
           </Tooltip>
           {onSiteEdit && (
             <Tooltip label="Editar site">
-              <ActionIcon
-                variant="light"
-                color="orange"
-                onClick={() => onSiteEdit(selectedSite)}
-              >
+              <ActionIcon variant="light" color="orange" onClick={() => onSiteEdit(selectedSite)}>
                 <IconMapPin size={16} />
               </ActionIcon>
             </Tooltip>
           )}
           <Tooltip label="Ver en Google Maps">
-            <ActionIcon
-              variant="light"
-              color="green"
-              onClick={handleOpenInMaps}
-            >
+            <ActionIcon variant="light" color="green" onClick={handleOpenInMaps}>
               <IconRoute size={16} />
             </ActionIcon>
           </Tooltip>
@@ -258,23 +260,51 @@ const useSiteMapLogic = (props: SiteMapProps) => {
   };
 
   return {
-    mapRef, map, setMap, markers, setMarkers, infoWindow, setInfoWindow,
-    mapLoaded, filteredSites, selectedCliente, setSelectedCliente,
-    showInactiveSites, setShowInactiveSites, handleCenterMap
+    mapRef,
+    map,
+    setMap,
+    markers,
+    setMarkers,
+    infoWindow,
+    setInfoWindow,
+    mapLoaded,
+    filteredSites,
+    selectedCliente,
+    setSelectedCliente,
+    showInactiveSites,
+    setShowInactiveSites,
+    handleCenterMap,
   };
 };
 
 // Hook para manejo de efectos del mapa
 const useSiteMapEffects = (props: {
-  mapLoaded: boolean; mapRef: React.RefObject<HTMLDivElement>; map: GoogleMap | null;
-  setMap: (map: GoogleMap) => void; setInfoWindow: (infoWindow: GoogleInfoWindow) => void;
-  filteredSites: Site[]; markers: GoogleMarker[]; infoWindow: GoogleInfoWindow | null;
-  onSiteSelect: ((site: Site) => void) | undefined; clientes: Cliente[];
-  setMarkers: (markers: GoogleMarker[]) => void; selectedSite: Site | undefined;
+  mapLoaded: boolean;
+  mapRef: React.RefObject<HTMLDivElement | null>;
+  map: GoogleMap | null;
+  setMap: (map: GoogleMap) => void;
+  setInfoWindow: (infoWindow: GoogleInfoWindow) => void;
+  filteredSites: Site[];
+  markers: GoogleMarker[];
+  infoWindow: GoogleInfoWindow | null;
+  onSiteSelect: ((site: Site) => void) | undefined;
+  clientes: Cliente[];
+  setMarkers: (markers: GoogleMarker[]) => void;
+  selectedSite: Site | undefined;
 }) => {
-  const { 
-    mapLoaded, mapRef, map, setMap, setInfoWindow, filteredSites, markers,
-    infoWindow, onSiteSelect, clientes, setMarkers, selectedSite
+  const {
+    mapLoaded,
+    mapRef,
+    map,
+    setMap,
+    setInfoWindow,
+    filteredSites,
+    markers,
+    infoWindow,
+    onSiteSelect,
+    clientes,
+    setMarkers,
+    selectedSite,
   } = props;
 
   // Inicializar mapa
@@ -310,7 +340,7 @@ const useSiteMapEffects = (props: {
 
     filteredSites.forEach((site) => {
       if (!isValidCoordinates(site) || !site.coordenadas) return;
-      
+
       const position = { lat: site.coordenadas.lat, lng: site.coordenadas.lng };
       const marker = new window.google.maps.Marker({
         position,
@@ -365,16 +395,44 @@ const useSiteMapEffects = (props: {
 };
 
 export default function SiteMap(props: SiteMapProps) {
-  const { selectedSite, onSiteSelect, onSiteEdit, height = 500, showFilters = true, clientes = [] } = props;
   const {
-    mapRef, map, setMap, markers, setMarkers, infoWindow, setInfoWindow,
-    mapLoaded, filteredSites, selectedCliente, setSelectedCliente,
-    showInactiveSites, setShowInactiveSites, handleCenterMap
+    selectedSite,
+    onSiteSelect,
+    onSiteEdit,
+    height = 500,
+    showFilters = true,
+    clientes = [],
+  } = props;
+  const {
+    mapRef,
+    map,
+    setMap,
+    markers,
+    setMarkers,
+    infoWindow,
+    setInfoWindow,
+    mapLoaded,
+    filteredSites,
+    selectedCliente,
+    setSelectedCliente,
+    showInactiveSites,
+    setShowInactiveSites,
+    handleCenterMap,
   } = useSiteMapLogic(props);
 
   useSiteMapEffects({
-    mapLoaded, mapRef, map, setMap, setInfoWindow, filteredSites, markers,
-    infoWindow, onSiteSelect, clientes, setMarkers, selectedSite
+    mapLoaded,
+    mapRef,
+    map,
+    setMap,
+    setInfoWindow,
+    filteredSites,
+    markers,
+    infoWindow,
+    onSiteSelect,
+    clientes,
+    setMarkers,
+    selectedSite,
   });
 
   if (!mapLoaded) {
@@ -412,11 +470,7 @@ export default function SiteMap(props: SiteMapProps) {
         />
       </Paper>
 
-      <SelectedSiteCard
-        selectedSite={selectedSite}
-        clientes={clientes}
-        onSiteEdit={onSiteEdit}
-      />
+      <SelectedSiteCard selectedSite={selectedSite} clientes={clientes} onSiteEdit={onSiteEdit} />
     </Stack>
   );
 }

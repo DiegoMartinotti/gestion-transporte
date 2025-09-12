@@ -1,6 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { Box, Paper, Stack, Text, Loader, Alert, Group, ActionIcon, Tooltip } from '@mantine/core';
-import { IconMap, IconCurrentLocation, IconRefresh, IconMaximize, IconMinimize } from '@tabler/icons-react';
+import {
+  IconMap,
+  IconCurrentLocation,
+  IconRefresh,
+  IconMaximize,
+  IconMinimize,
+} from '@tabler/icons-react';
 import { useGoogleMapsLoader, useMapLogic } from './MapViewHelpers';
 
 export interface MapMarker {
@@ -32,7 +38,12 @@ interface MapViewProps {
   onMarkerDragEnd?: (markerId: string, position: { lat: number; lng: number }) => void;
 }
 
-const LoadingView = ({ height, width, className, style }: {
+const LoadingView = ({
+  height,
+  width,
+  className,
+  style,
+}: {
   height: number;
   width: string;
   className?: string;
@@ -46,7 +57,13 @@ const LoadingView = ({ height, width, className, style }: {
   </Paper>
 );
 
-const ErrorView = ({ height, width, className, style, error }: {
+const ErrorView = ({
+  height,
+  width,
+  className,
+  style,
+  error,
+}: {
   height: number;
   width: string;
   className?: string;
@@ -55,12 +72,19 @@ const ErrorView = ({ height, width, className, style, error }: {
 }) => (
   <Paper h={height} w={width} withBorder className={className} style={style}>
     <Stack align="center" justify="center" h="100%" p="md">
-      <Alert color="red" title="Error en el mapa">{error}</Alert>
+      <Alert color="red" title="Error en el mapa">
+        {error}
+      </Alert>
     </Stack>
   </Paper>
 );
 
-const NotLoadedView = ({ height, width, className, style }: {
+const NotLoadedView = ({
+  height,
+  width,
+  className,
+  style,
+}: {
   height: number;
   width: string;
   className?: string;
@@ -75,7 +99,7 @@ const NotLoadedView = ({ height, width, className, style }: {
 );
 
 interface MapViewRenderProps {
-  mapRef: React.RefObject<HTMLDivElement>;
+  mapRef: React.RefObject<HTMLDivElement | null> | React.MutableRefObject<HTMLDivElement | null>;
   isFullscreen: boolean;
   showControls: boolean;
   showCurrentLocation: boolean;
@@ -101,7 +125,7 @@ const renderMapView = ({
   height,
   width,
   className,
-  style
+  style,
 }: MapViewRenderProps) => {
   const boxStyle = {
     ...style,
@@ -109,8 +133,8 @@ const renderMapView = ({
       position: 'fixed' as const,
       top: 0,
       left: 0,
-      zIndex: 9999
-    })
+      zIndex: 9999,
+    }),
   };
 
   return (
@@ -131,7 +155,7 @@ const renderMapView = ({
                 </ActionIcon>
               </Tooltip>
             )}
-            
+
             {markers.length > 0 && (
               <Tooltip label="Ajustar a marcadores">
                 <ActionIcon variant="light" color="green" onClick={fitToMarkers}>
@@ -139,8 +163,8 @@ const renderMapView = ({
                 </ActionIcon>
               </Tooltip>
             )}
-            
-            <Tooltip label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}>
+
+            <Tooltip label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}>
               <ActionIcon variant="light" color="gray" onClick={toggleFullscreen}>
                 {isFullscreen ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
               </ActionIcon>
@@ -154,7 +178,7 @@ const renderMapView = ({
         style={{
           width: '100%',
           height: '100%',
-          borderRadius: isFullscreen ? 0 : 8
+          borderRadius: isFullscreen ? 0 : 8,
         }}
       />
     </Box>
@@ -176,21 +200,22 @@ export default function MapView({
   loading = false,
   error,
   className,
-  style
+  style,
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const { mapLoaded, mapError } = useGoogleMapsLoader();
-  const { isFullscreen, initializeMap, getCurrentLocation, fitToMarkers, toggleFullscreen } = useMapLogic({
-    mapLoaded,
-    disabled,
-    markers,
-    center,
-    zoom,
-    mapTypeId,
-    showControls,
-    onMapClick,
-    onMarkerClick
-  });
+  const { isFullscreen, initializeMap, getCurrentLocation, fitToMarkers, toggleFullscreen } =
+    useMapLogic({
+      mapLoaded,
+      disabled,
+      markers,
+      center,
+      zoom,
+      mapTypeId,
+      showControls,
+      onMapClick,
+      onMarkerClick,
+    });
 
   useEffect(() => {
     if (mapRef.current && mapLoaded) {
@@ -203,7 +228,15 @@ export default function MapView({
   }
 
   if (error || mapError) {
-    return <ErrorView height={height} width={width} className={className} style={style} error={error || mapError} />;
+    return (
+      <ErrorView
+        height={height}
+        width={width}
+        className={className}
+        style={style}
+        error={error || mapError}
+      />
+    );
   }
 
   if (!mapLoaded) {
@@ -222,6 +255,6 @@ export default function MapView({
     height,
     width,
     className,
-    style
+    style,
   });
 }

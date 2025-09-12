@@ -109,24 +109,51 @@ export function renderFormFields(form: UseFormReturnType<Record<string, unknown>
   );
 }
 
+function toDateString(v: unknown): string {
+  if (v instanceof Date) return v.toLocaleDateString();
+  if (typeof v === 'string' || typeof v === 'number') {
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+  }
+  return '';
+}
+
+function PreviewBadges({ values }: { values: Record<string, unknown> }) {
+  const tipo = String(values.tipo ?? '');
+  const metodoCalculo = String(values.metodoCalculo ?? '');
+  const valor = String(values.valor ?? '');
+  const valorPeaje = Number(values.valorPeaje ?? 0);
+  const showPeaje = valorPeaje > 0;
+
+  return (
+    <Group gap="xs">
+      <Badge color={tipo === 'TRMC' ? 'blue' : 'green'}>{tipo}</Badge>
+      <Badge color="gray">{metodoCalculo}</Badge>
+      <Text size="sm">Valor: ${valor}</Text>
+      {showPeaje ? <Text size="sm">Peaje: ${String(values.valorPeaje ?? '')}</Text> : null}
+    </Group>
+  );
+}
+
+function PreviewDates({ values }: { values: Record<string, unknown> }) {
+  const desde = toDateString(values.vigenciaDesde);
+  const hasta = toDateString(values.vigenciaHasta);
+  if (!desde || !hasta) return null;
+  return (
+    <Text size="xs" c="dimmed" mt="xs">
+      Vigente desde {desde} hasta {hasta}
+    </Text>
+  );
+}
+
 export function renderPreview(values: Record<string, unknown>) {
   return (
     <Paper p="md" withBorder bg="gray.0">
       <Text size="sm" fw={500} mb="xs">
         Vista Previa:
       </Text>
-      <Group gap="xs">
-        <Badge color={values.tipo === 'TRMC' ? 'blue' : 'green'}>{values.tipo}</Badge>
-        <Badge color="gray">{values.metodoCalculo}</Badge>
-        <Text size="sm">Valor: ${values.valor}</Text>
-        {values.valorPeaje > 0 && <Text size="sm">Peaje: ${values.valorPeaje}</Text>}
-      </Group>
-      {values.vigenciaDesde && values.vigenciaHasta && (
-        <Text size="xs" c="dimmed" mt="xs">
-          Vigente desde {values.vigenciaDesde.toLocaleDateString()} hasta{' '}
-          {values.vigenciaHasta.toLocaleDateString()}
-        </Text>
-      )}
+      <PreviewBadges values={values} />
+      <PreviewDates values={values} />
     </Paper>
   );
 }
