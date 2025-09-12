@@ -11,10 +11,10 @@ import swaggerUi from 'swagger-ui-express';
  * Configura todas las rutas para la aplicación Express
  * @param app - Instancia de la aplicación Express
  */
-function configureRoutes(app: Application): void {
+async function configureRoutes(app: Application): Promise<void> {
   configureTestRoute(app);
-  configureApiRoutes(app);
-  configureSwaggerDocs(app);
+  await configureApiRoutes(app);
+  await configureSwaggerDocs(app);
 }
 
 /**
@@ -25,11 +25,11 @@ function configureTestRoute(app: Application): void {
   // Test endpoint para verificar que la API está funcionando
   app.get('/api/test', (req: Request, res: Response) => {
     logger.debug('Endpoint de prueba accedido');
-    res.json({ 
+    res.json({
       success: true,
       message: 'API funcionando correctamente',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
     });
   });
 }
@@ -38,22 +38,25 @@ function configureTestRoute(app: Application): void {
  * Configura las rutas principales de la API
  * @param app - Instancia de la aplicación Express
  */
-function configureApiRoutes(app: Application): void {
+async function configureApiRoutes(app: Application): Promise<void> {
   try {
     // Importar routers
-    // Nota: Usamos require en lugar de import porque estamos en una migración gradual
-    // y estos módulos aún podrían estar en JavaScript
-    const authRouter = require('../routes/auth').default || require('../routes/auth');
-    const apiRoutes = require('../routes/index').default || require('../routes/index');
-    const proxyRouter = require('../routes/proxy').default || require('../routes/proxy');
-    
+    // Importar routers usando dynamic imports para compatibilidad
+    const authModule = await import('../routes/auth');
+    const apiModule = await import('../routes/index');
+    const proxyModule = await import('../routes/proxy');
+
+    const authRouter = authModule.default || authModule;
+    const apiRoutes = apiModule.default || apiModule;
+    const proxyRouter = proxyModule.default || proxyModule;
+
     // Rutas públicas que no requieren autenticación
     app.use('/api/auth', authRouter);
     app.use('/api/proxy', proxyRouter);
-    
+
     // Rutas protegidas (el middleware de auth se aplica en index.js)
     app.use('/api', apiRoutes);
-    
+
     logger.info('Rutas de API configuradas correctamente');
   } catch (error) {
     logger.error('Error al configurar rutas de API:', error);
@@ -65,16 +68,21 @@ function configureApiRoutes(app: Application): void {
  * Configura la documentación Swagger de la API
  * @param app - Instancia de la aplicación Express
  */
-function configureSwaggerDocs(app: Application): void {
+async function configureSwaggerDocs(app: Application): Promise<void> {
   try {
-    const swaggerSpecs = require('../swaggerConfig');
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
-      explorer: true,
-      customCss: '.swagger-ui .topbar { display: none }',
-      customfavIcon: '',
-      customSiteTitle: 'API Documentation'
-    }));
-    
+    const swaggerModule = await import('../swaggerConfig');
+    const swaggerSpecs = swaggerModule.default || swaggerModule;
+    app.use(
+      '/api-docs',
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerSpecs, {
+        explorer: true,
+        customCss: '.swagger-ui .topbar { display: none }',
+        customfavIcon: '',
+        customSiteTitle: 'API Documentation',
+      })
+    );
+
     logger.info('Documentación Swagger configurada en /api-docs');
   } catch (error) {
     logger.warn('Error al configurar documentación Swagger:', error);
@@ -95,11 +103,8 @@ function getMainRoutes(): string[] {
     'GET /api-docs - Documentación Swagger',
     'GET /api/clientes - Obtener clientes',
     'GET /api/tramo - Gestionar tramos',
-    'GET /api/site - Gestionar sitios'
+    'GET /api/site - Gestionar sitios',
   ];
 }
 
-export {
-  configureRoutes,
-  getMainRoutes
-}; 
+export { configureRoutes, getMainRoutes };
