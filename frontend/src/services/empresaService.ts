@@ -16,13 +16,16 @@ function buildQueryParams(filters: EmpresaFilters): URLSearchParams {
   return params;
 }
 
-function extractEmpresasFromResponse(response: unknown): Empresa[] {
-  if (Array.isArray(response)) {
-    return response;
-  } else if (response.data && Array.isArray(response.data)) {
-    return response.data;
-  } else if (response && response.data && Array.isArray(response.data.data)) {
-    return response.data.data;
+function extractEmpresasFromResponse(response: any): Empresa[] {
+  const responseData = response.data;
+  if (Array.isArray(responseData)) {
+    return responseData;
+  } else if (responseData && 'data' in responseData) {
+    if (Array.isArray(responseData.data)) {
+      return responseData.data;
+    } else if (responseData.data && Array.isArray(responseData.data.data)) {
+      return responseData.data.data;
+    }
   }
   return [];
 }
@@ -109,7 +112,6 @@ export const empresaService = {
   async processExcelFile(file: File, options: unknown): Promise<unknown> {
     return await processExcelFile(file, {
       ...(options as Record<string, unknown>),
-      endpoint: '/empresas/import',
       entityType: 'empresa',
     });
   },

@@ -24,7 +24,7 @@ export default function SiteForm({ site, onSubmit, onCancel, loading = false }: 
   const [geocoding, setGeocoding] = useState(false);
 
   const form = useForm<CreateSiteData>({
-    initialValues: getInitialValues(site),
+    initialValues: getInitialValues(site || null),
     validate: siteValidationRules,
   });
 

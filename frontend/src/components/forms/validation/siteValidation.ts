@@ -1,4 +1,5 @@
 import { CreateSiteData } from '../../../services/siteService';
+import { Site } from '../../../types';
 
 export const siteValidationRules = {
   nombre: (value: string) => (!value ? 'El nombre es requerido' : null),
@@ -14,20 +15,38 @@ export const siteValidationRules = {
 };
 
 export const getInitialValues = (
-  site: CreateSiteData | { cliente: { _id: string } } | null
-): CreateSiteData => ({
-  nombre: site?.nombre || '',
-  direccion: site?.direccion || '',
-  ciudad: site?.localidad || '',
-  provincia: site?.provincia || '',
-  codigoPostal: '',
-  pais: 'Argentina',
-  cliente: typeof site?.cliente === 'string' ? site.cliente : site?.cliente?._id || '',
-  coordenadas: site?.coordenadas || { lat: 0, lng: 0 },
-  contacto: '',
-  telefono: '',
-  activo: true,
-});
+  site: Site | CreateSiteData | { cliente: { _id: string } } | null | undefined
+): CreateSiteData => {
+  if (!site) {
+    return {
+      nombre: '',
+      direccion: '',
+      ciudad: '',
+      provincia: '',
+      codigoPostal: '',
+      pais: 'Argentina',
+      cliente: '',
+      coordenadas: { lat: 0, lng: 0 },
+      contacto: '',
+      telefono: '',
+      activo: true,
+    };
+  }
+
+  return {
+    nombre: 'nombre' in site ? site.nombre : '',
+    direccion: 'direccion' in site ? site.direccion : '',
+    ciudad: 'localidad' in site ? site.localidad : 'ciudad' in site ? site.ciudad : '',
+    provincia: 'provincia' in site ? site.provincia : '',
+    codigoPostal: '',
+    pais: 'Argentina',
+    cliente: typeof site.cliente === 'string' ? site.cliente : site.cliente?._id || '',
+    coordenadas: 'coordenadas' in site ? site.coordenadas : { lat: 0, lng: 0 },
+    contacto: '',
+    telefono: '',
+    activo: true,
+  };
+};
 
 export const hasValidCoordinates = (coordenadas?: { lat: number; lng: number }) => {
   return coordenadas?.lat !== 0 && coordenadas?.lng !== 0;

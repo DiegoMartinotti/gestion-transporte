@@ -1,6 +1,7 @@
 import React from 'react';
 import { Grid, TextInput, Select, Textarea } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
+import { UseFormReturnType } from '@mantine/form';
 import DynamicListField from './DynamicListField';
 import { PersonalFormType } from './PersonalFormTypes';
 
@@ -15,7 +16,16 @@ const tiposIncidente = [
 export const EmploymentPeriodsSection: React.FC<{ form: PersonalFormType }> = ({ form }) => (
   <DynamicListField
     title="Períodos de Empleo"
-    form={form}
+    form={
+      form as unknown as UseFormReturnType<{
+        [key: string]: {
+          fechaIngreso: Date;
+          fechaEgreso: Date | null;
+          categoria: string;
+          motivo: string;
+        }[];
+      }>
+    }
     path="periodosEmpleo"
     initialItem={{
       fechaIngreso: new Date(),
@@ -64,7 +74,17 @@ export const EmploymentPeriodsSection: React.FC<{ form: PersonalFormType }> = ({
 export const TrainingSection: React.FC<{ form: PersonalFormType }> = ({ form }) => (
   <DynamicListField
     title="Capacitaciones"
-    form={form}
+    form={
+      form as unknown as UseFormReturnType<{
+        [key: string]: {
+          nombre: string;
+          fecha: Date | null;
+          vencimiento: Date | null;
+          institucion: string;
+          certificado: string;
+        }[];
+      }>
+    }
     path="capacitaciones"
     initialItem={{
       nombre: '',
@@ -119,7 +139,11 @@ export const TrainingSection: React.FC<{ form: PersonalFormType }> = ({ form }) 
 export const IncidentsSection: React.FC<{ form: PersonalFormType }> = ({ form }) => (
   <DynamicListField
     title="Incidentes"
-    form={form}
+    form={
+      form as unknown as UseFormReturnType<{
+        [key: string]: { fecha: Date; tipo: string; descripcion: string; consecuencias: string }[];
+      }>
+    }
     path="incidentes"
     initialItem={{
       fecha: new Date(),
