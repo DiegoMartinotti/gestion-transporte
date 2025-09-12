@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import Site, { ISite } from '../../models/Site';
+import Site from '../../models/Site';
 import { tryCatch } from '../../utils/errorHandler';
-import { ValidationError } from '../../utils/errors';
 import logger from '../../utils/logger';
 
 /**
