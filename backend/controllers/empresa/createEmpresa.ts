@@ -20,7 +20,7 @@ interface ApiResponse<T = unknown> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isValidationError = (
   error: unknown
-): error is { name: string; errors: Record<string, any> } => {
+): error is { name: string; errors: Record<string, unknown> } => {
   return !!(
     error &&
     typeof error === 'object' &&
@@ -54,7 +54,9 @@ export const createEmpresa = async (
 
     if (isValidationError(error)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const errores = Object.values(error.errors).map((err: any) => err.message);
+      const errores = Object.values(error.errors).map(
+        (err: any) => (err as { message: string }).message
+      );
       res.status(400).json({ message: 'Error de validación', errores });
       return;
     }
