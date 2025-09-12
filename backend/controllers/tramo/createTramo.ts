@@ -11,31 +11,31 @@ import logger from '../../utils/logger';
  * Interface for authenticated user in request
  */
 interface AuthenticatedUser {
-    id: string;
-    email: string;
-    roles?: string[];
+  id: string;
+  email: string;
+  roles?: string[];
 }
 
 /**
  * Interface for authenticated request
  */
 interface AuthenticatedRequest extends Request {
-    user?: AuthenticatedUser;
+  user?: AuthenticatedUser;
 }
 
 /**
  * Interface for API responses
  */
-interface ApiResponse<T = any> {
-    success: boolean;
-    data?: T;
-    message?: string;
-    error?: string;
+interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
 /**
  * Crea un nuevo tramo
- * 
+ *
  * @async
  * @function createTramo
  * @param {Object} req - Objeto de solicitud Express
@@ -44,26 +44,30 @@ interface ApiResponse<T = any> {
  * @returns {Promise<Object>} Tramo creado
  * @throws {Error} Error 400 si hay error de validación, 500 si hay error del servidor
  */
-async function createTramo(req: AuthenticatedRequest, res: Response<ApiResponse<ITramo>>): Promise<void> {
-    try {
-        const tramoData = req.body;
-        const nuevoTramo = new Tramo(tramoData);
-        const tramoGuardado = await nuevoTramo.save();
-        
-        await tramoGuardado.populate('origen', 'Site');
-        await tramoGuardado.populate('destino', 'Site');
-        
-        res.status(201).json({
-            success: true,
-            data: tramoGuardado
-        });
-    } catch (error: any) {
-        logger.error('Error al crear tramo:', error);
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
-    }
+async function createTramo(
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse<ITramo>>
+): Promise<void> {
+  try {
+    const tramoData = req.body;
+    const nuevoTramo = new Tramo(tramoData);
+    const tramoGuardado = await nuevoTramo.save();
+
+    await tramoGuardado.populate('origen', 'Site');
+    await tramoGuardado.populate('destino', 'Site');
+
+    res.status(201).json({
+      success: true,
+      data: tramoGuardado,
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    logger.error('Error al crear tramo:', error);
+    res.status(400).json({
+      success: false,
+      message: errorMessage,
+    });
+  }
 }
 
 export default createTramo;
