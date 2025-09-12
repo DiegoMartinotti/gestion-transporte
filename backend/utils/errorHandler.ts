@@ -26,6 +26,7 @@ type ControllerFunction = (req: Request, res: Response, next: NextFunction) => P
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tryCatch =
   (fn: ControllerFunction) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
       await fn(req, res, next);
