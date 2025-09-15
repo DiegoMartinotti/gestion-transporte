@@ -73,6 +73,7 @@ const router = express.Router();
  *       401:
  *         description: No autorizado
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.get('/', authenticateToken, getAllTarifaMetodosValidators, getAllTarifaMetodos as any);
 
 /**
@@ -89,6 +90,7 @@ router.get('/', authenticateToken, getAllTarifaMetodosValidators, getAllTarifaMe
  *       401:
  *         description: No autorizado
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.get('/activos', authenticateToken, getMetodosActivos as any);
 
 /**
@@ -116,6 +118,7 @@ router.get('/activos', authenticateToken, getMetodosActivos as any);
  *       401:
  *         description: No autorizado
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.get('/:id', authenticateToken, getTarifaMetodoByIdValidators, getTarifaMetodoById as any);
 
 /**
@@ -191,6 +194,7 @@ router.get('/:id', authenticateToken, getTarifaMetodoByIdValidators, getTarifaMe
  *       401:
  *         description: No autorizado
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.post('/', authenticateToken, createTarifaMetodoValidators, createTarifaMetodo as any);
 
 /**
@@ -250,6 +254,7 @@ router.post('/', authenticateToken, createTarifaMetodoValidators, createTarifaMe
  *       401:
  *         description: No autorizado
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.put('/:id', authenticateToken, updateTarifaMetodoValidators, updateTarifaMetodo as any);
 
 /**
@@ -279,6 +284,7 @@ router.put('/:id', authenticateToken, updateTarifaMetodoValidators, updateTarifa
  *       401:
  *         description: No autorizado
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.delete('/:id', authenticateToken, deleteTarifaMetodoValidators, deleteTarifaMetodo as any);
 
 export default router;

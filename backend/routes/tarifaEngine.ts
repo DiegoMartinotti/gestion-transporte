@@ -174,6 +174,7 @@ const router = express.Router();
  *       500:
  *         description: Error interno del servidor
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.post('/calculate', authenticateToken, calculateTarifaValidators, calculateTarifa as any);
 
 /**
@@ -309,6 +310,7 @@ router.post('/calculate', authenticateToken, calculateTarifaValidators, calculat
  *       500:
  *         description: Error interno del servidor
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.post('/simulate', authenticateToken, simulateTarifaValidators, simulateTarifa as any);
 
 /**
@@ -422,6 +424,7 @@ router.post('/simulate', authenticateToken, simulateTarifaValidators, simulateTa
  *       500:
  *         description: Error interno del servidor
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.get('/audit', authenticateToken, getAuditoriaValidators, getAuditoria as any);
 
 /**
@@ -467,6 +470,7 @@ router.get('/audit', authenticateToken, getAuditoriaValidators, getAuditoria as 
  *       500:
  *         description: Error interno del servidor
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 router.post('/clear-cache', authenticateToken, clearCache as any);
 
 export default router;
