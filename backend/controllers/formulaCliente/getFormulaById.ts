@@ -22,6 +22,76 @@ export const getFormulaByIdValidators = [
  * Obtiene una fórmula personalizada por su ID
  * Incluye información extendida del método de cálculo y validación
  */
+/**
+ * Enriquece la fórmula con información adicional
+ */
+async function enriquecerFormula(
+  formula: {
+    _id: unknown;
+    metodoCalculo: string;
+    estadisticas: { vecesUtilizada: number; montoTotalCalculado: number; ultimoUso?: Date };
+    historialCambios: Array<{ fecha: Date }>;
+    validacionFormula?: { esValida?: boolean; ultimaValidacion?: Date };
+    vigenciaDesde: Date;
+    vigenciaHasta?: Date;
+    activa: boolean;
+    nombre?: string;
+    descripcion?: string;
+  },
+  metodoInfo: {
+    nombre?: string;
+    descripcion?: string;
+    requiereDistancia?: boolean;
+    requierePalets?: boolean;
+    obtenerVariablesDisponibles?: () => Array<{ nombre: string }>;
+  } | null
+) {
+  const fechaActual = new Date();
+  return {
+    esVigente: esFormulaVigente(formula, fechaActual),
+    diasRestantesVigencia: calcularDiasRestantes(formula, fechaActual),
+    diasTranscurridos: calcularDiasTranscurridos(formula, fechaActual),
+    metodoCalculo: {
+      codigo: formula.metodoCalculo,
+      existe: !!metodoInfo,
+      nombre: metodoInfo?.nombre || 'Método legacy',
+      descripcion: metodoInfo?.descripcion || 'Método no encontrado o inactivo',
+      requiereDistancia: metodoInfo?.requiereDistancia || false,
+      requierePalets: metodoInfo?.requierePalets || false,
+      variablesDisponibles: metodoInfo?.obtenerVariablesDisponibles() || [],
+    },
+    estadisticas: {
+      ...formula.estadisticas,
+      promedioMontoCalculado:
+        formula.estadisticas.vecesUtilizada > 0
+          ? Math.round(
+              (formula.estadisticas.montoTotalCalculado / formula.estadisticas.vecesUtilizada) * 100
+            ) / 100
+          : 0,
+      frecuenciaUso: calcularFrecuenciaUso(formula),
+      eficienciaFormula: calcularEficienciaFormula(formula),
+    },
+    validacion: {
+      ...formula.validacionFormula,
+      necesitaRevalidacion: necesitaRevalidacion(formula),
+      compatibilidadMetodo: validarCompatibilidadMetodo(formula, metodoInfo),
+      conflictos: await verificarConflictos(formula),
+    },
+    historial: {
+      totalCambios: formula.historialCambios.length,
+      ultimoCambio:
+        formula.historialCambios.length > 0
+          ? formula.historialCambios[formula.historialCambios.length - 1]
+          : null,
+      cambiosRecientes: formula.historialCambios.filter((cambio: { fecha: Date }) => {
+        const hace30Dias = new Date();
+        hace30Dias.setDate(hace30Dias.getDate() - 30);
+        return cambio.fecha >= hace30Dias;
+      }).length,
+    },
+  };
+}
+
 export const getFormulaById = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar parámetros
@@ -47,51 +117,7 @@ export const getFormulaById = async (req: Request, res: Response): Promise<void>
     const metodoInfo = await TarifaMetodo.findByCodigoActivo(formula.metodoCalculo);
 
     // Enriquecer con información adicional
-    const fechaActual = new Date();
-    const informacionAdicional = {
-      esVigente: esFormulaVigente(formula, fechaActual),
-      diasRestantesVigencia: calcularDiasRestantes(formula, fechaActual),
-      diasTranscurridos: calcularDiasTranscurridos(formula, fechaActual),
-      metodoCalculo: {
-        codigo: formula.metodoCalculo,
-        existe: !!metodoInfo,
-        nombre: metodoInfo?.nombre || 'Método legacy',
-        descripcion: metodoInfo?.descripcion || 'Método no encontrado o inactivo',
-        requiereDistancia: metodoInfo?.requiereDistancia || false,
-        requierePalets: metodoInfo?.requierePalets || false,
-        variablesDisponibles: metodoInfo?.obtenerVariablesDisponibles() || [],
-      },
-      estadisticas: {
-        ...formula.estadisticas,
-        promedioMontoCalculado:
-          formula.estadisticas.vecesUtilizada > 0
-            ? Math.round(
-                (formula.estadisticas.montoTotalCalculado / formula.estadisticas.vecesUtilizada) *
-                  100
-              ) / 100
-            : 0,
-        frecuenciaUso: calcularFrecuenciaUso(formula),
-        eficienciaFormula: calcularEficienciaFormula(formula),
-      },
-      validacion: {
-        ...formula.validacionFormula,
-        necesitaRevalidacion: necesitaRevalidacion(formula),
-        compatibilidadMetodo: validarCompatibilidadMetodo(formula, metodoInfo),
-      },
-      conflictos: await verificarConflictos(formula),
-      historial: {
-        totalCambios: formula.historialCambios.length,
-        ultimoCambio:
-          formula.historialCambios.length > 0
-            ? formula.historialCambios[formula.historialCambios.length - 1]
-            : null,
-        cambiosRecientes: formula.historialCambios.filter((cambio) => {
-          const hace30Dias = new Date();
-          hace30Dias.setDate(hace30Dias.getDate() - 30);
-          return cambio.fecha >= hace30Dias;
-        }).length,
-      },
-    };
+    const informacionAdicional = await enriquecerFormula(formula, metodoInfo);
 
     const respuesta = {
       ...formula,
@@ -102,11 +128,11 @@ export const getFormulaById = async (req: Request, res: Response): Promise<void>
       formulaId: formula._id,
       cliente: formula.clienteId,
       metodo: formula.metodoCalculo,
-      usuario: (req as any).user?.email,
+      usuario: (req as { user?: { email?: string } }).user?.email,
     });
 
     ApiResponse.success(res, respuesta, 'Fórmula obtenida exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[FormulasCliente] Error al obtener fórmula:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
@@ -115,20 +141,21 @@ export const getFormulaById = async (req: Request, res: Response): Promise<void>
 /**
  * Verifica si una fórmula está vigente
  */
-function esFormulaVigente(formula: any, fecha: Date): boolean {
+function esFormulaVigente(
+  formula: { activa: boolean; vigenciaDesde: Date; vigenciaHasta?: Date },
+  fecha: Date
+): boolean {
   if (!formula.activa) return false;
 
   if (formula.vigenciaDesde > fecha) return false;
 
-  if (formula.vigenciaHasta && formula.vigenciaHasta < fecha) return false;
-
-  return true;
+  return !formula.vigenciaHasta || formula.vigenciaHasta >= fecha;
 }
 
 /**
  * Calcula días restantes de vigencia
  */
-function calcularDiasRestantes(formula: any, fecha: Date): number | null {
+function calcularDiasRestantes(formula: { vigenciaHasta?: Date }, fecha: Date): number | null {
   if (!formula.vigenciaHasta) return null;
 
   const fechaFin = new Date(formula.vigenciaHasta);
@@ -141,7 +168,7 @@ function calcularDiasRestantes(formula: any, fecha: Date): number | null {
 /**
  * Calcula días transcurridos desde la vigencia
  */
-function calcularDiasTranscurridos(formula: any, fecha: Date): number {
+function calcularDiasTranscurridos(formula: { vigenciaDesde: Date }, fecha: Date): number {
   const fechaInicio = new Date(formula.vigenciaDesde);
   const diferencia = fecha.getTime() - fechaInicio.getTime();
   const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
@@ -152,7 +179,10 @@ function calcularDiasTranscurridos(formula: any, fecha: Date): number {
 /**
  * Calcula la frecuencia de uso
  */
-function calcularFrecuenciaUso(formula: any): string {
+function calcularFrecuenciaUso(formula: {
+  estadisticas: { ultimoUso?: Date; vecesUtilizada: number };
+  vigenciaDesde: Date;
+}): string {
   if (!formula.estadisticas.ultimoUso) return 'Nunca utilizada';
 
   const diasDesdeUltimoUso = Math.floor(
@@ -172,63 +202,107 @@ function calcularFrecuenciaUso(formula: any): string {
 }
 
 /**
- * Calcula la eficiencia de la fórmula
+ * Calcula factores de uso para la puntuación
  */
-function calcularEficienciaFormula(formula: any): {
-  puntuacion: number;
-  categoria: string;
-  factores: string[];
-} {
-  let puntuacion = 50; // Puntuación base
-  const factores: string[] = [];
-
-  // Factor: Uso regular
+function calcularFactorUso(formula: {
+  estadisticas: { vecesUtilizada: number };
+  vigenciaDesde: Date;
+}): { puntuacion: number; factor?: string } {
   const diasVigente = calcularDiasTranscurridos(formula, new Date());
   if (diasVigente > 0) {
     const usosPorDia = formula.estadisticas.vecesUtilizada / diasVigente;
     if (usosPorDia > 0.1) {
-      puntuacion += 20;
-      factores.push('Uso regular');
+      return { puntuacion: 20, factor: 'Uso regular' };
     }
   }
+  return { puntuacion: 0 };
+}
 
-  // Factor: Validación exitosa
+/**
+ * Calcula factores de validación para la puntuación
+ */
+function calcularFactorValidacion(formula: { validacionFormula?: { esValida: boolean } }): {
+  puntuacion: number;
+  factor: string;
+} {
   if (formula.validacionFormula?.esValida) {
-    puntuacion += 15;
-    factores.push('Fórmula válida');
-  } else {
-    puntuacion -= 15;
-    factores.push('Fórmula inválida');
+    return { puntuacion: 15, factor: 'Fórmula válida' };
   }
+  return { puntuacion: -15, factor: 'Fórmula inválida' };
+}
 
-  // Factor: Configuración completa
-  if (formula.nombre && formula.descripcion) {
-    puntuacion += 10;
-    factores.push('Documentación completa');
-  }
-
-  // Factor: Sin cambios recientes (estabilidad)
-  const cambiosRecientes = formula.historialCambios.filter((cambio: any) => {
+/**
+ * Calcula factores de estabilidad para la puntuación
+ */
+function calcularFactorEstabilidad(formula: {
+  estadisticas: { vecesUtilizada: number };
+  historialCambios: Array<{ fecha: Date }>;
+}): { puntuacion: number; factor?: string } {
+  const cambiosRecientes = formula.historialCambios.filter((cambio: { fecha: Date }) => {
     const hace30Dias = new Date();
     hace30Dias.setDate(hace30Dias.getDate() - 30);
     return cambio.fecha >= hace30Dias;
   }).length;
 
   if (cambiosRecientes === 0 && formula.estadisticas.vecesUtilizada > 0) {
-    puntuacion += 10;
-    factores.push('Fórmula estable');
-  } else if (cambiosRecientes > 3) {
-    puntuacion -= 10;
-    factores.push('Cambios frecuentes');
+    return { puntuacion: 10, factor: 'Fórmula estable' };
   }
+  if (cambiosRecientes > 3) {
+    return { puntuacion: -10, factor: 'Cambios frecuentes' };
+  }
+  return { puntuacion: 0 };
+}
+
+/**
+ * Calcula la eficiencia de la fórmula
+ */
+function calcularEficienciaFormula(formula: {
+  estadisticas: { vecesUtilizada: number };
+  validacionFormula?: { esValida: boolean };
+  nombre?: string;
+  descripcion?: string;
+  historialCambios: Array<{ fecha: Date }>;
+}): {
+  puntuacion: number;
+  categoria: string;
+  factores: string[];
+} {
+  let puntuacion = 50;
+  const factores: string[] = [];
+
+  // Aplicar factores
+  const factorUso = calcularFactorUso(
+    formula as { estadisticas: { vecesUtilizada: number }; vigenciaDesde: Date }
+  );
+  puntuacion += factorUso.puntuacion;
+  if (factorUso.factor) factores.push(factorUso.factor);
+
+  const factorValidacion = calcularFactorValidacion(formula);
+  puntuacion += factorValidacion.puntuacion;
+  factores.push(factorValidacion.factor);
+
+  if (formula.nombre && formula.descripcion) {
+    puntuacion += 10;
+    factores.push('Documentación completa');
+  }
+
+  const factorEstabilidad = calcularFactorEstabilidad(formula);
+  puntuacion += factorEstabilidad.puntuacion;
+  if (factorEstabilidad.factor) factores.push(factorEstabilidad.factor);
 
   // Determinar categoría
   let categoria: string;
-  if (puntuacion >= 80) categoria = 'Excelente';
-  else if (puntuacion >= 65) categoria = 'Buena';
-  else if (puntuacion >= 50) categoria = 'Regular';
-  else if (puntuacion >= 35) categoria = 'Necesita mejora';
-  else categoria = 'Problemática';
+  if (puntuacion >= 80) {
+    categoria = 'Excelente';
+  } else if (puntuacion >= 65) {
+    categoria = 'Buena';
+  } else if (puntuacion >= 50) {
+    categoria = 'Regular';
+  } else if (puntuacion >= 35) {
+    categoria = 'Necesita mejora';
+  } else {
+    categoria = 'Problemática';
+  }
 
   return {
     puntuacion: Math.max(0, Math.min(100, puntuacion)),
@@ -240,7 +314,9 @@ function calcularEficienciaFormula(formula: any): {
 /**
  * Verifica si necesita revalidación
  */
-function necesitaRevalidacion(formula: any): boolean {
+function necesitaRevalidacion(formula: {
+  validacionFormula?: { ultimaValidacion: Date };
+}): boolean {
   if (!formula.validacionFormula) return true;
 
   // Si la última validación fue hace más de 30 días
@@ -254,8 +330,8 @@ function necesitaRevalidacion(formula: any): boolean {
  * Valida compatibilidad con el método de cálculo
  */
 function validarCompatibilidadMetodo(
-  formula: any,
-  metodo: any
+  formula: { formula: string },
+  metodo: { obtenerVariablesDisponibles(): Array<{ nombre: string }> } | null
 ): {
   compatible: boolean;
   advertencias: string[];
@@ -268,8 +344,10 @@ function validarCompatibilidadMetodo(
   }
 
   // Verificar variables utilizadas en la fórmula
-  const variablesEnFormula = formula.formula.match(/\b[A-Za-z][A-Za-z0-9_]*\b/g) || [];
-  const variablesDisponibles = metodo.obtenerVariablesDisponibles().map((v: any) => v.nombre);
+  const variablesEnFormula = formula.formula.match(/\b[A-Za-z]\w*\b/g) || [];
+  const variablesDisponibles = metodo
+    .obtenerVariablesDisponibles()
+    .map((v: { nombre: string }) => v.nombre);
 
   const variablesNoEncontradas = variablesEnFormula.filter(
     (variable: string) => !variablesDisponibles.includes(variable)
@@ -288,9 +366,9 @@ function validarCompatibilidadMetodo(
 /**
  * Verifica conflictos con otras fórmulas
  */
-async function verificarConflictos(formula: any): Promise<{
+async function verificarConflictos(formula: { _id: unknown; clienteId: unknown }): Promise<{
   tieneConflictos: boolean;
-  conflictos: any[];
+  conflictos: unknown[];
 }> {
   try {
     // Buscar otras fórmulas del mismo cliente con solapamiento

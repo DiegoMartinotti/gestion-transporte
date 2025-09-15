@@ -16,18 +16,28 @@ function buildQueryParams(filters: EmpresaFilters): URLSearchParams {
   return params;
 }
 
-function extractEmpresasFromResponse(response: any): Empresa[] {
-  const responseData = response.data;
+function extractEmpresasFromResponse(response: unknown): Empresa[] {
+  const responseData = (response as { data?: unknown }).data;
+
   if (Array.isArray(responseData)) {
     return responseData;
-  } else if (responseData && 'data' in responseData) {
-    if (Array.isArray(responseData.data)) {
-      return responseData.data;
-    } else if (responseData.data && Array.isArray(responseData.data.data)) {
-      return responseData.data.data;
-    }
   }
-  return [];
+
+  if (!responseData || typeof responseData !== 'object' || responseData === null) {
+    return [];
+  }
+
+  const nestedData = (responseData as { data?: unknown }).data;
+  if (Array.isArray(nestedData)) {
+    return nestedData;
+  }
+
+  if (!nestedData || typeof nestedData !== 'object' || nestedData === null) {
+    return [];
+  }
+
+  const deepData = (nestedData as { data?: unknown }).data;
+  return Array.isArray(deepData) ? deepData : [];
 }
 
 function buildPaginationResponse(
