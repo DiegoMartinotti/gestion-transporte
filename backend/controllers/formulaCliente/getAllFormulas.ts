@@ -12,7 +12,7 @@ import { Types } from 'mongoose';
 export const getAllFormulasValidators = [
   query('cliente')
     .optional()
-    .custom((value: any) => {
+    .custom((value: string) => {
       if (value && !Types.ObjectId.isValid(value)) {
         throw new Error('ID de cliente no válido');
       }
@@ -53,6 +53,7 @@ export const getAllFormulasValidators = [
  * Obtiene todas las fórmulas personalizadas con filtros avanzados
  * Nuevo endpoint que soporta múltiples métodos de cálculo
  */
+// eslint-disable-next-line max-lines-per-function, complexity, sonarjs/cognitive-complexity
 export const getAllFormulas = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar parámetros de consulta
@@ -76,6 +77,7 @@ export const getAllFormulas = async (req: Request, res: Response): Promise<void>
     } = req.query;
 
     // Construir filtros
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filtros: any = {};
 
     if (cliente) {
@@ -128,7 +130,7 @@ export const getAllFormulas = async (req: Request, res: Response): Promise<void>
     const skip = (paginaNum - 1) * limitNum;
 
     // Configurar proyección
-    let projection: any = {};
+    let projection: Record<string, number> = {};
     if (!incluirHistorial || incluirHistorial === 'false') {
       projection = { historialCambios: 0 }; // Excluir historial por defecto para mejor rendimiento
     }
@@ -210,12 +212,12 @@ export const getAllFormulas = async (req: Request, res: Response): Promise<void>
       `[FormulasCliente] Consulta realizada: ${formulas.length} resultados de ${total} total`,
       {
         filtros,
-        usuario: (req as any).user?.email,
+        usuario: (req as { user?: { email?: string } }).user?.email,
       }
     );
 
     ApiResponse.success(res, resultado, 'Fórmulas obtenidas exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[FormulasCliente] Error al obtener fórmulas:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
@@ -224,20 +226,24 @@ export const getAllFormulas = async (req: Request, res: Response): Promise<void>
 /**
  * Verifica si una fórmula está vigente
  */
-function esFormulaVigente(formula: any, fecha: Date): boolean {
+function esFormulaVigente(
+  formula: { activa: boolean; vigenciaDesde: Date; vigenciaHasta?: Date },
+  fecha: Date
+): boolean {
   if (!formula.activa) return false;
 
   if (formula.vigenciaDesde > fecha) return false;
 
-  if (formula.vigenciaHasta && formula.vigenciaHasta < fecha) return false;
-
-  return true;
+  return !formula.vigenciaHasta || formula.vigenciaHasta >= fecha;
 }
 
 /**
  * Calcula días restantes de vigencia
  */
-function calcularDiasRestantesVigencia(formula: any, fecha: Date): number | null {
+function calcularDiasRestantesVigencia(
+  formula: { vigenciaHasta?: Date },
+  fecha: Date
+): number | null {
   if (!formula.vigenciaHasta) return null;
 
   const fechaFin = new Date(formula.vigenciaHasta);
@@ -250,6 +256,7 @@ function calcularDiasRestantesVigencia(formula: any, fecha: Date): number | null
 /**
  * Calcula estadísticas avanzadas
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function calcularEstadisticas(filtrosBase: any): Promise<any> {
   // Estadísticas generales
   const [totalActivas, totalInactivas, porMetodo, porTipoUnidad, porCliente] = await Promise.all([
@@ -274,6 +281,7 @@ async function calcularEstadisticas(filtrosBase: any): Promise<any> {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function obtenerEstadisticasPorMetodo(filtrosBase: any): Promise<any[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
@@ -298,6 +306,7 @@ async function obtenerEstadisticasPorMetodo(filtrosBase: any): Promise<any[]> {
   ]);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function obtenerEstadisticasPorTipoUnidad(filtrosBase: any): Promise<any[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
@@ -319,6 +328,7 @@ async function obtenerEstadisticasPorTipoUnidad(filtrosBase: any): Promise<any[]
   ]);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function obtenerEstadisticasPorCliente(filtrosBase: any): Promise<any[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },

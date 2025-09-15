@@ -8,6 +8,7 @@ import logger from '../../utils/logger';
 import { checkOverlap } from './utils/checkOverlap';
 import { FormulaUpdateRequest, ApiResponse } from './types';
 
+// eslint-disable-next-line max-lines-per-function, complexity
 export const updateFormula = async (
   req: Request<{ id: string }, IFormulasPersonalizadasCliente | ApiResponse, FormulaUpdateRequest>,
   res: Response<IFormulasPersonalizadasCliente | ApiResponse>
@@ -67,10 +68,13 @@ export const updateFormula = async (
     const formulaActualizada = await formulaExistente.save();
     logger.info(`Fórmula ${id} actualizada.`);
     res.json(formulaActualizada);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(`Error al actualizar fórmula ${req.params.id}:`, error);
     res
       .status(500)
-      .json({ message: 'Error interno al actualizar la fórmula', error: error.message });
+      .json({
+        message: 'Error interno al actualizar la fórmula',
+        error: error instanceof Error ? error.message : 'Error desconocido',
+      });
   }
 };
