@@ -53,7 +53,9 @@ export const createEmpresa = async (
     logger.error('Error al crear empresa:', error);
 
     if (isValidationError(error)) {
-      const errores = Object.values(error.errors).map((err: { message: string }) => err.message);
+      const errores = Object.values(error.errors).map(
+        (err) => (err as { message: string }).message
+      );
       res.status(400).json({ message: 'Error de validación', errores });
       return;
     }
