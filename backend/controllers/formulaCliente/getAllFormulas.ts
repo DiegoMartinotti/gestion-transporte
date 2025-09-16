@@ -59,7 +59,7 @@ export const getAllFormulas = async (req: Request, res: Response): Promise<void>
     // Validar parámetros de consulta
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, { errors: errors.array() });
       return;
     }
 
