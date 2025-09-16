@@ -3,14 +3,14 @@ import { Response } from 'express';
 class ApiResponse {
   static success(
     res: Response,
-    data: any,
+    data: unknown,
     message: string = 'Operación exitosa',
     status: number = 200
   ): Response {
     return res.status(status).json({
       success: true,
       message,
-      data
+      data,
     });
   }
 
@@ -18,15 +18,15 @@ class ApiResponse {
     res: Response,
     message: string = 'Error en la operación',
     status: number = 400,
-    errors: any = null
+    errors: Record<string, unknown> | null = null
   ): Response {
     const response: {
       success: boolean;
       message: string;
-      errors?: any;
+      errors?: Record<string, unknown> | null;
     } = {
       success: false,
-      message
+      message,
     };
 
     if (errors) {
@@ -37,4 +37,4 @@ class ApiResponse {
   }
 }
 
-export default ApiResponse; 
+export default ApiResponse;
