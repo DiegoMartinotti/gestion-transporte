@@ -25,7 +25,7 @@ export const getTarifaMetodoById = async (req: Request, res: Response): Promise<
     // Validar parámetros
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Parámetros inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Parámetros inválidos', 400, { errors: errors.array() });
       return;
     }
 
@@ -58,11 +58,11 @@ export const getTarifaMetodoById = async (req: Request, res: Response): Promise<
 
     logger.debug(`[TarifaMetodo] Método consultado: ${metodo.codigo}`, {
       metodoId: metodo._id,
-      usuario: (req as any).user?.email,
+      usuario: (req as { user?: { email?: string } }).user?.email,
     });
 
     ApiResponse.success(res, respuesta, 'Método de tarifa obtenido exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al obtener método:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
