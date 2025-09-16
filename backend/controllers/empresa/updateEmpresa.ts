@@ -15,6 +15,33 @@ interface ApiResponse<T = unknown> {
 }
 
 /**
+ * Verifica si es un error de validación de MongoDB
+ */
+const isValidationError = (
+  error: unknown
+): error is { name: string; errors: Record<string, unknown> } => {
+  return !!(
+    error &&
+    typeof error === 'object' &&
+    'name' in error &&
+    error.name === 'ValidationError' &&
+    'errors' in error
+  );
+};
+
+/**
+ * Verifica si es un error de duplicado de MongoDB
+ */
+const isDuplicateError = (error: unknown): error is { code: number } => {
+  return !!(
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code: number }).code === 11000
+  );
+};
+
+/**
  * Actualiza una empresa existente
  */
 export const updateEmpresa = async (
@@ -34,22 +61,15 @@ export const updateEmpresa = async (
   } catch (error: unknown) {
     logger.error('Error al actualizar empresa:', error);
 
-    // Manejo específico para errores de validación
-    if (error instanceof Error && error.name === 'ValidationError') {
-      const errores = Object.values(
-        (error as { errors: Record<string, { message: string }> }).errors
-      ).map((err) => err.message);
+    if (isValidationError(error)) {
+      const errores = Object.values(error.errors).map(
+        (err) => (err as { message: string }).message
+      );
       res.status(400).json({ message: 'Error de validación', errores });
       return;
     }
 
-    // Manejo específico para errores de duplicados
-    if (
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as { code: number }).code === 11000
-    ) {
+    if (isDuplicateError(error)) {
       res.status(400).json({
         message: 'Error de duplicado',
         error: `Ya existe una empresa con el nombre ${req.body.nombre}`,
