@@ -100,34 +100,119 @@ export const createReglaTarifaValidators = [
 /**
  * Crea una nueva regla de tarifa
  */
+// Funciones auxiliares para reducir complejidad
+
+const validateHorarios = (horariosAplicacion: unknown, res: Response): boolean => {
+  if (!horariosAplicacion) return true;
+
+  const { horaInicio, horaFin } = horariosAplicacion as { horaInicio: string; horaFin: string };
+  if (!horaInicio || !horaFin) {
+    ApiResponse.error(
+      res,
+      'Debe especificar hora de inicio y fin para horarios de aplicación',
+      400
+    );
+    return false;
+  }
+
+  const formatoHora = /^([01]?\d|2[0-3]):[0-5]\d$/;
+  if (!formatoHora.test(horaInicio) || !formatoHora.test(horaFin)) {
+    ApiResponse.error(res, 'Las horas deben estar en formato HH:MM', 400);
+    return false;
+  }
+
+  return true;
+};
+
+const validateDiasSemana = (diasSemana: unknown, res: Response): boolean => {
+  if (!diasSemana) return true;
+
+  const dias = diasSemana as number[];
+  if (dias.length > 0) {
+    const diasValidos = dias.every((dia: number) => dia >= 0 && dia <= 6);
+    if (!diasValidos) {
+      ApiResponse.error(
+        res,
+        'Los días de la semana deben ser números entre 0 (domingo) y 6 (sábado)',
+        400
+      );
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const buildBasicFields = (reqBody: Record<string, unknown>) => ({
+  codigo: (reqBody.codigo as string).toUpperCase(),
+  nombre: reqBody.nombre,
+  descripcion: reqBody.descripcion,
+  cliente: reqBody.cliente || undefined,
+  metodoCalculo: reqBody.metodoCalculo || undefined,
+  condiciones: reqBody.condiciones || [],
+  operadorLogico: reqBody.operadorLogico || 'AND',
+  modificadores: reqBody.modificadores || [],
+});
+
+const buildConfigFields = (reqBody: Record<string, unknown>) => ({
+  prioridad: reqBody.prioridad || 100,
+  activa: reqBody.activa !== undefined ? reqBody.activa : true,
+  aplicarEnCascada: reqBody.aplicarEnCascada !== undefined ? reqBody.aplicarEnCascada : true,
+  excluirOtrasReglas: reqBody.excluirOtrasReglas || false,
+  diasSemana: reqBody.diasSemana || undefined,
+  horariosAplicacion: reqBody.horariosAplicacion || undefined,
+  temporadas: reqBody.temporadas || undefined,
+});
+
+const buildDateFields = (reqBody: Record<string, unknown>) => ({
+  fechaInicioVigencia: new Date(reqBody.fechaInicioVigencia as string),
+  fechaFinVigencia: reqBody.fechaFinVigencia
+    ? new Date(reqBody.fechaFinVigencia as string)
+    : undefined,
+  estadisticas: { vecesAplicada: 0, montoTotalModificado: 0 },
+});
+
+const createReglaTarifaObject = (reqBody: Record<string, unknown>) => {
+  const basicFields = buildBasicFields(reqBody);
+  const configFields = buildConfigFields(reqBody);
+  const dateFields = buildDateFields(reqBody);
+
+  return new ReglaTarifa({ ...basicFields, ...configFields, ...dateFields });
+};
+
+const handleValidationError = (error: unknown, res: Response) => {
+  const err = error as { name: string; errors: Record<string, unknown>; code: number };
+
+  if (err.name === 'ValidationError') {
+    const validationErrors = Object.values(err.errors).map((errorItem: unknown) => {
+      const validationError = errorItem as { path: string; message: string };
+      return {
+        field: validationError.path,
+        message: validationError.message,
+      };
+    });
+    ApiResponse.error(res, 'Error de validación', 400, { errors: validationErrors });
+    return;
+  }
+
+  if (err.code === 11000) {
+    ApiResponse.error(res, 'El código de la regla ya existe', 409);
+    return;
+  }
+
+  ApiResponse.error(res, 'Error interno del servidor', 500);
+};
+
 export const createReglaTarifa = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar entrada
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Datos de entrada inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Datos de entrada inválidos', 400, { errors: errors.array() });
       return;
     }
 
-    const {
-      codigo,
-      nombre,
-      descripcion,
-      cliente,
-      metodoCalculo,
-      condiciones,
-      operadorLogico,
-      modificadores,
-      prioridad,
-      activa,
-      fechaInicioVigencia,
-      fechaFinVigencia,
-      aplicarEnCascada,
-      excluirOtrasReglas,
-      diasSemana,
-      horariosAplicacion,
-      temporadas,
-    } = req.body;
+    const { codigo } = req.body;
 
     // Verificar que el código no exista
     const reglaExistente = await ReglaTarifa.findOne({
@@ -139,71 +224,19 @@ export const createReglaTarifa = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    // Validar horarios si se proporcionan
-    if (horariosAplicacion) {
-      const { horaInicio, horaFin } = horariosAplicacion;
-      if (!horaInicio || !horaFin) {
-        ApiResponse.error(
-          res,
-          'Debe especificar hora de inicio y fin para horarios de aplicación',
-          400
-        );
-        return;
-      }
-
-      // Validar formato de horas (HH:MM)
-      const formatoHora = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      if (!formatoHora.test(horaInicio) || !formatoHora.test(horaFin)) {
-        ApiResponse.error(res, 'Las horas deben estar en formato HH:MM', 400);
-        return;
-      }
-    }
-
-    // Validar días de la semana si se proporcionan
-    if (diasSemana && diasSemana.length > 0) {
-      const diasValidos = diasSemana.every((dia: number) => dia >= 0 && dia <= 6);
-      if (!diasValidos) {
-        ApiResponse.error(
-          res,
-          'Los días de la semana deben ser números entre 0 (domingo) y 6 (sábado)',
-          400
-        );
-        return;
-      }
-    }
+    // Validaciones específicas
+    if (!validateHorarios(req.body.horariosAplicacion, res)) return;
+    if (!validateDiasSemana(req.body.diasSemana, res)) return;
 
     // Crear nueva regla
-    const nuevaRegla = new ReglaTarifa({
-      codigo: codigo.toUpperCase(),
-      nombre,
-      descripcion,
-      cliente: cliente || undefined,
-      metodoCalculo: metodoCalculo || undefined,
-      condiciones: condiciones || [],
-      operadorLogico: operadorLogico || 'AND',
-      modificadores: modificadores || [],
-      prioridad: prioridad || 100,
-      activa: activa !== undefined ? activa : true,
-      fechaInicioVigencia: new Date(fechaInicioVigencia),
-      fechaFinVigencia: fechaFinVigencia ? new Date(fechaFinVigencia) : undefined,
-      aplicarEnCascada: aplicarEnCascada !== undefined ? aplicarEnCascada : true,
-      excluirOtrasReglas: excluirOtrasReglas || false,
-      diasSemana: diasSemana || undefined,
-      horariosAplicacion: horariosAplicacion || undefined,
-      temporadas: temporadas || undefined,
-      estadisticas: {
-        vecesAplicada: 0,
-        montoTotalModificado: 0,
-      },
-    });
-
+    const nuevaRegla = createReglaTarifaObject(req.body);
     await nuevaRegla.save();
 
     logger.info(`[ReglaTarifa] Regla creada: ${nuevaRegla.codigo}`, {
       reglaId: nuevaRegla._id,
-      cliente: cliente || 'General',
-      metodoCalculo: metodoCalculo || 'Todos',
-      usuario: (req as any).user?.email,
+      cliente: req.body.cliente || 'General',
+      metodoCalculo: req.body.metodoCalculo || 'Todos',
+      usuario: (req as { user?: { email: string } }).user?.email,
     });
 
     // Poblar referencias para la respuesta
@@ -212,23 +245,8 @@ export const createReglaTarifa = async (req: Request, res: Response): Promise<vo
       .lean();
 
     ApiResponse.success(res, reglaConReferencias, 'Regla de tarifa creada exitosamente', 201);
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[ReglaTarifa] Error al crear regla:', error);
-
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      ApiResponse.error(res, 'Error de validación', 400, validationErrors);
-      return;
-    }
-
-    if (error.code === 11000) {
-      ApiResponse.error(res, 'El código de la regla ya existe', 409);
-      return;
-    }
-
-    ApiResponse.error(res, 'Error interno del servidor', 500);
+    handleValidationError(error, res);
   }
 };
