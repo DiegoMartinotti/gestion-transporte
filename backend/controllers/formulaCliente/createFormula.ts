@@ -8,6 +8,62 @@ import logger from '../../utils/logger';
 import { checkOverlap } from './utils/checkOverlap';
 import { FormulaCreateRequest, ApiResponse } from './types';
 
+/**
+ * Valida los campos requeridos
+ */
+const validateRequiredFields = (body: FormulaCreateRequest): string | null => {
+  const { clienteId, tipoUnidad, formula, vigenciaDesde } = body;
+  if (!clienteId || !tipoUnidad || !formula || !vigenciaDesde) {
+    return 'Faltan campos requeridos: clienteId, tipoUnidad, formula, vigenciaDesde';
+  }
+  return null;
+};
+
+/**
+ * Valida las fechas de vigencia
+ */
+const validateDates = (
+  vigenciaDesde: string,
+  vigenciaHasta?: string
+): { isValid: boolean; error?: string; desdeDate: Date; hastaDate: Date | null } => {
+  const desdeDate = new Date(vigenciaDesde);
+  const hastaDate = vigenciaHasta ? new Date(vigenciaHasta) : null;
+
+  if (hastaDate && desdeDate >= hastaDate) {
+    return {
+      isValid: false,
+      error: 'La fecha de vigenciaDesde debe ser anterior a vigenciaHasta',
+      desdeDate,
+      hastaDate,
+    };
+  }
+
+  return { isValid: true, desdeDate, hastaDate };
+};
+
+/**
+ * Crea y guarda una nueva fórmula
+ */
+const createAndSaveFormula = async (params: {
+  clienteId: string;
+  tipoUnidad: string;
+  formula: string;
+  desdeDate: Date;
+  hastaDate: Date | null;
+}) => {
+  const { clienteId, tipoUnidad, formula, desdeDate, hastaDate } = params;
+  const nuevaFormula = new FormulasPersonalizadasCliente({
+    clienteId,
+    tipoUnidad,
+    formula,
+    vigenciaDesde: desdeDate,
+    vigenciaHasta: hastaDate,
+  });
+  await nuevaFormula.save();
+  logger.info(`Nueva fórmula creada para cliente ${clienteId}, tipo ${tipoUnidad}`);
+  return nuevaFormula;
+};
+
 export const createFormula = async (
   req: Request<
     Record<string, unknown>,
@@ -19,12 +75,10 @@ export const createFormula = async (
   try {
     const { clienteId, tipoUnidad, formula, vigenciaDesde, vigenciaHasta } = req.body;
 
-    if (!clienteId || !tipoUnidad || !formula || !vigenciaDesde) {
-      res
-        .status(400)
-        .json({
-          message: 'Faltan campos requeridos: clienteId, tipoUnidad, formula, vigenciaDesde',
-        });
+    // Validar campos requeridos
+    const fieldsError = validateRequiredFields(req.body);
+    if (fieldsError) {
+      res.status(400).json({ message: fieldsError });
       return;
     }
 
@@ -36,39 +90,37 @@ export const createFormula = async (
     }
 
     // Validar fechas
-    const desdeDate = new Date(vigenciaDesde);
-    const hastaDate = vigenciaHasta ? new Date(vigenciaHasta) : null;
-
-    if (hastaDate && desdeDate >= hastaDate) {
-      res
-        .status(400)
-        .json({ message: 'La fecha de vigenciaDesde debe ser anterior a vigenciaHasta' });
+    const dateValidation = validateDates(vigenciaDesde, vigenciaHasta);
+    if (!dateValidation.isValid) {
+      res.status(400).json({ message: dateValidation.error });
       return;
     }
+
+    const { desdeDate, hastaDate } = dateValidation;
 
     // Validar solapamiento
     const overlap = await checkOverlap(clienteId, tipoUnidad, desdeDate, hastaDate);
     if (overlap) {
+      const desde = overlap.vigenciaDesde.toISOString().split('T')[0];
+      const hasta = overlap.vigenciaHasta?.toISOString().split('T')[0] || 'Activa';
       res.status(400).json({
-        message: `El período de vigencia se solapa con una fórmula existente (ID: ${overlap._id}, Vigencia: ${overlap.vigenciaDesde.toISOString().split('T')[0]} - ${overlap.vigenciaHasta ? overlap.vigenciaHasta.toISOString().split('T')[0] : 'Activa'})`,
+        message: `El período se solapa con fórmula existente (ID: ${overlap._id}, ${desde} - ${hasta})`,
         overlappingFormula: overlap,
       });
       return;
     }
 
-    const nuevaFormula = new FormulasPersonalizadasCliente({
+    const nuevaFormula = await createAndSaveFormula({
       clienteId,
       tipoUnidad,
       formula,
-      vigenciaDesde: desdeDate,
-      vigenciaHasta: hastaDate,
+      desdeDate,
+      hastaDate,
     });
-
-    await nuevaFormula.save();
-    logger.info(`Nueva fórmula creada para cliente ${clienteId}, tipo ${tipoUnidad}`);
     res.status(201).json(nuevaFormula);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error al crear fórmula personalizada:', error);
-    res.status(500).json({ message: 'Error interno al crear la fórmula', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    res.status(500).json({ message: 'Error interno al crear la fórmula', error: errorMessage });
   }
 };
