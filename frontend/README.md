@@ -116,7 +116,7 @@ npx tsc --noEmit
 
 ## Acceso
 
-- **URL**: http://localhost:3000
+- **URL**: <http://localhost:3000>
 - **Puerto**: 3000 (con hot-reload)
 - **Backend**: Conecta a API en puerto 3001
 

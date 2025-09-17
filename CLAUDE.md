@@ -70,7 +70,7 @@ npx tsc --noEmit
 npm run type-check:files src/path/to/file.tsx [src/path/to/other/file.ts]
 ```
 
-Both servers run in hot-reload mode. Access the app at http://localhost:3000
+Both servers run in hot-reload mode. Access the app at <http://localhost:3000>
 
 ## TypeScript
 
