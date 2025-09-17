@@ -49,7 +49,6 @@ function construirEstadisticasEnriquecidas(formula: {
           (formula.estadisticas.montoTotalCalculado / formula.estadisticas.vecesUtilizada) * 100
         ) / 100
       : 0;
-
   return {
     ...formula.estadisticas,
     promedioMontoCalculado,
@@ -85,7 +84,6 @@ function construirInfoHistorial(historialCambios: Array<{ fecha: Date }>) {
   const cambiosRecientes = historialCambios.filter(
     (cambio: { fecha: Date }) => cambio.fecha >= hace30Dias
   ).length;
-
   return {
     totalCambios: historialCambios.length,
     ultimoCambio:
@@ -178,10 +176,8 @@ function esFormulaVigente(
 
 function calcularDiasRestantes(formula: { vigenciaHasta?: Date }, fecha: Date): number | null {
   if (!formula.vigenciaHasta) return null;
-
   const diferencia = new Date(formula.vigenciaHasta).getTime() - fecha.getTime();
-  const dias = Math.ceil(diferencia / (1000 * 60 * 60 * 24));
-  return dias >= 0 ? dias : 0;
+  return Math.max(0, Math.ceil(diferencia / (1000 * 60 * 60 * 24)));
 }
 
 function calcularDiasTranscurridos(formula: { vigenciaDesde: Date }, fecha: Date): number {
@@ -233,9 +229,8 @@ function calcularFactorEstabilidad(formula: {
   const cambiosRecientes = formula.historialCambios.filter(
     (cambio: { fecha: Date }) => cambio.fecha >= hace30Dias
   ).length;
-  if (cambiosRecientes === 0 && formula.estadisticas.vecesUtilizada > 0) {
+  if (cambiosRecientes === 0 && formula.estadisticas.vecesUtilizada > 0)
     return { puntuacion: 10, factor: 'Fórmula estable' };
-  }
   if (cambiosRecientes > 3) return { puntuacion: -10, factor: 'Cambios frecuentes' };
   return { puntuacion: 0 };
 }
@@ -306,9 +301,8 @@ function validarCompatibilidadMetodo(
   const variablesNoEncontradas = variablesEnFormula.filter(
     (variable: string) => !variablesDisponibles.includes(variable)
   );
-  if (variablesNoEncontradas.length > 0) {
+  if (variablesNoEncontradas.length > 0)
     advertencias.push(`Variables no definidas en el método: ${variablesNoEncontradas.join(', ')}`);
-  }
   return { compatible: advertencias.length === 0, advertencias };
 }
 
@@ -319,10 +313,7 @@ async function verificarConflictos(formula: {
   tipoUnidad: string;
   vigenciaDesde: Date;
   vigenciaHasta?: Date;
-}): Promise<{
-  tieneConflictos: boolean;
-  conflictos: unknown[];
-}> {
+}): Promise<{ tieneConflictos: boolean; conflictos: unknown[] }> {
   try {
     const conflictosPotenciales = await FormulasPersonalizadasCliente.find({
       _id: { $ne: formula._id },
@@ -336,7 +327,6 @@ async function verificarConflictos(formula: {
         { vigenciaHasta: { $exists: false } },
       ],
     }).select('nombre vigenciaDesde vigenciaHasta prioridad tipoUnidad');
-
     return {
       tieneConflictos: conflictosPotenciales.length > 0,
       conflictos: conflictosPotenciales.map((conflicto) => ({
