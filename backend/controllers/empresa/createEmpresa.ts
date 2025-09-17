@@ -25,7 +25,7 @@ const isValidationError = (
     error &&
     typeof error === 'object' &&
     'name' in error &&
-    error.name === 'ValidationError' &&
+    (error as any).name === 'ValidationError' &&
     'errors' in error
   );
 };
@@ -35,7 +35,7 @@ const isValidationError = (
  */
 const isDuplicateError = (error: unknown): error is { code: number } => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return !!(error && typeof error === 'object' && 'code' in error && (error as any).code === 11000);
+  return !!(error && typeof error === 'object' && 'code' in error && (error as unknown).code === 11000);
 };
 
 /**

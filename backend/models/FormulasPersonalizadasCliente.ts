@@ -21,7 +21,7 @@ export interface IFormulasPersonalizadasCliente extends Document {
   condiciones?: {
     campo: string;
     operador: string;
-    valor: any;
+    valor: unknown;
   }[];
   vigenciaDesde: Date;
   vigenciaHasta?: Date;
@@ -225,10 +225,10 @@ formulasPersonalizadasClienteSchema.methods.validarFormula = async function (): 
 
     await this.save();
     return this.validacionFormula.esValida;
-  } catch (error: any) {
+  } catch (error: unknown) {
     this.validacionFormula = {
       esValida: false,
-      mensaje: error.message || 'Error al validar la fórmula',
+      mensaje: (error instanceof Error ? error.message : String(error)) || 'Error al validar la fórmula',
       ultimaValidacion: new Date(),
     };
 

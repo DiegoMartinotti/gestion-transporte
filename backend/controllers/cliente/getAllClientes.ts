@@ -36,7 +36,7 @@ export const getAllClientes = async (
     // Por ejemplo, si no es admin, solo ver los clientes asociados a su empresa
     const esAdmin = req.user.roles && req.user.roles.includes('admin');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filtro: Record<string, any> = {};
+    const filtro: Record<string, unknown> = {};
 
     if (!esAdmin && req.user.empresa) {
       // Supongamos que hay un campo empresa en Cliente que relaciona cliente con empresa
@@ -56,7 +56,7 @@ export const getAllClientes = async (
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
       res
         .status(error instanceof UnauthorizedError ? 401 : 403)
-        .json({ success: false, message: error.message });
+        .json({ success: false, message: (error instanceof Error ? error.message : String(error)) });
       return;
     }
     res.status(500).json({ success: false, message: 'Error al obtener clientes' });

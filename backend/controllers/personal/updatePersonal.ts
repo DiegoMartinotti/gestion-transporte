@@ -21,7 +21,7 @@ interface AuthenticatedUser {
 interface AuthenticatedRequest {
     user?: AuthenticatedUser;
     params: { id: string };
-    body: any;
+    body: unknown;
 }
 
 /**
@@ -69,15 +69,15 @@ export const updatePersonal = async (req: AuthenticatedRequest, res: Response<IP
         }
         
         res.status(200).json(personal);
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al actualizar personal:', error);
         
-        if (error.name === 'ValidationError') {
-            res.status(400).json({ error: error.message });
+        if ((error as any).name === 'ValidationError') {
+            res.status(400).json({ error: (error instanceof Error ? error.message : String(error)) });
             return;
         }
         
-        if (error.code === 11000) {
+        if ((error as any).code === 11000) {
             res.status(400).json({ error: 'Ya existe un registro con ese DNI' });
             return;
         }

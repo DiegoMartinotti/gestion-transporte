@@ -71,7 +71,7 @@ const connectDB = async (): Promise<void> => {
     }
 
     // Mensajes de error más descriptivos
-    if (error instanceof Error && error.name === 'MongoNetworkTimeoutError') {
+    if (error instanceof Error && (error as any).name === 'MongoNetworkTimeoutError') {
       logger.error('💡 Posibles soluciones:');
       logger.error('  1. Verificar que tu IP esté en el Access List de MongoDB Atlas');
       logger.error('  2. Revisar conectividad de red/firewall');

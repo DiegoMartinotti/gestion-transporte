@@ -17,7 +17,7 @@ export interface PaginationOptions<T = any> {
   limite?: number;
   pagina?: number;
   filtros?: FilterQuery<T>;
-  ordenamiento?: any;
+  ordenamiento?: unknown;
   proyeccion?: string;
 }
 
@@ -45,7 +45,7 @@ export interface BulkResult {
     index?: number | string;
     message: string;
     code?: number;
-    data?: any;
+    data?: unknown;
   }>;
 }
 
@@ -158,7 +158,7 @@ export abstract class BaseService<T extends Document> {
    * @param data - Datos a validar
    * @param fields - Campos requeridos
    */
-  protected validateRequired(data: any, fields: string[]): void {
+  protected validateRequired(data: unknown, fields: string[]): void {
     if (!data) {
       throw new Error('Los datos son requeridos');
     }
@@ -179,16 +179,16 @@ export abstract class BaseService<T extends Document> {
    * Maneja errores de Mongoose y los convierte a errores más legibles
    * @param error - Error original
    */
-  protected handleMongooseError(error: any): never {
+  protected handleMongooseError(error: unknown): never {
     // Error de validación de Mongoose
     if (error instanceof MongooseError.ValidationError) {
-      const messages = Object.values(error.errors).map(err => (err as any).message);
+      const messages = Object.values(error.errors).map(err => (err as unknown).message);
       throw new Error(`Errores de validación: ${messages.join(', ')}`);
     }
     
     // Error de clave duplicada (código 11000)
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern || {})[0] || 'campo';
+    if ((error as any).code === 11000) {
+      const field = Object.keys((error as any).keyPattern || {})[0] || 'campo';
       throw new Error(`Ya existe un registro con ese ${field}`);
     }
     
@@ -198,13 +198,13 @@ export abstract class BaseService<T extends Document> {
     }
     
     // Error de referencia inválida
-    if (error.name === 'DocumentNotFoundError') {
+    if ((error as any).name === 'DocumentNotFoundError') {
       throw new Error(`Documento no encontrado`);
     }
     
     // Error genérico
     this.logError('mongoose_error', error);
-    throw new Error(error.message || 'Error interno del servidor');
+    throw new Error((error instanceof Error ? error.message : String(error)) || 'Error interno del servidor');
   }
 
   // ==================== MÉTODOS CRUD BÁSICOS ====================
@@ -403,7 +403,7 @@ export abstract class BaseService<T extends Document> {
   /**
    * Ejecuta operaciones bulk con manejo de errores
    */
-  protected async executeBulkWrite(operations: any[], options: TransactionOptions = {}): Promise<BulkResult> {
+  protected async executeBulkWrite(operations: unknown[], options: TransactionOptions = {}): Promise<BulkResult> {
     const session = options.session;
     
     try {
@@ -439,7 +439,7 @@ export abstract class BaseService<T extends Document> {
             index: 'N/A',
             message: `Error en operación: ${err.errmsg}`,
             code: err.code,
-            data: (err as any).op || 'No disponible'
+            data: (err as unknown).op || 'No disponible'
           });
         });
         
@@ -460,8 +460,8 @@ export abstract class BaseService<T extends Document> {
   /**
    * Formatea un contexto estándar para logging
    */
-  private formatLogContext(operation: string, data?: any): any {
-    const context: any = {
+  private formatLogContext(operation: string, data?: unknown): unknown {
+    const context: unknown = {
       model: this.modelName,
       operation,
       timestamp: new Date().toISOString()
@@ -477,7 +477,7 @@ export abstract class BaseService<T extends Document> {
   /**
    * Log de inicio de operación
    */
-  protected logOperation(operation: string, data?: any): void {
+  protected logOperation(operation: string, data?: unknown): void {
     const context = this.formatLogContext(operation, data);
     logger.info(`[${this.modelName}] ${operation} - iniciado`, context);
   }
@@ -485,7 +485,7 @@ export abstract class BaseService<T extends Document> {
   /**
    * Log de operación exitosa
    */
-  protected logSuccess(operation: string, result?: any): void {
+  protected logSuccess(operation: string, result?: unknown): void {
     const context = this.formatLogContext(operation, result);
     logger.info(`[${this.modelName}] ${operation} - exitoso`, context);
   }
@@ -493,9 +493,9 @@ export abstract class BaseService<T extends Document> {
   /**
    * Log de fallo en operación
    */
-  protected logFailure(operation: string, error: any): void {
+  protected logFailure(operation: string, error: unknown): void {
     const context = this.formatLogContext(operation, {
-      error: error.message || 'Error desconocido',
+      error: (error instanceof Error ? error.message : String(error)) || 'Error desconocido',
       stack: error.stack
     });
     logger.error(`[${this.modelName}] ${operation} - falló`, context);
@@ -504,7 +504,7 @@ export abstract class BaseService<T extends Document> {
   /**
    * Log genérico de información con contexto del servicio
    */
-  protected logInfo(message: string, data?: any): void {
+  protected logInfo(message: string, data?: unknown): void {
     const context = this.formatLogContext('info', data);
     logger.info(`[${this.modelName}] ${message}`, context);
   }
@@ -512,9 +512,9 @@ export abstract class BaseService<T extends Document> {
   /**
    * Log de error con contexto del servicio
    */
-  protected logError(message: string, error: any): void {
+  protected logError(message: string, error: unknown): void {
     const context = this.formatLogContext('error', {
-      error: error.message || 'Error desconocido',
+      error: (error instanceof Error ? error.message : String(error)) || 'Error desconocido',
       stack: error.stack
     });
     logger.error(`[${this.modelName}] ${message}`, context);
@@ -523,7 +523,7 @@ export abstract class BaseService<T extends Document> {
   /**
    * Log de debug con contexto del servicio
    */
-  protected logDebug(message: string, data?: any): void {
+  protected logDebug(message: string, data?: unknown): void {
     const context = this.formatLogContext('debug', data);
     logger.debug(`[${this.modelName}] ${message}`, context);
   }
@@ -531,7 +531,7 @@ export abstract class BaseService<T extends Document> {
   /**
    * Log de advertencia con contexto del servicio
    */
-  protected logWarn(message: string, data?: any): void {
+  protected logWarn(message: string, data?: unknown): void {
     const context = this.formatLogContext('warning', data);
     logger.warn(`[${this.modelName}] ${message}`, context);
   }
@@ -543,9 +543,9 @@ export abstract class BaseService<T extends Document> {
    */
   protected async validateUnique(
     field: string,
-    value: any,
+    value: unknown,
     excludeId?: string,
-    additionalFilter?: Record<string, any>
+    additionalFilter?: Record<string, unknown>
   ): Promise<boolean>;
   
   /**
@@ -553,16 +553,16 @@ export abstract class BaseService<T extends Document> {
    */
   protected async validateUnique(
     field: string,
-    value: any,
+    value: unknown,
     excludeId?: string,
     fieldName?: string
   ): Promise<void>;
   
   protected async validateUnique(
     field: string,
-    value: any,
+    value: unknown,
     excludeId?: string,
-    additionalFilterOrFieldName?: Record<string, any> | string
+    additionalFilterOrFieldName?: Record<string, unknown> | string
   ): Promise<boolean | void> {
     // Si el cuarto parámetro es un string, es la versión que lanza excepción
     if (typeof additionalFilterOrFieldName === 'string') {
@@ -592,7 +592,7 @@ export abstract class BaseService<T extends Document> {
    * Valida unicidad de múltiples campos
    */
   protected async validateUniqueComposite(
-    fields: Record<string, any>,
+    fields: Record<string, unknown>,
     excludeId?: string
   ): Promise<boolean> {
     return commonValidators.validateUniqueComposite(
@@ -659,7 +659,7 @@ export abstract class BaseService<T extends Document> {
   protected async validateNoDateOverlap(
     fechaDesde: Date,
     fechaHasta: Date | null,
-    filterFields: Record<string, any>,
+    filterFields: Record<string, unknown>,
     excludeId?: string
   ): Promise<boolean> {
     return commonValidators.validateNoDateOverlap(
@@ -708,7 +708,7 @@ export abstract class BaseService<T extends Document> {
   protected async validateReference<R extends Document>(
     model: Model<R>,
     id: string,
-    additionalFilter?: Record<string, any>
+    additionalFilter?: Record<string, unknown>
   ): Promise<boolean> {
     return commonValidators.validateReference(model, id, additionalFilter);
   }

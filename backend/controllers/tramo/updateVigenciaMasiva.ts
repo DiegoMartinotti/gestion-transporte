@@ -125,7 +125,7 @@ const updateVigenciaMasiva = async (req: Request<{}, ApiResponse<VigenciaUpdateR
                         await tramo.save();
                         actualizados.push(tramoId);
                         logger.debug(`Tramo ${tramoId} actualizado correctamente.`);
-                    } catch (saveError: any) {
+                    } catch (saveError: unknown) {
                         logger.error(`Error al guardar tramo ${tramoId} tras actualización masiva: ${saveError.message}`);
                         conflictos.push({ id: tramoId, error: `Error al guardar: ${saveError.message}` });
                     }
@@ -135,9 +135,9 @@ const updateVigenciaMasiva = async (req: Request<{}, ApiResponse<VigenciaUpdateR
                     logger.info(`Tramo ${tramoId}: No se encontraron tarifas ${tipoTramo ? `del tipo ${tipoTramo} ` : ''}para actualizar.`);
                 }
 
-            } catch (error: any) {
+            } catch (error: unknown) {
                 logger.error(`Error procesando tramo ${tramoId} en actualización masiva:`, error);
-                conflictos.push({ id: tramoId, error: error.message });
+                conflictos.push({ id: tramoId, error: (error instanceof Error ? error.message : String(error)) });
             }
         }
 
@@ -153,12 +153,12 @@ const updateVigenciaMasiva = async (req: Request<{}, ApiResponse<VigenciaUpdateR
             data: resultado
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error general en actualización masiva de vigencia:', error);
         res.status(500).json({
             success: false,
             message: 'Error interno al actualizar la vigencia de los tramos',
-            error: error.message
+            error: (error instanceof Error ? error.message : String(error))
         });
     }
 };

@@ -69,11 +69,11 @@ async function getVigentesByFecha(req: AuthenticatedRequest, res: Response<ApiRe
             success: true,
             data: tramos
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al obtener tramos vigentes:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: (error instanceof Error ? error.message : String(error))
         });
     }
 }

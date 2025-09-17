@@ -78,7 +78,7 @@ export const getAllFormulas = async (req: Request, res: Response): Promise<void>
 
     // Construir filtros
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filtros: any = {};
+    const filtros: unknown = {};
 
     if (cliente) {
       filtros.clienteId = cliente;
@@ -257,7 +257,7 @@ function calcularDiasRestantesVigencia(
  * Calcula estadísticas avanzadas
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function calcularEstadisticas(filtrosBase: any): Promise<any> {
+async function calcularEstadisticas(filtrosBase: unknown): Promise<any> {
   // Estadísticas generales
   const [totalActivas, totalInactivas, porMetodo, porTipoUnidad, porCliente] = await Promise.all([
     FormulasPersonalizadasCliente.countDocuments({ ...filtrosBase, activa: true }),
@@ -282,7 +282,7 @@ async function calcularEstadisticas(filtrosBase: any): Promise<any> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function obtenerEstadisticasPorMetodo(filtrosBase: any): Promise<any[]> {
+async function obtenerEstadisticasPorMetodo(filtrosBase: unknown): Promise<unknown[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
     {
@@ -307,7 +307,7 @@ async function obtenerEstadisticasPorMetodo(filtrosBase: any): Promise<any[]> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function obtenerEstadisticasPorTipoUnidad(filtrosBase: any): Promise<any[]> {
+async function obtenerEstadisticasPorTipoUnidad(filtrosBase: unknown): Promise<unknown[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
     {
@@ -329,7 +329,7 @@ async function obtenerEstadisticasPorTipoUnidad(filtrosBase: any): Promise<any[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function obtenerEstadisticasPorCliente(filtrosBase: any): Promise<any[]> {
+async function obtenerEstadisticasPorCliente(filtrosBase: unknown): Promise<unknown[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
     {

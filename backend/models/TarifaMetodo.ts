@@ -9,7 +9,7 @@ export interface IVariableDefinition {
   tipo: 'number' | 'string' | 'boolean' | 'date';
   origen: 'tramo' | 'viaje' | 'cliente' | 'vehiculo' | 'calculado' | 'constante';
   campo?: string; // Campo específico del origen
-  valorPorDefecto?: any;
+  valorPorDefecto?: unknown;
   requerido: boolean;
 }
 
@@ -27,7 +27,7 @@ export interface ITarifaMetodo extends Document {
   requiereDistancia: boolean;
   requierePalets: boolean;
   permiteFormulasPersonalizadas: boolean;
-  configuracion: Record<string, any>;
+  configuracion: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 

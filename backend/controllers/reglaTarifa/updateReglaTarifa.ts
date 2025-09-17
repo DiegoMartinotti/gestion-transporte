@@ -186,7 +186,7 @@ export const updateReglaTarifa = async (req: Request, res: Response): Promise<vo
     }
 
     // Construir objeto de actualización
-    const actualizacion: any = {};
+    const actualizacion: unknown = {};
 
     if (codigo !== undefined) actualizacion.codigo = codigo.toUpperCase();
     if (nombre !== undefined) actualizacion.nombre = nombre;
@@ -237,7 +237,7 @@ export const updateReglaTarifa = async (req: Request, res: Response): Promise<vo
       reglaId: reglaActualizada._id,
       cambios: Object.keys(actualizacion),
       cliente: reglaActualizada.cliente ? 'Específica' : 'General',
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     // Si se desactivó la regla y tenía estadísticas de uso, registrar el motivo
@@ -253,11 +253,11 @@ export const updateReglaTarifa = async (req: Request, res: Response): Promise<vo
     }
 
     ApiResponse.success(res, reglaActualizada, 'Regla de tarifa actualizada exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[ReglaTarifa] Error al actualizar regla:', error);
 
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => ({
+    if ((error as any).name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map((err: unknown) => ({
         field: err.path,
         message: err.message,
       }));
@@ -265,7 +265,7 @@ export const updateReglaTarifa = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    if (error.code === 11000) {
+    if ((error as any).code === 11000) {
       ApiResponse.error(res, 'El código de la regla ya existe', 409);
       return;
     }

@@ -75,7 +75,7 @@ export const deleteCliente = async (req: AuthenticatedRequest, res: Response<Api
         logger.error('Error al eliminar cliente:', error);
         if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
             res.status(error instanceof UnauthorizedError ? 401 : 403)
-                .json({ success: false, message: error.message });
+                .json({ success: false, message: (error instanceof Error ? error.message : String(error)) });
             return;
         }
         res.status(500).json({ success: false, message: 'Error al eliminar cliente' });

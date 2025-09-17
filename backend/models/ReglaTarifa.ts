@@ -15,8 +15,8 @@ export interface ICondicion {
     | 'entre'
     | 'en'
     | 'contiene';
-  valor: any;
-  valorHasta?: any; // Para operador 'entre'
+  valor: unknown;
+  valorHasta?: unknown; // Para operador 'entre'
 }
 
 /**
@@ -66,8 +66,8 @@ export interface IReglaTarifa extends Document {
   updatedAt: Date;
 
   // Instance methods
-  evaluarCondiciones(contexto: any): boolean;
-  aplicarModificadores(valores: any): any;
+  evaluarCondiciones(contexto: unknown): boolean;
+  aplicarModificadores(valores: unknown): unknown;
   esVigente(fecha?: Date): boolean;
 }
 
@@ -75,8 +75,8 @@ export interface IReglaTarifa extends Document {
  * Interface for ReglaTarifa Model
  */
 export interface IReglaTarifaModel extends mongoose.Model<IReglaTarifa> {
-  findReglasAplicables(contexto: any, fecha?: Date): Promise<IReglaTarifa[]>;
-  aplicarReglas(contexto: any, valores: any): Promise<any>;
+  findReglasAplicables(contexto: unknown, fecha?: Date): Promise<IReglaTarifa[]>;
+  aplicarReglas(contexto: unknown, valores: unknown): Promise<any>;
 }
 
 const condicionSchema = new Schema<ICondicion>(
@@ -222,7 +222,7 @@ reglaTarifaSchema.index({ fechaInicioVigencia: 1, fechaFinVigencia: 1 });
 reglaTarifaSchema.index({ codigo: 1, activa: 1 });
 
 // Método para evaluar condiciones
-reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: any): boolean {
+reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: unknown): boolean {
   if (!this.condiciones || this.condiciones.length === 0) {
     return true; // Sin condiciones, siempre aplica
   }
@@ -262,7 +262,7 @@ reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: any): boolean
 };
 
 // Método para aplicar modificadores
-reglaTarifaSchema.methods.aplicarModificadores = function (valores: any): any {
+reglaTarifaSchema.methods.aplicarModificadores = function (valores: unknown): unknown {
   const resultado = { ...valores };
 
   for (const modificador of this.modificadores) {
@@ -327,7 +327,7 @@ reglaTarifaSchema.methods.esVigente = function (fecha: Date = new Date()): boole
   if (this.temporadas && this.temporadas.length > 0) {
     const mesdia = `${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
     const enTemporada = this.temporadas.some(
-      (t: any) => mesdia >= t.fechaInicio && mesdia <= t.fechaFin
+      (t: unknown) => mesdia >= t.fechaInicio && mesdia <= t.fechaFin
     );
     if (!enTemporada) {
       return false;
@@ -339,10 +339,10 @@ reglaTarifaSchema.methods.esVigente = function (fecha: Date = new Date()): boole
 
 // Método estático para encontrar reglas aplicables
 reglaTarifaSchema.statics.findReglasAplicables = async function (
-  contexto: any,
+  contexto: unknown,
   fecha: Date = new Date()
 ): Promise<IReglaTarifa[]> {
-  const query: any = {
+  const query: unknown = {
     activa: true,
     fechaInicioVigencia: { $lte: fecha },
   };
@@ -365,10 +365,10 @@ reglaTarifaSchema.statics.findReglasAplicables = async function (
 
 // Método estático para aplicar reglas
 reglaTarifaSchema.statics.aplicarReglas = async function (
-  contexto: any,
-  valores: any
+  contexto: unknown,
+  valores: unknown
 ): Promise<any> {
-  const modelo = this as any;
+  const modelo = this as unknown;
   const reglas = await modelo.findReglasAplicables(contexto);
   let resultado = { ...valores };
 
@@ -396,7 +396,7 @@ reglaTarifaSchema.statics.aplicarReglas = async function (
 };
 
 // Función auxiliar para obtener valor del contexto
-function obtenerValorDeContexto(contexto: any, campo: string): any {
+function obtenerValorDeContexto(contexto: unknown, campo: string): unknown {
   const partes = campo.split('.');
   let valor = contexto;
 

@@ -13,7 +13,7 @@ interface UserPayload {
   id: string;
   email: string;
   roles?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface RequestWithUser extends Request {

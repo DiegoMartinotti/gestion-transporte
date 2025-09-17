@@ -55,7 +55,7 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
     const { cliente, metodoCalculo, activa, vigente, fecha, busqueda, limite, pagina } = req.query;
 
     // Construir filtros
-    const filtros: any = {};
+    const filtros: unknown = {};
 
     if (cliente) {
       filtros.cliente = cliente;
@@ -161,12 +161,12 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
       `[ReglaTarifa] Consulta realizada: ${reglas.length} resultados de ${total} total`,
       {
         filtros,
-        usuario: (req as any).user?.email,
+        usuario: (req as unknown).user?.email,
       }
     );
 
     ApiResponse.success(res, resultado, 'Reglas de tarifa obtenidas exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[ReglaTarifa] Error al obtener reglas:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
@@ -175,7 +175,7 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
 /**
  * Verifica si una regla está vigente en una fecha específica
  */
-function esReglVigente(regla: any, fecha: Date): boolean {
+function esReglVigente(regla: unknown, fecha: Date): boolean {
   if (!regla.activa) return false;
 
   if (regla.fechaInicioVigencia > fecha) return false;
@@ -188,7 +188,7 @@ function esReglVigente(regla: any, fecha: Date): boolean {
 /**
  * Calcula los días restantes de vigencia
  */
-function calcularDiasRestantesVigencia(regla: any, fecha: Date): number | null {
+function calcularDiasRestantesVigencia(regla: unknown, fecha: Date): number | null {
   if (!regla.fechaFinVigencia) return null;
 
   const fechaFin = new Date(regla.fechaFinVigencia);
@@ -212,7 +212,7 @@ async function contarReglasVigentes(fecha: Date): Promise<number> {
 /**
  * Obtiene estadísticas por cliente
  */
-async function obtenerEstadisticasPorCliente(): Promise<any[]> {
+async function obtenerEstadisticasPorCliente(): Promise<unknown[]> {
   return await ReglaTarifa.aggregate([
     { $match: { activa: true } },
     {
@@ -246,7 +246,7 @@ async function obtenerEstadisticasPorCliente(): Promise<any[]> {
 /**
  * Obtiene estadísticas por método de cálculo
  */
-async function obtenerEstadisticasPorMetodo(): Promise<any[]> {
+async function obtenerEstadisticasPorMetodo(): Promise<unknown[]> {
   return await ReglaTarifa.aggregate([
     { $match: { activa: true, metodoCalculo: { $exists: true } } },
     {

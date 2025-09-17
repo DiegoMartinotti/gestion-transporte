@@ -22,7 +22,7 @@ interface ApiResponse<T = any> {
  */
 interface BulkImportRequest {
     cliente: string;
-    tramos: any[];
+    tramos: unknown[];
     reutilizarDistancias?: boolean;
     actualizarExistentes?: boolean;
 }
@@ -33,7 +33,7 @@ interface BulkImportRequest {
 interface BulkImportResult {
     total: number;
     exitosos: number;
-    errores: any[];
+    errores: unknown[];
     tramosCreados: number;
     tramosActualizados: number;
 }
@@ -111,12 +111,12 @@ async function bulkCreateTramos(req: Request<{}, ApiResponse<BulkImportResult>, 
                 
                 logger.debug(`Lote ${i + 1} procesado: ${resultados.exitosos} exitosos, ${resultados.errores.length} errores`);
                 
-            } catch (error: any) {
+            } catch (error: unknown) {
                 logger.error(`Error procesando lote ${i + 1}:`, error);
                 
                 resultadosConsolidados.errores.push({
                     lote: i + 1,
-                    error: `Error procesando lote: ${error.message}`
+                    error: `Error procesando lote: ${(error instanceof Error ? error.message : String(error))}`
                 });
             }
         }
@@ -128,12 +128,12 @@ async function bulkCreateTramos(req: Request<{}, ApiResponse<BulkImportResult>, 
             data: resultadosConsolidados
         });
         
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error general en bulkCreateTramos:', error);
         res.status(500).json({
             success: false,
             message: 'Error interno del servidor durante la importación masiva',
-            error: error.message
+            error: (error instanceof Error ? error.message : String(error))
         });
     }
 }

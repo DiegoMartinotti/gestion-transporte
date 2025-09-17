@@ -44,7 +44,7 @@ export const getAllTarifaMetodos = async (req: Request, res: Response): Promise<
     const { activo, requiereDistancia, requierePalets, busqueda, limite, pagina } = req.query;
 
     // Construir filtros
-    const filtros: any = {};
+    const filtros: unknown = {};
 
     if (activo !== undefined) {
       filtros.activo = activo === 'true';
@@ -115,12 +115,12 @@ export const getAllTarifaMetodos = async (req: Request, res: Response): Promise<
       `[TarifaMetodo] Consulta realizada: ${metodos.length} resultados de ${total} total`,
       {
         filtros,
-        usuario: (req as any).user?.email,
+        usuario: (req as unknown).user?.email,
       }
     );
 
     ApiResponse.success(res, resultado, 'Métodos de tarifa obtenidos exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al obtener métodos:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }

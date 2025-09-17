@@ -16,9 +16,9 @@ interface AuthenticatedUser {
  */
 interface AuthenticatedRequest {
     user?: AuthenticatedUser;
-    body: any;
-    params: any;
-    query: any;
+    body: unknown;
+    params: unknown;
+    query: unknown;
 }
 
 /**
@@ -41,7 +41,7 @@ const normalizarTramos = async (req: AuthenticatedRequest, res: Response<ApiResp
         const resultados = {
             procesados: 0,
             actualizados: 0,
-            errores: [] as any[]
+            errores: [] as unknown[]
         };
 
         resultados.procesados = await Tramo.countDocuments();
@@ -90,11 +90,11 @@ const normalizarTramos = async (req: AuthenticatedRequest, res: Response<ApiResp
                 
             logger.info(`Normalización masiva completada: ${resultados.actualizados} tramos actualizados`);
             
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error en actualización masiva:', error);
             resultados.errores.push({
                 fase: 'actualizacionMasiva',
-                error: error.message
+                error: (error instanceof Error ? error.message : String(error))
             });
         }
 
@@ -102,12 +102,12 @@ const normalizarTramos = async (req: AuthenticatedRequest, res: Response<ApiResp
             success: true,
             data: resultados
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error normalizando tramos:', error);
         res.status(500).json({
             success: false,
             message: 'Error al normalizar los tramos',
-            error: error.message
+            error: (error instanceof Error ? error.message : String(error))
         });
     }
 };

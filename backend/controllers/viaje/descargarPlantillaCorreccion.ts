@@ -66,7 +66,7 @@ export const descargarPlantillaCorreccion = async (req: Request, res: Response):
         await ExcelTemplateService.generateMissingDataTemplates(res, importacion);
         logger.info(`Plantillas de corrección generadas para importación ${importId}`);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al generar plantillas de corrección:', error);
         res.status(500).json({ 
             success: false, 

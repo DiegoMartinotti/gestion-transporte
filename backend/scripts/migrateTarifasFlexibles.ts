@@ -21,8 +21,8 @@ interface MigrationStats {
   metodosCreados: number;
   formulasMigradas: number;
   reglasMigradas: number;
-  errores: Array<{ tipo: string; mensaje: string; datos?: any }>;
-  advertencias: Array<{ tipo: string; mensaje: string; datos?: any }>;
+  errores: Array<{ tipo: string; mensaje: string; datos?: unknown }>;
+  advertencias: Array<{ tipo: string; mensaje: string; datos?: unknown }>;
 }
 
 class TarifaMigrationService {
@@ -95,7 +95,7 @@ class TarifaMigrationService {
 
       return this.stats;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error durante la migración:', error);
       
       if (!dryRun) {
@@ -278,11 +278,11 @@ class TarifaMigrationService {
             logger.info(`  [SIMULACIÓN] Método a crear: ${metodoData.codigo}`);
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.stats.errores.push({
           tipo: 'METODO',
           mensaje: `Error creando método ${metodoData.codigo}`,
-          datos: error.message
+          datos: (error instanceof Error ? error.message : String(error))
         });
       }
     }
@@ -305,22 +305,22 @@ class TarifaMigrationService {
 
       for (const cliente of clientes) {
         // Migrar fórmula Sider
-        if ((cliente as any).formulaPaletSider) {
+        if ((cliente as unknown).formulaPaletSider) {
           await this.migrarFormula(
             cliente._id,
             'Sider',
-            (cliente as any).formulaPaletSider,
+            (cliente as unknown).formulaPaletSider,
             dryRun,
             verbose
           );
         }
 
         // Migrar fórmula Bitren
-        if ((cliente as any).formulaPaletBitren) {
+        if ((cliente as unknown).formulaPaletBitren) {
           await this.migrarFormula(
             cliente._id,
             'Bitren',
-            (cliente as any).formulaPaletBitren,
+            (cliente as unknown).formulaPaletBitren,
             dryRun,
             verbose
           );
@@ -353,11 +353,11 @@ class TarifaMigrationService {
 
       logger.info(`  Total fórmulas migradas: ${this.stats.formulasMigradas}`);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.stats.errores.push({
         tipo: 'FORMULA',
         mensaje: 'Error migrando fórmulas',
-        datos: error.message
+        datos: (error instanceof Error ? error.message : String(error))
       });
     }
   }
@@ -413,11 +413,11 @@ class TarifaMigrationService {
           logger.info(`  [SIMULACIÓN] Fórmula a migrar: Cliente ${clienteId} - ${tipoUnidad}`);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.stats.advertencias.push({
         tipo: 'FORMULA',
         mensaje: `Error migrando fórmula para cliente ${clienteId}`,
-        datos: error.message
+        datos: (error instanceof Error ? error.message : String(error))
       });
     }
   }
@@ -517,11 +517,11 @@ class TarifaMigrationService {
             logger.info(`  [SIMULACIÓN] Regla a crear: ${reglaData.codigo}`);
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         this.stats.errores.push({
           tipo: 'REGLA',
           mensaje: `Error creando regla ${reglaData.codigo}`,
-          datos: error.message
+          datos: (error instanceof Error ? error.message : String(error))
         });
       }
     }
@@ -609,11 +609,11 @@ class TarifaMigrationService {
       });
       
       logger.info('  ✅ Índices actualizados correctamente');
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.stats.advertencias.push({
         tipo: 'INDICES',
         mensaje: 'Error actualizando índices',
-        datos: error.message
+        datos: (error instanceof Error ? error.message : String(error))
       });
     }
   }
@@ -644,7 +644,7 @@ class TarifaMigrationService {
       }
 
       logger.info('✅ Rollback completado');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error durante rollback:', error);
     }
   }

@@ -107,7 +107,7 @@ class SiteService extends BaseService<ISite> {
                 throw new Error('Nombre del site es requerido');
             }
 
-            const site = await (this.model as any).findByClienteAndNombre(clienteId, nombre);
+            const site = await (this.model as unknown).findByClienteAndNombre(clienteId, nombre);
             
             if (site) {
                 this.logSuccess('getByClienteAndNombre', { clienteId, nombre, found: true });
@@ -170,7 +170,7 @@ class SiteService extends BaseService<ISite> {
             }
 
             const searchRegex = { $regex: query.trim(), $options: 'i' };
-            const filtros: any = {
+            const filtros: unknown = {
                 ...opciones.filtros,
                 $or: [
                     { nombre: searchRegex },
@@ -225,7 +225,7 @@ class SiteService extends BaseService<ISite> {
             const { limite = 50, pagina = 1, filtros = {} } = opciones;
             const skip = (pagina - 1) * limite;
 
-            const agregacion: any[] = [
+            const agregacion: unknown[] = [
                 {
                     $geoNear: {
                         near: {
@@ -295,13 +295,13 @@ class SiteService extends BaseService<ISite> {
         this.logOperation('getSitesByLocalidad', { clienteId });
         
         try {
-            const matchFilter: any = {};
+            const matchFilter: unknown = {};
             if (clienteId) {
                 this.validateId(clienteId, 'Cliente ID');
                 matchFilter.cliente = new Types.ObjectId(clienteId);
             }
 
-            const agregacion: any[] = [
+            const agregacion: unknown[] = [
                 { $match: matchFilter },
                 {
                     $group: {

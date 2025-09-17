@@ -132,7 +132,7 @@ function validarFormula(
     // Validar ejecución con contexto de prueba
     return validarEjecucionFormula(formula, variablesFiltradas);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido';
     return {
       valida: false,
       mensaje: errorMessage || 'Error al validar la fórmula',

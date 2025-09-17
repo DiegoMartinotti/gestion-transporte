@@ -27,7 +27,7 @@ interface ResultadoAgregacion {
   totalCobrado: number;
   total?: number;
   estadoActual?: EstadoPartida;
-  viaje?: any;
+  viaje?: unknown;
 }
 
 /**

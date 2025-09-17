@@ -62,11 +62,11 @@ async function deleteTramo(req: AuthenticatedRequest, res: Response<ApiResponse>
             success: true,
             message: 'Tramo eliminado correctamente'
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al eliminar tramo:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: (error instanceof Error ? error.message : String(error))
         });
     }
 }

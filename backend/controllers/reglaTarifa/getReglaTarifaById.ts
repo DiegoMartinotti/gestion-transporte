@@ -73,11 +73,11 @@ export const getReglaTarifaById = async (req: Request, res: Response): Promise<v
 
     logger.debug(`[ReglaTarifa] Regla consultada: ${regla.codigo}`, {
       reglaId: regla._id,
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     ApiResponse.success(res, respuesta, 'Regla de tarifa obtenida exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[ReglaTarifa] Error al obtener regla:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
@@ -86,7 +86,7 @@ export const getReglaTarifaById = async (req: Request, res: Response): Promise<v
 /**
  * Verifica si una regla está vigente
  */
-function esVigenteRegla(regla: any, fecha: Date): boolean {
+function esVigenteRegla(regla: unknown, fecha: Date): boolean {
   if (!regla.activa) return false;
 
   if (regla.fechaInicioVigencia > fecha) return false;
@@ -111,7 +111,7 @@ function esVigenteRegla(regla: any, fecha: Date): boolean {
   if (regla.temporadas && regla.temporadas.length > 0) {
     const mesdia = `${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
     const enTemporada = regla.temporadas.some(
-      (t: any) => mesdia >= t.fechaInicio && mesdia <= t.fechaFin
+      (t: unknown) => mesdia >= t.fechaInicio && mesdia <= t.fechaFin
     );
     if (!enTemporada) return false;
   }
@@ -122,7 +122,7 @@ function esVigenteRegla(regla: any, fecha: Date): boolean {
 /**
  * Calcula días restantes de vigencia
  */
-function calcularDiasRestantes(regla: any, fecha: Date): number | null {
+function calcularDiasRestantes(regla: unknown, fecha: Date): number | null {
   if (!regla.fechaFinVigencia) return null;
 
   const fechaFin = new Date(regla.fechaFinVigencia);
@@ -135,7 +135,7 @@ function calcularDiasRestantes(regla: any, fecha: Date): number | null {
 /**
  * Calcula días transcurridos desde el inicio
  */
-function calcularDiasTranscurridos(regla: any, fecha: Date): number {
+function calcularDiasTranscurridos(regla: unknown, fecha: Date): number {
   const fechaInicio = new Date(regla.fechaInicioVigencia);
   const diferencia = fecha.getTime() - fechaInicio.getTime();
   const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
@@ -146,7 +146,7 @@ function calcularDiasTranscurridos(regla: any, fecha: Date): number {
 /**
  * Evalúa la aplicabilidad general de la regla
  */
-async function evaluarAplicabilidad(regla: any): Promise<{
+async function evaluarAplicabilidad(regla: unknown): Promise<{
   alcance: string;
   restricciones: string[];
   compatibilidad: string;
@@ -196,7 +196,7 @@ async function evaluarAplicabilidad(regla: any): Promise<{
 /**
  * Valida las condiciones de la regla
  */
-function validarCondiciones(condiciones: any[]): { validas: boolean; errores: string[] } {
+function validarCondiciones(condiciones: unknown[]): { validas: boolean; errores: string[] } {
   const errores: string[] = [];
 
   if (!condiciones || condiciones.length === 0) {
@@ -224,7 +224,7 @@ function validarCondiciones(condiciones: any[]): { validas: boolean; errores: st
 /**
  * Valida los modificadores de la regla
  */
-function validarModificadores(modificadores: any[]): { validos: boolean; errores: string[] } {
+function validarModificadores(modificadores: unknown[]): { validos: boolean; errores: string[] } {
   const errores: string[] = [];
 
   if (!modificadores || modificadores.length === 0) {
@@ -257,7 +257,7 @@ function validarModificadores(modificadores: any[]): { validos: boolean; errores
 /**
  * Valida la configuración completa de la regla
  */
-function validarConfiguracion(regla: any): { completa: boolean; advertencias: string[] } {
+function validarConfiguracion(regla: unknown): { completa: boolean; advertencias: string[] } {
   const advertencias: string[] = [];
 
   if (regla.prioridad < 1 || regla.prioridad > 1000) {

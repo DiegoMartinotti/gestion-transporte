@@ -76,7 +76,7 @@ async function getAllTramos(
 
     // Expandir cada tramo por sus tipos de tarifa
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tramosExpandidos: any[] = [];
+    const tramosExpandidos: unknown[] = [];
 
     // eslint-disable-next-line max-lines-per-function
     tramosBase.forEach(
@@ -145,7 +145,7 @@ async function getAllTramos(
 
     // Ordenar con función simplificada
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, complexity
-    const sortTramos = (a: any, b: any): number => {
+    const sortTramos = (a: unknown, b: unknown): number => {
       const clienteCompare = (a.cliente?.nombre || '').localeCompare(b.cliente?.nombre || '');
       if (clienteCompare !== 0) return clienteCompare;
 
@@ -178,7 +178,7 @@ async function getAllTramos(
       },
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido';
     logger.error('Error al obtener todos los tramos:', error);
     res.status(500).json({
       success: false,

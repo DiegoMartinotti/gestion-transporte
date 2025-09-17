@@ -312,7 +312,7 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
         }
 
         // Construir la consulta base
-        const baseQuery: any = { cliente };
+        const baseQuery: unknown = { cliente };
         
         // Añadir filtros opcionales
         if (origen) baseQuery.origen = origen;
@@ -331,26 +331,26 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
         const analisis = {
             totalTramos: tramos.length,
             porTipo: {
-                TRMC: tramos.filter(t => (t as any).tipo === 'TRMC').length,
-                TRMI: tramos.filter(t => (t as any).tipo === 'TRMI').length,
-                otros: tramos.filter(t => !['TRMC', 'TRMI'].includes((t as any).tipo)).length,
-                nulos: tramos.filter(t => !(t as any).tipo).length
+                TRMC: tramos.filter(t => (t as unknown).tipo === 'TRMC').length,
+                TRMI: tramos.filter(t => (t as unknown).tipo === 'TRMI').length,
+                otros: tramos.filter(t => !['TRMC', 'TRMI'].includes((t as unknown).tipo)).length,
+                nulos: tramos.filter(t => !(t as unknown).tipo).length
             },
-            tramosSinTipoNormalizado: tramos.filter(t => (t as any).tipo && (t as any).tipo !== 'TRMC' && (t as any).tipo !== 'TRMI').map(t => ({
+            tramosSinTipoNormalizado: tramos.filter(t => (t as unknown).tipo && (t as unknown).tipo !== 'TRMC' && (t as unknown).tipo !== 'TRMI').map(t => ({
                 _id: t._id,
-                origen: (t.origen as any)?.Site,
-                destino: (t.destino as any)?.Site,
-                tipo: (t as any).tipo
+                origen: (t.origen as unknown)?.Site,
+                destino: (t.destino as unknown)?.Site,
+                tipo: (t as unknown).tipo
             })),
-            posiblesConflictos: [] as any[]
+            posiblesConflictos: [] as unknown[]
         };
 
         // Encontrar pares de tramos que podrían estar en conflicto
         // (mismo origen-destino pero diferentes tipos)
-        const rutasUnicas: Record<string, any[]> = {};
+        const rutasUnicas: Record<string, unknown[]> = {};
         
         tramos.forEach(tramo => {
-            const rutaKey = `${(tramo.origen as any)._id}-${(tramo.destino as any)._id}-${(tramo as any).metodoCalculo}`;
+            const rutaKey = `${(tramo.origen as unknown)._id}-${(tramo.destino as unknown)._id}-${(tramo as unknown).metodoCalculo}`;
             if (!rutasUnicas[rutaKey]) {
                 rutasUnicas[rutaKey] = [];
             }
@@ -362,16 +362,16 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
             const tramosRuta = rutasUnicas[ruta];
             if (tramosRuta.length > 1) {
                 // Verificar si hay diferentes tipos en esta ruta
-                const tiposEnRuta = new Set(tramosRuta.map(t => (t as any).tipo));
+                const tiposEnRuta = new Set(tramosRuta.map(t => (t as unknown).tipo));
                 if (tiposEnRuta.size > 1) {
                     analisis.posiblesConflictos.push({
                         ruta: ruta,
-                        origen: (tramosRuta[0].origen as any)?.Site,
-                        destino: (tramosRuta[0].destino as any)?.Site,
+                        origen: (tramosRuta[0].origen as unknown)?.Site,
+                        destino: (tramosRuta[0].destino as unknown)?.Site,
                         tipos: Array.from(tiposEnRuta),
                         tramos: tramosRuta.map(t => ({
                             _id: t._id,
-                            tipo: (t as any).tipo,
+                            tipo: (t as unknown).tipo,
                             vigenciaDesde: t.vigenciaDesde,
                             vigenciaHasta: t.vigenciaHasta,
                             valor: t.valor
@@ -417,15 +417,15 @@ router.post('/corregir-tipos', async (req: express.Request, res: express.Respons
         const resultados = {
             procesados: tramoIds.length,
             actualizados: 0,
-            errores: [] as any[]
+            errores: [] as unknown[]
         };
         
         for (const id of tramoIds) {
             try {
                 const tramo = await Tramo.findById(id);
                 if (tramo) {
-                    const tipoAnterior = (tramo as any).tipo;
-                    (tramo as any).tipo = nuevoTipo;
+                    const tipoAnterior = (tramo as unknown).tipo;
+                    (tramo as unknown).tipo = nuevoTipo;
                     await tramo.save();
                     resultados.actualizados++;
                     logger.info(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
@@ -622,7 +622,7 @@ router.post('/diagnose-tipos', async (req: express.Request, res: express.Respons
         });
         
         // Agrupar por tipo para análisis
-        const porTipo: { [key: string]: any[] } = {};
+        const porTipo: { [key: string]: unknown[] } = {};
         tramos.forEach(t => {
             // Obtener la tarifa vigente para acceder a las propiedades
             const tarifaVigente = t.getTarifaVigente();
@@ -651,12 +651,12 @@ router.post('/diagnose-tipos', async (req: express.Request, res: express.Respons
                 'OK: El sistema permite tramos con diferentes tipos' :
                 'Problema: No hay tramos con diferentes tipos para este origen-destino'
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error en diagnóstico:', error);
         res.status(500).json({
             success: false,
             message: 'Error en diagnóstico',
-            error: error.message
+            error: (error instanceof Error ? error.message : String(error))
         });
     }
 });

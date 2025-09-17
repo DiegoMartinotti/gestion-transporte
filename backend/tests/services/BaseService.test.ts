@@ -254,7 +254,7 @@ describe('BaseService', () => {
     it('debería manejar transacciones en operaciones bulk', async () => {
       // Este test requiere implementación de operaciones bulk específicas
       // Por ahora solo verificamos que el método executeBulkWrite existe
-      expect(typeof (testService as any).executeBulkWrite).toBe('function');
+      expect(typeof (testService as unknown).executeBulkWrite).toBe('function');
     });
   });
 

@@ -170,7 +170,7 @@ tramoSchema.pre('save', async function(next) {
                     // Actualizar el campo de distancia
                     this.distancia = distanciaKm;
                     logger.debug(`[DISTANCIA] ✅ Distancia calculada: ${distanciaKm} km`);
-                } catch (routeError: any) {
+                } catch (routeError: unknown) {
                     logger.error('[DISTANCIA] ❌ Error calculando distancia:', routeError.message);
                     // No interrumpimos el guardado si falla el cálculo de distancia
                 }
@@ -192,7 +192,7 @@ tramoSchema.pre('save', async function(next) {
 tramoSchema.pre('save', function(next) {
     // Formatear valores en las tarifas históricas
     if (this.tarifasHistoricas && this.tarifasHistoricas.length > 0) {
-        this.tarifasHistoricas.forEach((tarifa: any) => {
+        this.tarifasHistoricas.forEach((tarifa: unknown) => {
             // Normalizar el tipo a mayúsculas
             if (tarifa.tipo) {
                 tarifa.tipo = tarifa.tipo.toUpperCase();
@@ -263,9 +263,9 @@ tramoSchema.virtual('descripcion').get(async function(this: ITramo): Promise<str
     try {
         // Poblar relaciones para obtener nombres
         await this.populate('origen destino cliente'); 
-        const nombreOrigen = (this.origen as any)?.nombre || 'ID Origen Desc.';
-        const nombreDestino = (this.destino as any)?.nombre || 'ID Destino Desc.';
-        const nombreCliente = (this.cliente as any)?.nombre || 'ID Cliente Desc.';
+        const nombreOrigen = (this.origen as unknown)?.nombre || 'ID Origen Desc.';
+        const nombreDestino = (this.destino as unknown)?.nombre || 'ID Destino Desc.';
+        const nombreCliente = (this.cliente as unknown)?.nombre || 'ID Cliente Desc.';
         
         const tarifaActual = this.getTarifaVigente();
         const tipoStr = tarifaActual ? tarifaActual.tipo : 'Sin tipo';

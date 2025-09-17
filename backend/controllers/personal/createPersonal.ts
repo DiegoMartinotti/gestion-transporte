@@ -47,14 +47,14 @@ const validateEmpresa = async (empresaId: unknown): Promise<boolean> => {
  * Verifica si el error es de validación
  */
 const isValidationError = (error: unknown): boolean => {
-  return error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError';
+  return error && typeof error === 'object' && 'name' in error && (error as any).name === 'ValidationError';
 };
 
 /**
  * Verifica si el error es de duplicado
  */
 const isDuplicateError = (error: unknown): boolean => {
-  return error && typeof error === 'object' && 'code' in error && error.code === 11000;
+  return error && typeof error === 'object' && 'code' in error && (error as any).code === 11000;
 };
 
 /**
@@ -65,8 +65,8 @@ const handleCreationError = (error: unknown, res: Response<IPersonal | ApiRespon
 
   if (isValidationError(error)) {
     const message =
-      error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
-        ? error.message
+      error && typeof error === 'object' && 'message' in error && typeof (error instanceof Error ? error.message : String(error)) === 'string'
+        ? (error instanceof Error ? error.message : String(error))
         : 'Error de validación';
     res.status(400).json({ error: message });
     return;

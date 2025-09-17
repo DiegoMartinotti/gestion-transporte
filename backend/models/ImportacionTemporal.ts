@@ -8,7 +8,7 @@ interface FailedTripData {
   dt: string;
   reason: string; // 'MISSING_SITE', 'DUPLICATE_DT', etc.
   message: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 /**
@@ -24,7 +24,7 @@ interface PendingTripData {
   chofer: string;
   vehiculo: string;
   paletas: number;
-  [key: string]: any; // Para campos adicionales opcionales
+  [key: string]: unknown; // Para campos adicionales opcionales
 }
 
 /**

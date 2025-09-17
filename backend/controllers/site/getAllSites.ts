@@ -14,9 +14,9 @@ interface GetSitesQuery {
  * Interface for formatted site response
  */
 interface FormattedSite {
-    _id: any;
+    _id: unknown;
     nombre: string;
-    cliente: any;
+    cliente: unknown;
     codigo?: string;
     direccion?: string;
     localidad?: string;
@@ -52,7 +52,7 @@ interface ApiResponse {
 const getAllSites = tryCatch(async (req: Request<{}, ApiResponse, {}, GetSitesQuery>, res: Response<ApiResponse>): Promise<void> => {
     const { cliente } = req.query;
     
-    const query: any = {};
+    const query: unknown = {};
     
     if (cliente) {
         // Buscar por ID del cliente, no por nombre
@@ -64,7 +64,7 @@ const getAllSites = tryCatch(async (req: Request<{}, ApiResponse, {}, GetSitesQu
         .lean()
         .exec();
 
-    const sitesFormateados: FormattedSite[] = sites.map((site: any) => {
+    const sitesFormateados: FormattedSite[] = sites.map((site: unknown) => {
         // Convertir coordenadas de GeoJSON a formato lat/lng
         const coordenadas = site.location && Array.isArray(site.location.coordinates) ? {
             lng: site.location.coordinates[0],

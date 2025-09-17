@@ -59,7 +59,7 @@ const validators = {
    * @param texto - Texto a validar
    * @returns true si es válido
    */
-  esTextoNoVacio: (texto: any): boolean => {
+  esTextoNoVacio: (texto: unknown): boolean => {
     if (texto === undefined || texto === null) return false;
     return texto.toString().trim().length > 0;
   },
@@ -81,7 +81,7 @@ const validators = {
    * @param valor - Valor a validar
    * @returns true si es un booleano
    */
-  esBooleano: (valor: any): boolean => {
+  esBooleano: (valor: unknown): boolean => {
     return typeof valor === 'boolean';
   },
   

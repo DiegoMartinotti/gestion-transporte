@@ -112,15 +112,15 @@ export const createTarifaMetodo = async (req: Request, res: Response): Promise<v
 
     logger.info(`[TarifaMetodo] Método creado: ${nuevoMetodo.codigo}`, {
       metodoId: nuevoMetodo._id,
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     ApiResponse.success(res, nuevoMetodo, 'Método de tarifa creado exitosamente', 201);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al crear método:', error);
 
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => ({
+    if ((error as any).name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map((err: unknown) => ({
         field: err.path,
         message: err.message,
       }));
@@ -128,7 +128,7 @@ export const createTarifaMetodo = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    if (error.code === 11000) {
+    if ((error as any).code === 11000) {
       ApiResponse.error(res, 'El código del método ya existe', 409);
       return;
     }

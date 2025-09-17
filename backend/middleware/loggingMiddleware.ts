@@ -10,12 +10,12 @@ interface LogContext {
   path: string;
   ip: string;
   userId?: string;
-  params?: any;
-  query?: any;
-  body?: any;
+  params?: unknown;
+  query?: unknown;
+  body?: unknown;
   statusCode?: number;
   responseTime?: number;
-  error?: any;
+  error?: unknown;
 }
 
 /**
@@ -29,7 +29,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
     method: req.method,
     path: req.originalUrl,
     ip: req.ip || 'unknown',
-    userId: (req as any).user?.id,
+    userId: (req as unknown).user?.id,
     params: req.params,
     query: req.query
   };
@@ -51,7 +51,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
       method: req.method,
       path: req.originalUrl,
       ip: req.ip || 'unknown',
-      userId: (req as any).user?.id,
+      userId: (req as unknown).user?.id,
       statusCode: res.statusCode,
       responseTime
     };
@@ -84,7 +84,7 @@ export class ControllerLogger {
   /**
    * Log de operación iniciada
    */
-  logOperation(operation: string, data?: any): void {
+  logOperation(operation: string, data?: unknown): void {
     logger.info(`[${this.controllerName}] ${operation} - Iniciado`, {
       controller: this.controllerName,
       operation,
@@ -96,7 +96,7 @@ export class ControllerLogger {
   /**
    * Log de operación exitosa
    */
-  logSuccess(operation: string, result?: any): void {
+  logSuccess(operation: string, result?: unknown): void {
     logger.info(`[${this.controllerName}] ${operation} - Exitoso`, {
       controller: this.controllerName,
       operation,
@@ -108,15 +108,15 @@ export class ControllerLogger {
   /**
    * Log de error en operación
    */
-  logError(operation: string, error: any, context?: any): void {
+  logError(operation: string, error: unknown, context?: unknown): void {
     logger.error(`[${this.controllerName}] ${operation} - Error`, {
       controller: this.controllerName,
       operation,
       timestamp: new Date().toISOString(),
       error: {
-        message: error.message || 'Error desconocido',
+        message: (error instanceof Error ? error.message : String(error)) || 'Error desconocido',
         stack: error.stack,
-        code: error.code
+        code: (error as any).code
       },
       context
     });
@@ -125,7 +125,7 @@ export class ControllerLogger {
   /**
    * Log de advertencia
    */
-  logWarning(operation: string, message: string, data?: any): void {
+  logWarning(operation: string, message: string, data?: unknown): void {
     logger.warn(`[${this.controllerName}] ${operation} - ${message}`, {
       controller: this.controllerName,
       operation,
@@ -137,7 +137,7 @@ export class ControllerLogger {
   /**
    * Log de información general
    */
-  logInfo(message: string, data?: any): void {
+  logInfo(message: string, data?: unknown): void {
     logger.info(`[${this.controllerName}] ${message}`, {
       controller: this.controllerName,
       timestamp: new Date().toISOString(),
@@ -148,7 +148,7 @@ export class ControllerLogger {
   /**
    * Log de debug
    */
-  logDebug(message: string, data?: any): void {
+  logDebug(message: string, data?: unknown): void {
     logger.debug(`[${this.controllerName}] ${message}`, {
       controller: this.controllerName,
       timestamp: new Date().toISOString(),
@@ -160,12 +160,12 @@ export class ControllerLogger {
 /**
  * Middleware de manejo de errores con logging unificado
  */
-export function errorLogger(err: any, req: Request, res: Response, next: NextFunction) {
+export function errorLogger(err: unknown, req: Request, res: Response, next: NextFunction) {
   const errorContext = {
     method: req.method,
     path: req.originalUrl,
     ip: req.ip || 'unknown',
-    userId: (req as any).user?.id,
+    userId: (req as unknown).user?.id,
     error: {
       message: err.message,
       stack: err.stack,

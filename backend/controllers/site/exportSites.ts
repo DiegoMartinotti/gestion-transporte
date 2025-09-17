@@ -14,7 +14,7 @@ export const exportSites = tryCatch(async (req: Request, res: Response): Promise
     logger.info('Exportando sites a Excel');
     
     // Construir filtros desde query parameters
-    const filters: any = {};
+    const filters: unknown = {};
     if (req.query.cliente) filters.cliente = req.query.cliente;
     if (req.query.search) {
         filters.$or = [
@@ -60,7 +60,7 @@ export const exportSites = tryCatch(async (req: Request, res: Response): Promise
     sites.forEach(site => {
         worksheet.addRow({
             nombre: site.nombre,
-            cliente: (site.cliente as any)?.nombre || 'Sin cliente',
+            cliente: (site.cliente as unknown)?.nombre || 'Sin cliente',
             codigo: site.codigo || '',
             direccion: site.direccion || '',
             localidad: site.localidad || '',
