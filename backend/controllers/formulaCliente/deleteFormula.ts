@@ -6,7 +6,7 @@ import logger from '../../utils/logger';
 import { ApiResponse } from './types';
 
 export const deleteFormula = async (
-  req: Request<{ id: string }>, 
+  req: Request<{ id: string }>,
   res: Response<ApiResponse>
 ): Promise<void> => {
   try {
@@ -26,9 +26,13 @@ export const deleteFormula = async (
 
     logger.info(`Fórmula ${id} eliminada.`);
     res.json({ message: 'Fórmula eliminada exitosamente' });
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(`Error al eliminar fórmula ${req.params.id}:`, error);
-    res.status(500).json({ message: 'Error interno al eliminar la fórmula', error: error.message });
+    res
+      .status(500)
+      .json({
+        message: 'Error interno al eliminar la fórmula',
+        error: error instanceof Error ? error.message : String(error),
+      });
   }
 };

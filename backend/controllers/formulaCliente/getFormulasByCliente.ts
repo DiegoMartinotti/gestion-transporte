@@ -25,7 +25,7 @@ export const getFormulasByCliente = async (
       return;
     }
 
-    const query: any = { clienteId: clienteId };
+    const query: Record<string, unknown> = { clienteId: clienteId };
     if (tipoUnidad) {
       query.tipoUnidad = tipoUnidad;
     }
@@ -45,8 +45,13 @@ export const getFormulasByCliente = async (
       req.query
     );
     res.json(formulas);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(`Error al obtener fórmulas para cliente ${req.params.clienteId}:`, error);
-    res.status(500).json({ message: 'Error interno al obtener fórmulas', error: error.message });
+    res
+      .status(500)
+      .json({
+        message: 'Error interno al obtener fórmulas',
+        error: error instanceof Error ? error.message : String(error),
+      });
   }
 };
