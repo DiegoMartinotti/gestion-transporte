@@ -14,8 +14,8 @@ import * as tramoService from '../../services/tramo/tramoService';
  */
 interface BulkImportRequest {
     cliente: string;
-    viajes: any[];
-    erroresMapeo?: any[];
+    viajes: unknown[];
+    erroresMapeo?: unknown[];
     sitesNoEncontrados?: string[];
     totalFilasConErrores?: number;
 }
@@ -93,7 +93,7 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
                 duplicateDt: { count: 0, details: [] },
                 invalidData: { count: 0, details: [] },
             },
-            failedTrips: erroresMapeo?.map((error: any, index: number) => ({
+            failedTrips: erroresMapeo?.map((error: unknown, index: number) => ({
                 originalIndex: error.fila,
                 dt: String(`Viaje ${error.fila}`),
                 reason: 'MISSING_SITE',
@@ -125,8 +125,8 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
         // Procesamiento de viajes
         let successCount = 0;
         let failCount = 0;
-        const viajesCreados: any[] = [];
-        const erroresDetallados: any[] = [];
+        const viajesCreados: unknown[] = [];
+        const erroresDetallados: unknown[] = [];
 
         for (let i = 0; i < viajes.length; i++) {
             const viajeData = viajes[i];
@@ -184,9 +184,9 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
                 viajesCreados.push(nuevoViaje);
                 successCount++;
                 
-            } catch (error: any) {
+            } catch (error: unknown) {
                 failCount++;
-                const errorMsg = error.message || 'Error desconocido';
+                const errorMsg = (error instanceof Error ? error.message : String(error)) || 'Error desconocido';
                 logger.error(`Error procesando viaje ${i + 1} (DT: ${viajeData.dt || 'sin DT'}):`, errorMsg);
                 
                 erroresDetallados.push({
@@ -198,7 +198,7 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
 
                 // Actualizar categorías de error en ImportacionTemporal
                 if (importacionId) {
-                    const updateData: any = {};
+                    const updateData: unknown = {};
                     
                     if (errorMsg.includes('tramo') || errorMsg.includes('tarifa')) {
                         // Obtener nombres reales de los sites desde la BD
@@ -249,7 +249,7 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
                     failCountInitial: totalFailCountFinal,
                     message: `Importación completada: ${successCount} viajes creados, ${totalFailCountFinal} errores`,
                     failedTrips: [
-                        ...(erroresMapeo?.map((error: any, index: number) => ({
+                        ...(erroresMapeo?.map((error: unknown, index: number) => ({
                             originalIndex: error.fila,
                             dt: String(`Viaje ${error.fila}`),
                             reason: 'MISSING_SITE',
@@ -290,7 +290,7 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
             }
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error en iniciarBulkImportViajes:', error);
         
         if (importacionId) {
@@ -299,7 +299,7 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
                     importacionId,
                     { 
                         status: 'failed',
-                        message: `Error durante importación: ${error.message}`
+                        message: `Error durante importación: ${(error instanceof Error ? error.message : String(error))}`
                     },
                     { session }
                 );
@@ -315,7 +315,7 @@ export const iniciarBulkImportViajes = async (req: Request<{}, ApiResponse, Bulk
             res,
             'Error interno durante la importación',
             500,
-            error.message
+            (error instanceof Error ? error.message : String(error))
         );
     }
 };

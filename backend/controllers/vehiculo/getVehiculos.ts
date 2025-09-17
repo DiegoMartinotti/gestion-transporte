@@ -18,7 +18,7 @@ interface VehiculoQuery {
 interface OpcionesProcesadas {
   limite: number;
   pagina: number;
-  filtros: Record<string, any>;
+  filtros: Record<string, unknown>;
   vencimientoProximo?: boolean;
   diasVencimiento?: number;
   vencidos?: boolean;
@@ -83,7 +83,7 @@ const getVehiculos = async (req: express.Request, res: express.Response): Promis
     const opciones = procesarParametros(req.query as VehiculoQuery);
     logger.info(`Parámetros procesados: ${JSON.stringify(opciones)}`);
     
-    let resultado: any;
+    let resultado: unknown;
     
     // Determinar el tipo de consulta según los parámetros
     if (opciones.vencimientoProximo) {

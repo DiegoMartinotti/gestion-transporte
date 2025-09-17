@@ -118,7 +118,7 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
     }
 
     // Construir objeto de actualización
-    const actualizacion: any = {};
+    const actualizacion: unknown = {};
 
     if (codigo !== undefined) actualizacion.codigo = codigo.toUpperCase();
     if (nombre !== undefined) actualizacion.nombre = nombre;
@@ -164,7 +164,7 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
     logger.info(`[TarifaMetodo] Método actualizado: ${metodoActualizado.codigo}`, {
       metodoId: metodoActualizado._id,
       cambios: Object.keys(actualizacion),
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     // Información adicional para la respuesta
@@ -177,11 +177,11 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
     };
 
     ApiResponse.success(res, respuesta, 'Método de tarifa actualizado exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al actualizar método:', error);
 
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => ({
+    if ((error as any).name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map((err: unknown) => ({
         field: err.path,
         message: err.message,
       }));
@@ -189,7 +189,7 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    if (error.code === 11000) {
+    if ((error as any).code === 11000) {
       ApiResponse.error(res, 'El código del método ya existe', 409);
       return;
     }

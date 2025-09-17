@@ -64,11 +64,11 @@ async function getTramoById(req: AuthenticatedRequest, res: Response<ApiResponse
             success: true,
             data: tramo
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al obtener tramo por ID:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: (error instanceof Error ? error.message : String(error))
         });
     }
 }

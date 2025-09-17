@@ -79,7 +79,7 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
     logger.info('[TarifaEngine] Iniciando simulación de tarifas', {
       cantidadEscenarios: escenarios.length,
       configuracion,
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     const startTime = Date.now();
@@ -93,7 +93,7 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
       try {
         logger.debug(`[TarifaEngine] Procesando escenario ${i + 1}: ${escenario.nombre}`);
 
-        const resultadosEscenario: any = {
+        const resultadosEscenario: unknown = {
           nombre: escenario.nombre,
           parametros: {
             clienteId: escenario.clienteId,
@@ -122,10 +122,10 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
         }
 
         resultados.push(resultadosEscenario);
-      } catch (error: any) {
+      } catch (error: unknown) {
         const errorInfo = {
           escenario: escenario.nombre,
-          error: error.message,
+          error: (error instanceof Error ? error.message : String(error)),
           parametros: {
             clienteId: escenario.clienteId,
             origenId: escenario.origenId,
@@ -151,7 +151,7 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
       configuracion,
       metadatos: {
         timestamp: new Date(),
-        usuario: (req as any).user?.email || 'desconocido',
+        usuario: (req as unknown).user?.email || 'desconocido',
       },
     };
 
@@ -163,7 +163,7 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
     });
 
     ApiResponse.success(res, respuesta, 'Simulación completada exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaEngine] Error en simulación de tarifas:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
@@ -173,11 +173,11 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
  * Simula con múltiples métodos de cálculo
  */
 async function simularConMultiplesMetodos(
-  escenario: any,
-  configuracion: any
-): Promise<Record<string, any>> {
+  escenario: unknown,
+  configuracion: unknown
+): Promise<Record<string, unknown>> {
   const metodosComparar = ['PALET', 'KILOMETRO', 'FIJO'];
-  const calculos: Record<string, any> = {};
+  const calculos: Record<string, unknown> = {};
 
   for (const metodo of metodosComparar) {
     try {
@@ -188,9 +188,9 @@ async function simularConMultiplesMetodos(
         ...resultado,
         metodoUtilizado: metodo,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       calculos[metodo] = {
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
         metodoUtilizado: metodo,
       };
     }
@@ -203,9 +203,9 @@ async function simularConMultiplesMetodos(
  * Simula con un método único
  */
 async function simularConMetodoUnico(
-  escenario: any,
-  configuracion: any
-): Promise<Record<string, any>> {
+  escenario: unknown,
+  configuracion: unknown
+): Promise<Record<string, unknown>> {
   try {
     const contexto = construirContexto(escenario, configuracion);
     const resultado = await tarifaEngine.calcular(contexto);
@@ -216,10 +216,10 @@ async function simularConMetodoUnico(
         metodoUtilizado: escenario.metodoCalculo || 'automático',
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       principal: {
-        error: error.message,
+        error: (error instanceof Error ? error.message : String(error)),
         metodoUtilizado: escenario.metodoCalculo || 'automático',
       },
     };
@@ -229,15 +229,15 @@ async function simularConMetodoUnico(
 /**
  * Genera análisis de la simulación
  */
-async function generarAnalisisSimulacion(resultadosEscenario: any): Promise<any> {
+async function generarAnalisisSimulacion(resultadosEscenario: unknown): Promise<any> {
   const calculos = Object.values(resultadosEscenario.calculos);
-  const calculosExitosos = calculos.filter((c: any) => !c.error);
+  const calculosExitosos = calculos.filter((c: unknown) => !c.error);
 
   if (calculosExitosos.length === 0) {
     return { error: 'No hay cálculos exitosos para analizar' };
   }
 
-  const totales = calculosExitosos.map((c: any) => c.total || 0);
+  const totales = calculosExitosos.map((c: unknown) => c.total || 0);
 
   return {
     totalMinimo: Math.min(...totales),
@@ -253,8 +253,8 @@ async function generarAnalisisSimulacion(resultadosEscenario: any): Promise<any>
  * Construye el contexto de cálculo para un escenario
  */
 function construirContexto(
-  escenario: any,
-  configuracion: any,
+  escenario: unknown,
+  configuracion: unknown,
   metodoOverride?: string
 ): IContextoCalculo {
   return {

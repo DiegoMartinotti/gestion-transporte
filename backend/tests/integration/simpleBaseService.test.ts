@@ -51,7 +51,7 @@ describe('BaseService Simple Integration Tests', () => {
       expect(created.cuit).toBe(testCliente.cuit);
 
       // Read
-      const clienteId = (created as any)._id.toString();
+      const clienteId = (created as unknown)._id.toString();
       const found = await clienteService.getById(clienteId);
       expect(found).toBeDefined();
       expect(found!.nombre).toBe(testCliente.nombre);
@@ -78,7 +78,7 @@ describe('BaseService Simple Integration Tests', () => {
         activo: true
       });
 
-      const clienteId = (created as any)._id.toString();
+      const clienteId = (created as unknown)._id.toString();
       const updated = await clienteService.update(clienteId, { nombre: 'Cliente Actualizado' });
       
       expect(updated).toBeDefined();
@@ -93,7 +93,7 @@ describe('BaseService Simple Integration Tests', () => {
         activo: true
       });
 
-      const clienteId = (created as any)._id.toString();
+      const clienteId = (created as unknown)._id.toString();
       const deleted = await clienteService.delete(clienteId);
       
       expect(deleted).toBe(true);

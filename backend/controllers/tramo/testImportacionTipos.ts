@@ -16,9 +16,9 @@ interface AuthenticatedUser {
  */
 interface AuthenticatedRequest {
     user?: AuthenticatedUser;
-    body: any;
-    params: any;
-    query: any;
+    body: unknown;
+    params: unknown;
+    query: unknown;
 }
 
 /**
@@ -83,12 +83,12 @@ const testImportacionTipos = async (req: AuthenticatedRequest, res: Response<Api
             message: 'Prueba completada correctamente',
             data: nuevoTramo
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error en prueba de importación:', error);
         res.status(500).json({
             success: false,
             message: 'Error al realizar la prueba de importación',
-            error: error.message
+            error: (error instanceof Error ? error.message : String(error))
         });
     }
 };

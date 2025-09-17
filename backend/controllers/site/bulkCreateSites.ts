@@ -66,12 +66,12 @@ const bulkCreateSites = tryCatch(async (req: express.Request, res: express.Respo
 
             await nuevoSite.save();
             resultados.exitosos++;
-        } catch (error: any) {
+        } catch (error: unknown) {
             resultados.errores.push({
                 site: siteData.site,
-                error: error.code === 11000 ? 
+                error: (error as any).code === 11000 ? 
                     'Site duplicado para este cliente' : 
-                    error.message
+                    (error instanceof Error ? error.message : String(error))
             });
         }
     }

@@ -317,7 +317,7 @@ class VehiculoService extends BaseService<IVehiculo> {
     const insertados = 0;
     const actualizados = 0;
     const errores: BulkResult['errores'] = [];
-    const operations: any[] = [];
+    const operations: unknown[] = [];
 
     if (!Array.isArray(vehiculosData) || vehiculosData.length === 0) {
       return { 

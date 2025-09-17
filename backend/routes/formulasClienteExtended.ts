@@ -106,7 +106,7 @@ const router = express.Router();
  *       401:
  *         description: No autorizado
  */
-router.get('/', authenticateToken, getAllFormulasValidators, getAllFormulas as any);
+router.get('/', authenticateToken, getAllFormulasValidators, getAllFormulas as unknown);
 
 /**
  * @swagger
@@ -183,7 +183,7 @@ router.get('/', authenticateToken, getAllFormulasValidators, getAllFormulas as a
  *       401:
  *         description: No autorizado
  */
-router.get('/:id', authenticateToken, getFormulaByIdValidators, getFormulaById as any);
+router.get('/:id', authenticateToken, getFormulaByIdValidators, getFormulaById as unknown);
 
 /**
  * @swagger
@@ -294,6 +294,6 @@ router.get('/:id', authenticateToken, getFormulaByIdValidators, getFormulaById a
  *       401:
  *         description: No autorizado
  */
-router.post('/validate', authenticateToken, validateFormulaValidators, validateFormula as any);
+router.post('/validate', authenticateToken, validateFormulaValidators, validateFormula as unknown);
 
 export default router;

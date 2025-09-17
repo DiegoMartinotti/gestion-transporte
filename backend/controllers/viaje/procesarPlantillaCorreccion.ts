@@ -54,11 +54,11 @@ export const procesarPlantillaCorreccion = async (req: Request, res: Response): 
             data: resultado
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al procesar plantilla de corrección:', error);
         res.status(500).json({ 
             success: false, 
-            message: error.message || 'Error al procesar plantilla de corrección' 
+            message: (error instanceof Error ? error.message : String(error)) || 'Error al procesar plantilla de corrección' 
         });
     }
 };

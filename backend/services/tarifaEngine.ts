@@ -142,7 +142,7 @@ export class TarifaEngine {
     contexto: IContextoCalculo,
     startTime: number
   ): never {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido';
     logger.error('[TarifaEngine] Error en cálculo de tarifa:', errorMessage);
     logger.error('[TarifaEngine] Error en cálculo de tarifa:', error);
 

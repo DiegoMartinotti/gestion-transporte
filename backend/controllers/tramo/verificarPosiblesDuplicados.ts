@@ -24,7 +24,7 @@ interface ApiResponse<T = any> {
 interface DuplicateVerificationResult {
     tramosVerificados: number;
     tramosExistentes: number;
-    posiblesDuplicados: any[];
+    posiblesDuplicados: unknown[];
     mapaIds: Record<string, number>;
 }
 
@@ -41,7 +41,7 @@ interface DuplicateVerificationResult {
  * @returns {Promise<Object>} Resultado de la verificación de duplicados
  * @throws {Error} Error 400 si faltan datos, 500 si hay error del servidor
  */
-async function verificarPosiblesDuplicados(req: Request<{}, ApiResponse<{ resultado: DuplicateVerificationResult }>, { tramos: any[]; cliente: string }>, res: Response<ApiResponse<{ resultado: DuplicateVerificationResult }>>): Promise<void> {
+async function verificarPosiblesDuplicados(req: Request<{}, ApiResponse<{ resultado: DuplicateVerificationResult }>, { tramos: unknown[]; cliente: string }>, res: Response<ApiResponse<{ resultado: DuplicateVerificationResult }>>): Promise<void> {
     try {
         const { tramos, cliente } = req.body;
         
@@ -55,7 +55,7 @@ async function verificarPosiblesDuplicados(req: Request<{}, ApiResponse<{ result
         
         const tramosExistentes = await Tramo.find({ cliente }).lean();
         
-        const mapaExistentes: Record<string, any[]> = {};
+        const mapaExistentes: Record<string, unknown[]> = {};
         tramosExistentes.forEach(tramo => {
             const id = generarTramoId(tramo);
             if (!mapaExistentes[id]) {
@@ -113,12 +113,12 @@ async function verificarPosiblesDuplicados(req: Request<{}, ApiResponse<{ result
             success: true,
             data: { resultado }
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al verificar duplicados:', error);
         res.status(500).json({
             success: false,
             message: 'Error al verificar duplicados',
-            error: error.message
+            error: (error instanceof Error ? error.message : String(error))
         });
     }
 }

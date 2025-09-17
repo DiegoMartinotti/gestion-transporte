@@ -74,7 +74,7 @@ export const updateFormula = async (
       .status(500)
       .json({
         message: 'Error interno al actualizar la fórmula',
-        error: error instanceof Error ? error.message : 'Error desconocido',
+        error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido',
       });
   }
 };

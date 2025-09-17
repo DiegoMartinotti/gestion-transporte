@@ -19,7 +19,7 @@ interface AuthenticatedUser {
  */
 interface AuthenticatedRequest {
     user?: AuthenticatedUser;
-    query: any;
+    query: unknown;
 }
 
 /**
@@ -40,7 +40,7 @@ export const getAllPersonal = async (req: AuthenticatedRequest, res: Response<IP
     try {
         const { empresaId } = req.query;
         
-        const query: any = {};
+        const query: unknown = {};
         if (empresaId && typeof empresaId === 'string') {
             query.empresa = empresaId;
         }

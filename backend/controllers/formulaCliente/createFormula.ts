@@ -120,7 +120,7 @@ export const createFormula = async (
     res.status(201).json(nuevaFormula);
   } catch (error: unknown) {
     logger.error('Error al crear fórmula personalizada:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido';
     res.status(500).json({ message: 'Error interno al crear la fórmula', error: errorMessage });
   }
 };

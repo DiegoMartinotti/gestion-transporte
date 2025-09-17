@@ -88,7 +88,7 @@ export const deleteTarifaMetodo = async (req: Request, res: Response): Promise<v
     logger.info(`[TarifaMetodo] Método eliminado: ${metodo.codigo}`, {
       metodoId: metodo._id,
       nombre: metodo.nombre,
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     ApiResponse.success(
@@ -101,7 +101,7 @@ export const deleteTarifaMetodo = async (req: Request, res: Response): Promise<v
       },
       'Método de tarifa eliminado exitosamente'
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al eliminar método:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }

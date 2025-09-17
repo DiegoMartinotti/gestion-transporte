@@ -271,7 +271,7 @@ async function validarSintaxis(
     } else errores.push(resultado.mensaje || 'Error de sintaxis en la fórmula');
   } catch (error: unknown) {
     errores.push(
-      `Error de validación: ${error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE}`
+      `Error de validación: ${error instanceof Error ? (error instanceof Error ? error.message : String(error)) : DEFAULT_ERROR_MESSAGE}`
     );
   }
   return { valida: errores.length === 0, errores, advertencias };
@@ -364,7 +364,7 @@ async function ejecutarFormulaNumerica(
   } catch (error: unknown) {
     return {
       exitosa: false,
-      error: error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE,
+      error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : DEFAULT_ERROR_MESSAGE,
     };
   }
 }
@@ -390,7 +390,7 @@ async function ejecutarPruebaCalculo(
   } catch (error: unknown) {
     return {
       exitosa: false,
-      error: error instanceof Error ? error.message : DEFAULT_ERROR_MESSAGE,
+      error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : DEFAULT_ERROR_MESSAGE,
     };
   }
 }

@@ -204,12 +204,12 @@ const determinarTipoError = (error: ErrorCalculoTarifa) => {
   let statusCode = 500;
   let mensaje = 'Error interno del servidor';
 
-  if (error.message.includes('no encontrado')) {
+  if ((error instanceof Error ? error.message : String(error)).includes('no encontrado')) {
     statusCode = 404;
-    mensaje = error.message;
-  } else if (error.message.includes('inválido') || error.message.includes('requerido')) {
+    mensaje = (error instanceof Error ? error.message : String(error));
+  } else if ((error instanceof Error ? error.message : String(error)).includes('inválido') || (error instanceof Error ? error.message : String(error)).includes('requerido')) {
     statusCode = 400;
-    mensaje = error.message;
+    mensaje = (error instanceof Error ? error.message : String(error));
   }
 
   return { statusCode, mensaje };

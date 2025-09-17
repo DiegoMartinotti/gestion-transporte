@@ -241,7 +241,7 @@ class PersonalService extends BaseService<IPersonal> {
         try {
             this.validateTipoPersonal(tipo);
             
-            const filtros: any = {
+            const filtros: unknown = {
                 ...opciones.filtros,
                 tipo: tipo
             };
@@ -276,7 +276,7 @@ class PersonalService extends BaseService<IPersonal> {
     async getPersonalActivo(empresaId?: string, opciones: PaginationOptions<IPersonal> = {}) {
         this.logOperation('getPersonalActivo', { empresaId, opciones });
         
-        const filtros: any = {
+        const filtros: unknown = {
             ...opciones.filtros,
             activo: true
         };
@@ -305,7 +305,7 @@ class PersonalService extends BaseService<IPersonal> {
             }
 
             const searchRegex = { $regex: query.trim(), $options: 'i' };
-            const filtros: any = {
+            const filtros: unknown = {
                 ...opciones.filtros,
                 $or: [
                     { nombre: searchRegex },
@@ -349,7 +349,7 @@ class PersonalService extends BaseService<IPersonal> {
             const fechaLimite = new Date();
             fechaLimite.setDate(fechaLimite.getDate() + diasLimite);
 
-            const filtros: any = {
+            const filtros: unknown = {
                 activo: true,
                 $or: [
                     { 'documentacion.licenciaConducir.vencimiento': { $lte: fechaLimite } },
@@ -444,7 +444,7 @@ class PersonalService extends BaseService<IPersonal> {
         this.logOperation('getEstadisticas', { empresaId });
         
         try {
-            const matchFilter: any = {};
+            const matchFilter: unknown = {};
             if (empresaId) {
                 this.validateId(empresaId, 'Empresa ID');
                 matchFilter.empresa = new Types.ObjectId(empresaId);

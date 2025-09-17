@@ -69,11 +69,11 @@ async function updateTramo(req: AuthenticatedRequest, res: Response<ApiResponse<
             success: true,
             data: tramoActualizado
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Error al actualizar tramo:', error);
         res.status(400).json({
             success: false,
-            message: error.message
+            message: (error instanceof Error ? error.message : String(error))
         });
     }
 }

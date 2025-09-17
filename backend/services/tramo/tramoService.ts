@@ -51,7 +51,7 @@ interface ProcessOptions {
 
 interface ProcessResult {
   status: 'insert' | 'update' | 'error';
-  operation?: any;
+  operation?: unknown;
   error?: string;
   tramoInfo?: {
     origenNombre: string;
@@ -91,7 +91,7 @@ interface CreateTramosBulkResult {
     index?: number | string;
     message: string;
     code?: number;
-    data?: any;
+    data?: unknown;
   }>;
 }
 
@@ -506,8 +506,8 @@ class TramoService extends BaseService<ITramo> {
         };
         
         // Preparar operaciones para bulkWrite
-        const operacionesInsert: any[] = [];
-        const operacionesUpdate: any[] = [];
+        const operacionesInsert: unknown[] = [];
+        const operacionesUpdate: unknown[] = [];
         
         // Iniciar sesión de MongoDB para transacción
         const session = await mongoose.startSession();
@@ -607,7 +607,7 @@ class TramoService extends BaseService<ITramo> {
    * @param hasta - Fecha final (ISO string)
    * @returns Objeto con tramos filtrados y metadata
    */
-  private async obtenerTramosHistoricos(tramos: any[], desde: string, hasta: string): Promise<any> {
+  private async obtenerTramosHistoricos(tramos: unknown[], desde: string, hasta: string): Promise<any> {
     logger.debug('Procesando tramos históricos con filtro de fecha');
     
     // Convertir fechas a objetos Date para comparación
@@ -617,7 +617,7 @@ class TramoService extends BaseService<ITramo> {
     logger.debug(`Filtrando tramos por rango de fechas: ${desdeDate.toISOString().split('T')[0]} - ${hastaDate.toISOString().split('T')[0]}`);
     
     // Usar reduce para construir el Map de tramos únicos en una sola pasada
-    const tramosUnicos = tramos.reduce((mapaTramos: Map<string, any>, tramo: any) => {
+    const tramosUnicos = tramos.reduce((mapaTramos: Map<string, any>, tramo: unknown) => {
         // Añadir verificación dentro del reduce para manejar tramos sin origen/destino
         if (!tramo || !tramo.origen || !tramo.destino) {
             logger.warn('Omitiendo tramo sin origen/destino en procesamiento histórico:', tramo?._id);
@@ -632,11 +632,11 @@ class TramoService extends BaseService<ITramo> {
         };
         
         // Función para crear la clave única por origen-destino-tipo
-        const crearClave = (origen: any, destino: any, tipo: string): string => 
+        const crearClave = (origen: unknown, destino: unknown, tipo: string): string => 
             `${origen.Site}-${destino.Site}-${tipo || 'TRMC'}`;
             
         // Función para actualizar el mapa con un tramo si es más reciente
-        const actualizarMapa = (clave: string, tramoActualizado: any, fechaHasta: Date): Map<string, any> => {
+        const actualizarMapa = (clave: string, tramoActualizado: unknown, fechaHasta: Date): Map<string, any> => {
             if (!mapaTramos.has(clave) || 
                 fechaHasta > new Date(mapaTramos.get(clave).vigenciaHasta)) {
                 mapaTramos.set(clave, tramoActualizado);
@@ -647,18 +647,18 @@ class TramoService extends BaseService<ITramo> {
         // Caso 1: Tramo con tarifas históricas
         if (tramo.tarifasHistoricas?.length > 0) {
             // Filtrar tarifas que se superpongan con el rango de fechas solicitado
-            const tarifasEnRango = tramo.tarifasHistoricas.filter((tarifa: any) => 
+            const tarifasEnRango = tramo.tarifasHistoricas.filter((tarifa: unknown) => 
                 estaEnRango(tarifa.vigenciaDesde, tarifa.vigenciaHasta)
             );
             
             // Agrupar por tipo y obtener la más reciente para cada tipo
-            const tiposTarifa = [...new Set(tarifasEnRango.map((t: any) => t.tipo))] as string[];
+            const tiposTarifa = [...new Set(tarifasEnRango.map((t: unknown) => t.tipo))] as string[];
             
             tiposTarifa.forEach((tipo: string) => {
                 // Obtener la tarifa más reciente de este tipo
                 const tarifaMasReciente = tarifasEnRango
-                    .filter((t: any) => t.tipo === tipo)
-                    .sort((a: any, b: any) => new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime())[0];
+                    .filter((t: unknown) => t.tipo === tipo)
+                    .sort((a: unknown, b: unknown) => new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime())[0];
                 
                 if (tarifaMasReciente) {
                     // Crear tramo con esta tarifa
@@ -708,14 +708,14 @@ class TramoService extends BaseService<ITramo> {
    * @param tramos - Lista de tramos a procesar
    * @returns Objeto con tramos actuales y metadata
    */
-  private obtenerTramosActuales(tramos: any[]): any {
+  private obtenerTramosActuales(tramos: unknown[]): unknown {
     // Función para crear la clave única por origen-destino-tipo
-    const crearClave = (origen: any, destino: any, tipo: string): string => 
+    const crearClave = (origen: unknown, destino: unknown, tipo: string): string => 
         // Manejar posible nulidad de origen/destino al crear la clave
         `${origen?.Site || 'null'}-${destino?.Site || 'null'}-${tipo || 'TRMC'}`;
         
     // Usar reduce para construir el Map de tramos únicos en una sola pasada
-    const tramosUnicos = tramos.reduce((mapaTramos: Map<string, any>, tramo: any) => {
+    const tramosUnicos = tramos.reduce((mapaTramos: Map<string, any>, tramo: unknown) => {
         // Añadir verificación dentro del reduce para manejar tramos sin origen/destino
         if (!tramo || !tramo.origen || !tramo.destino) {
             logger.warn('Omitiendo tramo sin origen/destino en procesamiento actual:', tramo?._id);
@@ -725,7 +725,7 @@ class TramoService extends BaseService<ITramo> {
         // Caso 1: Tramo con tarifas históricas (modelo nuevo)
         if (tramo.tarifasHistoricas?.length > 0) {
             // Por cada tarifa histórica, crear un tramo con esos datos
-            tramo.tarifasHistoricas.forEach((tarifa: any) => {
+            tramo.tarifasHistoricas.forEach((tarifa: unknown) => {
                 const tramoConTarifa = {
                     ...tramo,
                     tipo: tarifa.tipo || 'TRMC',
@@ -768,7 +768,7 @@ class TramoService extends BaseService<ITramo> {
     const tramosArray = Array.from(tramosUnicos.values());
     
     // Ordenar por origen, destino y tipo
-    const resultado = tramosArray.sort((a: any, b: any) => {
+    const resultado = tramosArray.sort((a: unknown, b: unknown) => {
         // Primero ordenar por origen (manejar null)
         const origenA = a.origen?.Site || '';
         const origenB = b.origen?.Site || '';
@@ -801,7 +801,7 @@ class TramoService extends BaseService<ITramo> {
    * Obtiene todas las distancias calculadas de tramos existentes
    * @returns Lista de distancias calculadas
    */
-  async getDistanciasCalculadas(): Promise<any[]> {
+  async getDistanciasCalculadas(): Promise<unknown[]> {
     // Obtener todas las distancias calculadas de tramos existentes
     const distancias = await Tramo.aggregate([
         // Filtrar solo tramos con distancia calculada
@@ -842,7 +842,7 @@ class TramoService extends BaseService<ITramo> {
     let insertados = 0;
     let actualizados = 0;
     const errores: CreateTramosBulkResult['errores'] = [];
-    const operations: any[] = [];
+    const operations: unknown[] = [];
 
     if (!Array.isArray(tramosData) || tramosData.length === 0) {
         return { success: false, insertados, actualizados, errores: [{ message: 'No tramo data provided for bulk operation.' }] };
@@ -871,7 +871,7 @@ class TramoService extends BaseService<ITramo> {
     this.logDebug(`Sitios encontrados: ${sitiosPorNombre.size} de ${sitiosNecesarios.length} necesarios`);
 
     // 4. Obtener los tramos existentes para determinar si actualizar o crear
-    const origenesDest: Array<{ origen: any; destino: any }> = [];
+    const origenesDest: Array<{ origen: unknown; destino: unknown }> = [];
     const clienteIds = new Set();
 
     // Construir pares de origen-destino para buscar tramos existentes
@@ -1076,7 +1076,7 @@ class TramoService extends BaseService<ITramo> {
                         index: 'N/A', // Es difícil mapear el error al índice original
                         message: `Error en operación: ${err.errmsg}`,
                         code: err.code,
-                        data: (err as any).op || 'No disponible'
+                        data: (err as unknown).op || 'No disponible'
                     });
                 });
             }
@@ -1133,7 +1133,7 @@ class TramoService extends BaseService<ITramo> {
         }
         
         // Buscar tarifas vigentes para la fecha
-        const tarifasVigentes = tramo.tarifasHistoricas.filter((tarifa: any) => 
+        const tarifasVigentes = tramo.tarifasHistoricas.filter((tarifa: unknown) => 
             new Date(tarifa.vigenciaDesde) <= fecha && 
             new Date(tarifa.vigenciaHasta) >= fecha
         );
@@ -1153,13 +1153,13 @@ class TramoService extends BaseService<ITramo> {
         
         // Ordenar por vigenciaHasta descendente y tomar la más reciente
         const tarifaMasReciente = tramo.tarifasHistoricas
-            .sort((a: any, b: any) => new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime())[0];
+            .sort((a: unknown, b: unknown) => new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime())[0];
         
         if (tarifaMasReciente) {
             logger.debug(`Usando tarifa más reciente: tipo=${tarifaMasReciente.tipo}, vigenciaHasta=${tarifaMasReciente.vigenciaHasta}`);
             
             // Entre las tarifas con la misma fecha de vigencia, buscar la de mayor valor
-            const mismaFechaVigencia = tramo.tarifasHistoricas.filter((t: any) => 
+            const mismaFechaVigencia = tramo.tarifasHistoricas.filter((t: unknown) => 
                 new Date(t.vigenciaHasta).getTime() === new Date(tarifaMasReciente.vigenciaHasta).getTime()
             );
             

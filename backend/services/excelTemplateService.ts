@@ -535,7 +535,7 @@ export class ExcelTemplateService {
             sites.forEach(site => {
                 sitesSheet.addRow([
                     site.nombre,
-                    (site.cliente as any)?.nombre || 'Sin cliente',
+                    (site.cliente as unknown)?.nombre || 'Sin cliente',
                     site.localidad || '-',
                     site.provincia || '-'
                 ]);
@@ -639,7 +639,7 @@ export class ExcelTemplateService {
             sites.forEach(site => {
                 sitesSheet.addRow([
                     site.nombre,
-                    (site.cliente as any)?.nombre || 'Sin cliente',
+                    (site.cliente as unknown)?.nombre || 'Sin cliente',
                     site.localidad || '-',
                     site.provincia || '-'
                 ]);
@@ -668,7 +668,7 @@ export class ExcelTemplateService {
                 choferesSheet.addRow([
                     `${chofer.nombre} ${chofer.apellido}`,
                     chofer.dni,
-                    (chofer.empresa as any)?.nombre || 'Sin empresa'
+                    (chofer.empresa as unknown)?.nombre || 'Sin empresa'
                 ]);
             });
             
@@ -696,7 +696,7 @@ export class ExcelTemplateService {
                     vehiculo.marca || '-',
                     vehiculo.modelo || '-',
                     vehiculo.tipo,
-                    (vehiculo.empresa as any)?.nombre || 'Sin empresa'
+                    (vehiculo.empresa as unknown)?.nombre || 'Sin empresa'
                 ]);
             });
             
@@ -1094,7 +1094,7 @@ export class ExcelTemplateService {
     /**
      * Agrega hoja de Tramos faltantes al workbook
      */
-    private static async addMissingTramosSheet(workbook: ExcelJS.Workbook, tramosDetails: any[], clienteName: string): Promise<void> {
+    private static async addMissingTramosSheet(workbook: ExcelJS.Workbook, tramosDetails: unknown[], clienteName: string): Promise<void> {
         const worksheet = workbook.addWorksheet('Tramos Faltantes');
         
         worksheet.columns = [
@@ -1135,7 +1135,7 @@ export class ExcelTemplateService {
     /**
      * Agrega hoja de Viajes Fallidos al workbook
      */
-    private static async addFailedTripsSheet(workbook: ExcelJS.Workbook, failedTrips: any[], clienteName: string): Promise<void> {
+    private static async addFailedTripsSheet(workbook: ExcelJS.Workbook, failedTrips: unknown[], clienteName: string): Promise<void> {
         const worksheet = workbook.addWorksheet('Viajes Fallidos');
         
         worksheet.columns = [
@@ -1251,7 +1251,7 @@ export class ExcelTemplateService {
     /**
      * Procesa un archivo Excel con plantillas de corrección completadas
      */
-    static async processCorrectionTemplate(fileBuffer: Buffer, importacion: IImportacionTemporal): Promise<any> {
+    static async processCorrectionTemplate(fileBuffer: Buffer, importacion: IImportacionTemporal): Promise<unknown> {
         try {
             logger.info('Iniciando procesamiento de plantilla de corrección');
             
@@ -1305,9 +1305,9 @@ export class ExcelTemplateService {
     /**
      * Procesa la hoja de Sites Faltantes
      */
-    private static async processSitesSheet(worksheet: ExcelJS.Worksheet, clienteId: string): Promise<any> {
-        const sites: any[] = [];
-        const errores: any[] = [];
+    private static async processSitesSheet(worksheet: ExcelJS.Worksheet, clienteId: string): Promise<unknown> {
+        const sites: unknown[] = [];
+        const errores: unknown[] = [];
 
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return; // Saltar header
@@ -1339,14 +1339,14 @@ export class ExcelTemplateService {
             const siteController = require('../controllers/site/index');
             const mockReq = { body: { sites } };
             
-            let responseData: any;
+            let responseData: unknown;
             const mockRes = {
-                json: (data: any) => {
+                json: (data: unknown) => {
                     responseData = data;
                     return data;
                 },
                 status: (code: number) => ({ 
-                    json: (data: any) => {
+                    json: (data: unknown) => {
                         responseData = data;
                         return data;
                     }
@@ -1363,12 +1363,12 @@ export class ExcelTemplateService {
                 exitosos: resultados.exitosos || 0,
                 errores: resultados.errores || []
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error al importar sites:', error);
             return {
                 total: sites.length,
                 exitosos: 0,
-                errores: [{ site: 'Error general', error: error.message }]
+                errores: [{ site: 'Error general', error: (error instanceof Error ? error.message : String(error)) }]
             };
         }
     }
@@ -1376,8 +1376,8 @@ export class ExcelTemplateService {
     /**
      * Procesa la hoja de Personal Faltante
      */
-    private static async processPersonalSheet(worksheet: ExcelJS.Worksheet): Promise<any> {
-        const personal: any[] = [];
+    private static async processPersonalSheet(worksheet: ExcelJS.Worksheet): Promise<unknown> {
+        const personal: unknown[] = [];
 
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return; // Saltar header
@@ -1407,14 +1407,14 @@ export class ExcelTemplateService {
             const personalController = require('../controllers/personal/index');
             const mockReq = { body: { personal } };
             
-            let responseData: any;
+            let responseData: unknown;
             const mockRes = {
-                json: (data: any) => {
+                json: (data: unknown) => {
                     responseData = data;
                     return data;
                 },
                 status: (code: number) => ({ 
-                    json: (data: any) => {
+                    json: (data: unknown) => {
                         responseData = data;
                         return data;
                     }
@@ -1431,12 +1431,12 @@ export class ExcelTemplateService {
                 exitosos: resultados.exitosos || resultados.successful || 0,
                 errores: resultados.errores || resultados.errors || []
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error al importar personal:', error);
             return {
                 total: personal.length,
                 exitosos: 0,
-                errores: [{ indice: 0, error: error.message }]
+                errores: [{ indice: 0, error: (error instanceof Error ? error.message : String(error)) }]
             };
         }
     }
@@ -1444,8 +1444,8 @@ export class ExcelTemplateService {
     /**
      * Procesa la hoja de Vehiculos Faltantes
      */
-    private static async processVehiculosSheet(worksheet: ExcelJS.Worksheet): Promise<any> {
-        const vehiculos: any[] = [];
+    private static async processVehiculosSheet(worksheet: ExcelJS.Worksheet): Promise<unknown> {
+        const vehiculos: unknown[] = [];
 
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return; // Saltar header
@@ -1475,14 +1475,14 @@ export class ExcelTemplateService {
             const { createVehiculosBulk } = require('../controllers/vehiculo/index');
             const mockReq = { body: { vehiculos } };
             
-            let responseData: any;
+            let responseData: unknown;
             const mockRes = {
-                json: (data: any) => {
+                json: (data: unknown) => {
                     responseData = data;
                     return data;
                 },
                 status: (code: number) => ({ 
-                    json: (data: any) => {
+                    json: (data: unknown) => {
                         responseData = data;
                         return data;
                     }
@@ -1499,12 +1499,12 @@ export class ExcelTemplateService {
                 exitosos: resultados.exitosos || resultados.successful || 0,
                 errores: resultados.errores || resultados.errors || []
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error al importar vehículos:', error);
             return {
                 total: vehiculos.length,
                 exitosos: 0,
-                errores: [{ index: 0, message: error.message }]
+                errores: [{ index: 0, message: (error instanceof Error ? error.message : String(error)) }]
             };
         }
     }
@@ -1512,8 +1512,8 @@ export class ExcelTemplateService {
     /**
      * Procesa la hoja de Tramos Faltantes
      */
-    private static async processTramosSheet(worksheet: ExcelJS.Worksheet, clienteId: string): Promise<any> {
-        const tramos: any[] = [];
+    private static async processTramosSheet(worksheet: ExcelJS.Worksheet, clienteId: string): Promise<unknown> {
+        const tramos: unknown[] = [];
 
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return; // Saltar header
@@ -1550,14 +1550,14 @@ export class ExcelTemplateService {
                 } 
             };
             
-            let responseData: any;
+            let responseData: unknown;
             const mockRes = {
-                json: (data: any) => {
+                json: (data: unknown) => {
                     responseData = data;
                     return data;
                 },
                 status: (code: number) => ({ 
-                    json: (data: any) => {
+                    json: (data: unknown) => {
                         responseData = data;
                         return data;
                     }
@@ -1574,12 +1574,12 @@ export class ExcelTemplateService {
                 exitosos: resultados.exitosos || resultados.successful || 0,
                 errores: resultados.errores || resultados.errors || []
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error al importar tramos:', error);
             return {
                 total: tramos.length,
                 exitosos: 0,
-                errores: [{ tramo: 'Error general', error: error.message }]
+                errores: [{ tramo: 'Error general', error: (error instanceof Error ? error.message : String(error)) }]
             };
         }
     }

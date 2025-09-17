@@ -117,7 +117,7 @@ const viajeSchema = new Schema<IViaje>({
         required: true,
         validate: {
             validator: function(value: Types.ObjectId) {
-                return mongoose.model('Personal').findById(value).lean().then((personal: any) => {
+                return mongoose.model('Personal').findById(value).lean().then((personal: unknown) => {
                     return personal && personal.activo === true;
                 });
             },
@@ -256,8 +256,8 @@ viajeSchema.pre('save', async function (next) {
     
     // Primero, intentar obtener info de tarifa pre-calculada (desde bulk import)
     const tempTariffInfo = viaje._tempTariffInfo;
-    let tarifaVigente: any = null;
-    let tramo: any = null; // Necesitaremos 'tramo' si calculamos por Km o usamos fórmula
+    let tarifaVigente: unknown = null;
+    let tramo: unknown = null; // Necesitaremos 'tramo' si calculamos por Km o usamos fórmula
 
     try {
         // --- 1. Verificar y actualizar tipoUnidad basado en vehículo principal ---
@@ -315,28 +315,28 @@ viajeSchema.pre('save', async function (next) {
                 }).populate('tarifasHistoricas'); // Poblar para acceder a tarifas
 
                 if (!tramo) {
-                    await (this as any).populate(['origen', 'destino']);
-                    const origenPopulated = (this as any).populated('origen') ? (this as any).origen : await Site.findById(viaje.origen);
-                    const destinoPopulated = (this as any).populated('destino') ? (this as any).destino : await Site.findById(viaje.destino);
-                    const origenNombre = (origenPopulated as any)?.Site || 'ID desconocido';
-                    const destinoNombre = (destinoPopulated as any)?.Site || 'ID desconocido';
-                    throw new Error(`No se encontró un tramo válido para Cliente ${(clienteDoc as any).nombre} (${viaje.cliente}) desde ${origenNombre} hasta ${destinoNombre} para la fecha ${viaje.fecha.toISOString().split('T')[0]}`);
+                    await (this as unknown).populate(['origen', 'destino']);
+                    const origenPopulated = (this as unknown).populated('origen') ? (this as unknown).origen : await Site.findById(viaje.origen);
+                    const destinoPopulated = (this as unknown).populated('destino') ? (this as unknown).destino : await Site.findById(viaje.destino);
+                    const origenNombre = (origenPopulated as unknown)?.Site || 'ID desconocido';
+                    const destinoNombre = (destinoPopulated as unknown)?.Site || 'ID desconocido';
+                    throw new Error(`No se encontró un tramo válido para Cliente ${(clienteDoc as unknown).nombre} (${viaje.cliente}) desde ${origenNombre} hasta ${destinoNombre} para la fecha ${viaje.fecha.toISOString().split('T')[0]}`);
                 }
 
                 // Encontrar la tarifa vigente usando el método del modelo (o lógica manual si es necesario)
                 // ¡Asegúrate que tramo.getTarifaVigente maneje fechas y tipos correctamente!
                 try {
                     tarifaVigente = tramo.getTarifaVigente(viaje.fecha, viaje.tipoTramo);
-                } catch (e: any) {
+                } catch (e: unknown) {
                     logger.error(`Error en tramo.getTarifaVigente para tramo ${tramo._id}: ${e.message}`);
                     throw new Error(`Error buscando tarifa vigente: ${e.message}`); // Relanzar error
                 }
 
                 if (!tarifaVigente) {
-                    await (this as any).populate('origen destino');
-                    const origenNombre = ((this as any).origen as any)?.nombre || 'ID desconocido';
-                    const destinoNombre = ((this as any).destino as any)?.nombre || 'ID desconocido';
-                    throw new Error(`No se encontró una tarifa (${viaje.tipoTramo}) vigente para tramo ${origenNombre} → ${destinoNombre} (Cliente: ${(clienteDoc as any).Cliente}) en fecha ${viaje.fecha.toISOString().split('T')[0]}`);
+                    await (this as unknown).populate('origen destino');
+                    const origenNombre = ((this as unknown).origen as unknown)?.nombre || 'ID desconocido';
+                    const destinoNombre = ((this as unknown).destino as unknown)?.nombre || 'ID desconocido';
+                    throw new Error(`No se encontró una tarifa (${viaje.tipoTramo}) vigente para tramo ${origenNombre} → ${destinoNombre} (Cliente: ${(clienteDoc as unknown).Cliente}) en fecha ${viaje.fecha.toISOString().split('T')[0]}`);
                 }
 
                 // Asignar el peaje de la tarifa vigente encontrada
@@ -357,9 +357,9 @@ viajeSchema.pre('save', async function (next) {
             switch (tarifaVigente.metodoCalculo) {
                 case 'Palet':
                     const formulaKey = viaje.tipoUnidad === 'Bitren' ? 'formulaPaletBitren' : 'formulaPaletSider';
-                    const formulaPersonalizada = (clienteDoc as any)[formulaKey];
+                    const formulaPersonalizada = (clienteDoc as unknown)[formulaKey];
                     if (formulaPersonalizada) {
-                        logger.info(`Usando fórmula personalizada para ${(clienteDoc as any).Cliente} (${viaje.tipoUnidad}): ${formulaPersonalizada}`);
+                        logger.info(`Usando fórmula personalizada para ${(clienteDoc as unknown).Cliente} (${viaje.tipoUnidad}): ${formulaPersonalizada}`);
                         const valorTarifaParaFormula = Number(tarifaVigente.valor);
                         if (isNaN(valorTarifaParaFormula)) throw new Error('Valor de tarifa inválido para fórmula Palet.');
                         const resultado = calcularTarifaPaletConFormula(valorTarifaParaFormula, viaje.peaje, numPalets, formulaPersonalizada);
@@ -420,7 +420,7 @@ viajeSchema.pre('save', async function (next) {
 
             if (extrasPoblados) {
                 totalExtras = this.extras.reduce((sum, extraItem) => {
-                    const valorExtra = Number((extraItem?.extra as any)?.valor);
+                    const valorExtra = Number((extraItem?.extra as unknown)?.valor);
                     const cantidadExtra = Number(extraItem?.cantidad);
                     if (extraItem && !isNaN(valorExtra) && !isNaN(cantidadExtra)) {
                         return sum + (valorExtra * cantidadExtra);
@@ -478,14 +478,14 @@ viajeSchema.index({ dt: 1, cliente: 1 }, { unique: true });
 
 // Método para obtener una descripción corta del viaje
 viajeSchema.methods.getDescripcionCorta = function(this: IViaje): string {
-    const origenNombre = (this.origen as any)?.nombre || 'ID desconocido';
-    const destinoNombre = (this.destino as any)?.nombre || 'ID desconocido';
+    const origenNombre = (this.origen as unknown)?.nombre || 'ID desconocido';
+    const destinoNombre = (this.destino as unknown)?.nombre || 'ID desconocido';
     return `${origenNombre} -> ${destinoNombre}`;
 };
 
 // Método para verificar si el viaje está completo (ejemplo)
 viajeSchema.methods.isCompleto = function(this: IViaje): boolean {
-    return !!(this.origen && this.destino && this.vehiculos && this.fecha && (this as any).fecha_fin);
+    return !!(this.origen && this.destino && this.vehiculos && this.fecha && (this as unknown).fecha_fin);
 };
 
 // Índices

@@ -69,9 +69,9 @@ const getAddressFromCoords = async (lat: number, lng: number): Promise<AddressRe
     }
   } catch (error) {
     if (axios.isAxiosError(error)) {
-       logger.error(`Error Axios llamando a Nominatim para ${lat},${lng}: ${error.message} - Status: ${error.response?.status}`);
+       logger.error(`Error Axios llamando a Nominatim para ${lat},${lng}: ${(error instanceof Error ? error.message : String(error))} - Status: ${error.response?.status}`);
     } else {
-       logger.error(`Error inesperado llamando a Nominatim para ${lat},${lng}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+       logger.error(`Error inesperado llamando a Nominatim para ${lat},${lng}: ${error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido'}`);
     }
     return null;
   }

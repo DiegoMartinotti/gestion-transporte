@@ -50,11 +50,11 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
 
     logger.info('[TarifaEngine] Consultando auditoría', {
       filtros: { desde, hasta, clienteId, conErrores },
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     // Construir filtros
-    const filtros: any = {};
+    const filtros: unknown = {};
 
     if (desde) {
       filtros.desde = new Date(desde as string);
@@ -81,7 +81,7 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
 
     // Procesar datos según configuración
     const resultadosProcesados = auditoriasPaginadas.map((auditoria) => {
-      const resultado: any = {
+      const resultado: unknown = {
         timestamp: auditoria.timestamp,
         tiempoEjecucion: auditoria.tiempoEjecucionMs,
         resultado: {
@@ -136,7 +136,7 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
           incluirContexto: incluirContexto === 'true',
           agruparPor: agruparPor || null,
         },
-        usuario: (req as any).user?.email || 'desconocido',
+        usuario: (req as unknown).user?.email || 'desconocido',
       },
       auditorias: resultadosProcesados,
       agrupacion: datosAgrupados,
@@ -156,11 +156,11 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
     logger.debug(`[TarifaEngine] Auditoría consultada: ${resultadosProcesados.length} registros`, {
       total: auditorias.length,
       conErrores: estadisticas.errores,
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     ApiResponse.success(res, respuesta, 'Auditoría obtenida exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaEngine] Error al obtener auditoría:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
@@ -169,7 +169,7 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
 /**
  * Agrupa auditorías según el criterio especificado
  */
-function agruparAuditorias(auditorias: any[], criterio: string): any {
+function agruparAuditorias(auditorias: unknown[], criterio: string): unknown {
   switch (criterio) {
     case 'cliente':
       return auditorias.reduce((acc, auditoria) => {
@@ -286,7 +286,7 @@ function agruparAuditorias(auditorias: any[], criterio: string): any {
 /**
  * Genera estadísticas de las auditorías
  */
-function generarEstadisticasAuditoria(auditorias: any[]): any {
+function generarEstadisticasAuditoria(auditorias: unknown[]): unknown {
   if (auditorias.length === 0) {
     return {
       total: 0,
@@ -313,7 +313,7 @@ function generarEstadisticasAuditoria(auditorias: any[]): any {
 
   // Análisis de métodos más utilizados
   const metodos = auditorias.map((a) => a.resultado.metodoUtilizado);
-  const frecuenciaMetodos = metodos.reduce((acc: any, metodo: string) => {
+  const frecuenciaMetodos = metodos.reduce((acc: unknown, metodo: string) => {
     acc[metodo] = (acc[metodo] || 0) + 1;
     return acc;
   }, {});
@@ -338,7 +338,7 @@ function generarEstadisticasAuditoria(auditorias: any[]): any {
     metodos: {
       frecuencia: frecuenciaMetodos,
       masUtilizado: Object.entries(frecuenciaMetodos).sort(
-        ([, a]: any, [, b]: any) => b - a
+        ([, a]: unknown, [, b]: unknown) => b - a
       )[0]?.[0],
     },
     cache: {
@@ -356,8 +356,8 @@ function generarEstadisticasAuditoria(auditorias: any[]): any {
 /**
  * Calcula las horas pico de uso
  */
-function calcularHorasPico(auditorias: any[]): number[] {
-  const usosPorHora = auditorias.reduce((acc: any, auditoria) => {
+function calcularHorasPico(auditorias: unknown[]): number[] {
+  const usosPorHora = auditorias.reduce((acc: unknown, auditoria) => {
     const hora = auditoria.timestamp.getHours();
     acc[hora] = (acc[hora] || 0) + 1;
     return acc;
@@ -365,7 +365,7 @@ function calcularHorasPico(auditorias: any[]): number[] {
 
   // Encontrar las 3 horas con más actividad
   return Object.entries(usosPorHora)
-    .sort(([, a]: any, [, b]: any) => b - a)
+    .sort(([, a]: unknown, [, b]: unknown) => b - a)
     .slice(0, 3)
-    .map(([hora]: any) => parseInt(hora));
+    .map(([hora]: unknown) => parseInt(hora));
 }

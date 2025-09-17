@@ -32,7 +32,7 @@ export const deleteFormula = async (
       .status(500)
       .json({
         message: 'Error interno al eliminar la fórmula',
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error),
       });
   }
 };

@@ -15,7 +15,7 @@ interface BulkCreateResult {
         index?: number | string;
         message: string;
         code?: string | number;
-        data?: any;
+        data?: unknown;
     }>;
 }
 
@@ -48,13 +48,13 @@ interface PersonalBulkData {
  * @param options - Opciones, incluye la session de mongoose.
  * @returns Resultado con insertados, actualizados y errores.
  */
-export const createPersonalBulk = async (personalData: PersonalBulkData[], options: { session?: any } = {}): Promise<BulkCreateResult> => {
+export const createPersonalBulk = async (personalData: PersonalBulkData[], options: { session?: unknown } = {}): Promise<BulkCreateResult> => {
     const session = options.session;
     let insertados = 0;
     let actualizados = 0;
     const errores: BulkCreateResult['errores'] = [];
-    const personalToInsert: any[] = [];
-    const personalToActivate: Array<{ filter: any; update: any }> = [];
+    const personalToInsert: unknown[] = [];
+    const personalToActivate: Array<{ filter: unknown; update: unknown }> = [];
 
     if (!Array.isArray(personalData) || personalData.length === 0) {
         return { success: false, insertados, actualizados, errores: [{ message: 'No personal data provided for bulk operation.' }] };
@@ -131,15 +131,15 @@ export const createPersonalBulk = async (personalData: PersonalBulkData[], optio
             
             // Registrar errores de activación si los hubiera (aunque ordered:false los ignora)
             if (activationResult.hasWriteErrors && activationResult.hasWriteErrors()) {
-                 (activationResult as any).getWriteErrors().forEach((err: any) => {
+                 (activationResult as unknown).getWriteErrors().forEach((err: unknown) => {
                     // Es difícil mapear el error al índice original aquí sin más lógica
-                    errores.push({ index: 'N/A', message: `Error activando personal (DNI: ${err.op?.filter?.dni}): ${err.errmsg}`, code: err.code });
+                    errores.push({ index: 'N/A', message: `Error activando personal (DNI: ${(err as any).op?.filter?.dni}): ${err.errmsg}`, code: err.code });
                  });
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('[createPersonalBulk] Error durante bulkWrite de activación:', error);
-            errores.push({ message: `Error general durante la activación: ${error.message}` });
+            errores.push({ message: `Error general durante la activación: ${(error instanceof Error ? error.message : String(error))}` });
         }
     }
 
@@ -149,10 +149,10 @@ export const createPersonalBulk = async (personalData: PersonalBulkData[], optio
             const insertResult = await Personal.insertMany(personalToInsert, { session, ordered: false });
             insertados = insertResult.length;
             logger.info(`[createPersonalBulk] Insertados ${insertados} nuevos registros de personal.`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('[createPersonalBulk] Error durante insertMany:', error);
-            if (error.name === 'MongoBulkWriteError' && error.writeErrors) {
-                error.writeErrors.forEach((err: any) => {
+            if ((error as any).name === 'MongoBulkWriteError' && error.writeErrors) {
+                error.writeErrors.forEach((err: unknown) => {
                     // Mapear error al índice original si es posible (requiere mantener correlación)
                      const originalIndex = personalData.findIndex(p => p.dni === personalToInsert[err.index]?.dni && !p.activar); // Intento de mapeo
                     errores.push({
@@ -164,7 +164,7 @@ export const createPersonalBulk = async (personalData: PersonalBulkData[], optio
                 });
                 insertados = error.result?.nInserted || (personalToInsert.length - error.writeErrors.length);
             } else {
-                errores.push({ message: `Error inesperado en bulk insert: ${error.message}` });
+                errores.push({ message: `Error inesperado en bulk insert: ${(error instanceof Error ? error.message : String(error))}` });
                 insertados = 0;
             }
         }

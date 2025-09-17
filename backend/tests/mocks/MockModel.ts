@@ -95,7 +95,7 @@ export class TestService extends BaseService<ITestDocument> {
     this.validateId(id);
   }
 
-  public async testValidateRequired(data: any, fields: string[]): Promise<void> {
+  public async testValidateRequired(data: unknown, fields: string[]): Promise<void> {
     this.validateRequired(data, fields);
   }
 }

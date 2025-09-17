@@ -9,15 +9,15 @@ import { AppError } from '../utils/errors';
 
 interface ErrorWithStatusCode extends Error {
   statusCode?: number;
-  errors?: any;
+  errors?: unknown;
   codigo?: string;
-  detalles?: any;
+  detalles?: unknown;
 }
 
 interface ErrorResponse {
   success: boolean;
   message: string;
-  errors?: any;
+  errors?: unknown;
   stack?: string;
 }
 
@@ -71,12 +71,12 @@ class APIError extends Error {
   name: string;
   statusCode: number;
   codigo: string;
-  detalles: any;
+  detalles: unknown;
 
   constructor(mensaje: string, opciones: {
     statusCode?: number;
     codigo?: string;
-    detalles?: any;
+    detalles?: unknown;
   } = {}) {
     super(mensaje);
     this.name = 'APIError';
@@ -91,7 +91,7 @@ class APIError extends Error {
    * @param {Object} detalles - Detalles adicionales del error
    * @returns {APIError} Instancia de error
    */
-  static validacion(mensaje: string, detalles?: any): APIError {
+  static validacion(mensaje: string, detalles?: unknown): APIError {
     return new APIError(mensaje, {
       statusCode: 400,
       codigo: 'ERROR_VALIDACION',
@@ -143,7 +143,7 @@ class APIError extends Error {
    * @param {Object} detalles - Detalles adicionales del error
    * @returns {APIError} Instancia de error
    */
-  static conflicto(mensaje: string, detalles?: any): APIError {
+  static conflicto(mensaje: string, detalles?: unknown): APIError {
     return new APIError(mensaje, {
       statusCode: 409,
       codigo: 'ERROR_CONFLICTO',

@@ -46,11 +46,11 @@ export const getMetodosActivos = async (req: Request, res: Response): Promise<vo
     };
 
     logger.debug(`[TarifaMetodo] Métodos activos consultados: ${metodosActivos.length} métodos`, {
-      usuario: (req as any).user?.email,
+      usuario: (req as unknown).user?.email,
     });
 
     ApiResponse.success(res, respuesta, 'Métodos activos obtenidos exitosamente');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al obtener métodos activos:', error);
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }

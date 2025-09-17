@@ -147,7 +147,7 @@ const calcularTarifa = async (
     }
 
     if (!tarifaSeleccionada) {
-      const tarifaVigente = (tramo as any).getTarifaVigente(fechaConsulta, tipoTramo);
+      const tarifaVigente = (tramo as unknown).getTarifaVigente(fechaConsulta, tipoTramo);
 
       if (!tarifaVigente) {
         // Si no hay tarifa vigente, buscar la más reciente del tipo solicitado
@@ -352,8 +352,8 @@ const calcularTarifa = async (
             peaje: resultado.peaje,
             total: resultado.total,
             detalles: {
-              origen: (tramo.origen as any).Site,
-              destino: (tramo.destino as any).Site,
+              origen: (tramo.origen as unknown).Site,
+              destino: (tramo.destino as unknown).Site,
               distancia: tramo.distancia,
               metodoCalculo: tramoConTarifa.metodoCalculo,
               tipo: tramoConTarifa.tipo,
@@ -372,9 +372,9 @@ const calcularTarifa = async (
             data: resultadoFinal,
           });
           return;
-        } catch (error: any) {
+        } catch (error: unknown) {
           logger.error(
-            `Error al calcular tarifa con fórmula personalizada: ${error.message}`,
+            `Error al calcular tarifa con fórmula personalizada: ${(error instanceof Error ? error.message : String(error))}`,
             error
           );
 
@@ -410,8 +410,8 @@ const calcularTarifa = async (
             peaje: resultado.peaje,
             total: resultado.total,
             detalles: {
-              origen: (tramo.origen as any).Site,
-              destino: (tramo.destino as any).Site,
+              origen: (tramo.origen as unknown).Site,
+              destino: (tramo.destino as unknown).Site,
               distancia: tramo.distancia,
               metodoCalculo: tramoConTarifa.metodoCalculo,
               tipo: tramoConTarifa.tipo,
@@ -430,8 +430,8 @@ const calcularTarifa = async (
             data: resultadoFinal,
           });
         }
-      } catch (error: any) {
-        logger.error(`Error al calcular tarifa con fórmula personalizada: ${error.message}`, error);
+      } catch (error: unknown) {
+        logger.error(`Error al calcular tarifa con fórmula personalizada: ${(error instanceof Error ? error.message : String(error))}`, error);
 
         if (!tramoConTarifa.valor || tramoConTarifa.valor === 0) {
           if (tarifaSeleccionada && tarifaSeleccionada.valor) {
@@ -461,8 +461,8 @@ const calcularTarifa = async (
           peaje: resultado.peaje,
           total: resultado.total,
           detalles: {
-            origen: (tramo.origen as any).Site,
-            destino: (tramo.destino as any).Site,
+            origen: (tramo.origen as unknown).Site,
+            destino: (tramo.destino as unknown).Site,
             distancia: tramo.distancia,
             metodoCalculo: tramoConTarifa.metodoCalculo,
             tipo: tramoConTarifa.tipo,
@@ -501,8 +501,8 @@ const calcularTarifa = async (
       peaje: resultado.peaje,
       total: resultado.total,
       detalles: {
-        origen: (tramo.origen as any).Site,
-        destino: (tramo.destino as any).Site,
+        origen: (tramo.origen as unknown).Site,
+        destino: (tramo.destino as unknown).Site,
         distancia: tramo.distancia,
         metodoCalculo: tramoConTarifa.metodoCalculo,
         tipo: tramoConTarifa.tipo,
@@ -520,12 +520,12 @@ const calcularTarifa = async (
       success: true,
       data: resultadoFinal,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error al calcular tarifa:', error);
     res.status(500).json({
       success: false,
       message: 'Error al calcular la tarifa',
-      error: error.message,
+      error: (error instanceof Error ? error.message : String(error)),
     });
   }
 };

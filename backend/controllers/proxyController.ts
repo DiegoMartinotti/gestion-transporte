@@ -32,8 +32,8 @@ interface GeocodingQuery {
 interface ApiResponse {
     message?: string;
     error?: string;
-    details?: any;
-    received?: any;
+    details?: unknown;
+    received?: unknown;
 }
 
 export const geocode = async (req: Request<{}, any, {}, GeocodingQuery>, res: Response<any>): Promise<void> => {
@@ -81,10 +81,10 @@ export const geocode = async (req: Request<{}, any, {}, GeocodingQuery>, res: Re
 
         logger.debug('Nominatim response:', response.data);
         res.json(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
         logger.error('Geocoding error details:', {
-            message: error.message,
-            code: error.code,
+            message: (error instanceof Error ? error.message : String(error)),
+            code: (error as any).code,
             response: error.response?.data,
             config: {
                 url: error.config?.url,
@@ -94,7 +94,7 @@ export const geocode = async (req: Request<{}, any, {}, GeocodingQuery>, res: Re
 
         res.status(500).json({ 
             message: 'Error en geocodificación',
-            error: error.message,
+            error: (error instanceof Error ? error.message : String(error)),
             details: error.response?.data
         });
     }

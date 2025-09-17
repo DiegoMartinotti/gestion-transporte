@@ -83,7 +83,7 @@ const router = express.Router();
  *       401:
  *         description: No autorizado
  */
-router.get('/', authenticateToken, getAllReglasTarifaValidators, getAllReglasTarifa as any);
+router.get('/', authenticateToken, getAllReglasTarifaValidators, getAllReglasTarifa as unknown);
 
 /**
  * @swagger
@@ -110,7 +110,7 @@ router.get('/', authenticateToken, getAllReglasTarifaValidators, getAllReglasTar
  *       401:
  *         description: No autorizado
  */
-router.get('/:id', authenticateToken, getReglaTarifaByIdValidators, getReglaTarifaById as any);
+router.get('/:id', authenticateToken, getReglaTarifaByIdValidators, getReglaTarifaById as unknown);
 
 /**
  * @swagger
@@ -161,9 +161,9 @@ router.get('/:id', authenticateToken, getReglaTarifaByIdValidators, getReglaTari
  *                       type: string
  *                       enum: [igual, diferente, mayor, menor, mayorIgual, menorIgual, entre, en, contiene]
  *                     valor:
- *                       type: any
+ *                       type: unknown
  *                     valorHasta:
- *                       type: any
+ *                       type: unknown
  *               operadorLogico:
  *                 type: string
  *                 enum: [AND, OR]
@@ -177,7 +177,7 @@ router.get('/:id', authenticateToken, getReglaTarifaByIdValidators, getReglaTari
  *                       type: string
  *                       enum: [porcentaje, fijo, formula]
  *                     valor:
- *                       type: any
+ *                       type: unknown
  *                     aplicarA:
  *                       type: string
  *                       enum: [tarifa, peaje, total, extras]
@@ -238,7 +238,7 @@ router.get('/:id', authenticateToken, getReglaTarifaByIdValidators, getReglaTari
  *       401:
  *         description: No autorizado
  */
-router.post('/', authenticateToken, createReglaTarifaValidators, createReglaTarifa as any);
+router.post('/', authenticateToken, createReglaTarifaValidators, createReglaTarifa as unknown);
 
 /**
  * @swagger
@@ -312,7 +312,7 @@ router.post('/', authenticateToken, createReglaTarifaValidators, createReglaTari
  *       401:
  *         description: No autorizado
  */
-router.put('/:id', authenticateToken, updateReglaTarifaValidators, updateReglaTarifa as any);
+router.put('/:id', authenticateToken, updateReglaTarifaValidators, updateReglaTarifa as unknown);
 
 /**
  * @swagger
@@ -350,6 +350,6 @@ router.put('/:id', authenticateToken, updateReglaTarifaValidators, updateReglaTa
  *       401:
  *         description: No autorizado
  */
-router.delete('/:id', authenticateToken, deleteReglaTarifaValidators, deleteReglaTarifa as any);
+router.delete('/:id', authenticateToken, deleteReglaTarifaValidators, deleteReglaTarifa as unknown);
 
 export default router;

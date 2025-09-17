@@ -19,7 +19,7 @@ router.post('/register', register);
 // Nueva ruta para obtener datos del usuario
 router.get('/me', authenticateToken, async (req: express.Request, res: express.Response) => {
     try {
-        const { userId, email } = (req as any).user;
+        const { userId, email } = (req as unknown).user;
         res.json({
             success: true,
             user: {
