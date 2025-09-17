@@ -196,9 +196,9 @@ gestion-transporte/
 ## Uso
 
 ### Acceso a la Aplicación
-- Frontend: http://localhost:3000 (cuando esté disponible)
-- API Backend: http://localhost:5000/api
-- Documentación API (Swagger): http://localhost:5000/api-docs
+- Frontend: <http://localhost:3000> (cuando esté disponible)
+- API Backend: <http://localhost:5000/api>
+- Documentación API (Swagger): <http://localhost:5000/api-docs>
 
 ### Endpoints Principales
 
@@ -213,7 +213,7 @@ Principales endpoints siguiendo patrones RESTful:
 
 ### Autenticación
 Para acceder al sistema, utiliza las siguientes credenciales de prueba:
-- Email: admin@ejemplo.com
+- Email: <admin@ejemplo.com>
 - Contraseña: password123
 
 ## Comandos de Desarrollo

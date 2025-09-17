@@ -45,7 +45,9 @@ export function procesarFuncionREDONDEAR(expresion: string): string {
   // REDONDEAR(valor;decimales) - optimizado
   const patron = /REDONDEAR\s*\(\s*([^;]{1,50});\s*(\d{1,2})\s*\)/;
 
-  return expresion.replace(patron, (match, valor, decimales) => {
+  return expresion.replace(patron, (match: string, ...args: unknown[]): string => {
+    const valor = args[0] as string;
+    const decimales = args[1] as string;
     const factor = Math.pow(10, parseInt(decimales));
     return `(round(${valor} * ${factor}) / ${factor})`;
   });
@@ -137,8 +139,10 @@ export function procesarFuncionTARIFAESCALONADA(expresion: string): string {
   // TARIFAESCALONADA(valor;rango1:tarifa1;rango2:tarifa2;...) - optimizado
   const patron = /TARIFAESCALONADA\s*\(\s*([^;]{1,50});([^)]{1,200})\s*\)/;
 
-  return expresion.replace(patron, (match, valor, rangos) => {
-    const pares = rangos.split(';').map((r: string) => {
+  return expresion.replace(patron, (match: string, ...args: unknown[]): string => {
+    const valor = args[0] as string;
+    const rangos = args[1] as string;
+    const pares = (rangos as string).split(';').map((r: string) => {
       const [rango, tarifa] = r.split(':').map((s: string) => s.trim());
       return { rango: parseFloat(rango), tarifa: parseFloat(tarifa) };
     });

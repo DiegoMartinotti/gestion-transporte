@@ -116,7 +116,10 @@ function evaluarAlternativo(expresion: string): number {
     // Simplificar operadores ternarios básicos
     const expresionSimplificada = expresion.replace(
       /\((\d+(?:\.\d+)?)\s*\?\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\)/g,
-      (match, condicion, valorVerdadero, valorFalso) => {
+      (match: string, ...args: unknown[]): string => {
+        const condicion = args[0] as string;
+        const valorVerdadero = args[1] as string;
+        const valorFalso = args[2] as string;
         const condNumero = parseFloat(condicion);
         return condNumero > 0 ? valorVerdadero : valorFalso;
       }

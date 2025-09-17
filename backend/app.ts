@@ -54,7 +54,7 @@ app.use(cookieParser());
 
 // Importar y configurar middleware de seguridad
 import securityMiddleware from './middleware/security';
-app.use(securityMiddleware);
+securityMiddleware.forEach(middleware => app.use(middleware));
 
 // Improved request logging
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -134,7 +134,7 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   res.status(statusCode).json({
     success: false,
     message: errorMessage,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    ...(process.env.NODE_ENV === 'development' && { stack: err instanceof Error ? err.stack : undefined }),
   });
 });
 

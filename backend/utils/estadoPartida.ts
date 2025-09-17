@@ -105,19 +105,19 @@ async function actualizarEstadoPartida(viajeId: string): Promise<void> {
 
 /**
  * Actualiza el estado de partida de múltiples viajes en una sola operación
- * 
+ *
  * @param viajeIds - Array de IDs de viajes a actualizar
  * @returns Promise que resuelve cuando se completa la actualización
- * 
+ *
  * @description
  * Este método es una versión optimizada para actualizar múltiples viajes a la vez.
  * Es especialmente útil cuando se modifica una OC que afecta a varios viajes.
- * 
+ *
  * Optimizaciones:
  * 1. Una sola agregación para obtener todos los totales
  * 2. Uso de bulkWrite para actualizar todos los estados en una operación
  * 3. Minimiza el número de operaciones en la base de datos
- * 
+ *
  * Casos de uso típicos:
  * - Cuando se crea/modifica una OC con múltiples viajes
  * - Cuando se necesita recalcular estados en batch
@@ -127,66 +127,92 @@ async function actualizarEstadosPartidaBulk(viajeIds: string[]): Promise<void> {
   const OrdenCompra = mongoose.model('OrdenCompra');
 
   try {
-    // Convertir los IDs a ObjectId
     const objectIds = viajeIds.map(id => new mongoose.Types.ObjectId(id));
-    
-    // Obtener totales cobrados para todos los viajes en una sola agregación
-    const resultados = await OrdenCompra.aggregate<ResultadoAgregacion>([
-      // Desenrollar para trabajar con cada viaje individualmente
-      { $unwind: '$viajes' },
-      // Filtrar solo los viajes que nos interesan
-      { 
-        $match: { 
-          'viajes.viaje': { 
-            $in: objectIds
-          } 
-        } 
-      },
-      // Agrupar y sumar importes por viaje
-      { 
-        $group: {
-          _id: '$viajes.viaje',
-          totalCobrado: { $sum: '$viajes.importe' }
-        }
-      },
-      // Obtener información del viaje
-      {
-        $lookup: {
-          from: 'viajes',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'viaje'
-        }
-      },
-      { $unwind: '$viaje' }
-    ]);
-
-    // Interfaz para la operación de actualización
-    interface BulkOperation {
-      updateOne: {
-        filter: {_id: mongoose.Types.ObjectId};
-        update: {$set: {estadoPartida: EstadoPartida}};
-      }
-    }
-
-    // Preparar las operaciones de actualización en bulk
-    const bulkOps: BulkOperation[] = resultados.map(r => ({
-      updateOne: {
-        filter: { _id: r._id },
-        update: { 
-          $set: { 
-            estadoPartida: r.totalCobrado >= (r.viaje?.total || 0) ? 'Cerrada' : 'Abierta' 
-          } 
-        }
-      }
-    }));
-
-    // Ejecutar todas las actualizaciones en una sola operación
-    if (bulkOps.length > 0) {
-      await Viaje.bulkWrite(bulkOps);
-    }
+    const resultados = await obtenerTotalesCobrados(OrdenCompra, objectIds);
+    const bulkOps = prepararOperacionesBulk(resultados);
+    await ejecutarActualizacionesBulk(Viaje, bulkOps);
   } catch (error) {
     logger.error('Error actualizando estados de partida en bulk:', error);
+  }
+}
+
+/**
+ * Obtiene los totales cobrados para los viajes especificados
+ */
+async function obtenerTotalesCobrados(
+  OrdenCompra: mongoose.Model<unknown>,
+  objectIds: mongoose.Types.ObjectId[]
+): Promise<ResultadoAgregacion[]> {
+  return await OrdenCompra.aggregate<ResultadoAgregacion>([
+    { $unwind: '$viajes' },
+    {
+      $match: {
+        'viajes.viaje': { $in: objectIds }
+      }
+    },
+    {
+      $group: {
+        _id: '$viajes.viaje',
+        totalCobrado: { $sum: '$viajes.importe' }
+      }
+    },
+    {
+      $lookup: {
+        from: 'viajes',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'viaje'
+      }
+    },
+    { $unwind: '$viaje' }
+  ]);
+}
+
+/**
+ * Prepara las operaciones de actualización en bulk
+ */
+function prepararOperacionesBulk(resultados: ResultadoAgregacion[]): BulkOperation[] {
+  return resultados.map(r => ({
+    updateOne: {
+      filter: { _id: r._id },
+      update: {
+        $set: {
+          estadoPartida: calcularEstadoPartida(r)
+        }
+      }
+    }
+  }));
+}
+
+/**
+ * Calcula el estado de partida basado en los totales
+ */
+function calcularEstadoPartida(resultado: ResultadoAgregacion): EstadoPartida {
+  const viajeTotal = (resultado.viaje && typeof resultado.viaje === 'object' && 'total' in resultado.viaje)
+    ? (resultado.viaje as { total: number }).total
+    : 0;
+  return resultado.totalCobrado >= viajeTotal ? 'Cerrada' : 'Abierta';
+}
+
+/**
+ * Ejecuta las actualizaciones en bulk si hay operaciones
+ */
+async function ejecutarActualizacionesBulk(
+  Viaje: mongoose.Model<unknown>,
+  bulkOps: BulkOperation[]
+): Promise<void> {
+  if (bulkOps.length > 0) {
+    await Viaje.bulkWrite(bulkOps);
+  }
+}
+
+/**
+ * Interfaz para la operación de actualización
+ */
+interface BulkOperation {
+  updateOne: {
+    filter: {_id: mongoose.Types.ObjectId};
+    update: {$set: {estadoPartida: EstadoPartida}};
   }
 }
 

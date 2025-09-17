@@ -22,8 +22,8 @@ La documentación de la API está disponible en tres formatos:
 ## Documentación Swagger
 
 La documentación interactiva de la API está implementada usando OpenAPI/Swagger y está disponible en:
-- Desarrollo: http://localhost:5000/api-docs
-- Producción: https://tu-dominio.com/api-docs
+- Desarrollo: <http://localhost:5000/api-docs>
+- Producción: <https://tu-dominio.com/api-docs>
 
 ### Características Documentadas
 
