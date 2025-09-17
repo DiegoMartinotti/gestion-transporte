@@ -279,9 +279,19 @@ export async function getIndexSizes(): Promise<
     const stats = await db.command({ collStats: indexDef.collection });
 
     if (!result[indexDef.collection]) {
+      // Type guard para verificar que stats tenga las propiedades necesarias
+      const totalIndexSize =
+        stats && typeof stats === 'object' && 'totalIndexSize' in stats
+          ? (stats as { totalIndexSize: number }).totalIndexSize
+          : 0;
+      const indexSizes =
+        stats && typeof stats === 'object' && 'indexSizes' in stats
+          ? (stats as { indexSizes: Record<string, number> }).indexSizes
+          : {};
+
       result[indexDef.collection] = {
-        totalIndexSize: stats.totalIndexSize,
-        indexSizes: stats.indexSizes,
+        totalIndexSize,
+        indexSizes,
       };
     }
   }
