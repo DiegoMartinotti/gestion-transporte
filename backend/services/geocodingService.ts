@@ -30,6 +30,78 @@ interface NominatimResponse {
 }
 
 /**
+ * Construye la dirección a partir de los campos disponibles en la respuesta de Nominatim
+ */
+const buildDireccion = (address: NominatimAddress): string => {
+  if (address.road) {
+    return `${address.road} ${address.house_number || ''}`.trim();
+  }
+  return address.pedestrian || address.footway || '';
+};
+
+/**
+ * Obtiene la localidad a partir de los campos disponibles
+ */
+const getLocalidad = (address: NominatimAddress): string => {
+  return (
+    address.city || address.town || address.village || address.county || address.municipality || ''
+  );
+};
+
+/**
+ * Obtiene la provincia a partir de los campos disponibles
+ */
+const getProvincia = (address: NominatimAddress): string => {
+  return address.state || address.state_district || '';
+};
+
+/**
+ * Maneja los errores de la llamada a Nominatim
+ */
+const handleNominatimError = (error: unknown, lat: number, lng: number): void => {
+  if (axios.isAxiosError(error)) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(
+      `Error Axios llamando a Nominatim para ${lat},${lng}: ${errorMessage} - Status: ${error.response?.status}`
+    );
+  } else {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    logger.error(`Error inesperado llamando a Nominatim para ${lat},${lng}: ${errorMessage}`);
+  }
+};
+
+/**
+ * Procesa la respuesta de Nominatim y construye el resultado
+ */
+const processNominatimResponse = (
+  response: NominatimResponse,
+  lat: number,
+  lng: number
+): AddressResult | null => {
+  if (!response.address) {
+    logger.warn(
+      `No se encontraron detalles de dirección para ${lat},${lng} en Nominatim. Respuesta: ${JSON.stringify(response)}`
+    );
+    return null;
+  }
+
+  const address = response.address;
+  const direccion = buildDireccion(address);
+  const localidad = getLocalidad(address);
+  const provincia = getProvincia(address);
+
+  logger.debug(
+    `Geocodificación inversa exitosa para ${lat},${lng}: ${direccion}, ${localidad}, ${provincia}`
+  );
+
+  return {
+    direccion: direccion || '-',
+    localidad: localidad || '-',
+    provincia: provincia || '-',
+  };
+};
+
+/**
  * Obtiene la dirección (calle, localidad, provincia) a partir de coordenadas usando Nominatim.
  * @param lat - Latitud
  * @param lng - Longitud
@@ -37,46 +109,22 @@ interface NominatimResponse {
  */
 const getAddressFromCoords = async (lat: number, lng: number): Promise<AddressResult | null> => {
   try {
-    // Construir URL asegurándose de que los parámetros se codifican correctamente
     const url = `${NOMINATIM_URL}?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
-    
     logger.debug(`Llamando a Nominatim: ${url}`);
 
     const response = await axios.get<NominatimResponse>(url, {
       headers: {
-        'User-Agent': USER_AGENT, // Requerido por Nominatim
-        'Accept-Language': 'es' // Preferir resultados en español si es posible
+        'User-Agent': USER_AGENT,
+        'Accept-Language': 'es',
       },
-      timeout: 10000 // Timeout de 10 segundos
+      timeout: 10000,
     });
 
-    if (response.data && response.data.address) {
-      const address = response.data.address;
-      // Mapeo más robusto de campos de dirección (puede variar según la ubicación)
-      const direccion = address.road ? `${address.road} ${address.house_number || ''}`.trim() : address.pedestrian || address.footway || '';
-      const localidad = address.city || address.town || address.village || address.county || address.municipality || '';
-      const provincia = address.state || address.state_district || ''; // state_district a veces se usa
-      
-      logger.debug(`Geocodificación inversa exitosa para ${lat},${lng}: ${direccion}, ${localidad}, ${provincia}`);
-      return {
-        direccion: direccion || '-', // Devolver '-' si está vacío
-        localidad: localidad || '-',
-        provincia: provincia || '-'
-      };
-    } else {
-      logger.warn(`No se encontraron detalles de dirección para ${lat},${lng} en Nominatim. Respuesta: ${JSON.stringify(response.data)}`);
-      return null;
-    }
+    return processNominatimResponse(response.data, lat, lng);
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-       logger.error(`Error Axios llamando a Nominatim para ${lat},${lng}: ${(error instanceof Error ? error.message : String(error))} - Status: ${error.response?.status}`);
-    } else {
-       logger.error(`Error inesperado llamando a Nominatim para ${lat},${lng}: ${error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido'}`);
-    }
+    handleNominatimError(error, lat, lng);
     return null;
   }
 };
 
-export {
-  getAddressFromCoords
-};
+export { getAddressFromCoords };
