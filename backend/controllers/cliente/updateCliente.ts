@@ -75,9 +75,13 @@ export const updateCliente = async (
     // Verificar permisos (ejemplo: solo admins pueden actualizar)
     verificarPermisosCliente(req, clienteId, true);
 
-    const cliente: ICliente | null = await Cliente.findByIdAndUpdate(clienteId, req.body, {
-      new: true,
-    });
+    const cliente = (await Cliente.findByIdAndUpdate(
+      clienteId,
+      req.body as Record<string, unknown>,
+      {
+        new: true,
+      }
+    )) as ICliente | null;
 
     if (!cliente) {
       res.status(404).json({ success: false, message: 'Cliente no encontrado' });
@@ -90,7 +94,7 @@ export const updateCliente = async (
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
       res
         .status(error instanceof UnauthorizedError ? 401 : 403)
-        .json({ success: false, message: (error instanceof Error ? error.message : String(error)) });
+        .json({ success: false, message: error instanceof Error ? error.message : String(error) });
       return;
     }
     res.status(500).json({ success: false, message: 'Error al actualizar cliente' });
