@@ -66,7 +66,7 @@ function configureMiddlewares(app: Application, config: MiddlewareConfig): void 
   app.use(cookieParser());
 
   // Security headers
-  app.use((req: Request, res: Response, next: NextFunction): void => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     res.header('X-Content-Type-Options', 'nosniff');
     res.header('X-Frame-Options', 'DENY');
     res.header('X-XSS-Protection', '1; mode=block');
@@ -82,7 +82,7 @@ function configureMiddlewares(app: Application, config: MiddlewareConfig): void 
  * @param app - Instancia de la aplicación Express
  */
 function configureRequestLogging(app: Application): void {
-  app.use((req: Request, res: Response, next: NextFunction): void => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     const startTime = Date.now();
 
     // Loguear información básica de la solicitud
@@ -131,26 +131,26 @@ function configureRequestLogging(app: Application): void {
  */
 function configureErrorHandling(app: Application): void {
   // Middleware para rutas no encontradas (404)
-  app.use('*', notFoundHandler);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app.use('*', notFoundHandler as any);
 
   // Middleware para manejo de errores generales
-  app.use(errorHandler);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app.use(errorHandler as any);
 
   // Middleware específico para errores de parsing JSON
-  app.use(
-    (err: Error & { body?: unknown }, req: Request, res: Response, next: NextFunction): void => {
-      if (err instanceof SyntaxError && 'body' in err) {
-        logger.error(`Error al analizar JSON: ${err.message}`);
-        res.status(400).json({
-          success: false,
-          message: 'JSON inválido',
-          error: err.message,
-        });
-      } else {
-        next(err);
-      }
+  app.use((err: Error & { body?: unknown }, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+      logger.error(`Error al analizar JSON: ${err.message}`);
+      res.status(400).json({
+        success: false,
+        message: 'JSON inválido',
+        error: err.message,
+      });
+    } else {
+      next(err);
     }
-  );
+  });
 }
 
 export { configureMiddlewares, configureErrorHandling };

@@ -23,7 +23,7 @@ async function configureRoutes(app: Application): Promise<void> {
  */
 function configureTestRoute(app: Application): void {
   // Test endpoint para verificar que la API está funcionando
-  app.get('/api/test', (req: Request, res: Response) => {
+  app.get('/api/test', (req: Request, res: Response): void => {
     logger.debug('Endpoint de prueba accedido');
     res.json({
       success: true,
@@ -75,7 +75,8 @@ async function configureSwaggerDocs(app: Application): Promise<void> {
     app.use(
       '/api-docs',
       swaggerUi.serve,
-      swaggerUi.setup(swaggerSpecs, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      swaggerUi.setup(swaggerSpecs as any, {
         explorer: true,
         customCss: '.swagger-ui .topbar { display: none }',
         customfavIcon: '',

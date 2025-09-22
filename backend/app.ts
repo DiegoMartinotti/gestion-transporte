@@ -54,10 +54,11 @@ app.use(cookieParser());
 
 // Importar y configurar middleware de seguridad
 import securityMiddleware from './middleware/security';
-securityMiddleware.forEach(middleware => app.use(middleware));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+securityMiddleware.forEach((middleware) => app.use(middleware as any));
 
 // Improved request logging
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction): void => {
   // En producción, solo registrar errores
   if (process.env.NODE_ENV === 'production') {
     res.on('finish', () => {
@@ -78,7 +79,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Test endpoint
-app.get('/api/test', (req: Request, res: Response) => {
+app.get('/api/test', (req: Request, res: Response): void => {
   res.json({ message: 'API funcionando correctamente' });
 });
 
@@ -104,19 +105,19 @@ app.use('/api/proxy', proxyLimiter, proxyRouter); // Aplicar limiter específico
 app.use('/api', apiRoutes);
 
 // Middleware para rutas no encontradas (404)
-app.use(notFoundHandler);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use(notFoundHandler as any);
 
 // Middleware para manejo de errores
-app.use(errorHandler);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+app.use(errorHandler as any);
 
-// Middleware global para manejo de errores
-// Este middleware debe colocarse después de todas las rutas y otros middleware
-app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+// Función auxiliar para manejo de errores globales
+function handleGlobalError(err: unknown, req: Request, res: Response, _next: NextFunction): void {
   // Loguear el error
   logger.error('Error no controlado:', err);
 
   // Determinar código de estado HTTP
-  // Usar statusCode si existe (errores personalizados) o 500 por defecto
   const statusCode =
     err && typeof err === 'object' && 'statusCode' in err
       ? (err as { statusCode: number }).statusCode
@@ -126,7 +127,7 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   let errorMessage = err instanceof Error ? err.message : 'Error interno del servidor';
 
   // Para errores de sintaxis JSON, personalizar el mensaje
-  if (err instanceof SyntaxError && 'status' in err && 'status' in err && 'body' in err) {
+  if (err instanceof SyntaxError && 'status' in err && 'body' in err) {
     errorMessage = 'JSON inválido';
   }
 
@@ -134,9 +135,15 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   res.status(statusCode).json({
     success: false,
     message: errorMessage,
-    ...(process.env.NODE_ENV === 'development' && { stack: err instanceof Error ? err.stack : undefined }),
+    ...(process.env.NODE_ENV === 'development' && {
+      stack: err instanceof Error ? err.stack : undefined,
+    }),
   });
-});
+}
+
+// Middleware global para manejo de errores
+// Este middleware debe colocarse después de todas las rutas y otros middleware
+app.use(handleGlobalError);
 
 async function startServer(): Promise<void> {
   try {
