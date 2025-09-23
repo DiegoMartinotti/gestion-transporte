@@ -5,6 +5,13 @@ import FormulasPersonalizadasCliente from '../../models/FormulasPersonalizadasCl
 import logger from '../../utils/logger';
 import { ApiResponse } from './types';
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+};
+
 export const deleteFormula = async (
   req: Request<{ id: string }>,
   res: Response<ApiResponse>
@@ -28,11 +35,9 @@ export const deleteFormula = async (
     res.json({ message: 'Fórmula eliminada exitosamente' });
   } catch (error: unknown) {
     logger.error(`Error al eliminar fórmula ${req.params.id}:`, error);
-    res
-      .status(500)
-      .json({
-        message: 'Error interno al eliminar la fórmula',
-        error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error),
-      });
+    res.status(500).json({
+      message: 'Error interno al eliminar la fórmula',
+      error: getErrorMessage(error),
+    });
   }
 };

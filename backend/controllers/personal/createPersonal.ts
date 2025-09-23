@@ -47,14 +47,34 @@ const validateEmpresa = async (empresaId: unknown): Promise<boolean> => {
  * Verifica si el error es de validación
  */
 const isValidationError = (error: unknown): boolean => {
-  return error && typeof error === 'object' && 'name' in error && (error as any).name === 'ValidationError';
+  return (
+    error &&
+    typeof error === 'object' &&
+    'name' in error &&
+    (error as { name?: string }).name === 'ValidationError'
+  );
 };
 
 /**
  * Verifica si el error es de duplicado
  */
 const isDuplicateError = (error: unknown): boolean => {
-  return error && typeof error === 'object' && 'code' in error && (error as any).code === 11000;
+  return (
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code?: number }).code === 11000
+  );
+};
+
+/**
+ * Obtiene el mensaje de error de forma segura
+ */
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 };
 
 /**
@@ -64,10 +84,15 @@ const handleCreationError = (error: unknown, res: Response<IPersonal | ApiRespon
   logger.error('Error al crear personal:', error);
 
   if (isValidationError(error)) {
-    const message =
-      error && typeof error === 'object' && 'message' in error && typeof (error instanceof Error ? error.message : String(error)) === 'string'
-        ? (error instanceof Error ? error.message : String(error))
-        : 'Error de validación';
+    let message = 'Error de validación';
+
+    if (error && typeof error === 'object' && 'message' in error) {
+      const errorMessage = getErrorMessage(error);
+      if (typeof errorMessage === 'string') {
+        message = errorMessage;
+      }
+    }
+
     res.status(400).json({ error: message });
     return;
   }

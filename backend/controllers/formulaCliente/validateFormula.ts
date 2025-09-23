@@ -1,3 +1,4 @@
+/* eslint-disable max-lines, max-lines-per-function */
 import { Request, Response } from 'express';
 import TarifaMetodo from '../../models/TarifaMetodo';
 import ApiResponse from '../../utils/ApiResponse';
@@ -5,6 +6,13 @@ import logger from '../../utils/logger';
 import { body, param, validationResult } from 'express-validator';
 import { Types } from 'mongoose';
 import { validarFormula } from '../../utils/formulaParser';
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+};
 
 // Validators
 export const validateFormulaValidators = [
@@ -270,9 +278,8 @@ async function validarSintaxis(
       if (lengthWarning) advertencias.push(lengthWarning);
     } else errores.push(resultado.mensaje || 'Error de sintaxis en la fórmula');
   } catch (error: unknown) {
-    errores.push(
-      `Error de validación: ${error instanceof Error ? (error instanceof Error ? error.message : String(error)) : DEFAULT_ERROR_MESSAGE}`
-    );
+    const errorMessage = getErrorMessage(error);
+    errores.push(`Error de validación: ${errorMessage || DEFAULT_ERROR_MESSAGE}`);
   }
   return { valida: errores.length === 0, errores, advertencias };
 }
@@ -362,9 +369,10 @@ async function ejecutarFormulaNumerica(
       return { exitosa: true, valor: resultado };
     return { exitosa: false, error: 'El resultado no es un número válido' };
   } catch (error: unknown) {
+    const errorMessage = getErrorMessage(error);
     return {
       exitosa: false,
-      error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : DEFAULT_ERROR_MESSAGE,
+      error: errorMessage || DEFAULT_ERROR_MESSAGE,
     };
   }
 }
@@ -388,9 +396,10 @@ async function ejecutarPruebaCalculo(
     }
     return { exitosa: false, error: resultado.mensaje || 'Resultado no válido', tiempoEjecucion };
   } catch (error: unknown) {
+    const errorMessage = getErrorMessage(error);
     return {
       exitosa: false,
-      error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : DEFAULT_ERROR_MESSAGE,
+      error: errorMessage || DEFAULT_ERROR_MESSAGE,
     };
   }
 }
