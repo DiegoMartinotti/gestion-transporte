@@ -7,13 +7,14 @@ import Site, { ISite } from '../../models/Site';
 import Cliente from '../../models/Cliente';
 import { BaseService, PaginationOptions, TransactionOptions } from '../BaseService';
 import { Types } from 'mongoose';
-import logger from '../../utils/logger';
 
 /**
  * Servicio especializado para la gestión de sites
  * Hereda toda la funcionalidad básica de BaseService y añade lógica específica
  */
 class SiteService extends BaseService<ISite> {
+    private static readonly CLIENTE_ID_VALIDATION_NAME = 'Cliente ID';
+
     constructor() {
         super(Site);
     }
@@ -101,7 +102,7 @@ class SiteService extends BaseService<ISite> {
         this.logOperation('getByClienteAndNombre', { clienteId, nombre });
         
         try {
-            this.validateId(clienteId, 'Cliente ID');
+            this.validateId(clienteId, SiteService.CLIENTE_ID_VALIDATION_NAME);
             
             if (!nombre) {
                 throw new Error('Nombre del site es requerido');
@@ -132,7 +133,7 @@ class SiteService extends BaseService<ISite> {
         this.logOperation('getSitesByCliente', { clienteId, opciones });
         
         try {
-            this.validateId(clienteId, 'Cliente ID');
+            this.validateId(clienteId, SiteService.CLIENTE_ID_VALIDATION_NAME);
 
             const filtros = {
                 ...opciones.filtros,
@@ -183,7 +184,7 @@ class SiteService extends BaseService<ISite> {
 
             // Filtrar por cliente si se especifica
             if (clienteId) {
-                this.validateId(clienteId, 'Cliente ID');
+                this.validateId(clienteId, SiteService.CLIENTE_ID_VALIDATION_NAME);
                 filtros.cliente = clienteId;
             }
 
@@ -297,7 +298,7 @@ class SiteService extends BaseService<ISite> {
         try {
             const matchFilter: unknown = {};
             if (clienteId) {
-                this.validateId(clienteId, 'Cliente ID');
+                this.validateId(clienteId, SiteService.CLIENTE_ID_VALIDATION_NAME);
                 matchFilter.cliente = new Types.ObjectId(clienteId);
             }
 
@@ -354,7 +355,7 @@ class SiteService extends BaseService<ISite> {
      * @param site - Site recién creado
      * @param options - Opciones de transacción
      */
-    protected async afterCreate(site: ISite, options: TransactionOptions = {}): Promise<void> {
+    protected async afterCreate(site: ISite, _options: TransactionOptions = {}): Promise<void> {
         this.logInfo(`Site creado exitosamente: ${site.nombre} para cliente ${site.cliente}`);
         
         // Aquí se pueden agregar acciones adicionales después de crear un site
@@ -366,7 +367,7 @@ class SiteService extends BaseService<ISite> {
      * @param site - Site actualizado
      * @param options - Opciones de transacción
      */
-    protected async afterUpdate(site: ISite, options: TransactionOptions = {}): Promise<void> {
+    protected async afterUpdate(site: ISite, _options: TransactionOptions = {}): Promise<void> {
         this.logInfo(`Site actualizado exitosamente: ${site.nombre} (${site._id})`);
     }
 
@@ -375,7 +376,7 @@ class SiteService extends BaseService<ISite> {
      * @param site - Site a eliminar
      * @param options - Opciones de transacción
      */
-    protected async beforeDelete(site: ISite, options: TransactionOptions = {}): Promise<void> {
+    protected async beforeDelete(site: ISite, _options: TransactionOptions = {}): Promise<void> {
         // Verificar que no tenga tramos o viajes asociados
         // Esto se puede implementar cuando se necesite
         this.logWarn(`Preparando eliminación del site: ${site.nombre} (${site._id})`);

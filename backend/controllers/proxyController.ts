@@ -3,22 +3,6 @@ import axios from 'axios';
 import logger from '../utils/logger';
 
 /**
- * Interface for authenticated user in request
- */
-interface AuthenticatedUser {
-    id: string;
-    email: string;
-    roles?: string[];
-}
-
-/**
- * Interface for authenticated request
- */
-interface AuthenticatedRequest extends Request {
-    user?: AuthenticatedUser;
-}
-
-/**
  * Interface for geocoding query parameters
  */
 interface GeocodingQuery {
@@ -26,17 +10,7 @@ interface GeocodingQuery {
     lng: string;
 }
 
-/**
- * Interface for API responses
- */
-interface ApiResponse {
-    message?: string;
-    error?: string;
-    details?: unknown;
-    received?: unknown;
-}
-
-export const geocode = async (req: Request<{}, any, {}, GeocodingQuery>, res: Response<any>): Promise<void> => {
+export const geocode = async (req: Request<never, unknown, unknown, GeocodingQuery>, res: Response<unknown>): Promise<void> => {
     try {
         const { lat, lng } = req.query;
         
@@ -84,18 +58,18 @@ export const geocode = async (req: Request<{}, any, {}, GeocodingQuery>, res: Re
     } catch (error: unknown) {
         logger.error('Geocoding error details:', {
             message: (error instanceof Error ? error.message : String(error)),
-            code: (error as any).code,
-            response: error.response?.data,
+            code: (error as { code?: string }).code,
+            response: (error as { response?: { data?: unknown } }).response?.data,
             config: {
-                url: error.config?.url,
-                params: error.config?.params
+                url: (error as { config?: { url?: string } }).config?.url,
+                params: (error as { config?: { params?: unknown } }).config?.params
             }
         });
 
         res.status(500).json({ 
             message: 'Error en geocodificación',
             error: (error instanceof Error ? error.message : String(error)),
-            details: error.response?.data
+            details: (error as { response?: { data?: unknown } }).response?.data
         });
     }
 };

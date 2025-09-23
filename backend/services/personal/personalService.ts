@@ -7,21 +7,15 @@ import Personal, { IPersonal } from '../../models/Personal';
 import Empresa from '../../models/Empresa';
 import { BaseService, PaginationOptions, TransactionOptions } from '../BaseService';
 import { Types } from 'mongoose';
-import logger from '../../utils/logger';
 
-/**
- * Interfaz para vencimientos próximos
- */
-interface IVencimiento {
-    tipo: string;
-    vencimiento: Date;
-}
 
 /**
  * Servicio especializado para la gestión de personal
  * Hereda toda la funcionalidad básica de BaseService y añade lógica específica
  */
 class PersonalService extends BaseService<IPersonal> {
+    private static readonly EMPRESA_ID_VALIDATION_NAME = 'Empresa ID';
+
     constructor() {
         super(Personal);
     }
@@ -93,7 +87,7 @@ class PersonalService extends BaseService<IPersonal> {
      * @param dni - DNI a validar
      */
     private validateDni(dni: string): void {
-        const dniRegex = /^[0-9]{7,8}$/;
+        const dniRegex = /^\d{7,8}$/;
         const cleanDni = dni.replace(/\D/g, '');
         if (!dniRegex.test(cleanDni)) {
             throw new Error('El DNI debe tener 7 u 8 dígitos');
@@ -193,7 +187,7 @@ class PersonalService extends BaseService<IPersonal> {
     }
 
     /**
-     * Obtiene todo el personal de una empresa específica
+     * Obtiene el personal de una empresa específica
      * @param empresaId - ID de la empresa
      * @param opciones - Opciones de paginación
      * @returns Resultado paginado con personal de la empresa
@@ -202,7 +196,7 @@ class PersonalService extends BaseService<IPersonal> {
         this.logOperation('getPersonalByEmpresa', { empresaId, opciones });
         
         try {
-            this.validateId(empresaId, 'Empresa ID');
+            this.validateId(empresaId, PersonalService.EMPRESA_ID_VALIDATION_NAME);
 
             const filtros = {
                 ...opciones.filtros,
@@ -247,7 +241,7 @@ class PersonalService extends BaseService<IPersonal> {
             };
 
             if (empresaId) {
-                this.validateId(empresaId, 'Empresa ID');
+                this.validateId(empresaId, PersonalService.EMPRESA_ID_VALIDATION_NAME);
                 filtros.empresa = empresaId;
             }
 
@@ -282,7 +276,7 @@ class PersonalService extends BaseService<IPersonal> {
         };
 
         if (empresaId) {
-            this.validateId(empresaId, 'Empresa ID');
+            this.validateId(empresaId, PersonalService.EMPRESA_ID_VALIDATION_NAME);
             filtros.empresa = empresaId;
         }
 
@@ -316,7 +310,7 @@ class PersonalService extends BaseService<IPersonal> {
             };
 
             if (empresaId) {
-                this.validateId(empresaId, 'Empresa ID');
+                this.validateId(empresaId, PersonalService.EMPRESA_ID_VALIDATION_NAME);
                 filtros.empresa = empresaId;
             }
 
@@ -359,7 +353,7 @@ class PersonalService extends BaseService<IPersonal> {
             };
 
             if (empresaId) {
-                this.validateId(empresaId, 'Empresa ID');
+                this.validateId(empresaId, PersonalService.EMPRESA_ID_VALIDATION_NAME);
                 filtros.empresa = empresaId;
             }
 
@@ -446,7 +440,7 @@ class PersonalService extends BaseService<IPersonal> {
         try {
             const matchFilter: unknown = {};
             if (empresaId) {
-                this.validateId(empresaId, 'Empresa ID');
+                this.validateId(empresaId, PersonalService.EMPRESA_ID_VALIDATION_NAME);
                 matchFilter.empresa = new Types.ObjectId(empresaId);
             }
 
@@ -504,7 +498,7 @@ class PersonalService extends BaseService<IPersonal> {
      * @param personal - Personal recién creado
      * @param options - Opciones de transacción
      */
-    protected async afterCreate(personal: IPersonal, options: TransactionOptions = {}): Promise<void> {
+    protected async afterCreate(personal: IPersonal, _options: TransactionOptions = {}): Promise<void> {
         this.logInfo(`Personal creado exitosamente: ${personal.nombre} ${personal.apellido} (DNI: ${personal.dni})`);
         
         // Aquí se pueden agregar acciones adicionales después de crear personal
@@ -516,7 +510,7 @@ class PersonalService extends BaseService<IPersonal> {
      * @param personal - Personal actualizado
      * @param options - Opciones de transacción
      */
-    protected async afterUpdate(personal: IPersonal, options: TransactionOptions = {}): Promise<void> {
+    protected async afterUpdate(personal: IPersonal, _options: TransactionOptions = {}): Promise<void> {
         this.logInfo(`Personal actualizado exitosamente: ${personal.nombre} ${personal.apellido} (${personal._id})`);
     }
 
@@ -525,7 +519,7 @@ class PersonalService extends BaseService<IPersonal> {
      * @param personal - Personal a eliminar
      * @param options - Opciones de transacción
      */
-    protected async beforeDelete(personal: IPersonal, options: TransactionOptions = {}): Promise<void> {
+    protected async beforeDelete(personal: IPersonal, _options: TransactionOptions = {}): Promise<void> {
         // Verificar que no tenga viajes asignados activos
         // Esto se puede implementar cuando se necesite
         this.logWarn(`Preparando eliminación del personal: ${personal.nombre} ${personal.apellido} (${personal._id})`);
