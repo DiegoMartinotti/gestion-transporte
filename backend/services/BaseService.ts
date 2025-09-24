@@ -1,19 +1,31 @@
+/* eslint-disable max-lines */
 /**
  * @module services/BaseService
  * @description Servicio base abstracto que proporciona funcionalidad común para todos los servicios
  * Implementa patrones unificados de paginación, transacciones, logging y operaciones bulk
  */
 
-import mongoose, { Document, Model, ClientSession, FilterQuery, Error as MongooseError } from 'mongoose';
+import mongoose, {
+  Document,
+  Model,
+  ClientSession,
+  FilterQuery,
+  Error as MongooseError,
+} from 'mongoose';
 import logger from '../utils/logger';
 import * as commonValidators from '../utils/commonValidators';
 
 // ==================== INTERFACES UNIFICADAS ====================
 
+// Constantes para evitar duplicación de strings
+const VALIDATION_MESSAGES = {
+  DOCUMENT_ID: 'ID del documento',
+} as const;
+
 /**
  * Opciones para paginación de resultados
  */
-export interface PaginationOptions<T = any> {
+export interface PaginationOptions<T = Document> {
   limite?: number;
   pagina?: number;
   filtros?: FilterQuery<T>;
@@ -59,7 +71,7 @@ export interface TransactionOptions {
 /**
  * Resultado de operación con información de éxito/error
  */
-export interface ServiceResult<T = any> {
+export interface ServiceResult<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -95,20 +107,20 @@ export abstract class BaseService<T extends Document> {
   ): Promise<R> {
     const { autoManage = true } = options;
     const session = await mongoose.startSession();
-    
+
     try {
       if (autoManage) {
         session.startTransaction();
         this.logOperation('transaction_start', { modelName: this.modelName });
       }
-      
+
       const result = await operation(session);
-      
+
       if (autoManage) {
         await session.commitTransaction();
         this.logSuccess('transaction_commit', { modelName: this.modelName });
       }
-      
+
       return result;
     } catch (error) {
       if (autoManage) {
@@ -130,7 +142,7 @@ export abstract class BaseService<T extends Document> {
     if (!id) {
       throw new Error(`${fieldName} es requerido`);
     }
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error(`${fieldName} no es un ObjectId válido: ${id}`);
     }
@@ -143,13 +155,13 @@ export abstract class BaseService<T extends Document> {
    */
   protected async validateExists(id: string, session?: ClientSession): Promise<T> {
     this.validateId(id);
-    
+
     const documento = await this.model.findById(id).session(session || null);
-    
+
     if (!documento) {
       throw new Error(`${this.modelName} con ID ${id} no encontrado`);
     }
-    
+
     return documento;
   }
 
@@ -162,18 +174,16 @@ export abstract class BaseService<T extends Document> {
     if (!data) {
       throw new Error('Los datos son requeridos');
     }
-    
-    const missingFields = fields.filter(field => {
+
+    const missingFields = fields.filter((field) => {
       const value = data[field];
       return value === undefined || value === null || value === '';
     });
-    
+
     if (missingFields.length > 0) {
       throw new Error(`Campos requeridos faltantes: ${missingFields.join(', ')}`);
     }
   }
-
-
 
   /**
    * Maneja errores de Mongoose y los convierte a errores más legibles
@@ -182,29 +192,34 @@ export abstract class BaseService<T extends Document> {
   protected handleMongooseError(error: unknown): never {
     // Error de validación de Mongoose
     if (error instanceof MongooseError.ValidationError) {
-      const messages = Object.values(error.errors).map(err => (err as unknown).message);
+      const messages = Object.values(error.errors).map((err) => (err as unknown).message);
       throw new Error(`Errores de validación: ${messages.join(', ')}`);
     }
-    
+
     // Error de clave duplicada (código 11000)
-    if ((error as any).code === 11000) {
-      const field = Object.keys((error as any).keyPattern || {})[0] || 'campo';
+    if ((error as unknown as { code: number }).code === 11000) {
+      const field =
+        Object.keys(
+          (error as unknown as { keyPattern?: Record<string, unknown> }).keyPattern || {}
+        )[0] || 'campo';
       throw new Error(`Ya existe un registro con ese ${field}`);
     }
-    
+
     // Error de cast (ID inválido)
     if (error instanceof MongooseError.CastError) {
       throw new Error(`ID inválido: ${error.value}`);
     }
-    
+
     // Error de referencia inválida
-    if ((error as any).name === 'DocumentNotFoundError') {
+    if ((error as unknown as { name: string }).name === 'DocumentNotFoundError') {
       throw new Error(`Documento no encontrado`);
     }
-    
+
     // Error genérico
     this.logError('mongoose_error', error);
-    throw new Error((error instanceof Error ? error.message : String(error)) || 'Error interno del servidor');
+    throw new Error(
+      (error instanceof Error ? error.message : String(error)) || 'Error interno del servidor'
+    );
   }
 
   // ==================== MÉTODOS CRUD BÁSICOS ====================
@@ -215,22 +230,19 @@ export abstract class BaseService<T extends Document> {
   async getAll(opciones: PaginationOptions<T> = {}): Promise<PaginationResult<T>> {
     try {
       const { limite = 50, pagina = 1, filtros = {}, ordenamiento, proyeccion } = opciones;
-      
+
       // Validar y limitar el tamaño de la página para prevenir consultas excesivas
       const maxLimite = 100;
       const limiteFinal = Math.min(limite, maxLimite);
       const skip = (pagina - 1) * limiteFinal;
-      
+
       this.logOperation('getAll', { pagina, limite: limiteFinal });
-      
+
       const query = filtros as FilterQuery<T>;
-      
+
       // Construir query base con todas las opciones
-      let findQuery = this.model.find(query)
-        .limit(limiteFinal)
-        .skip(skip)
-        .lean();
-      
+      let findQuery = this.model.find(query).limit(limiteFinal).skip(skip).lean();
+
       // Agregar ordenamiento si se especifica
       if (ordenamiento) {
         findQuery = findQuery.sort(ordenamiento);
@@ -238,28 +250,28 @@ export abstract class BaseService<T extends Document> {
         // Ordenamiento por defecto por _id descendente (más eficiente que createdAt)
         findQuery = findQuery.sort({ _id: -1 });
       }
-      
+
       // Agregar proyección si se especifica para reducir transferencia de datos
       if (proyeccion) {
         findQuery = findQuery.select(proyeccion);
       }
-      
+
       // Ejecutar consultas en paralelo para mejor rendimiento con hints de índices
       const [data, total] = await Promise.all([
         findQuery.exec(),
-        this.model.countDocuments(query).hint({ _id: 1 })
+        this.model.countDocuments(query).hint({ _id: 1 }),
       ]);
-      
+
       const result = {
         data: data as T[],
         paginacion: {
           total,
           paginas: Math.ceil(total / limiteFinal),
           paginaActual: pagina,
-          limite: limiteFinal
-        }
+          limite: limiteFinal,
+        },
       };
-      
+
       this.logSuccess('getAll', { count: data.length, total });
       return result;
     } catch (error) {
@@ -273,17 +285,17 @@ export abstract class BaseService<T extends Document> {
    */
   async getById(id: string): Promise<T | null> {
     this.logOperation('getById', { id });
-    
+
     try {
-      this.validateId(id, 'ID del documento');
-      
+      this.validateId(id, VALIDATION_MESSAGES.DOCUMENT_ID);
+
       const documento = await this.model.findById(id).lean().exec();
-      
+
       if (!documento) {
         this.logWarn(`Documento no encontrado: ${id}`);
         return null;
       }
-      
+
       this.logSuccess('getById', { id, found: true });
       return documento as T;
     } catch (error) {
@@ -297,70 +309,76 @@ export abstract class BaseService<T extends Document> {
    */
   async create(data: Partial<T>, options: TransactionOptions = {}): Promise<T> {
     this.logOperation('create', { hasData: !!data });
-    
-    return this.executeInTransaction(async (session) => {
-      // Validar datos antes de crear
-      await this.validateData(data);
-      
-      const documento = new this.model(data);
-      const documentoGuardado = await documento.save({ session });
-      
-      // Hook post-creación
-      await this.afterCreate(documentoGuardado, { session });
-      
-      this.logSuccess('create', { 
-        id: documentoGuardado._id,
-        created: true
-      });
-      
-      return documentoGuardado;
-    }, { autoManage: !options.session });
+
+    return this.executeInTransaction(
+      async (session) => {
+        // Validar datos antes de crear
+        await this.validateData(data);
+
+        const documento = new this.model(data);
+        const documentoGuardado = await documento.save({ session });
+
+        // Hook post-creación
+        await this.afterCreate(documentoGuardado, { session });
+
+        this.logSuccess('create', {
+          id: documentoGuardado._id,
+          created: true,
+        });
+
+        return documentoGuardado;
+      },
+      { autoManage: !options.session }
+    );
   }
 
   /**
    * Actualiza un documento existente con validaciones y transacción mejorada
    */
-  async update(id: string, data: Partial<T>, options: TransactionOptions & { upsert?: boolean } = {}): Promise<T | null> {
+  async update(
+    id: string,
+    data: Partial<T>,
+    options: TransactionOptions & { upsert?: boolean } = {}
+  ): Promise<T | null> {
     const { upsert = false, ...transactionOptions } = options;
     this.logOperation('update', { id, upsert, hasData: !!data });
-    
-    return this.executeInTransaction(async (session) => {
-      this.validateId(id, 'ID del documento');
-      await this.validateData(data);
-      
-      // Verificar existencia si no es upsert
-      if (!upsert) {
-        await this.validateExists(id, session);
-      }
-      
-      const documentoActualizado = await this.model.findByIdAndUpdate(
-        id,
-        data,
-        { 
-          new: true, 
-          runValidators: true, 
-          session,
-          upsert
+
+    return this.executeInTransaction(
+      async (session) => {
+        this.validateId(id, VALIDATION_MESSAGES.DOCUMENT_ID);
+        await this.validateData(data);
+
+        // Verificar existencia si no es upsert
+        if (!upsert) {
+          await this.validateExists(id, session);
         }
-      );
-      
-      if (!documentoActualizado && !upsert) {
-        throw new Error('Documento no encontrado');
-      }
-      
-      // Hook post-actualización
-      if (documentoActualizado) {
-        await this.afterUpdate(documentoActualizado, { session });
-      }
-      
-      this.logSuccess('update', { 
-        id, 
-        updated: !!documentoActualizado,
-        upsert 
-      });
-      
-      return documentoActualizado;
-    }, { autoManage: !transactionOptions.session });
+
+        const documentoActualizado = await this.model.findByIdAndUpdate(id, data, {
+          new: true,
+          runValidators: true,
+          session,
+          upsert,
+        });
+
+        if (!documentoActualizado && !upsert) {
+          throw new Error('Documento no encontrado');
+        }
+
+        // Hook post-actualización
+        if (documentoActualizado) {
+          await this.afterUpdate(documentoActualizado, { session });
+        }
+
+        this.logSuccess('update', {
+          id,
+          updated: !!documentoActualizado,
+          upsert,
+        });
+
+        return documentoActualizado;
+      },
+      { autoManage: !transactionOptions.session }
+    );
   }
 
   /**
@@ -368,34 +386,37 @@ export abstract class BaseService<T extends Document> {
    */
   async delete(id: string, options: TransactionOptions = {}): Promise<ServiceResult> {
     this.logOperation('delete', { id });
-    
-    return this.executeInTransaction(async (session) => {
-      this.validateId(id, 'ID del documento');
-      
-      // Obtener el documento antes de eliminarlo para el hook
-      const documento = await this.validateExists(id, session);
-      
-      // Hook pre-eliminación
-      await this.beforeDelete(documento, { session });
-      
-      // Eliminar el documento
-      const documentoEliminado = await this.model.findByIdAndDelete(id, { session });
-      
-      if (!documentoEliminado) {
-        throw new Error('Error al eliminar el documento');
-      }
-      
-      this.logSuccess('delete', { 
-        id, 
-        deleted: true 
-      });
-      
-      return { 
-        success: true, 
-        message: 'Documento eliminado correctamente',
-        data: { id }
-      };
-    }, { autoManage: !options.session });
+
+    return this.executeInTransaction(
+      async (session) => {
+        this.validateId(id, VALIDATION_MESSAGES.DOCUMENT_ID);
+
+        // Obtener el documento antes de eliminarlo para el hook
+        const documento = await this.validateExists(id, session);
+
+        // Hook pre-eliminación
+        await this.beforeDelete(documento, { session });
+
+        // Eliminar el documento
+        const documentoEliminado = await this.model.findByIdAndDelete(id, { session });
+
+        if (!documentoEliminado) {
+          throw new Error('Error al eliminar el documento');
+        }
+
+        this.logSuccess('delete', {
+          id,
+          deleted: true,
+        });
+
+        return {
+          success: true,
+          message: 'Documento eliminado correctamente',
+          data: { id },
+        };
+      },
+      { autoManage: !options.session }
+    );
   }
 
   // ==================== OPERACIONES BULK ====================
@@ -403,9 +424,12 @@ export abstract class BaseService<T extends Document> {
   /**
    * Ejecuta operaciones bulk con manejo de errores
    */
-  protected async executeBulkWrite(operations: unknown[], options: TransactionOptions = {}): Promise<BulkResult> {
+  protected async executeBulkWrite(
+    operations: unknown[],
+    options: TransactionOptions = {}
+  ): Promise<BulkResult> {
     const session = options.session;
-    
+
     try {
       if (operations.length === 0) {
         logger.info(`${this.modelName}: No se prepararon operaciones para bulk write`);
@@ -413,41 +437,43 @@ export abstract class BaseService<T extends Document> {
           success: true,
           insertados: 0,
           actualizados: 0,
-          errores: []
+          errores: [],
         };
       }
-      
-      const result = await this.model.bulkWrite(operations, { 
-        session, 
-        ordered: false 
+
+      const result = await this.model.bulkWrite(operations, {
+        session,
+        ordered: false,
       });
-      
+
       const bulkResult: BulkResult = {
         success: true,
         insertados: result.insertedCount || 0,
         actualizados: result.modifiedCount || 0,
-        errores: []
+        errores: [],
       };
-      
+
       // Manejar errores de escritura individuales
       if (result.hasWriteErrors && result.hasWriteErrors()) {
         const writeErrors = result.getWriteErrors();
         logger.warn(`${this.modelName}: ${writeErrors.length} errores durante bulkWrite`);
-        
-        writeErrors.forEach(err => {
+
+        writeErrors.forEach((err) => {
           bulkResult.errores.push({
             index: 'N/A',
             message: `Error en operación: ${err.errmsg}`,
             code: err.code,
-            data: (err as unknown).op || 'No disponible'
+            data: (err as unknown).op || 'No disponible',
           });
         });
-        
+
         bulkResult.success = bulkResult.errores.length === 0;
       }
-      
-      logger.info(`${this.modelName}: BulkWrite completado. Insertados: ${bulkResult.insertados}, Actualizados: ${bulkResult.actualizados}`);
-      
+
+      logger.info(
+        `${this.modelName}: BulkWrite completado. Insertados: ${bulkResult.insertados}, Actualizados: ${bulkResult.actualizados}`
+      );
+
       return bulkResult;
     } catch (error) {
       logger.error(`${this.modelName}: Error durante bulkWrite:`, error);
@@ -464,13 +490,13 @@ export abstract class BaseService<T extends Document> {
     const context: unknown = {
       model: this.modelName,
       operation,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
+
     if (data) {
       context.data = typeof data === 'object' ? data : { value: data };
     }
-    
+
     return context;
   }
 
@@ -496,7 +522,7 @@ export abstract class BaseService<T extends Document> {
   protected logFailure(operation: string, error: unknown): void {
     const context = this.formatLogContext(operation, {
       error: (error instanceof Error ? error.message : String(error)) || 'Error desconocido',
-      stack: error.stack
+      stack: error.stack,
     });
     logger.error(`[${this.modelName}] ${operation} - falló`, context);
   }
@@ -515,7 +541,7 @@ export abstract class BaseService<T extends Document> {
   protected logError(message: string, error: unknown): void {
     const context = this.formatLogContext('error', {
       error: (error instanceof Error ? error.message : String(error)) || 'Error desconocido',
-      stack: error.stack
+      stack: error.stack,
     });
     logger.error(`[${this.modelName}] ${message}`, context);
   }
@@ -547,7 +573,7 @@ export abstract class BaseService<T extends Document> {
     excludeId?: string,
     additionalFilter?: Record<string, unknown>
   ): Promise<boolean>;
-  
+
   /**
    * Valida unicidad de un campo - versión que lanza excepción (para compatibilidad)
    */
@@ -557,7 +583,7 @@ export abstract class BaseService<T extends Document> {
     excludeId?: string,
     fieldName?: string
   ): Promise<void>;
-  
+
   protected async validateUnique(
     field: string,
     value: unknown,
@@ -566,18 +592,15 @@ export abstract class BaseService<T extends Document> {
   ): Promise<boolean | void> {
     // Si el cuarto parámetro es un string, es la versión que lanza excepción
     if (typeof additionalFilterOrFieldName === 'string') {
-      const isUnique = await commonValidators.validateUnique(
-        this.model,
-        field,
-        value,
-        excludeId
-      );
+      const isUnique = await commonValidators.validateUnique(this.model, field, value, excludeId);
       if (!isUnique) {
-        throw new Error(`Ya existe un registro con ese ${additionalFilterOrFieldName || field}: ${value}`);
+        throw new Error(
+          `Ya existe un registro con ese ${additionalFilterOrFieldName || field}: ${value}`
+        );
       }
       return;
     }
-    
+
     // Versión que retorna booleano
     return commonValidators.validateUnique(
       this.model,
@@ -595,11 +618,7 @@ export abstract class BaseService<T extends Document> {
     fields: Record<string, unknown>,
     excludeId?: string
   ): Promise<boolean> {
-    return commonValidators.validateUniqueComposite(
-      this.model,
-      fields,
-      excludeId
-    );
+    return commonValidators.validateUniqueComposite(this.model, fields, excludeId);
   }
 
   /**
@@ -608,7 +627,7 @@ export abstract class BaseService<T extends Document> {
   protected validateCUITCUIL(cuitCuil: string): boolean {
     return commonValidators.validateCUITCUIL(cuitCuil);
   }
-  
+
   /**
    * Valida CUIT argentino (wrapper para compatibilidad)
    */
@@ -618,7 +637,7 @@ export abstract class BaseService<T extends Document> {
       throw new Error(`El formato del ${fieldName} no es válido`);
     }
   }
-  
+
   /**
    * Valida CUIL argentino (wrapper para compatibilidad)
    */
@@ -628,7 +647,7 @@ export abstract class BaseService<T extends Document> {
       throw new Error(`El formato del ${fieldName} no es válido`);
     }
   }
-  
+
   /**
    * Valida teléfono (wrapper para compatibilidad)
    */
@@ -675,12 +694,12 @@ export abstract class BaseService<T extends Document> {
    * Valida formato de email - versión que retorna booleano
    */
   protected validateEmail(email: string): boolean;
-  
+
   /**
    * Valida formato de email - versión que lanza excepción (para compatibilidad)
    */
   protected validateEmail(email: string, fieldName: string): void;
-  
+
   protected validateEmail(email: string, fieldName?: string): boolean | void {
     // Si se pasa fieldName, es la versión que lanza excepción
     if (fieldName !== undefined) {
@@ -690,7 +709,7 @@ export abstract class BaseService<T extends Document> {
       }
       return;
     }
-    
+
     // Versión que retorna booleano
     return commonValidators.validateEmail(email);
   }
@@ -723,21 +742,21 @@ export abstract class BaseService<T extends Document> {
   /**
    * Hook que se ejecuta después de crear un documento
    */
-  protected async afterCreate(documento: T, options: TransactionOptions = {}): Promise<void> {
+  protected async afterCreate(documento: T, _options: TransactionOptions = {}): Promise<void> {
     // Implementación por defecto vacía - los servicios específicos pueden sobrescribir
   }
 
   /**
    * Hook que se ejecuta después de actualizar un documento
    */
-  protected async afterUpdate(documento: T, options: TransactionOptions = {}): Promise<void> {
+  protected async afterUpdate(documento: T, _options: TransactionOptions = {}): Promise<void> {
     // Implementación por defecto vacía - los servicios específicos pueden sobrescribir
   }
 
   /**
    * Hook que se ejecuta antes de eliminar un documento
    */
-  protected async beforeDelete(documento: T, options: TransactionOptions = {}): Promise<void> {
+  protected async beforeDelete(documento: T, _options: TransactionOptions = {}): Promise<void> {
     // Implementación por defecto vacía - los servicios específicos pueden sobrescribir
   }
 }

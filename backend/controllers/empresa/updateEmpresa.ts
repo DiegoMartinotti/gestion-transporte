@@ -24,7 +24,7 @@ const isValidationError = (
     error &&
     typeof error === 'object' &&
     'name' in error &&
-    (error as any).name === 'ValidationError' &&
+    (error as unknown as { name: string }).name === 'ValidationError' &&
     'errors' in error
   );
 };
