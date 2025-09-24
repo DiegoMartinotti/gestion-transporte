@@ -1,16 +1,15 @@
 import express from 'express';
 const router = express.Router();
-import { 
-    getAllEmpresas, 
-    getEmpresaById, 
-    createEmpresa, 
-    updateEmpresa, 
-    deleteEmpresa,
-    getEmpresasByTipo,
-    getEmpresasActivas,
-    getEmpresaTemplate
+import {
+  getAllEmpresas,
+  getEmpresaById,
+  createEmpresa,
+  updateEmpresa,
+  deleteEmpresa,
+  getEmpresasByTipo,
+  getEmpresasActivas,
+  getEmpresaTemplate,
 } from '../controllers/empresa';
-import logger from '../utils/logger';
 
 // Rutas básicas CRUD
 router.get('/', getAllEmpresas);

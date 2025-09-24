@@ -6,15 +6,14 @@
 import express from 'express';
 const router = express.Router();
 import * as siteController from '../controllers/site/index';
-import { 
-    bulkCreateSites,
-    searchNearby,
-    getSiteTemplate,
-    exportSites
+import {
+  bulkCreateSites,
+  searchNearby,
+  getSiteTemplate,
+  exportSites,
 } from '../controllers/site/index';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { validateSite } from '../middleware/validationMiddleware';
-import logger from '../utils/logger';
 
 /**
  * @swagger
@@ -402,6 +401,10 @@ router.delete('/bulk/cliente/:cliente', authenticateToken, siteController.bulkDe
  *       500:
  *         description: Error del servidor durante el reprocesamiento
  */
-router.post('/reprocess-addresses/:cliente', authenticateToken, siteController.reprocessAddressesByCliente);
+router.post(
+  '/reprocess-addresses/:cliente',
+  authenticateToken,
+  siteController.reprocessAddressesByCliente
+);
 
 export default router;
