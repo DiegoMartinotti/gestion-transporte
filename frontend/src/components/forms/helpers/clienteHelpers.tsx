@@ -51,11 +51,22 @@ export const saveCliente = async (
   }
 };
 
+interface ErrorWithResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
 export const handleClienteError = (error: unknown) => {
   console.error('Error saving cliente:', error);
 
   const errorMessage =
-    error.response?.data?.message || error.message || 'Error al guardar el cliente';
+    (error as ErrorWithResponse).response?.data?.message ||
+    (error as ErrorWithResponse).message ||
+    'Error al guardar el cliente';
 
   notifications.show({
     title: 'Error',
