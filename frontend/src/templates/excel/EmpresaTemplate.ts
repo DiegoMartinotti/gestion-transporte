@@ -12,9 +12,12 @@ export interface EmpresaTemplateData {
   contactoPrincipal?: string;
   activa?: boolean;
   observaciones?: string;
+  [key: string]: unknown;
 }
 
-type ExcelRowData = Record<string, unknown>;
+interface ExcelRowData {
+  [key: string]: unknown;
+}
 
 export class EmpresaTemplate {
   private static REQUIRED_MARKER = '(*)';

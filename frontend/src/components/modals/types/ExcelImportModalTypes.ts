@@ -13,15 +13,18 @@ export interface ExcelImportModalProps {
 }
 
 export interface ImportOptions {
-  autoCorrect: boolean;
-  skipInvalidRows: boolean;
+  autoCorrect?: boolean;
+  skipInvalidRows?: boolean;
+  batchSize?: number;
   progressCallback?: (progress: ImportProgress) => void;
 }
 
 export interface ImportProgress {
-  percentage: number;
+  current: number;
+  total: number;
+  percent: number;
+  percentage?: number; // Backwards compatibility
   processed?: number;
-  total?: number;
 }
 
 export interface ImportResult {
@@ -42,6 +45,7 @@ export interface ImportSummary {
 export interface ImportError {
   row: number;
   field: string;
+  column?: string;
   value: unknown;
   message: string;
   severity: 'error' | 'warning';

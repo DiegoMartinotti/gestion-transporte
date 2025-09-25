@@ -3,7 +3,11 @@ import { Stack, Button, Group, Tabs, Modal, Divider } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { Site, Cliente, Tramo } from '../../types';
 import TarifaForm from './TarifaForm';
-import { tramoValidationRules, getInitialTramoValues } from './validation/tramoValidation';
+import {
+  tramoValidationRules,
+  getInitialTramoValues,
+  TramoFormValues,
+} from './validation/tramoValidation';
 import { filterSitesByClient } from './helpers/tramoHelpers';
 import TramoBasicPanel from './components/TramoBasicPanel';
 import TramoTarifasPanel from './components/TramoTarifasPanel';
@@ -14,15 +18,15 @@ interface TramoFormProps {
   tramo?: Tramo | null;
   clientes: Cliente[];
   sites: Site[];
-  onSubmit: (data: ReturnType<typeof getInitialTramoValues>) => void;
+  onSubmit: (data: TramoFormValues) => void;
   onCancel: () => void;
 }
 
 const TramoForm: React.FC<TramoFormProps> = ({ tramo, clientes, sites, onSubmit, onCancel }) => {
   const [sitesFiltered, setSitesFiltered] = useState<Site[]>([]);
 
-  const form = useForm({
-    initialValues: getInitialTramoValues(tramo),
+  const form = useForm<TramoFormValues>({
+    initialValues: getInitialTramoValues(tramo || null),
     validate: tramoValidationRules,
   });
 

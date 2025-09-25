@@ -5,10 +5,11 @@ export interface ClienteTemplateData {
   nombre: string;
   cuit: string;
   activo?: boolean;
+  [key: string]: unknown;
 }
 
 interface ExcelRowData {
-  [key: string]: string;
+  [key: string]: unknown;
 }
 
 export class ClienteTemplate {

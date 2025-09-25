@@ -2,6 +2,9 @@ import ExcelProcessor from './ExcelProcessor';
 import ValidationEngine from './ValidationEngine';
 import ErrorRecovery from './ErrorRecovery';
 import BulkOperations, { BulkUtils } from './BulkOperations';
+import type { Cliente, Empresa, Personal } from '../../types';
+
+type BulkData = Cliente | Empresa | Personal;
 
 export { ExcelProcessor, ValidationEngine, ErrorRecovery, BulkOperations, BulkUtils };
 
@@ -43,22 +46,6 @@ export class ExcelService {
     this.validator = new ValidationEngine();
     this.recovery = new ErrorRecovery();
     this.bulkOps = new BulkOperations();
-  }
-  private mapEntityTypeToBulkType(
-    entityType: 'cliente' | 'empresa' | 'personal' | 'sites'
-  ): string {
-    switch (entityType) {
-      case 'cliente':
-        return 'clientes';
-      case 'empresa':
-        return 'empresas';
-      case 'sites':
-        return 'sites';
-      case 'personal':
-        return 'personal';
-      default:
-        return 'clientes';
-    }
   }
 
   /**
@@ -105,7 +92,10 @@ export class ExcelService {
       let bulkResult = null;
       if (finalData.length > 0) {
         const bulkEntityType = this.mapEntityTypeToBulkType(entityType);
-        bulkResult = await this.bulkOps.bulkInsert(bulkEntityType, finalData);
+        bulkResult = await this.bulkOps.bulkInsert(
+          bulkEntityType,
+          finalData as unknown as BulkData[]
+        );
       }
 
       return {
@@ -146,6 +136,19 @@ export class ExcelService {
     } finally {
       this.processor.dispose();
     }
+  }
+
+  /**
+   * Mapea tipos de entidad a tipos de bulk operations
+   */
+  private mapEntityTypeToBulkType(entityType: string): 'clientes' | 'empresas' | 'personal' {
+    const mapping: Record<string, 'clientes' | 'empresas' | 'personal'> = {
+      cliente: 'clientes',
+      empresa: 'empresas',
+      personal: 'personal',
+      sites: 'clientes', // fallback
+    };
+    return mapping[entityType] || 'clientes';
   }
 
   /**

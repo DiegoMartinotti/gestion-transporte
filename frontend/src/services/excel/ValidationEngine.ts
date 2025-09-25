@@ -111,12 +111,12 @@ export class ValidationEngine {
     switch (entityType) {
       case 'cliente':
         templateResult = ClienteTemplate.validateData(
-          data as unknown as import('../../templates/excel').ClienteTemplateData[]
+          data as import('../../templates/excel').ClienteTemplateData[]
         );
         break;
       case 'empresa':
         templateResult = EmpresaTemplate.validateData(
-          data as unknown as import('../../templates/excel').EmpresaTemplateData[]
+          data as import('../../templates/excel').EmpresaTemplateData[]
         );
         break;
       case 'personal': {
@@ -127,7 +127,7 @@ export class ValidationEngine {
           nombre: e.nombre as string,
         }));
         templateResult = PersonalTemplate.validateData(
-          data as unknown as import('../../templates/excel').PersonalTemplateData[],
+          data as import('../../templates/excel').PersonalTemplateData[],
           empresas
         );
         break;

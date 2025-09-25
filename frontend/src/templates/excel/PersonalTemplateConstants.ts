@@ -31,6 +31,7 @@ export interface PersonalTemplateData {
   art?: string;
   activo?: boolean;
   observaciones?: string;
+  [key: string]: unknown;
 }
 
 export const PERSONAL_CONSTANTS = {

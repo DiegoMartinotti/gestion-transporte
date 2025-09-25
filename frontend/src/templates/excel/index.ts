@@ -90,7 +90,7 @@ interface ValidationOptions {
 
 // Excel row data type - debe coincidir con el tipo usado en los templates
 interface ExcelRowData {
-  [key: string]: string;
+  [key: string]: unknown;
 }
 
 export class TemplateFactory {

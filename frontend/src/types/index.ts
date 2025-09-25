@@ -329,6 +329,7 @@ export interface BaseFilters {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  [key: string]: unknown;
 }
 
 export type ClienteFilters = BaseFilters;

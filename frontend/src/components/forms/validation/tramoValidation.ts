@@ -1,3 +1,5 @@
+import { TarifaHistorica } from '../../../types';
+
 export const tramoValidationRules = {
   cliente: (value: string) => (!value ? 'Cliente es requerido' : null),
   origen: (value: string) => (!value ? 'Origen es requerido' : null),
@@ -10,10 +12,18 @@ interface TramoInput {
   origen?: { _id: string };
   destino?: { _id: string };
   distancia?: number;
-  tarifasHistoricas?: unknown[];
+  tarifasHistoricas?: TarifaHistorica[];
 }
 
-export const getInitialTramoValues = (tramo: TramoInput | null) => ({
+export type TramoFormValues = {
+  cliente: string;
+  origen: string;
+  destino: string;
+  distancia: number;
+  tarifasHistoricas: TarifaHistorica[];
+};
+
+export const getInitialTramoValues = (tramo: TramoInput | null): TramoFormValues => ({
   cliente: tramo?.cliente?._id || '',
   origen: tramo?.origen?._id || '',
   destino: tramo?.destino?._id || '',

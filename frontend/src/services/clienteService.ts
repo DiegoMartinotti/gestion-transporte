@@ -140,7 +140,7 @@ export const clienteService = {
 
     // Adapt the result to match ImportResult interface
     return {
-      success: result.bulkResult?.successful > 0 || false,
+      success: (result.bulkResult?.successful ?? 0) > 0,
       summary: {
         totalRows: result.summary.totalRows,
         insertedRows: result.summary.insertedRows,
