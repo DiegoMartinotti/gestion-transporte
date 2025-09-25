@@ -70,11 +70,9 @@ export const updateFormula = async (
     res.json(formulaActualizada);
   } catch (error: unknown) {
     logger.error(`Error al actualizar fórmula ${req.params.id}:`, error);
-    res
-      .status(500)
-      .json({
-        message: 'Error interno al actualizar la fórmula',
-        error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido',
-      });
+    res.status(500).json({
+      message: 'Error interno al actualizar la fórmula',
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    });
   }
 };

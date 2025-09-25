@@ -207,7 +207,7 @@ export const bulkImportPersonal = async (
         results.exitosos++;
       } catch (error: unknown) {
         logger.error(`Error al procesar registro de personal #${i + 1}:`, error);
-        const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido';
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
         results.errores.push({
           indice: i,
           registro: personal[i],

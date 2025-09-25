@@ -47,11 +47,9 @@ export const getFormulasByCliente = async (
     res.json(formulas);
   } catch (error: unknown) {
     logger.error(`Error al obtener fórmulas para cliente ${req.params.clienteId}:`, error);
-    res
-      .status(500)
-      .json({
-        message: 'Error interno al obtener fórmulas',
-        error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error),
-      });
+    res.status(500).json({
+      message: 'Error interno al obtener fórmulas',
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
