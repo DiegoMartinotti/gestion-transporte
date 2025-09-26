@@ -46,9 +46,9 @@ const validateEmpresa = async (empresaId: unknown): Promise<boolean> => {
 /**
  * Verifica si el error es de validación
  */
-const isValidationError = (error: unknown): boolean => {
+const isValidationError = (error: unknown): error is { name: string } => {
   return (
-    error &&
+    error !== null &&
     typeof error === 'object' &&
     'name' in error &&
     (error as { name?: string }).name === 'ValidationError'
@@ -58,9 +58,9 @@ const isValidationError = (error: unknown): boolean => {
 /**
  * Verifica si el error es de duplicado
  */
-const isDuplicateError = (error: unknown): boolean => {
+const isDuplicateError = (error: unknown): error is { code: number } => {
   return (
-    error &&
+    error !== null &&
     typeof error === 'object' &&
     'code' in error &&
     (error as { code?: number }).code === 11000

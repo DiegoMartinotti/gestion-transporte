@@ -12,8 +12,8 @@ import { Types } from 'mongoose';
 export const getAllFormulasValidators = [
   query('cliente')
     .optional()
-    .custom((value: string) => {
-      if (value && !Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (value && !Types.ObjectId.isValid(value as string)) {
         throw new Error('ID de cliente no válido');
       }
       return true;
@@ -57,7 +57,7 @@ export const getAllFormulasValidators = [
 export const getAllFormulas = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar parámetros de consulta
-    const errors = validationResult(req as Request);
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
       ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, { errors: errors.array() });
       return;

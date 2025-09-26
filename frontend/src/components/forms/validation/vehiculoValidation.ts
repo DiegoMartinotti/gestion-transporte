@@ -1,4 +1,9 @@
-import { Vehiculo, VehiculoTipo } from '../../../types/vehiculo';
+import {
+  Vehiculo,
+  VehiculoTipo,
+  VehiculoDocumentacion,
+  VehiculoCaracteristicas,
+} from '../../../types/vehiculo';
 
 export const vehiculoValidationRules = {
   dominio: (value: string) => {
@@ -60,35 +65,41 @@ const createDefaultVehiculo = (): Vehiculo => ({
   observaciones: '',
 });
 
-const createDocumentacionDefaults = (doc?: Record<string, unknown>) => ({
-  seguro: {
-    numero: doc?.seguro?.numero || '',
-    vencimiento: doc?.seguro?.vencimiento || '',
-    compania: doc?.seguro?.compania || '',
-  },
-  vtv: {
-    numero: doc?.vtv?.numero || '',
-    vencimiento: doc?.vtv?.vencimiento || '',
-  },
-  ruta: {
-    numero: doc?.ruta?.numero || '',
-    vencimiento: doc?.ruta?.vencimiento || '',
-  },
-  senasa: {
-    numero: doc?.senasa?.numero || '',
-    vencimiento: doc?.senasa?.vencimiento || '',
-  },
-});
+const createDocumentacionDefaults = (doc?: VehiculoDocumentacion | Record<string, unknown>) => {
+  const docData = doc as VehiculoDocumentacion | undefined;
+  return {
+    seguro: {
+      numero: docData?.seguro?.numero || '',
+      vencimiento: docData?.seguro?.vencimiento || '',
+      compania: docData?.seguro?.compania || '',
+    },
+    vtv: {
+      numero: docData?.vtv?.numero || '',
+      vencimiento: docData?.vtv?.vencimiento || '',
+    },
+    ruta: {
+      numero: docData?.ruta?.numero || '',
+      vencimiento: docData?.ruta?.vencimiento || '',
+    },
+    senasa: {
+      numero: docData?.senasa?.numero || '',
+      vencimiento: docData?.senasa?.vencimiento || '',
+    },
+  };
+};
 
-const createCaracteristicasDefaults = (car?: Record<string, unknown>) => ({
-  capacidadCarga: car?.capacidadCarga || 0,
-  tara: car?.tara || 0,
-  largo: car?.largo || 0,
-  ancho: car?.ancho || 0,
-  alto: car?.alto || 0,
-  configuracionEjes: car?.configuracionEjes || '',
-  tipoCarroceria: car?.tipoCarroceria || '',
-});
+const createCaracteristicasDefaults = (car?: VehiculoCaracteristicas | Record<string, unknown>) => {
+  const carData = car as VehiculoCaracteristicas | undefined;
+  return {
+    capacidadCarga: carData?.capacidadCarga || 0,
+    tara: carData?.tara || 0,
+    largo: carData?.largo || 0,
+    ancho: carData?.ancho || 0,
+    alto: carData?.alto || 0,
+    configuracionEjes: carData?.configuracionEjes || '',
+    tipoCarroceria: carData?.tipoCarroceria || '',
+  };
+};
 
 export function normalizeVehiculoData(values: Vehiculo): Vehiculo {
   return {
