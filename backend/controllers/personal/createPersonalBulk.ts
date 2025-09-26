@@ -75,8 +75,8 @@ function validatePersonalItem(item: PersonalBulkData): boolean {
  */
 function resolveEmpresaId(
   empresa: string | Types.ObjectId,
-  empresaMap: Map<unknown, unknown>
-): unknown {
+  empresaMap: Map<string, Types.ObjectId>
+): Types.ObjectId | null {
   const empresaKey = typeof empresa === 'string' ? empresa.toLowerCase() : empresa;
   if (Types.ObjectId.isValid(empresa as string)) {
     return empresaMap.get(empresa.toString());
@@ -91,11 +91,14 @@ function resolveEmpresaId(
  */
 function processPersonalData(
   personalData: PersonalBulkData[],
-  empresaMap: Map<unknown, unknown>,
+  empresaMap: Map<string, Types.ObjectId>,
   errores: BulkCreateResult['errores']
 ) {
-  const personalToInsert: unknown[] = [];
-  const personalToActivate: Array<{ filter: unknown; update: unknown }> = [];
+  const personalToInsert: Record<string, unknown>[] = [];
+  const personalToActivate: Array<{
+    filter: Record<string, unknown>;
+    update: Record<string, unknown>;
+  }> = [];
 
   for (const [index, item] of personalData.entries()) {
     if (!validatePersonalItem(item)) {

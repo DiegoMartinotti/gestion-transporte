@@ -45,7 +45,7 @@ export class VehiculoBulkOperations {
   async prepareVehiculosMapping(
     vehiculosData: VehiculoBulkData[],
     session: unknown
-  ): Promise<Map<string, unknown>> {
+  ): Promise<Map<string, Record<string, unknown>>> {
     const patentesFaltantes = vehiculosData
       .map((v) =>
         String(v.patenteFaltante || '')
@@ -63,9 +63,9 @@ export class VehiculoBulkOperations {
   processVehiculosBulkData(
     vehiculosData: VehiculoBulkData[],
     empresaMap: Map<string, mongoose.Types.ObjectId>,
-    vehiculosExistentesMap: Map<string, unknown>
-  ): { operations: unknown[]; errores: BulkResult['errores'] } {
-    const operations: unknown[] = [];
+    vehiculosExistentesMap: Map<string, Record<string, unknown>>
+  ): { operations: Record<string, unknown>[]; errores: BulkResult['errores'] } {
+    const operations: Record<string, unknown>[] = [];
     const errores: BulkResult['errores'] = [];
 
     for (let i = 0; i < vehiculosData.length; i++) {
@@ -121,8 +121,8 @@ export class VehiculoBulkOperations {
   }
 
   private addBulkOperation(
-    operations: unknown[],
-    vehiculoExistente: unknown,
+    operations: Record<string, unknown>[],
+    vehiculoExistente: Record<string, unknown> | undefined,
     patente: string,
     vehiculoDataToSet: Record<string, unknown>
   ): void {

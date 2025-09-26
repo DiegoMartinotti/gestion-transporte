@@ -57,7 +57,7 @@ export const getAllFormulasValidators = [
 export const getAllFormulas = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar parámetros de consulta
-    const errors = validationResult(req);
+    const errors = validationResult(req as Request);
     if (!errors.isEmpty()) {
       ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, { errors: errors.array() });
       return;
@@ -257,7 +257,7 @@ function calcularDiasRestantesVigencia(
  * Calcula estadísticas avanzadas
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function calcularEstadisticas(filtrosBase: unknown): Promise<any> {
+async function calcularEstadisticas(filtrosBase: Record<string, any>): Promise<any> {
   // Estadísticas generales
   const [totalActivas, totalInactivas, porMetodo, porTipoUnidad, porCliente] = await Promise.all([
     FormulasPersonalizadasCliente.countDocuments({ ...filtrosBase, activa: true }),
@@ -282,7 +282,7 @@ async function calcularEstadisticas(filtrosBase: unknown): Promise<any> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function obtenerEstadisticasPorMetodo(filtrosBase: unknown): Promise<unknown[]> {
+async function obtenerEstadisticasPorMetodo(filtrosBase: Record<string, any>): Promise<unknown[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
     {
@@ -307,7 +307,9 @@ async function obtenerEstadisticasPorMetodo(filtrosBase: unknown): Promise<unkno
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function obtenerEstadisticasPorTipoUnidad(filtrosBase: unknown): Promise<unknown[]> {
+async function obtenerEstadisticasPorTipoUnidad(
+  filtrosBase: Record<string, any>
+): Promise<unknown[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
     {
@@ -329,7 +331,7 @@ async function obtenerEstadisticasPorTipoUnidad(filtrosBase: unknown): Promise<u
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function obtenerEstadisticasPorCliente(filtrosBase: unknown): Promise<unknown[]> {
+async function obtenerEstadisticasPorCliente(filtrosBase: Record<string, any>): Promise<unknown[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
     {
