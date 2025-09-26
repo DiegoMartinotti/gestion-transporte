@@ -178,7 +178,12 @@ async function getAllTramos(
       },
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido';
+    let errorMessage: string;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
+    }
     logger.error('Error al obtener todos los tramos:', error);
     res.status(500).json({
       success: false,

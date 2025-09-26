@@ -11,31 +11,31 @@ import logger from '../../utils/logger';
  * Interface for authenticated user in request
  */
 interface AuthenticatedUser {
-    id: string;
-    email: string;
-    roles?: string[];
+  id: string;
+  email: string;
+  roles?: string[];
 }
 
 /**
  * Interface for authenticated request
  */
 interface AuthenticatedRequest extends Request {
-    user?: AuthenticatedUser;
+  user?: AuthenticatedUser;
 }
 
 /**
  * Interface for API responses
  */
-interface ApiResponse<T = any> {
-    success: boolean;
-    data?: T;
-    message?: string;
-    error?: string;
+interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
 /**
  * Actualiza un tramo existente
- * 
+ *
  * @async
  * @function updateTramo
  * @param {Object} req - Objeto de solicitud Express
@@ -46,36 +46,38 @@ interface ApiResponse<T = any> {
  * @returns {Promise<Object>} Tramo actualizado
  * @throws {Error} Error 404 si el tramo no existe, 400 si hay error de validación
  */
-async function updateTramo(req: AuthenticatedRequest, res: Response<ApiResponse<ITramo>>): Promise<void> {
-    try {
-        const { id } = req.params;
-        const tramoActualizado = await Tramo.findByIdAndUpdate(
-            id,
-            req.body,
-            { new: true, runValidators: true }
-        )
-        .populate('origen', 'Site')
-        .populate('destino', 'Site');
-        
-        if (!tramoActualizado) {
-            res.status(404).json({
-                success: false,
-                message: 'Tramo no encontrado'
-            });
-            return;
-        }
-        
-        res.json({
-            success: true,
-            data: tramoActualizado
-        });
-    } catch (error: unknown) {
-        logger.error('Error al actualizar tramo:', error);
-        res.status(400).json({
-            success: false,
-            message: (error instanceof Error ? error.message : String(error))
-        });
+async function updateTramo(
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse<ITramo>>
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tramoActualizado = await Tramo.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    })
+      .populate('origen', 'Site')
+      .populate('destino', 'Site');
+
+    if (!tramoActualizado) {
+      res.status(404).json({
+        success: false,
+        message: 'Tramo no encontrado',
+      });
+      return;
     }
+
+    res.json({
+      success: true,
+      data: tramoActualizado,
+    });
+  } catch (error: unknown) {
+    logger.error('Error al actualizar tramo:', error);
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export default updateTramo;

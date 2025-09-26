@@ -11,31 +11,31 @@ import logger from '../../utils/logger';
  * Interface for authenticated user in request
  */
 interface AuthenticatedUser {
-    id: string;
-    email: string;
-    roles?: string[];
+  id: string;
+  email: string;
+  roles?: string[];
 }
 
 /**
  * Interface for authenticated request
  */
 interface AuthenticatedRequest extends Request {
-    user?: AuthenticatedUser;
+  user?: AuthenticatedUser;
 }
 
 /**
  * Interface for API responses
  */
-interface ApiResponse<T = any> {
-    success: boolean;
-    data?: T;
-    message?: string;
-    error?: string;
+interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }
 
 /**
  * Obtiene un tramo específico por su ID
- * 
+ *
  * @async
  * @function getTramoById
  * @param {Object} req - Objeto de solicitud Express
@@ -45,32 +45,35 @@ interface ApiResponse<T = any> {
  * @returns {Promise<Object>} Datos del tramo encontrado
  * @throws {Error} Error 404 si el tramo no existe, 500 si hay error del servidor
  */
-async function getTramoById(req: AuthenticatedRequest, res: Response<ApiResponse<ITramo>>): Promise<void> {
-    try {
-        const { id } = req.params;
-        const tramo = await Tramo.findById(id)
-            .populate('origen', 'Site location')
-            .populate('destino', 'Site location');
-            
-        if (!tramo) {
-            res.status(404).json({
-                success: false,
-                message: 'Tramo no encontrado'
-            });
-            return;
-        }
-        
-        res.json({
-            success: true,
-            data: tramo
-        });
-    } catch (error: unknown) {
-        logger.error('Error al obtener tramo por ID:', error);
-        res.status(500).json({
-            success: false,
-            message: (error instanceof Error ? error.message : String(error))
-        });
+async function getTramoById(
+  req: AuthenticatedRequest,
+  res: Response<ApiResponse<ITramo>>
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const tramo = await Tramo.findById(id)
+      .populate('origen', 'Site location')
+      .populate('destino', 'Site location');
+
+    if (!tramo) {
+      res.status(404).json({
+        success: false,
+        message: 'Tramo no encontrado',
+      });
+      return;
     }
+
+    res.json({
+      success: true,
+      data: tramo,
+    });
+  } catch (error: unknown) {
+    logger.error('Error al obtener tramo por ID:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export default getTramoById;

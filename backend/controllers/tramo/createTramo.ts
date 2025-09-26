@@ -61,7 +61,12 @@ async function createTramo(
       data: tramoGuardado,
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Error desconocido';
+    let errorMessage: string;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
+    }
     logger.error('Error al crear tramo:', error);
     res.status(400).json({
       success: false,
