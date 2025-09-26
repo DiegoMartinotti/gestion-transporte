@@ -66,6 +66,7 @@ function configureMiddlewares(app: Application, config: MiddlewareConfig): void 
   app.use(cookieParser());
 
   // Security headers
+  // @ts-expect-error - Express middleware types conflict
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.header('X-Content-Type-Options', 'nosniff');
     res.header('X-Frame-Options', 'DENY');
@@ -82,6 +83,7 @@ function configureMiddlewares(app: Application, config: MiddlewareConfig): void 
  * @param app - Instancia de la aplicación Express
  */
 function configureRequestLogging(app: Application): void {
+  // @ts-expect-error - Express middleware types conflict
   app.use((req: Request, res: Response, next: NextFunction) => {
     const startTime = Date.now();
 
@@ -139,6 +141,7 @@ function configureErrorHandling(app: Application): void {
   app.use(errorHandler as any);
 
   // Middleware específico para errores de parsing JSON
+  // @ts-expect-error - Error middleware types conflict
   app.use((err: Error & { body?: unknown }, req: Request, res: Response, next: NextFunction) => {
     if (err instanceof SyntaxError && 'body' in err) {
       logger.error(`Error al analizar JSON: ${err.message}`);

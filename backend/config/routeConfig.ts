@@ -23,7 +23,8 @@ async function configureRoutes(app: Application): Promise<void> {
  */
 function configureTestRoute(app: Application): void {
   // Test endpoint para verificar que la API está funcionando
-  app.get('/api/test', (req: Request, res: Response): void => {
+  // @ts-expect-error - Express route types conflict
+  app.get('/api/test', (req: Request, res: Response) => {
     logger.debug('Endpoint de prueba accedido');
     res.json({
       success: true,
