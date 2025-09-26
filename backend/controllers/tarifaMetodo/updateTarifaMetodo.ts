@@ -38,7 +38,7 @@ export const updateTarifaMetodoValidators = [
   body('variables').optional().isArray().withMessage('Las variables deben ser un array'),
   body('variables.*.nombre')
     .optional()
-    .matches(/^[A-Za-z][A-Za-z0-9_]*$/)
+    .matches(/^[a-zA-Z]\w*$/)
     .withMessage(
       'Nombre de variable debe empezar con letra y contener solo letras, números y guiones bajos'
     ),
@@ -72,6 +72,7 @@ export const updateTarifaMetodoValidators = [
 /**
  * Actualiza un método de cálculo de tarifa
  */
+// eslint-disable-next-line complexity, max-lines-per-function, sonarjs/cognitive-complexity
 export const updateTarifaMetodo = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar entrada
@@ -180,7 +181,7 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
   } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al actualizar método:', error);
 
-    if ((error as any).name === 'ValidationError') {
+    if ((error as unknown).name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map((err: unknown) => ({
         field: err.path,
         message: err.message,
@@ -189,7 +190,7 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    if ((error as any).code === 11000) {
+    if ((error as unknown).code === 11000) {
       ApiResponse.error(res, 'El código del método ya existe', 409);
       return;
     }

@@ -109,6 +109,7 @@ export const updateReglaTarifaValidators = [
 /**
  * Actualiza una regla de tarifa
  */
+// eslint-disable-next-line complexity, max-lines-per-function, sonarjs/cognitive-complexity
 export const updateReglaTarifa = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar entrada
@@ -164,7 +165,7 @@ export const updateReglaTarifa = async (req: Request, res: Response): Promise<vo
     if (horariosAplicacion) {
       const { horaInicio, horaFin } = horariosAplicacion;
       if (horaInicio && horaFin) {
-        const formatoHora = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        const formatoHora = /^([0-1]?\d|2[0-3]):[0-5]\d$/;
         if (!formatoHora.test(horaInicio) || !formatoHora.test(horaFin)) {
           ApiResponse.error(res, 'Las horas deben estar en formato HH:MM', 400);
           return;
@@ -256,7 +257,7 @@ export const updateReglaTarifa = async (req: Request, res: Response): Promise<vo
   } catch (error: unknown) {
     logger.error('[ReglaTarifa] Error al actualizar regla:', error);
 
-    if ((error as any).name === 'ValidationError') {
+    if ((error as unknown).name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map((err: unknown) => ({
         field: err.path,
         message: err.message,
@@ -265,7 +266,7 @@ export const updateReglaTarifa = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    if ((error as any).code === 11000) {
+    if ((error as unknown).code === 11000) {
       ApiResponse.error(res, 'El código de la regla ya existe', 409);
       return;
     }

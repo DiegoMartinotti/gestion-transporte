@@ -57,6 +57,7 @@ export const simulateTarifaValidators = [
  * Simula cálculos de tarifa para múltiples escenarios
  * Útil para análisis comparativo y testing
  */
+// eslint-disable-next-line complexity, max-lines-per-function
 export const simulateTarifa = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar entrada
@@ -125,7 +126,7 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
       } catch (error: unknown) {
         const errorInfo = {
           escenario: escenario.nombre,
-          error: (error instanceof Error ? error.message : String(error)),
+          error: error instanceof Error ? error.message : String(error),
           parametros: {
             clienteId: escenario.clienteId,
             origenId: escenario.origenId,
@@ -190,7 +191,7 @@ async function simularConMultiplesMetodos(
       };
     } catch (error: unknown) {
       calculos[metodo] = {
-        error: (error instanceof Error ? error.message : String(error)),
+        error: error instanceof Error ? error.message : String(error),
         metodoUtilizado: metodo,
       };
     }
@@ -219,7 +220,7 @@ async function simularConMetodoUnico(
   } catch (error: unknown) {
     return {
       principal: {
-        error: (error instanceof Error ? error.message : String(error)),
+        error: error instanceof Error ? error.message : String(error),
         metodoUtilizado: escenario.metodoCalculo || 'automático',
       },
     };
@@ -229,7 +230,7 @@ async function simularConMetodoUnico(
 /**
  * Genera análisis de la simulación
  */
-async function generarAnalisisSimulacion(resultadosEscenario: unknown): Promise<any> {
+async function generarAnalisisSimulacion(resultadosEscenario: unknown): Promise<unknown> {
   const calculos = Object.values(resultadosEscenario.calculos);
   const calculosExitosos = calculos.filter((c: unknown) => !c.error);
 

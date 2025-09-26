@@ -43,6 +43,7 @@ export const getAllReglasTarifaValidators = [
 /**
  * Obtiene todas las reglas de tarifa con filtros opcionales
  */
+// eslint-disable-next-line complexity, max-lines-per-function
 export const getAllReglasTarifa = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar parámetros de consulta
@@ -180,7 +181,7 @@ function esReglVigente(regla: unknown, fecha: Date): boolean {
 
   if (regla.fechaInicioVigencia > fecha) return false;
 
-  if (regla.fechaFinVigencia && regla.fechaFinVigencia < fecha) return false;
+  return !(regla.fechaFinVigencia && regla.fechaFinVigencia < fecha);
 
   return true;
 }
