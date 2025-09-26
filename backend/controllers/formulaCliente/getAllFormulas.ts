@@ -308,7 +308,7 @@ async function obtenerEstadisticasPorMetodo(filtrosBase: Record<string, any>): P
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function obtenerEstadisticasPorTipoUnidad(
-  filtrosBase: Record<string, any>
+  filtrosBase: Record<string, unknown>
 ): Promise<unknown[]> {
   return await FormulasPersonalizadasCliente.aggregate([
     { $match: filtrosBase },
