@@ -63,8 +63,17 @@ export const saveEmpresa = async (
 export const handleEmpresaError = (error: unknown) => {
   console.error('Error saving empresa:', error);
 
-  const errorMessage =
-    error.response?.data?.message || error.message || 'Error al guardar la empresa';
+  let errorMessage = 'Error al guardar la empresa';
+
+  // Check if it's an HTTP error with response
+  if (error && typeof error === 'object' && 'response' in error) {
+    const httpError = error as { response?: { data?: { message?: string } } };
+    errorMessage = httpError.response?.data?.message || errorMessage;
+  }
+  // Check if it's a standard Error object
+  else if (error instanceof Error) {
+    errorMessage = error.message || errorMessage;
+  }
 
   notifications.show({
     title: 'Error',
