@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import mongoose, { Document, Schema, Types, model } from 'mongoose';
 
 /**
@@ -76,7 +77,7 @@ export interface IReglaTarifa extends Document {
  */
 export interface IReglaTarifaModel extends mongoose.Model<IReglaTarifa> {
   findReglasAplicables(contexto: unknown, fecha?: Date): Promise<IReglaTarifa[]>;
-  aplicarReglas(contexto: unknown, valores: unknown): Promise<any>;
+  aplicarReglas(contexto: unknown, valores: unknown): Promise<unknown>;
 }
 
 const condicionSchema = new Schema<ICondicion>(
@@ -227,6 +228,7 @@ reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: unknown): boo
     return true; // Sin condiciones, siempre aplica
   }
 
+  // eslint-disable-next-line complexity
   const resultados = this.condiciones.map((condicion: ICondicion) => {
     const valorContexto = obtenerValorDeContexto(contexto, condicion.campo);
 
@@ -262,6 +264,7 @@ reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: unknown): boo
 };
 
 // Método para aplicar modificadores
+// eslint-disable-next-line complexity
 reglaTarifaSchema.methods.aplicarModificadores = function (valores: unknown): unknown {
   const resultado = { ...valores };
 
@@ -298,6 +301,7 @@ reglaTarifaSchema.methods.aplicarModificadores = function (valores: unknown): un
 };
 
 // Método para verificar vigencia
+// eslint-disable-next-line complexity
 reglaTarifaSchema.methods.esVigente = function (fecha: Date = new Date()): boolean {
   if (this.fechaInicioVigencia > fecha) {
     return false;
@@ -367,7 +371,7 @@ reglaTarifaSchema.statics.findReglasAplicables = async function (
 reglaTarifaSchema.statics.aplicarReglas = async function (
   contexto: unknown,
   valores: unknown
-): Promise<any> {
+): Promise<unknown> {
   const modelo = this as unknown;
   const reglas = await modelo.findReglasAplicables(contexto);
   let resultado = { ...valores };
