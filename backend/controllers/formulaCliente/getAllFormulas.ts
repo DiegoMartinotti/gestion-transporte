@@ -78,7 +78,7 @@ export const getAllFormulas = async (req: Request, res: Response): Promise<void>
 
     // Construir filtros
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filtros: unknown = {};
+    const filtros: Record<string, any> = {};
 
     if (cliente) {
       filtros.clienteId = cliente;
