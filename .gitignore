@@ -65,3 +65,7 @@ storage/
 
 # Serena MCP Memory
 .serena/
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
