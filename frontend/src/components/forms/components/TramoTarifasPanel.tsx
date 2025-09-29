@@ -6,9 +6,8 @@ import { TarifaHistorica } from '../../../types';
 import TramoTarifasTable from './TramoTarifasTable';
 
 interface TramoTarifasPanelProps {
-  form: UseFormReturnType<{
-    tarifasHistoricas: TarifaHistorica[];
-  }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  form: UseFormReturnType<any>;
   conflicts: Array<{
     tipo: string;
     metodoCalculo: string;
