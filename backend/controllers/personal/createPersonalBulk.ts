@@ -1,5 +1,5 @@
 // @allow-duplicate: migración legítima de controlador monolítico a modular
-import { Types } from 'mongoose';
+import { Types, ClientSession } from 'mongoose';
 import Personal from '../../models/Personal';
 import Empresa from '../../models/Empresa';
 import logger from '../../utils/logger';
@@ -42,7 +42,7 @@ interface PersonalBulkData {
 /**
  * Resuelve empresas por ID o nombre y crea un mapa para búsquedas rápidas
  */
-async function resolveEmpresas(personalData: PersonalBulkData[], session: unknown) {
+async function resolveEmpresas(personalData: PersonalBulkData[], session: ClientSession | null) {
   const empresaIdentifiers = [...new Set(personalData.map((p) => p.empresa).filter((e) => e))];
   const empresaIds = empresaIdentifiers.filter((id) => Types.ObjectId.isValid(id));
   const empresaNombres = empresaIdentifiers.filter((id) => !Types.ObjectId.isValid(id));
@@ -192,7 +192,7 @@ export const createPersonalBulk = async (
  */
 async function performActivations(
   personalToActivate: Array<{ filter: unknown; update: unknown }>,
-  session: unknown,
+  session: ClientSession | null,
   errores: BulkCreateResult['errores']
 ): Promise<number> {
   try {
@@ -234,7 +234,7 @@ async function performActivations(
 async function performInsertions(
   personalToInsert: unknown[],
   personalData: PersonalBulkData[],
-  session: unknown,
+  session: ClientSession | null,
   errores: BulkCreateResult['errores']
 ): Promise<number> {
   try {

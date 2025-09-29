@@ -57,7 +57,8 @@ export const getAllFormulasValidators = [
 export const getAllFormulas = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar parámetros de consulta
-    const errors = validationResult(req);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errors = validationResult(req as any);
     if (!errors.isEmpty()) {
       ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, { errors: errors.array() });
       return;
