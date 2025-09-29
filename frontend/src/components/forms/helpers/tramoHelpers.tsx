@@ -30,7 +30,7 @@ export async function calculateDistance({
   const origenSite = sitesFiltered.find((s) => s._id === origen);
   const destinoSite = sitesFiltered.find((s) => s._id === destino);
 
-  if (!origenSite?.location?.coordinates || !destinoSite?.location?.coordinates) {
+  if (!origenSite?.coordenadas || !destinoSite?.coordenadas) {
     notifications.show({
       title: 'Error',
       message: 'Los sitios seleccionados no tienen coordenadas válidas',
@@ -44,10 +44,10 @@ export async function calculateDistance({
     // Simular cálculo de distancia (en implementación real usaríamos Google Maps API)
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const lat1 = origenSite.location.coordinates[1];
-    const lon1 = origenSite.location.coordinates[0];
-    const lat2 = destinoSite.location.coordinates[1];
-    const lon2 = destinoSite.location.coordinates[0];
+    const lat1 = origenSite.coordenadas.lat;
+    const lon1 = origenSite.coordenadas.lng;
+    const lat2 = destinoSite.coordenadas.lat;
+    const lon2 = destinoSite.coordenadas.lng;
 
     const distance = calculateHaversineDistance(lat1, lon1, lat2, lon2);
     const roundedDistance = Math.round(distance);
@@ -94,7 +94,7 @@ export async function validateTarifaConflicts({
       origen: formValues.origen,
       destino: formValues.destino,
       cliente: formValues.cliente,
-      tarifasHistoricas: formValues.tarifasHistoricas,
+      tarifasHistoricas: formValues.tarifasHistoricas as TarifaHistorica[],
     });
 
     setConflicts(result.conflicts || []);

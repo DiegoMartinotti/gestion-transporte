@@ -37,7 +37,7 @@ const TramoForm: React.FC<TramoFormProps> = ({ tramo, clientes, sites, onSubmit,
     handleValidateTarifaConflicts,
     handleCalculateDistance,
     handleSubmit,
-  } = useTramoHandlers(form, sitesFiltered, onSubmit);
+  } = useTramoHandlers(form, sitesFiltered, (data: TramoFormValues) => onSubmit(data));
 
   const {
     selectedTarifa,
@@ -51,7 +51,12 @@ const TramoForm: React.FC<TramoFormProps> = ({ tramo, clientes, sites, onSubmit,
 
   // Filtrar sites por cliente seleccionado
   useEffect(() => {
-    filterSitesByClient(form.values.cliente, sites, form, setSitesFiltered);
+    filterSitesByClient({
+      clientId: form.values.cliente,
+      sites,
+      form,
+      setSitesFiltered,
+    });
   }, [form.values.cliente, sites, form]);
 
   // Validar conflictos cuando cambien las tarifas

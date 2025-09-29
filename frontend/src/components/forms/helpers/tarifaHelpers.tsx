@@ -40,7 +40,7 @@ export function renderConflictAlerts(conflicts: string[], isValid: boolean) {
   );
 }
 
-export function renderFormFields(form: UseFormReturnType<Record<string, unknown>>) {
+export function renderFormFields(form: UseFormReturnType<any>) {
   return (
     <Grid>
       <Grid.Col span={6}>
@@ -160,7 +160,7 @@ export function renderPreview(values: Record<string, unknown>) {
 
 export function renderActions(
   onCancel: () => void,
-  tarifa: Record<string, unknown>,
+  tarifa: any,
   isValid: boolean,
   conflicts: string[]
 ) {

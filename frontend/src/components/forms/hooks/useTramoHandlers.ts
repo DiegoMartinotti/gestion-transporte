@@ -4,8 +4,10 @@ import { Site, TarifaHistorica } from '../../../types';
 import { calculateDistance, validateTarifaConflicts } from '../helpers/tramoHelpers';
 
 interface TramoFormValues {
+  cliente: string;
   origen: string;
   destino: string;
+  distancia: number;
   tarifasHistoricas: TarifaHistorica[];
 }
 
@@ -18,29 +20,25 @@ export const useTramoHandlers = (
   onSubmit: (values: TramoFormValues) => void
 ) => {
   const [calculatingDistance, setCalculatingDistance] = useState(false);
-  const [conflicts, setConflicts] = useState<
-    Array<{
-      tipo: string;
-      metodoCalculo: string;
-      fechaInicio: string;
-      fechaFin: string;
-      message: string;
-    }>
-  >([]);
+  const [conflicts, setConflicts] = useState<unknown[]>([]);
   const [validatingConflicts, setValidatingConflicts] = useState(false);
 
   const handleValidateTarifaConflicts = useCallback(async () => {
-    await validateTarifaConflicts(form.values, setConflicts, setValidatingConflicts);
+    await validateTarifaConflicts({
+      formValues: form.values,
+      setConflicts,
+      setValidatingConflicts,
+    });
   }, [form.values]);
 
   const handleCalculateDistance = async () => {
-    await calculateDistance(
-      form.values.origen,
-      form.values.destino,
+    await calculateDistance({
+      origen: form.values.origen,
+      destino: form.values.destino,
       sitesFiltered,
       setCalculatingDistance,
-      (distance) => form.setFieldValue('distancia', distance)
-    );
+      onSuccess: (distance: number) => form.setFieldValue('distancia', distance),
+    });
   };
 
   const handleSubmit = (values: TramoFormValues) => {

@@ -19,7 +19,7 @@ import {
 } from './helpers/validacionFormula';
 
 export const getFormulaByIdValidators = [
-  param('id').custom((value) => {
+  param('id').custom((value: string) => {
     if (!Types.ObjectId.isValid(value)) {
       throw new Error('ID de fórmula no válido');
     }
@@ -44,7 +44,7 @@ function construirInfoMetodo(
     descripcion: metodoInfo?.descripcion || 'Método no encontrado o inactivo',
     requiereDistancia: metodoInfo?.requiereDistancia || false,
     requierePalets: metodoInfo?.requierePalets || false,
-    variablesDisponibles: metodoInfo?.obtenerVariablesDisponibles() || [],
+    variablesDisponibles: metodoInfo?.obtenerVariablesDisponibles?.() || [],
   };
 }
 
