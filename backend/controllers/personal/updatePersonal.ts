@@ -44,7 +44,7 @@ export const updatePersonal = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = req.body as Partial<IPersonal>;
 
     if (!Types.ObjectId.isValid(id)) {
       res.status(400).json({ error: 'ID de personal inválido' });

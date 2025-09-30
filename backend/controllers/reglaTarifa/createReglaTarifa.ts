@@ -86,8 +86,9 @@ export const createReglaTarifaValidators = [
     .isISO8601()
     .withMessage('La fecha de fin de vigencia debe ser válida')
     .custom((fechaFin, { req }) => {
-      if (fechaFin && req.body.fechaInicioVigencia) {
-        const inicio = new Date(req.body.fechaInicioVigencia);
+      const body = req.body as { fechaInicioVigencia?: string };
+      if (fechaFin && body.fechaInicioVigencia) {
+        const inicio = new Date(body.fechaInicioVigencia);
         const fin = new Date(fechaFin);
         if (fin <= inicio) {
           throw new Error('La fecha de fin debe ser posterior a la fecha de inicio');
