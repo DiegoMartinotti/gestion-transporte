@@ -238,15 +238,18 @@ reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: unknown): boo
       case 'diferente':
         return valorContexto !== condicion.valor;
       case 'mayor':
-        return valorContexto > condicion.valor;
+        return (valorContexto as number) > (condicion.valor as number);
       case 'menor':
-        return valorContexto < condicion.valor;
+        return (valorContexto as number) < (condicion.valor as number);
       case 'mayorIgual':
-        return valorContexto >= condicion.valor;
+        return (valorContexto as number) >= (condicion.valor as number);
       case 'menorIgual':
-        return valorContexto <= condicion.valor;
+        return (valorContexto as number) <= (condicion.valor as number);
       case 'entre':
-        return valorContexto >= condicion.valor && valorContexto <= condicion.valorHasta;
+        return (
+          (valorContexto as number) >= (condicion.valor as number) &&
+          (valorContexto as number) <= (condicion.valorHasta as number)
+        );
       case 'en':
         return Array.isArray(condicion.valor) && condicion.valor.includes(valorContexto);
       case 'contiene':
@@ -265,12 +268,14 @@ reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: unknown): boo
 
 // Método para aplicar modificadores
 // eslint-disable-next-line complexity
-reglaTarifaSchema.methods.aplicarModificadores = function (valores: unknown): unknown {
-  const resultado = { ...valores };
+reglaTarifaSchema.methods.aplicarModificadores = function (
+  valores: Record<string, unknown>
+): Record<string, unknown> {
+  const resultado: Record<string, unknown> = { ...valores };
 
   for (const modificador of this.modificadores) {
     const campo = modificador.aplicarA;
-    const valorActual = resultado[campo] || 0;
+    const valorActual = (resultado[campo] as number) || 0;
 
     switch (modificador.tipo) {
       case 'porcentaje': {
@@ -290,11 +295,14 @@ reglaTarifaSchema.methods.aplicarModificadores = function (valores: unknown): un
 
   // Actualizar el total si se modificaron componentes
   if (
-    resultado.tarifa !== valores.tarifa ||
-    resultado.peaje !== valores.peaje ||
-    resultado.extras !== valores.extras
+    (resultado.tarifa as number) !== (valores.tarifa as number) ||
+    (resultado.peaje as number) !== (valores.peaje as number) ||
+    (resultado.extras as number) !== (valores.extras as number)
   ) {
-    resultado.total = (resultado.tarifa || 0) + (resultado.peaje || 0) + (resultado.extras || 0);
+    resultado.total =
+      ((resultado.tarifa as number) || 0) +
+      ((resultado.peaje as number) || 0) +
+      ((resultado.extras as number) || 0);
   }
 
   return resultado;
@@ -331,7 +339,8 @@ reglaTarifaSchema.methods.esVigente = function (fecha: Date = new Date()): boole
   if (this.temporadas && this.temporadas.length > 0) {
     const mesdia = `${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
     const enTemporada = this.temporadas.some(
-      (t: unknown) => mesdia >= t.fechaInicio && mesdia <= t.fechaFin
+      (t: { fechaInicio: string; fechaFin: string }) =>
+        mesdia >= t.fechaInicio && mesdia <= t.fechaFin
     );
     if (!enTemporada) {
       return false;
@@ -343,10 +352,10 @@ reglaTarifaSchema.methods.esVigente = function (fecha: Date = new Date()): boole
 
 // Método estático para encontrar reglas aplicables
 reglaTarifaSchema.statics.findReglasAplicables = async function (
-  contexto: unknown,
+  contexto: Record<string, unknown>,
   fecha: Date = new Date()
 ): Promise<IReglaTarifa[]> {
-  const query: unknown = {
+  const query: Record<string, unknown> = {
     activa: true,
     fechaInicioVigencia: { $lte: fecha },
   };
@@ -369,20 +378,21 @@ reglaTarifaSchema.statics.findReglasAplicables = async function (
 
 // Método estático para aplicar reglas
 reglaTarifaSchema.statics.aplicarReglas = async function (
-  contexto: unknown,
-  valores: unknown
-): Promise<unknown> {
-  const modelo = this as unknown;
+  contexto: Record<string, unknown>,
+  valores: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const modelo = this as IReglaTarifaModel;
   const reglas = await modelo.findReglasAplicables(contexto);
-  let resultado = { ...valores };
+  let resultado: Record<string, unknown> = { ...valores };
 
   for (const regla of reglas) {
-    resultado = regla.aplicarModificadores(resultado);
+    resultado = regla.aplicarModificadores(resultado) as Record<string, unknown>;
 
     // Actualizar estadísticas
     regla.estadisticas.vecesAplicada++;
     regla.estadisticas.ultimaAplicacion = new Date();
-    regla.estadisticas.montoTotalModificado += resultado.total - valores.total;
+    regla.estadisticas.montoTotalModificado +=
+      (resultado.total as number) - (valores.total as number);
     await regla.save();
 
     // Si la regla excluye otras, parar aquí
@@ -402,11 +412,11 @@ reglaTarifaSchema.statics.aplicarReglas = async function (
 // Función auxiliar para obtener valor del contexto
 function obtenerValorDeContexto(contexto: unknown, campo: string): unknown {
   const partes = campo.split('.');
-  let valor = contexto;
+  let valor: unknown = contexto;
 
   for (const parte of partes) {
     if (valor && typeof valor === 'object') {
-      valor = valor[parte];
+      valor = (valor as Record<string, unknown>)[parte];
     } else {
       return undefined;
     }

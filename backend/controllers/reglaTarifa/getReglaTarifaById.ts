@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import ReglaTarifa from '../../models/ReglaTarifa';
+import ReglaTarifa, { ICondicion, IModificador } from '../../models/ReglaTarifa';
 import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
 import { param, validationResult } from 'express-validator';
@@ -42,34 +42,8 @@ export const getReglaTarifaById = async (req: Request, res: Response): Promise<v
     }
 
     // Enriquecer con información adicional
-    const fechaActual = new Date();
-    const informacionAdicional = {
-      esVigente: esVigenteRegla(regla, fechaActual),
-      diasRestantesVigencia: calcularDiasRestantes(regla, fechaActual),
-      diasTranscurridos: calcularDiasTranscurridos(regla, fechaActual),
-      aplicabilidad: await evaluarAplicabilidad(regla),
-      estadisticas: {
-        vecesAplicada: regla.estadisticas.vecesAplicada,
-        ultimaAplicacion: regla.estadisticas.ultimaAplicacion,
-        montoTotalModificado: regla.estadisticas.montoTotalModificado,
-        promedioModificacion:
-          regla.estadisticas.vecesAplicada > 0
-            ? Math.round(
-                (regla.estadisticas.montoTotalModificado / regla.estadisticas.vecesAplicada) * 100
-              ) / 100
-            : 0,
-      },
-      validacion: {
-        condicionesValidas: validarCondiciones(regla.condiciones),
-        modificadoresValidos: validarModificadores(regla.modificadores),
-        configuracionCompleta: validarConfiguracion(regla),
-      },
-    };
-
-    const respuesta = {
-      ...regla,
-      informacionAdicional,
-    };
+    const informacionAdicional = await construirInformacionAdicional(regla);
+    const respuesta = { ...regla, informacionAdicional };
 
     logger.debug(`[ReglaTarifa] Regla consultada: ${regla.codigo}`, {
       reglaId: regla._id,
@@ -84,48 +58,99 @@ export const getReglaTarifaById = async (req: Request, res: Response): Promise<v
 };
 
 /**
+ * Construye la información adicional de la regla
+ */
+async function construirInformacionAdicional(
+  regla: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const fechaActual = new Date();
+  const estadisticas = regla.estadisticas as {
+    vecesAplicada: number;
+    ultimaAplicacion: Date;
+    montoTotalModificado: number;
+  };
+
+  return {
+    esVigente: esVigenteRegla(regla, fechaActual),
+    diasRestantesVigencia: calcularDiasRestantes(regla, fechaActual),
+    diasTranscurridos: calcularDiasTranscurridos(regla, fechaActual),
+    aplicabilidad: await evaluarAplicabilidad(regla),
+    estadisticas: {
+      vecesAplicada: estadisticas.vecesAplicada,
+      ultimaAplicacion: estadisticas.ultimaAplicacion,
+      montoTotalModificado: estadisticas.montoTotalModificado,
+      promedioModificacion:
+        estadisticas.vecesAplicada > 0
+          ? Math.round((estadisticas.montoTotalModificado / estadisticas.vecesAplicada) * 100) / 100
+          : 0,
+    },
+    validacion: {
+      condicionesValidas: validarCondiciones(regla.condiciones as ICondicion[]),
+      modificadoresValidos: validarModificadores(regla.modificadores as IModificador[]),
+      configuracionCompleta: validarConfiguracion(regla),
+    },
+  };
+}
+
+/**
  * Verifica si una regla está vigente
  */
-function esVigenteRegla(regla: unknown, fecha: Date): boolean {
-  if (!regla.activa) return false;
+function esVigenteRegla(regla: Record<string, unknown>, fecha: Date): boolean {
+  return (
+    Boolean(regla.activa) &&
+    estaEnPeriodoVigencia(regla, fecha) &&
+    cumpleDiaSemana(regla, fecha) &&
+    cumpleHorario(regla, fecha) &&
+    cumpleTemporada(regla, fecha)
+  );
+}
 
-  if (regla.fechaInicioVigencia > fecha) return false;
+/**
+ * Verifica si la fecha está en el período de vigencia
+ */
+function estaEnPeriodoVigencia(regla: Record<string, unknown>, fecha: Date): boolean {
+  const dentroDeInicio = (regla.fechaInicioVigencia as Date) <= fecha;
+  const dentroDelFin = !regla.fechaFinVigencia || (regla.fechaFinVigencia as Date) >= fecha;
+  return dentroDeInicio && dentroDelFin;
+}
 
-  if (regla.fechaFinVigencia && regla.fechaFinVigencia < fecha) return false;
+/**
+ * Verifica si cumple con el día de la semana
+ */
+function cumpleDiaSemana(regla: Record<string, unknown>, fecha: Date): boolean {
+  if (!regla.diasSemana || (regla.diasSemana as number[]).length === 0) return true;
+  const diaSemana = fecha.getDay();
+  return (regla.diasSemana as number[]).includes(diaSemana);
+}
 
-  // Verificar día de la semana
-  if (regla.diasSemana && regla.diasSemana.length > 0) {
-    const diaSemana = fecha.getDay();
-    if (!regla.diasSemana.includes(diaSemana)) return false;
-  }
+/**
+ * Verifica si cumple con el horario de aplicación
+ */
+function cumpleHorario(regla: Record<string, unknown>, fecha: Date): boolean {
+  if (!regla.horariosAplicacion) return true;
+  const hora = fecha.toTimeString().slice(0, 5);
+  const horarios = regla.horariosAplicacion as { horaInicio: string; horaFin: string };
+  return hora >= horarios.horaInicio && hora <= horarios.horaFin;
+}
 
-  // Verificar horario
-  if (regla.horariosAplicacion) {
-    const hora = fecha.toTimeString().slice(0, 5);
-    if (hora < regla.horariosAplicacion.horaInicio || hora > regla.horariosAplicacion.horaFin) {
-      return false;
-    }
-  }
-
-  // Verificar temporadas
-  if (regla.temporadas && regla.temporadas.length > 0) {
-    const mesdia = `${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
-    const enTemporada = regla.temporadas.some(
-      (t: unknown) => mesdia >= t.fechaInicio && mesdia <= t.fechaFin
-    );
-    if (!enTemporada) return false;
-  }
-
-  return true;
+/**
+ * Verifica si está en temporada válida
+ */
+function cumpleTemporada(regla: Record<string, unknown>, fecha: Date): boolean {
+  if (!regla.temporadas || (regla.temporadas as unknown[]).length === 0) return true;
+  const mesdia = `${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+  return (regla.temporadas as Array<{ fechaInicio: string; fechaFin: string }>).some(
+    (t) => mesdia >= t.fechaInicio && mesdia <= t.fechaFin
+  );
 }
 
 /**
  * Calcula días restantes de vigencia
  */
-function calcularDiasRestantes(regla: unknown, fecha: Date): number | null {
+function calcularDiasRestantes(regla: Record<string, unknown>, fecha: Date): number | null {
   if (!regla.fechaFinVigencia) return null;
 
-  const fechaFin = new Date(regla.fechaFinVigencia);
+  const fechaFin = new Date(regla.fechaFinVigencia as Date);
   const diferencia = fechaFin.getTime() - fecha.getTime();
   const dias = Math.ceil(diferencia / (1000 * 60 * 60 * 24));
 
@@ -135,8 +160,8 @@ function calcularDiasRestantes(regla: unknown, fecha: Date): number | null {
 /**
  * Calcula días transcurridos desde el inicio
  */
-function calcularDiasTranscurridos(regla: unknown, fecha: Date): number {
-  const fechaInicio = new Date(regla.fechaInicioVigencia);
+function calcularDiasTranscurridos(regla: Record<string, unknown>, fecha: Date): number {
+  const fechaInicio = new Date(regla.fechaInicioVigencia as Date);
   const diferencia = fecha.getTime() - fechaInicio.getTime();
   const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
 
@@ -146,57 +171,64 @@ function calcularDiasTranscurridos(regla: unknown, fecha: Date): number {
 /**
  * Evalúa la aplicabilidad general de la regla
  */
-async function evaluarAplicabilidad(regla: unknown): Promise<{
+async function evaluarAplicabilidad(regla: Record<string, unknown>): Promise<{
   alcance: string;
   restricciones: string[];
   compatibilidad: string;
 }> {
+  const restricciones = construirRestricciones(regla);
+  const alcance = regla.cliente ? 'Cliente específico' : 'General';
+  const compatibilidad = determinarCompatibilidad(regla);
+
+  return { alcance, restricciones, compatibilidad };
+}
+
+/**
+ * Construye la lista de restricciones de la regla
+ */
+function construirRestricciones(regla: Record<string, unknown>): string[] {
   const restricciones: string[] = [];
 
   if (regla.cliente) {
-    restricciones.push(
-      `Aplicable solo al cliente: ${regla.cliente.nombre || regla.cliente.razonSocial}`
-    );
+    const cliente = regla.cliente as Record<string, unknown>;
+    restricciones.push(`Aplicable solo al cliente: ${cliente.nombre || cliente.razonSocial}`);
   }
 
   if (regla.metodoCalculo) {
-    restricciones.push(`Aplicable solo al método: ${regla.metodoCalculo}`);
+    restricciones.push(`Aplicable solo al método: ${regla.metodoCalculo as string}`);
   }
 
-  if (regla.diasSemana && regla.diasSemana.length > 0) {
+  if (regla.diasSemana && (regla.diasSemana as number[]).length > 0) {
     const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const diasTexto = regla.diasSemana.map((d: number) => dias[d]).join(', ');
+    const diasTexto = (regla.diasSemana as number[]).map((d: number) => dias[d]).join(', ');
     restricciones.push(`Aplicable solo: ${diasTexto}`);
   }
 
   if (regla.horariosAplicacion) {
-    restricciones.push(
-      `Aplicable de ${regla.horariosAplicacion.horaInicio} a ${regla.horariosAplicacion.horaFin}`
-    );
+    const horarios = regla.horariosAplicacion as { horaInicio: string; horaFin: string };
+    restricciones.push(`Aplicable de ${horarios.horaInicio} a ${horarios.horaFin}`);
   }
 
-  if (regla.temporadas && regla.temporadas.length > 0) {
+  if (regla.temporadas && (regla.temporadas as unknown[]).length > 0) {
     restricciones.push(`Aplicable en temporadas específicas`);
   }
 
-  const alcance = regla.cliente ? 'Cliente específico' : 'General';
-  const compatibilidad = regla.aplicarEnCascada
-    ? 'Cascada'
-    : regla.excluirOtrasReglas
-      ? 'Exclusiva'
-      : 'Independiente';
+  return restricciones;
+}
 
-  return {
-    alcance,
-    restricciones,
-    compatibilidad,
-  };
+/**
+ * Determina el tipo de compatibilidad de la regla
+ */
+function determinarCompatibilidad(regla: Record<string, unknown>): string {
+  if (regla.aplicarEnCascada) return 'Cascada';
+  if (regla.excluirOtrasReglas) return 'Exclusiva';
+  return 'Independiente';
 }
 
 /**
  * Valida las condiciones de la regla
  */
-function validarCondiciones(condiciones: unknown[]): { validas: boolean; errores: string[] } {
+function validarCondiciones(condiciones: ICondicion[]): { validas: boolean; errores: string[] } {
   const errores: string[] = [];
 
   if (!condiciones || condiciones.length === 0) {
@@ -224,7 +256,10 @@ function validarCondiciones(condiciones: unknown[]): { validas: boolean; errores
 /**
  * Valida los modificadores de la regla
  */
-function validarModificadores(modificadores: unknown[]): { validos: boolean; errores: string[] } {
+function validarModificadores(modificadores: IModificador[]): {
+  validos: boolean;
+  errores: string[];
+} {
   const errores: string[] = [];
 
   if (!modificadores || modificadores.length === 0) {
@@ -233,19 +268,8 @@ function validarModificadores(modificadores: unknown[]): { validos: boolean; err
   }
 
   for (let i = 0; i < modificadores.length; i++) {
-    const modificador = modificadores[i];
-
-    if (!modificador.tipo || !modificador.aplicarA || modificador.valor === undefined) {
-      errores.push(`Modificador ${i + 1}: Faltan campos requeridos`);
-    }
-
-    if (modificador.tipo === 'porcentaje' && isNaN(parseFloat(modificador.valor))) {
-      errores.push(`Modificador ${i + 1}: Valor porcentaje debe ser numérico`);
-    }
-
-    if (modificador.tipo === 'fijo' && isNaN(parseFloat(modificador.valor))) {
-      errores.push(`Modificador ${i + 1}: Valor fijo debe ser numérico`);
-    }
+    const erroresModificador = validarModificadorIndividual(modificadores[i], i + 1);
+    errores.push(...erroresModificador);
   }
 
   return {
@@ -255,12 +279,36 @@ function validarModificadores(modificadores: unknown[]): { validos: boolean; err
 }
 
 /**
+ * Valida un modificador individual
+ */
+function validarModificadorIndividual(modificador: IModificador, numero: number): string[] {
+  const errores: string[] = [];
+
+  if (!modificador.tipo || !modificador.aplicarA || modificador.valor === undefined) {
+    errores.push(`Modificador ${numero}: Faltan campos requeridos`);
+  }
+
+  if (modificador.tipo === 'porcentaje' && isNaN(parseFloat(String(modificador.valor)))) {
+    errores.push(`Modificador ${numero}: Valor porcentaje debe ser numérico`);
+  }
+
+  if (modificador.tipo === 'fijo' && isNaN(parseFloat(String(modificador.valor)))) {
+    errores.push(`Modificador ${numero}: Valor fijo debe ser numérico`);
+  }
+
+  return errores;
+}
+
+/**
  * Valida la configuración completa de la regla
  */
-function validarConfiguracion(regla: unknown): { completa: boolean; advertencias: string[] } {
+function validarConfiguracion(regla: Record<string, unknown>): {
+  completa: boolean;
+  advertencias: string[];
+} {
   const advertencias: string[] = [];
 
-  if (regla.prioridad < 1 || regla.prioridad > 1000) {
+  if ((regla.prioridad as number) < 1 || (regla.prioridad as number) > 1000) {
     advertencias.push('La prioridad debería estar entre 1 y 1000');
   }
 
@@ -273,7 +321,8 @@ function validarConfiguracion(regla: unknown): { completa: boolean; advertencias
     advertencias.push('La regla no tiene fecha de fin (vigencia indefinida)');
   }
 
-  if (regla.estadisticas.vecesAplicada === 0 && calcularDiasTranscurridos(regla, new Date()) > 30) {
+  const estadisticas = regla.estadisticas as { vecesAplicada: number };
+  if (estadisticas.vecesAplicada === 0 && calcularDiasTranscurridos(regla, new Date()) > 30) {
     advertencias.push('La regla no se ha aplicado en más de 30 días');
   }
 
