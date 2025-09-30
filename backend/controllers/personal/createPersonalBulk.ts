@@ -244,20 +244,24 @@ async function performInsertions(
     return insertados;
   } catch (error: unknown) {
     logger.error('[createPersonalBulk] Error durante insertMany:', error);
-    const bulkError = error as { name?: string; writeErrors?: Array<{ index: number }> };
+    const bulkError = error as {
+      name?: string;
+      writeErrors?: Array<{ index: number; code?: number; errmsg?: string }>;
+      result?: { nInserted?: number };
+    };
     if (bulkError.name === 'MongoBulkWriteError' && bulkError.writeErrors) {
-      bulkError.writeErrors.forEach((err: unknown) => {
+      bulkError.writeErrors.forEach((err: { index: number; code?: number; errmsg?: string }) => {
         const originalIndex = personalData.findIndex(
           (p) => p.dni === personalToInsert[err.index]?.dni && !p.activar
         );
         errores.push({
           index: originalIndex !== -1 ? originalIndex : 'N/A',
-          message: `Error al insertar DNI ${personalToInsert[err.index]?.dni}: ${err.errmsg}`,
+          message: `Error al insertar DNI ${personalToInsert[err.index]?.dni}: ${err.errmsg || 'Error desconocido'}`,
           code: err.code,
           data: personalToInsert[err.index],
         });
       });
-      return error.result?.nInserted || personalToInsert.length - error.writeErrors.length;
+      return bulkError.result?.nInserted || personalToInsert.length - bulkError.writeErrors.length;
     } else {
       errores.push({
         message: `Error inesperado en bulk insert: ${error instanceof Error ? error.message : String(error)}`,
