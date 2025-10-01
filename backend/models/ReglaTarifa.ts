@@ -266,43 +266,63 @@ reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: unknown): boo
   }
 };
 
+// Función auxiliar para aplicar un modificador individual
+function aplicarModificadorIndividual(
+  resultado: Record<string, unknown>,
+  modificador: IModificador
+): void {
+  const campo = modificador.aplicarA;
+  const valorActual = (resultado[campo] as number) || 0;
+
+  switch (modificador.tipo) {
+    case 'porcentaje': {
+      const porcentaje = Number(modificador.valor) / 100;
+      resultado[campo] = valorActual * (1 + porcentaje);
+      break;
+    }
+    case 'fijo':
+      resultado[campo] = valorActual + Number(modificador.valor);
+      break;
+    case 'formula':
+      // Aquí se evaluaría la fórmula con el contexto
+      // Por ahora, mantenemos el valor actual
+      break;
+  }
+}
+
+// Función auxiliar para calcular el total
+function calcularTotal(valores: Record<string, unknown>): number {
+  return (
+    ((valores.tarifa as number) || 0) +
+    ((valores.peaje as number) || 0) +
+    ((valores.extras as number) || 0)
+  );
+}
+
+// Función auxiliar para verificar si debe actualizarse el total
+function debeActualizarTotal(
+  resultado: Record<string, unknown>,
+  valores: Record<string, unknown>
+): boolean {
+  return (
+    (resultado.tarifa as number) !== (valores.tarifa as number) ||
+    (resultado.peaje as number) !== (valores.peaje as number) ||
+    (resultado.extras as number) !== (valores.extras as number)
+  );
+}
+
 // Método para aplicar modificadores
-// eslint-disable-next-line complexity
 reglaTarifaSchema.methods.aplicarModificadores = function (
   valores: Record<string, unknown>
 ): Record<string, unknown> {
   const resultado: Record<string, unknown> = { ...valores };
 
-  for (const modificador of this.modificadores) {
-    const campo = modificador.aplicarA;
-    const valorActual = (resultado[campo] as number) || 0;
+  this.modificadores.forEach((modificador: IModificador) =>
+    aplicarModificadorIndividual(resultado, modificador)
+  );
 
-    switch (modificador.tipo) {
-      case 'porcentaje': {
-        const porcentaje = Number(modificador.valor) / 100;
-        resultado[campo] = valorActual * (1 + porcentaje);
-        break;
-      }
-      case 'fijo':
-        resultado[campo] = valorActual + Number(modificador.valor);
-        break;
-      case 'formula':
-        // Aquí se evaluaría la fórmula con el contexto
-        // Por ahora, mantenemos el valor actual
-        break;
-    }
-  }
-
-  // Actualizar el total si se modificaron componentes
-  if (
-    (resultado.tarifa as number) !== (valores.tarifa as number) ||
-    (resultado.peaje as number) !== (valores.peaje as number) ||
-    (resultado.extras as number) !== (valores.extras as number)
-  ) {
-    resultado.total =
-      ((resultado.tarifa as number) || 0) +
-      ((resultado.peaje as number) || 0) +
-      ((resultado.extras as number) || 0);
+  if (debeActualizarTotal(resultado, valores)) {
+    resultado.total = calcularTotal(resultado);
   }
 
   return resultado;
@@ -420,7 +440,7 @@ function obtenerValorDeContexto(contexto: unknown, campo: string): unknown {
       return undefined;
     }
 
-    if (valor && typeof valor === 'object') {
+    if (valor && typeof valor === 'object' && Object.hasOwn(valor, parte)) {
       valor = (valor as Record<string, unknown>)[parte];
     } else {
       return undefined;

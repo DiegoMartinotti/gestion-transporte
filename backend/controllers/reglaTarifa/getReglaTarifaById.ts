@@ -96,13 +96,16 @@ async function construirInformacionAdicional(
  * Verifica si una regla está vigente
  */
 function esVigenteRegla(regla: Record<string, unknown>, fecha: Date): boolean {
-  return (
-    Boolean(regla.activa) &&
-    estaEnPeriodoVigencia(regla, fecha) &&
-    cumpleDiaSemana(regla, fecha) &&
-    cumpleHorario(regla, fecha) &&
-    cumpleTemporada(regla, fecha)
-  );
+  if (!regla.activa) return false;
+
+  const validaciones = [
+    () => estaEnPeriodoVigencia(regla, fecha),
+    () => cumpleDiaSemana(regla, fecha),
+    () => cumpleHorario(regla, fecha),
+    () => cumpleTemporada(regla, fecha),
+  ];
+
+  return validaciones.every((validar) => validar());
 }
 
 /**
@@ -220,13 +223,21 @@ function agregarRestriccionHorario(regla: Record<string, unknown>, restricciones
 }
 
 /**
+ * Verifica si la regla tiene temporadas válidas
+ */
+function tieneTemporadasValidas(regla: Record<string, unknown>): boolean {
+  if (!regla.temporadas) return false;
+  return (regla.temporadas as unknown[]).length > 0;
+}
+
+/**
  * Agrega restricción de temporada
  */
 function agregarRestriccionTemporada(
   regla: Record<string, unknown>,
   restricciones: string[]
 ): void {
-  if (!regla.temporadas || (regla.temporadas as unknown[]).length === 0) return;
+  if (!tieneTemporadasValidas(regla)) return;
   restricciones.push(`Aplicable en temporadas específicas`);
 }
 
