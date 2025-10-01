@@ -4,6 +4,18 @@ import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
 import { query, validationResult } from 'express-validator';
 import { Types } from 'mongoose';
+import { IAuditoriaCalculo } from '../../services/tarifaEngine/types';
+import { agruparAuditorias, generarEstadisticasAuditoria } from './auditoriaHelpers';
+
+/**
+ * Interface para filtros de auditoría
+ */
+interface FiltrosAuditoria {
+  desde?: Date;
+  hasta?: Date;
+  clienteId?: string;
+  conErrores?: boolean;
+}
 
 /**
  * Validators para consulta de auditoría
@@ -54,104 +66,33 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
     });
 
     // Construir filtros
-    const filtros: unknown = {};
+    const filtros = construirFiltros(desde, hasta, clienteId, conErrores);
 
-    if (desde) {
-      filtros.desde = new Date(desde as string);
-    }
-
-    if (hasta) {
-      filtros.hasta = new Date(hasta as string);
-    }
-
-    if (clienteId) {
-      filtros.clienteId = clienteId as string;
-    }
-
-    if (conErrores !== undefined) {
-      filtros.conErrores = conErrores === 'true';
-    }
-
-    // Obtener auditorías del motor
+    // Obtener y procesar auditorías
     const auditorias = tarifaEngine.obtenerAuditorias(filtros);
-
-    // Aplicar límite si se especifica
     const limitNum = limite ? parseInt(limite as string) : 100;
     const auditoriasPaginadas = auditorias.slice(0, limitNum);
 
-    // Procesar datos según configuración
-    const resultadosProcesados = auditoriasPaginadas.map((auditoria) => {
-      const resultado: unknown = {
-        timestamp: auditoria.timestamp,
-        tiempoEjecucion: auditoria.tiempoEjecucionMs,
-        resultado: {
-          total: auditoria.resultado.total,
-          metodoUtilizado: auditoria.resultado.metodoUtilizado,
-          formulaAplicada: auditoria.resultado.formulaAplicada,
-          reglasAplicadas: auditoria.resultado.reglasAplicadas?.length || 0,
-          cacheUtilizado: auditoria.resultado.cacheUtilizado,
-          advertencias: auditoria.resultado.advertencias?.length || 0,
-        },
-      };
-
-      // Incluir contexto solo si se solicita
-      if (incluirContexto === 'true') {
-        resultado.contexto = {
-          clienteId: auditoria.contexto.clienteId,
-          fecha: auditoria.contexto.fecha,
-          tipoUnidad: auditoria.contexto.tipoUnidad,
-          metodoCalculo: auditoria.contexto.metodoCalculo,
-          palets: auditoria.contexto.palets,
-          aplicarReglas: auditoria.contexto.aplicarReglas,
-          usarCache: auditoria.contexto.usarCache,
-        };
-      }
-
-      // Incluir errores si existen
-      if (auditoria.errores && auditoria.errores.length > 0) {
-        resultado.errores = auditoria.errores;
-      }
-
-      return resultado;
-    });
-
-    // Agrupar datos si se solicita
-    let datosAgrupados = null;
-    if (agruparPor) {
-      datosAgrupados = agruparAuditorias(auditoriasPaginadas, agruparPor as string);
-    }
-
-    // Generar estadísticas
+    // Procesar y construir respuesta
+    const resultadosProcesados = procesarAuditorias(auditoriasPaginadas, incluirContexto);
+    const datosAgrupados = agruparPor
+      ? agruparAuditorias(auditoriasPaginadas, agruparPor as string)
+      : null;
     const estadisticas = generarEstadisticasAuditoria(auditoriasPaginadas);
-
-    // Obtener estadísticas de cache
     const estadisticasCache = tarifaEngine.obtenerEstadisticasCache();
 
-    const respuesta = {
-      consulta: {
-        timestamp: new Date(),
-        filtros,
-        configuracion: {
-          limite: limitNum,
-          incluirContexto: incluirContexto === 'true',
-          agruparPor: agruparPor || null,
-        },
-        usuario: (req as unknown).user?.email || 'desconocido',
-      },
-      auditorias: resultadosProcesados,
-      agrupacion: datosAgrupados,
+    const respuesta = construirRespuesta({
+      filtros,
+      limitNum,
+      incluirContexto,
+      agruparPor,
+      resultadosProcesados,
+      datosAgrupados,
       estadisticas,
-      cache: estadisticasCache,
-      metadatos: {
-        totalEncontradas: auditorias.length,
-        mostradas: resultadosProcesados.length,
-        limitadaPor: auditorias.length > limitNum ? 'limite' : 'disponibles',
-        rangoTiempo: {
-          mas_antigua: auditorias.length > 0 ? auditorias[auditorias.length - 1].timestamp : null,
-          mas_reciente: auditorias.length > 0 ? auditorias[0].timestamp : null,
-        },
-      },
-    };
+      estadisticasCache,
+      auditorias,
+      req,
+    });
 
     logger.debug(`[TarifaEngine] Auditoría consultada: ${resultadosProcesados.length} registros`, {
       total: auditorias.length,
@@ -167,205 +108,116 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
 };
 
 /**
- * Agrupa auditorías según el criterio especificado
+ * Construye los filtros de auditoría a partir de los parámetros de consulta
  */
-function agruparAuditorias(auditorias: unknown[], criterio: string): unknown {
-  switch (criterio) {
-    case 'cliente':
-      return auditorias.reduce((acc, auditoria) => {
-        const cliente = auditoria.contexto.clienteId.toString();
-        if (!acc[cliente]) {
-          acc[cliente] = {
-            cantidad: 0,
-            tiempoPromedio: 0,
-            errores: 0,
-            totalCalculado: 0,
-            metodosUtilizados: new Set(),
-          };
-        }
+function construirFiltros(
+  desde: unknown,
+  hasta: unknown,
+  clienteId: unknown,
+  conErrores: unknown
+): FiltrosAuditoria {
+  const filtros: FiltrosAuditoria = {};
 
-        acc[cliente].cantidad++;
-        acc[cliente].tiempoPromedio =
-          (acc[cliente].tiempoPromedio * (acc[cliente].cantidad - 1) +
-            auditoria.tiempoEjecucionMs) /
-          acc[cliente].cantidad;
+  if (desde) filtros.desde = new Date(desde as string);
+  if (hasta) filtros.hasta = new Date(hasta as string);
+  if (clienteId) filtros.clienteId = clienteId as string;
+  if (conErrores !== undefined) filtros.conErrores = conErrores === 'true';
 
-        if (auditoria.errores?.length > 0) {
-          acc[cliente].errores++;
-        }
-
-        acc[cliente].totalCalculado += auditoria.resultado.total || 0;
-        acc[cliente].metodosUtilizados.add(auditoria.resultado.metodoUtilizado);
-
-        return acc;
-      }, {});
-
-    case 'metodo':
-      return auditorias.reduce((acc, auditoria) => {
-        const metodo = auditoria.resultado.metodoUtilizado;
-        if (!acc[metodo]) {
-          acc[metodo] = {
-            cantidad: 0,
-            tiempoPromedio: 0,
-            errores: 0,
-            totalPromedio: 0,
-            clientesUnicos: new Set(),
-          };
-        }
-
-        acc[metodo].cantidad++;
-        acc[metodo].tiempoPromedio =
-          (acc[metodo].tiempoPromedio * (acc[metodo].cantidad - 1) + auditoria.tiempoEjecucionMs) /
-          acc[metodo].cantidad;
-
-        if (auditoria.errores?.length > 0) {
-          acc[metodo].errores++;
-        }
-
-        acc[metodo].totalPromedio =
-          (acc[metodo].totalPromedio * (acc[metodo].cantidad - 1) +
-            (auditoria.resultado.total || 0)) /
-          acc[metodo].cantidad;
-
-        acc[metodo].clientesUnicos.add(auditoria.contexto.clienteId.toString());
-
-        return acc;
-      }, {});
-
-    case 'fecha':
-      return auditorias.reduce((acc, auditoria) => {
-        const fecha = auditoria.timestamp.toISOString().split('T')[0];
-        if (!acc[fecha]) {
-          acc[fecha] = {
-            cantidad: 0,
-            errores: 0,
-            tiempoTotal: 0,
-            montoTotal: 0,
-          };
-        }
-
-        acc[fecha].cantidad++;
-        acc[fecha].tiempoTotal += auditoria.tiempoEjecucionMs;
-        acc[fecha].montoTotal += auditoria.resultado.total || 0;
-
-        if (auditoria.errores?.length > 0) {
-          acc[fecha].errores++;
-        }
-
-        return acc;
-      }, {});
-
-    case 'hora':
-      return auditorias.reduce((acc, auditoria) => {
-        const hora = auditoria.timestamp.getHours();
-        if (!acc[hora]) {
-          acc[hora] = {
-            cantidad: 0,
-            errores: 0,
-            tiempoPromedio: 0,
-          };
-        }
-
-        acc[hora].cantidad++;
-        acc[hora].tiempoPromedio =
-          (acc[hora].tiempoPromedio * (acc[hora].cantidad - 1) + auditoria.tiempoEjecucionMs) /
-          acc[hora].cantidad;
-
-        if (auditoria.errores?.length > 0) {
-          acc[hora].errores++;
-        }
-
-        return acc;
-      }, {});
-
-    default:
-      return null;
-  }
+  return filtros;
 }
 
 /**
- * Genera estadísticas de las auditorías
+ * Procesa las auditorías según la configuración
  */
-function generarEstadisticasAuditoria(auditorias: unknown[]): unknown {
-  if (auditorias.length === 0) {
-    return {
-      total: 0,
-      errores: 0,
-      exitos: 0,
-      tasaExito: 0,
-      tiempoPromedio: 0,
-      rendimiento: 'Sin datos',
+function procesarAuditorias(
+  auditorias: IAuditoriaCalculo[],
+  incluirContexto: unknown
+): Record<string, unknown>[] {
+  return auditorias.map((auditoria) => {
+    const resultado: Record<string, unknown> = {
+      timestamp: auditoria.timestamp,
+      tiempoEjecucion: auditoria.tiempoEjecucionMs,
+      resultado: {
+        total: auditoria.resultado.total,
+        metodoUtilizado: auditoria.resultado.metodoUtilizado,
+        formulaAplicada: auditoria.resultado.formulaAplicada,
+        reglasAplicadas: auditoria.resultado.reglasAplicadas?.length || 0,
+        cacheUtilizado: auditoria.resultado.cacheUtilizado,
+        advertencias: auditoria.resultado.advertencias?.length || 0,
+      },
     };
-  }
 
-  const conErrores = auditorias.filter((a) => a.errores && a.errores.length > 0).length;
-  const exitos = auditorias.length - conErrores;
+    if (incluirContexto === 'true') {
+      resultado.contexto = {
+        clienteId: auditoria.contexto.clienteId,
+        fecha: auditoria.contexto.fecha,
+        tipoUnidad: auditoria.contexto.tipoUnidad,
+        metodoCalculo: auditoria.contexto.metodoCalculo,
+        palets: auditoria.contexto.palets,
+        aplicarReglas: auditoria.contexto.aplicarReglas,
+        usarCache: auditoria.contexto.usarCache,
+      };
+    }
 
-  const tiempos = auditorias.map((a) => a.tiempoEjecucionMs);
-  const tiempoPromedio = tiempos.reduce((a, b) => a + b, 0) / tiempos.length;
+    if (auditoria.errores && auditoria.errores.length > 0) {
+      resultado.errores = auditoria.errores;
+    }
 
-  // Análisis de rendimiento
-  let categoriaRendimiento: string;
-  if (tiempoPromedio < 50) categoriaRendimiento = 'Excelente';
-  else if (tiempoPromedio < 100) categoriaRendimiento = 'Bueno';
-  else if (tiempoPromedio < 200) categoriaRendimiento = 'Regular';
-  else categoriaRendimiento = 'Necesita optimización';
+    return resultado;
+  });
+}
 
-  // Análisis de métodos más utilizados
-  const metodos = auditorias.map((a) => a.resultado.metodoUtilizado);
-  const frecuenciaMetodos = metodos.reduce((acc: unknown, metodo: string) => {
-    acc[metodo] = (acc[metodo] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Análisis de uso de cache
-  const conCache = auditorias.filter((a) => a.resultado.cacheUtilizado).length;
-  const tasaCache = (conCache / auditorias.length) * 100;
+/**
+ * Construye la respuesta completa de la auditoría
+ */
+function construirRespuesta(params: {
+  filtros: FiltrosAuditoria;
+  limitNum: number;
+  incluirContexto: unknown;
+  agruparPor: unknown;
+  resultadosProcesados: Record<string, unknown>[];
+  datosAgrupados: Record<string, unknown> | null;
+  estadisticas: Record<string, unknown>;
+  estadisticasCache: unknown;
+  auditorias: IAuditoriaCalculo[];
+  req: Request;
+}): Record<string, unknown> {
+  const {
+    filtros,
+    limitNum,
+    incluirContexto,
+    agruparPor,
+    resultadosProcesados,
+    datosAgrupados,
+    estadisticas,
+    estadisticasCache,
+    auditorias,
+    req,
+  } = params;
 
   return {
-    resumen: {
-      total: auditorias.length,
-      errores: conErrores,
-      exitos,
-      tasaExito: Math.round((exitos / auditorias.length) * 100),
+    consulta: {
+      timestamp: new Date(),
+      filtros,
+      configuracion: {
+        limite: limitNum,
+        incluirContexto: incluirContexto === 'true',
+        agruparPor: agruparPor || null,
+      },
+      usuario: (req as unknown).user?.email || 'desconocido',
     },
-    rendimiento: {
-      tiempoPromedio: Math.round(tiempoPromedio),
-      tiempoMinimo: Math.min(...tiempos),
-      tiempoMaximo: Math.max(...tiempos),
-      categoria: categoriaRendimiento,
-    },
-    metodos: {
-      frecuencia: frecuenciaMetodos,
-      masUtilizado: Object.entries(frecuenciaMetodos).sort(
-        ([, a]: unknown, [, b]: unknown) => b - a
-      )[0]?.[0],
-    },
-    cache: {
-      utilizaciones: conCache,
-      tasaUso: Math.round(tasaCache),
-      ahorro: conCache > 0 ? 'Activo' : 'Sin uso',
-    },
-    patrones: {
-      horasPico: calcularHorasPico(auditorias),
-      clientesActivos: [...new Set(auditorias.map((a) => a.contexto.clienteId.toString()))].length,
+    auditorias: resultadosProcesados,
+    agrupacion: datosAgrupados,
+    estadisticas,
+    cache: estadisticasCache,
+    metadatos: {
+      totalEncontradas: auditorias.length,
+      mostradas: resultadosProcesados.length,
+      limitadaPor: auditorias.length > limitNum ? 'limite' : 'disponibles',
+      rangoTiempo: {
+        mas_antigua: auditorias.length > 0 ? auditorias[auditorias.length - 1].timestamp : null,
+        mas_reciente: auditorias.length > 0 ? auditorias[0].timestamp : null,
+      },
     },
   };
-}
-
-/**
- * Calcula las horas pico de uso
- */
-function calcularHorasPico(auditorias: unknown[]): number[] {
-  const usosPorHora = auditorias.reduce((acc: unknown, auditoria) => {
-    const hora = auditoria.timestamp.getHours();
-    acc[hora] = (acc[hora] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Encontrar las 3 horas con más actividad
-  return Object.entries(usosPorHora)
-    .sort(([, a]: unknown, [, b]: unknown) => b - a)
-    .slice(0, 3)
-    .map(([hora]: unknown) => parseInt(hora));
 }

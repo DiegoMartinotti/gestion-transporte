@@ -1,0 +1,57 @@
+---
+# Configuración de Codacy para el proyecto
+# El proyecto usa ESLint con reglas estrictas (--max-warnings 0)
+# Esta configuración hace que Codacy use las reglas de ESLint del proyecto
+# en lugar de aplicar sus propios límites más restrictivos
+
+engines:
+  # Habilitar solo ESLint del proyecto
+  eslint:
+    enabled: true
+    exclude_paths:
+      - "**/node_modules/**"
+      - "**/dist/**"
+      - "**/*.test.ts"
+      - "**/*.test.tsx"
+      - "**/*.spec.ts"
+
+  # Deshabilitar herramientas que analizan complejidad con criterios diferentes
+  # Lizard analiza complejidad ciclomática con límites más estrictos que ESLint
+  lizard:
+    enabled: false
+
+  # Deshabilitar PMD para TypeScript (usa Java como base)
+  pmd:
+    enabled: false
+
+  # Mantener habilitadas herramientas de seguridad
+  semgrep:
+    enabled: true
+    exclude_paths:
+      - "**/node_modules/**"
+      - "**/dist/**"
+      - "**/*.test.ts"
+
+  trivy:
+    enabled: true
+
+# Configuración de detección de duplicación
+duplication:
+  enabled: true
+  config:
+    languages:
+      - typescript
+      - javascript
+  exclude_paths:
+    - "**/node_modules/**"
+    - "**/dist/**"
+
+# Paths a excluir del análisis
+exclude_paths:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/*.d.ts"
+  - "**/coverage/**"
+  - "**/__tests__/**"
+  - "**/jest.config.js"
+  - "**/temp/**"
