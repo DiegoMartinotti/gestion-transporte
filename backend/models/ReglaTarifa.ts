@@ -415,6 +415,11 @@ function obtenerValorDeContexto(contexto: unknown, campo: string): unknown {
   let valor: unknown = contexto;
 
   for (const parte of partes) {
+    // Protección contra prototype pollution
+    if (parte === '__proto__' || parte === 'constructor' || parte === 'prototype') {
+      return undefined;
+    }
+
     if (valor && typeof valor === 'object') {
       valor = (valor as Record<string, unknown>)[parte];
     } else {

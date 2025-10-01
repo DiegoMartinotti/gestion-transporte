@@ -184,35 +184,62 @@ async function evaluarAplicabilidad(regla: Record<string, unknown>): Promise<{
 }
 
 /**
+ * Agrega restricción de cliente
+ */
+function agregarRestriccionCliente(regla: Record<string, unknown>, restricciones: string[]): void {
+  if (!regla.cliente) return;
+  const cliente = regla.cliente as Record<string, unknown>;
+  restricciones.push(`Aplicable solo al cliente: ${cliente.nombre || cliente.razonSocial}`);
+}
+
+/**
+ * Agrega restricción de método de cálculo
+ */
+function agregarRestriccionMetodo(regla: Record<string, unknown>, restricciones: string[]): void {
+  if (!regla.metodoCalculo) return;
+  restricciones.push(`Aplicable solo al método: ${regla.metodoCalculo as string}`);
+}
+
+/**
+ * Agrega restricción de días de la semana
+ */
+function agregarRestriccionDias(regla: Record<string, unknown>, restricciones: string[]): void {
+  if (!regla.diasSemana || (regla.diasSemana as number[]).length === 0) return;
+  const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const diasTexto = (regla.diasSemana as number[]).map((d: number) => dias[d]).join(', ');
+  restricciones.push(`Aplicable solo: ${diasTexto}`);
+}
+
+/**
+ * Agrega restricción de horario
+ */
+function agregarRestriccionHorario(regla: Record<string, unknown>, restricciones: string[]): void {
+  if (!regla.horariosAplicacion) return;
+  const horarios = regla.horariosAplicacion as { horaInicio: string; horaFin: string };
+  restricciones.push(`Aplicable de ${horarios.horaInicio} a ${horarios.horaFin}`);
+}
+
+/**
+ * Agrega restricción de temporada
+ */
+function agregarRestriccionTemporada(
+  regla: Record<string, unknown>,
+  restricciones: string[]
+): void {
+  if (!regla.temporadas || (regla.temporadas as unknown[]).length === 0) return;
+  restricciones.push(`Aplicable en temporadas específicas`);
+}
+
+/**
  * Construye la lista de restricciones de la regla
  */
 function construirRestricciones(regla: Record<string, unknown>): string[] {
   const restricciones: string[] = [];
-
-  if (regla.cliente) {
-    const cliente = regla.cliente as Record<string, unknown>;
-    restricciones.push(`Aplicable solo al cliente: ${cliente.nombre || cliente.razonSocial}`);
-  }
-
-  if (regla.metodoCalculo) {
-    restricciones.push(`Aplicable solo al método: ${regla.metodoCalculo as string}`);
-  }
-
-  if (regla.diasSemana && (regla.diasSemana as number[]).length > 0) {
-    const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const diasTexto = (regla.diasSemana as number[]).map((d: number) => dias[d]).join(', ');
-    restricciones.push(`Aplicable solo: ${diasTexto}`);
-  }
-
-  if (regla.horariosAplicacion) {
-    const horarios = regla.horariosAplicacion as { horaInicio: string; horaFin: string };
-    restricciones.push(`Aplicable de ${horarios.horaInicio} a ${horarios.horaFin}`);
-  }
-
-  if (regla.temporadas && (regla.temporadas as unknown[]).length > 0) {
-    restricciones.push(`Aplicable en temporadas específicas`);
-  }
-
+  agregarRestriccionCliente(regla, restricciones);
+  agregarRestriccionMetodo(regla, restricciones);
+  agregarRestriccionDias(regla, restricciones);
+  agregarRestriccionHorario(regla, restricciones);
+  agregarRestriccionTemporada(regla, restricciones);
   return restricciones;
 }
 
@@ -226,31 +253,36 @@ function determinarCompatibilidad(regla: Record<string, unknown>): string {
 }
 
 /**
+ * Valida una condición individual
+ */
+function validarCondicionIndividual(condicion: ICondicion, indice: number): string[] {
+  const errores: string[] = [];
+
+  if (!condicion.campo || !condicion.operador || condicion.valor === undefined) {
+    errores.push(`Condición ${indice}: Faltan campos requeridos`);
+  }
+
+  if (condicion.operador === 'entre' && condicion.valorHasta === undefined) {
+    errores.push(`Condición ${indice}: Falta valor máximo para operador 'entre'`);
+  }
+
+  return errores;
+}
+
+/**
  * Valida las condiciones de la regla
  */
 function validarCondiciones(condiciones: ICondicion[]): { validas: boolean; errores: string[] } {
-  const errores: string[] = [];
-
   if (!condiciones || condiciones.length === 0) {
-    return { validas: true, errores: [] }; // Regla sin condiciones es válida
+    return { validas: true, errores: [] };
   }
 
+  const errores: string[] = [];
   for (let i = 0; i < condiciones.length; i++) {
-    const condicion = condiciones[i];
-
-    if (!condicion.campo || !condicion.operador || condicion.valor === undefined) {
-      errores.push(`Condición ${i + 1}: Faltan campos requeridos`);
-    }
-
-    if (condicion.operador === 'entre' && condicion.valorHasta === undefined) {
-      errores.push(`Condición ${i + 1}: Falta valor máximo para operador 'entre'`);
-    }
+    errores.push(...validarCondicionIndividual(condiciones[i], i + 1));
   }
 
-  return {
-    validas: errores.length === 0,
-    errores,
-  };
+  return { validas: errores.length === 0, errores };
 }
 
 /**
