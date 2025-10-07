@@ -1,9 +1,18 @@
 import { Request, Response } from 'express';
-import ReglaTarifa from '../../models/ReglaTarifa';
+import ReglaTarifa, { IReglaTarifa } from '../../models/ReglaTarifa';
 import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
 import { query, validationResult } from 'express-validator';
-import { Types } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
+import { ParsedQs } from 'qs';
+
+type ReglaTarifaConsulta = Pick<
+  IReglaTarifa,
+  'activa' | 'fechaInicioVigencia' | 'fechaFinVigencia'
+> &
+  Record<string, unknown>;
+type RequestForValidation = Request & { [key: string]: unknown };
+type ParametroQuery = string | ParsedQs | Array<string | ParsedQs> | undefined;
 
 /**
  * Validators para consulta de reglas de tarifa
@@ -12,7 +21,7 @@ export const getAllReglasTarifaValidators = [
   query('cliente')
     .optional()
     .custom((value) => {
-      if (value && !Types.ObjectId.isValid(value)) {
+      if (value && !Types.ObjectId.isValid(value as string)) {
         throw new Error('ID de cliente no válido');
       }
       return true;
@@ -47,16 +56,18 @@ export const getAllReglasTarifaValidators = [
 export const getAllReglasTarifa = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validar parámetros de consulta
-    const errors = validationResult(req);
+    const errors = validationResult(req as RequestForValidation);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, {
+        errores: errors.array(),
+      });
       return;
     }
 
     const { cliente, metodoCalculo, activa, vigente, fecha, busqueda, limite, pagina } = req.query;
 
-    // Construir filtros
-    const filtros: unknown = {};
+    // Construir filtros tipados para la consulta
+    const filtros: FilterQuery<IReglaTarifa> = {};
 
     if (cliente) {
       filtros.cliente = cliente;
@@ -71,32 +82,10 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
     }
 
     // Filtrar por vigencia
-    if (vigente === 'true') {
-      const fechaReferencia = fecha ? new Date(fecha as string) : new Date();
-      filtros.fechaInicioVigencia = { $lte: fechaReferencia };
-      filtros.$or = [
-        { fechaFinVigencia: { $gte: fechaReferencia } },
-        { fechaFinVigencia: { $exists: false } },
-      ];
-    } else if (vigente === 'false') {
-      const fechaReferencia = fecha ? new Date(fecha as string) : new Date();
-      filtros.$or = [
-        { fechaInicioVigencia: { $gt: fechaReferencia } },
-        { fechaFinVigencia: { $lt: fechaReferencia } },
-      ];
-    }
+    aplicarFiltroVigencia(filtros, vigente, fecha);
 
     // Búsqueda por texto en nombre, código o descripción
-    if (busqueda) {
-      filtros.$and = filtros.$and || [];
-      filtros.$and.push({
-        $or: [
-          { codigo: { $regex: busqueda, $options: 'i' } },
-          { nombre: { $regex: busqueda, $options: 'i' } },
-          { descripcion: { $regex: busqueda, $options: 'i' } },
-        ],
-      });
-    }
+    agregarFiltroBusqueda(filtros, busqueda);
 
     // Configurar paginación
     const limitNum = limite ? parseInt(limite as string) : 50;
@@ -104,15 +93,17 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
     const skip = (paginaNum - 1) * limitNum;
 
     // Ejecutar consulta con paginación
-    const [reglas, total] = await Promise.all([
-      ReglaTarifa.find(filtros)
-        .populate('cliente', 'nombre razonSocial')
-        .sort({ prioridad: -1, fechaInicioVigencia: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean(),
-      ReglaTarifa.countDocuments(filtros),
-    ]);
+    const reglasPromise = ReglaTarifa.find(filtros)
+      .populate('cliente', 'nombre razonSocial')
+      .sort({ prioridad: -1, fechaInicioVigencia: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean<ReglaTarifaConsulta>()
+      .exec();
+    const totalPromise = ReglaTarifa.countDocuments(filtros).exec();
+
+    const reglas = (await reglasPromise) as unknown as ReglaTarifaConsulta[];
+    const total = await totalPromise;
 
     // Calcular metadatos de paginación
     const totalPaginas = Math.ceil(total / limitNum);
@@ -121,7 +112,7 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
 
     // Enriquecer reglas con información de vigencia actual
     const fechaActual = new Date();
-    const reglasEnriquecidas = reglas.map((regla) => ({
+    const reglasEnriquecidas = reglas.map((regla: ReglaTarifaConsulta) => ({
       ...regla,
       esVigente: esReglVigente(regla, fechaActual),
       diasRestantesVigencia: calcularDiasRestantesVigencia(regla, fechaActual),
@@ -162,7 +153,7 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
       `[ReglaTarifa] Consulta realizada: ${reglas.length} resultados de ${total} total`,
       {
         filtros,
-        usuario: (req as unknown).user?.email,
+        usuario: (req as Request & { user?: { email?: string } }).user?.email,
       }
     );
 
@@ -173,23 +164,78 @@ export const getAllReglasTarifa = async (req: Request, res: Response): Promise<v
   }
 };
 
+function aplicarFiltroVigencia(
+  filtros: FilterQuery<IReglaTarifa>,
+  vigente: ParametroQuery,
+  fecha: ParametroQuery
+): void {
+  const vigenteNormalizado = normalizarCadena(vigente);
+  if (!vigenteNormalizado) {
+    return;
+  }
+
+  const fechaNormalizada = normalizarCadena(fecha);
+  const fechaReferencia = fechaNormalizada ? new Date(fechaNormalizada) : new Date();
+
+  if (vigenteNormalizado === 'true') {
+    filtros.fechaInicioVigencia = { $lte: fechaReferencia };
+    filtros.$or = [
+      { fechaFinVigencia: { $gte: fechaReferencia } },
+      { fechaFinVigencia: { $exists: false } },
+    ];
+    return;
+  }
+
+  if (vigenteNormalizado === 'false') {
+    filtros.$or = [
+      { fechaInicioVigencia: { $gt: fechaReferencia } },
+      { fechaFinVigencia: { $lt: fechaReferencia } },
+    ];
+  }
+}
+
+function agregarFiltroBusqueda(filtros: FilterQuery<IReglaTarifa>, busqueda: ParametroQuery): void {
+  const termino = normalizarCadena(busqueda);
+  if (!termino) {
+    return;
+  }
+
+  if (!Array.isArray(filtros.$and)) {
+    filtros.$and = [];
+  }
+
+  filtros.$and.push({
+    $or: [
+      { codigo: { $regex: termino, $options: 'i' } },
+      { nombre: { $regex: termino, $options: 'i' } },
+      { descripcion: { $regex: termino, $options: 'i' } },
+    ],
+  });
+}
+
+function normalizarCadena(valor: ParametroQuery): string | undefined {
+  if (Array.isArray(valor)) {
+    return normalizarCadena(valor[0]);
+  }
+
+  return typeof valor === 'string' ? valor : undefined;
+}
+
 /**
  * Verifica si una regla está vigente en una fecha específica
  */
-function esReglVigente(regla: unknown, fecha: Date): boolean {
+function esReglVigente(regla: ReglaTarifaConsulta, fecha: Date): boolean {
   if (!regla.activa) return false;
 
   if (regla.fechaInicioVigencia > fecha) return false;
 
   return !(regla.fechaFinVigencia && regla.fechaFinVigencia < fecha);
-
-  return true;
 }
 
 /**
  * Calcula los días restantes de vigencia
  */
-function calcularDiasRestantesVigencia(regla: unknown, fecha: Date): number | null {
+function calcularDiasRestantesVigencia(regla: ReglaTarifaConsulta, fecha: Date): number | null {
   if (!regla.fechaFinVigencia) return null;
 
   const fechaFin = new Date(regla.fechaFinVigencia);

@@ -2,35 +2,58 @@ import { Stack, Text, Paper, Grid, Group, Badge, Divider } from '@mantine/core';
 import { formatCurrency } from '../../utils/formatters';
 
 interface TarifaCalculatorProps {
-  cliente: { nombre?: string } | null;
-  tramo: { denominacion?: string } | null;
-  datos: {
+  readonly cliente: { nombre?: string } | null;
+  readonly tramo: { denominacion?: string } | null;
+  readonly datos: Readonly<{
     peso: number;
     volumen: number;
     distancia: number;
     vehiculos: number;
-  };
-  resultado: {
+  }>;
+  readonly resultado: Readonly<{
     montoBase: number;
     montoExtras: number;
     montoTotal: number;
     desglose?: Record<string, number>;
     formula?: string;
-  };
+  }>;
+}
+
+interface InformacionCalculoSectionProps {
+  readonly cliente: TarifaCalculatorProps['cliente'];
+  readonly tramo: TarifaCalculatorProps['tramo'];
+}
+
+interface DatosUtilizadosSectionProps {
+  readonly datos: TarifaCalculatorProps['datos'];
+}
+
+interface DesgloseCostosSectionProps {
+  readonly desglose: Readonly<Record<string, number>>;
+}
+
+interface ResumenFinalSectionProps {
+  readonly resultado: TarifaCalculatorProps['resultado'];
 }
 
 // Componente para información del cálculo
-function InformacionCalculoSection({ cliente, tramo }: { cliente: TarifaCalculatorProps['cliente'], tramo: TarifaCalculatorProps['tramo'] }) {
+function InformacionCalculoSection({ cliente, tramo }: InformacionCalculoSectionProps) {
   return (
     <Paper p="md" withBorder>
-      <Text fw={600} mb="sm">Información del Cálculo</Text>
+      <Text fw={600} mb="sm">
+        Información del Cálculo
+      </Text>
       <Grid>
         <Grid.Col span={6}>
-          <Text size="sm" c="dimmed">Cliente</Text>
+          <Text size="sm" c="dimmed">
+            Cliente
+          </Text>
           <Text>{cliente?.nombre || '-'}</Text>
         </Grid.Col>
         <Grid.Col span={6}>
-          <Text size="sm" c="dimmed">Tramo</Text>
+          <Text size="sm" c="dimmed">
+            Tramo
+          </Text>
           <Text>{tramo?.denominacion || '-'}</Text>
         </Grid.Col>
       </Grid>
@@ -39,25 +62,35 @@ function InformacionCalculoSection({ cliente, tramo }: { cliente: TarifaCalculat
 }
 
 // Componente para datos utilizados
-function DatosUtilizadosSection({ datos }: { datos: TarifaCalculatorProps['datos'] }) {
+function DatosUtilizadosSection({ datos }: DatosUtilizadosSectionProps) {
   return (
     <Paper p="md" withBorder>
-      <Text fw={600} mb="sm">Datos Utilizados</Text>
+      <Text fw={600} mb="sm">
+        Datos Utilizados
+      </Text>
       <Grid>
         <Grid.Col span={3}>
-          <Text size="sm" c="dimmed">Peso</Text>
+          <Text size="sm" c="dimmed">
+            Peso
+          </Text>
           <Text>{datos.peso} kg</Text>
         </Grid.Col>
         <Grid.Col span={3}>
-          <Text size="sm" c="dimmed">Volumen</Text>
+          <Text size="sm" c="dimmed">
+            Volumen
+          </Text>
           <Text>{datos.volumen} m³</Text>
         </Grid.Col>
         <Grid.Col span={3}>
-          <Text size="sm" c="dimmed">Distancia</Text>
+          <Text size="sm" c="dimmed">
+            Distancia
+          </Text>
           <Text>{datos.distancia} km</Text>
         </Grid.Col>
         <Grid.Col span={3}>
-          <Text size="sm" c="dimmed">Vehículos</Text>
+          <Text size="sm" c="dimmed">
+            Vehículos
+          </Text>
           <Text>{datos.vehiculos}</Text>
         </Grid.Col>
       </Grid>
@@ -66,15 +99,19 @@ function DatosUtilizadosSection({ datos }: { datos: TarifaCalculatorProps['datos
 }
 
 // Componente para desglose de costos
-function DesgloseCostosSection({ desglose }: { desglose: Record<string, number> }) {
+function DesgloseCostosSection({ desglose }: DesgloseCostosSectionProps) {
   return (
     <Paper p="md" withBorder>
-      <Text fw={600} mb="sm">Desglose de Costos</Text>
+      <Text fw={600} mb="sm">
+        Desglose de Costos
+      </Text>
       <Stack gap="xs">
         {Object.entries(desglose).map(([key, value]) => (
           <Group key={key} justify="space-between">
             <Text size="sm">{key}:</Text>
-            <Text size="sm" fw={500}>{formatCurrency(value as number)}</Text>
+            <Text size="sm" fw={500}>
+              {formatCurrency(value as number)}
+            </Text>
           </Group>
         ))}
       </Stack>
@@ -83,7 +120,7 @@ function DesgloseCostosSection({ desglose }: { desglose: Record<string, number> 
 }
 
 // Componente para resumen final
-function ResumenFinalSection({ resultado }: { resultado: TarifaCalculatorProps['resultado'] }) {
+function ResumenFinalSection({ resultado }: ResumenFinalSectionProps) {
   return (
     <Paper p="md" withBorder>
       <Stack gap="xs">
@@ -97,8 +134,12 @@ function ResumenFinalSection({ resultado }: { resultado: TarifaCalculatorProps['
         </Group>
         <Divider />
         <Group justify="space-between">
-          <Text size="lg" fw={700}>Total:</Text>
-          <Text size="lg" fw={700} c="green">{formatCurrency(resultado.montoTotal)}</Text>
+          <Text size="lg" fw={700}>
+            Total:
+          </Text>
+          <Text size="lg" fw={700} c="green">
+            {formatCurrency(resultado.montoTotal)}
+          </Text>
         </Group>
       </Stack>
     </Paper>
@@ -110,14 +151,18 @@ export function TarifaCalculator({ cliente, tramo, datos, resultado }: TarifaCal
     <Stack>
       <InformacionCalculoSection cliente={cliente} tramo={tramo} />
       <DatosUtilizadosSection datos={datos} />
-      
+
       {resultado.formula && (
         <Paper p="md" withBorder>
-          <Text fw={600} mb="sm">Fórmula Aplicada</Text>
-          <Badge variant="light" size="lg">{resultado.formula}</Badge>
+          <Text fw={600} mb="sm">
+            Fórmula Aplicada
+          </Text>
+          <Badge variant="light" size="lg">
+            {resultado.formula}
+          </Badge>
         </Paper>
       )}
-      
+
       {resultado.desglose && <DesgloseCostosSection desglose={resultado.desglose} />}
       <ResumenFinalSection resultado={resultado} />
     </Stack>

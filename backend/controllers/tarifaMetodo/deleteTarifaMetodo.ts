@@ -54,31 +54,7 @@ export const deleteTarifaMetodo = async (req: Request, res: Response): Promise<v
     const dependencias: IDependencias = await verificarDependencias(metodo.codigo);
 
     if (dependencias.total > 0) {
-      const mensaje = `No se puede eliminar el método "${metodo.nombre}" porque está siendo utilizado por:`;
-      const detalles: string[] = [];
-
-      if (dependencias.formulasPersonalizadas > 0) {
-        detalles.push(
-          `${dependencias.formulasPersonalizadas} fórmula(s) personalizada(s) de cliente`
-        );
-      }
-
-      if (dependencias.reglasTarifa > 0) {
-        detalles.push(`${dependencias.reglasTarifa} regla(s) de tarifa`);
-      }
-
-      const respuestaError = {
-        mensaje,
-        dependencias: {
-          formulasPersonalizadas: dependencias.formulasPersonalizadas,
-          reglasTarifa: dependencias.reglasTarifa,
-          total: dependencias.total,
-        },
-        sugerencia:
-          'Desactive o elimine primero las dependencias, o considere desactivar el método en lugar de eliminarlo.',
-      };
-
-      ApiResponse.error(res, mensaje, 409, respuestaError);
+      responderConflictoEliminacion(res, metodo.nombre, dependencias);
       return;
     }
 
@@ -106,6 +82,37 @@ export const deleteTarifaMetodo = async (req: Request, res: Response): Promise<v
     ApiResponse.error(res, 'Error interno del servidor', 500);
   }
 };
+
+function responderConflictoEliminacion(
+  res: Response,
+  nombreMetodo: string,
+  dependencias: IDependencias
+): void {
+  const mensaje = `No se puede eliminar el método "${nombreMetodo}" porque está siendo utilizado por:`;
+  const detalles: string[] = [];
+
+  if (dependencias.formulasPersonalizadas > 0) {
+    detalles.push(`${dependencias.formulasPersonalizadas} fórmula(s) personalizada(s) de cliente`);
+  }
+
+  if (dependencias.reglasTarifa > 0) {
+    detalles.push(`${dependencias.reglasTarifa} regla(s) de tarifa`);
+  }
+
+  const respuestaError = {
+    mensaje,
+    dependencias: {
+      formulasPersonalizadas: dependencias.formulasPersonalizadas,
+      reglasTarifa: dependencias.reglasTarifa,
+      total: dependencias.total,
+      detalles,
+    },
+    sugerencia:
+      'Desactive o elimine primero las dependencias, o considere desactivar el método en lugar de eliminarlo.',
+  };
+
+  ApiResponse.error(res, mensaje, 409, respuestaError);
+}
 
 /**
  * Verifica las dependencias de un método de tarifa
