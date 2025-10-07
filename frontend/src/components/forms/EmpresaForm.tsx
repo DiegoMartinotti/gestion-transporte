@@ -85,12 +85,12 @@ const useEmpresaForm = (empresa?: Empresa) => {
   return { form, loading, setLoading };
 };
 
-interface EmpresaFormProps {
+type EmpresaFormProps = Readonly<{
   empresa?: Empresa;
   onSuccess?: (empresa: Empresa) => void;
   onCancel?: () => void;
   mode?: 'create' | 'edit';
-}
+}>;
 
 interface EmpresaFormData {
   nombre: string;
@@ -108,10 +108,10 @@ interface EmpresaFormData {
 }
 
 // Render components for EmpresaForm
-interface EmpresaFormRenderProps {
+type EmpresaFormRenderProps = Readonly<{
   form: ReturnType<typeof useForm<EmpresaFormData>>;
   loading: boolean;
-}
+}>;
 
 function EmpresaBasicInfo({ form, loading }: EmpresaFormRenderProps) {
   return (
@@ -244,17 +244,17 @@ function EmpresaAdditionalInfo({ form, loading }: EmpresaFormRenderProps) {
 function EmpresaStatusAlert({ form }: { form: ReturnType<typeof useForm<EmpresaFormData>> }) {
   return !form.values.activa ? (
     <Alert icon={<IconAlertCircle size="1rem" />} color="yellow" variant="light">
-      <strong>Atención:</strong> Una empresa inactiva no podrá ser utilizada para asignar personal
-      o vehículos a viajes.
+      <strong>Atención:</strong> Una empresa inactiva no podrá ser utilizada para asignar personal o
+      vehículos a viajes.
     </Alert>
   ) : null;
 }
 
-interface EmpresaActionButtonsProps {
+type EmpresaActionButtonsProps = Readonly<{
   onCancel?: () => void;
   loading: boolean;
   isEditing: boolean;
-}
+}>;
 
 function EmpresaActionButtons({ onCancel, loading, isEditing }: EmpresaActionButtonsProps) {
   return (

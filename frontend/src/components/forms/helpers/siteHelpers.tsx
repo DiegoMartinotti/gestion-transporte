@@ -12,6 +12,7 @@ export const loadClientes = async (
     const response = await clienteService.getAll({ limit: 1000 });
     setClientes(response.data);
   } catch (error) {
+    console.error('loadClientes - failed to fetch clientes', error);
     notifications.show({
       title: 'Error',
       message: 'No se pudieron cargar los clientes',
@@ -48,6 +49,7 @@ export const geocodeAddress = async (
     });
     return coords;
   } catch (error) {
+    console.error('geocodeAddress - failed to retrieve coordinates', error);
     notifications.show({
       title: 'Error',
       message: 'No se pudieron obtener las coordenadas de la dirección',
@@ -83,6 +85,7 @@ export const submitSite = async (
 
     onSubmit(result);
   } catch (error) {
+    console.error(`submitSite - failed to ${site ? 'update' : 'create'} site`, error);
     notifications.show({
       title: 'Error',
       message: `No se pudo ${site ? 'actualizar' : 'crear'} el site`,

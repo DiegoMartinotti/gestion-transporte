@@ -1,20 +1,30 @@
+const DNI_REGEX = /^\d{7,8}$/;
+const CUIL_REGEX = /^\d{2}-\d{8}-\d$/;
+
 export const validateDNI = (value: string): string | null => {
   if (!value) return 'El DNI es obligatorio';
-  if (!/^[0-9]{7,8}$/.test(value)) return 'DNI debe tener 7 u 8 dígitos';
+  if (!DNI_REGEX.test(value)) return 'DNI debe tener 7 u 8 dígitos';
   return null;
 };
 
 export const validateCUIL = (value: string): string | null => {
-  if (value && !/^[0-9]{2}-[0-9]{8}-[0-9]$/.test(value)) {
+  if (value && !CUIL_REGEX.test(value)) {
     return 'CUIL debe tener formato XX-XXXXXXXX-X';
   }
   return null;
 };
 
 export const validateEmail = (value: string): string | null => {
-  if (value && !/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(value)) {
+  if (!value) return null;
+
+  const [localPart, domainPart] = value.split('@');
+  if (!localPart || !domainPart) return 'Email inválido';
+
+  const domainSections = domainPart.split('.');
+  if (domainSections.length < 2 || domainSections.some((section) => section.length === 0)) {
     return 'Email inválido';
   }
+
   return null;
 };
 
