@@ -53,7 +53,7 @@ export function ViajeAssignerContent({
   handleCancel,
   handleAssign,
   getTotalSelected,
-}: ViajeAssignerContentProps) {
+}: Readonly<ViajeAssignerContentProps>) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -139,7 +139,7 @@ function ViajesList({
   handleImporteChange,
   formatCurrency,
   formatDate,
-}: ViajesListProps) {
+}: Readonly<ViajesListProps>) {
   if (filteredViajes.length === 0) {
     return (
       <Alert icon={<IconInfoCircle size={16} />} color="blue">
@@ -194,7 +194,7 @@ function ViajesTable({
   handleImporteChange,
   formatCurrency,
   formatDate,
-}: ViajesTableProps) {
+}: Readonly<ViajesTableProps>) {
   return (
     <ScrollArea h={400}>
       <Table>
@@ -246,7 +246,7 @@ function ViajeTableRow({
   onImporteChange,
   formatCurrency,
   formatDate,
-}: ViajeTableRowProps) {
+}: Readonly<ViajeTableRowProps>) {
   return (
     <Table.Tr>
       <Table.Td>

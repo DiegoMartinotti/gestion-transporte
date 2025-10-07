@@ -210,7 +210,7 @@ interface ExtraFormBasicInfoProps {
   form: ReturnType<typeof useForm<ExtraFormData>>;
 }
 
-function ExtraFormBasicInfo({ form }: ExtraFormBasicInfoProps) {
+function ExtraFormBasicInfo({ form }: Readonly<ExtraFormBasicInfoProps>) {
   return (
     <Stack gap="sm">
       <Text size="sm" fw={500} c="dimmed">
@@ -264,7 +264,11 @@ interface ExtraFormVigenciaProps {
   onVigenciaChange: () => void;
 }
 
-function ExtraFormVigencia({ form, vigenciaError, onVigenciaChange }: ExtraFormVigenciaProps) {
+function ExtraFormVigencia({
+  form,
+  vigenciaError,
+  onVigenciaChange,
+}: Readonly<ExtraFormVigenciaProps>) {
   return (
     <Stack gap="sm">
       <Text size="sm" fw={500} c="dimmed">
@@ -312,7 +316,7 @@ interface ExtraFormActionsProps {
   validating: boolean;
 }
 
-function ExtraFormActions({ onCancel, loading, validating }: ExtraFormActionsProps) {
+function ExtraFormActions({ onCancel, loading, validating }: Readonly<ExtraFormActionsProps>) {
   return (
     <Group justify="flex-end" gap="sm">
       {onCancel && (
@@ -332,7 +336,7 @@ function ExtraFormActions({ onCancel, loading, validating }: ExtraFormActionsPro
   );
 }
 
-export function ExtraForm({ extraId, onSuccess, onCancel }: ExtraFormProps) {
+export function ExtraForm({ extraId, onSuccess, onCancel }: Readonly<ExtraFormProps>) {
   const { form, loading, setLoading, validating, setValidating, vigenciaError, setVigenciaError } =
     useExtraFormSetup(extraId);
 

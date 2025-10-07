@@ -87,7 +87,7 @@ interface ClienteFormRenderProps {
   loading: boolean;
 }
 
-function ClienteBasicFields({ form, loading }: ClienteFormRenderProps) {
+function ClienteBasicFields({ form, loading }: Readonly<ClienteFormRenderProps>) {
   return (
     <>
       <FieldWrapper label="Nombre" required description="Nombre o razón social del cliente">
@@ -105,7 +105,7 @@ function ClienteBasicFields({ form, loading }: ClienteFormRenderProps) {
   );
 }
 
-function ClienteContactFields({ form, loading }: ClienteFormRenderProps) {
+function ClienteContactFields({ form, loading }: Readonly<ClienteFormRenderProps>) {
   return (
     <>
       <Group grow>
@@ -150,7 +150,7 @@ function ClienteContactFields({ form, loading }: ClienteFormRenderProps) {
   );
 }
 
-function ClienteStatusFields({ form, loading }: ClienteFormRenderProps) {
+function ClienteStatusFields({ form, loading }: Readonly<ClienteFormRenderProps>) {
   return (
     <>
       <FieldWrapper label="Estado" description="Define si el cliente está activo para operaciones">
@@ -177,7 +177,11 @@ interface ClienteActionButtonsProps {
   isEditing: boolean;
 }
 
-function ClienteActionButtons({ onCancel, loading, isEditing }: ClienteActionButtonsProps) {
+function ClienteActionButtons({
+  onCancel,
+  loading,
+  isEditing,
+}: Readonly<ClienteActionButtonsProps>) {
   return (
     <Group justify="flex-end" gap="sm">
       {onCancel && (
@@ -192,7 +196,12 @@ function ClienteActionButtons({ onCancel, loading, isEditing }: ClienteActionBut
   );
 }
 
-export function ClienteForm({ cliente, onSuccess, onCancel, mode = 'create' }: ClienteFormProps) {
+export function ClienteForm({
+  cliente,
+  onSuccess,
+  onCancel,
+  mode = 'create',
+}: Readonly<ClienteFormProps>) {
   const { form, loading, setLoading, isEditing, title } = useClienteFormSetup(cliente, mode);
   const handleSubmit = useClienteSubmit(mode, setLoading, cliente?._id, onSuccess);
 
