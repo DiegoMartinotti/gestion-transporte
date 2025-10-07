@@ -1,3 +1,10 @@
+import {
+  CUIT_OPTIONAL_HYPHEN_REGEX,
+  CUIT_WITH_HYPHEN_REGEX,
+  DNI_REGEX,
+  EMAIL_REGEX,
+} from '../../utils/excel/validationHelpers';
+
 export interface ValidationRule {
   field: string;
   type: 'required' | 'format' | 'unique' | 'reference' | 'custom';
@@ -53,7 +60,7 @@ export class ValidationRulesManager {
         field: ValidationRulesManager.CUIT_FIELD,
         type: 'format',
         message: 'CUIT con formato inválido (debe ser XX-XXXXXXXX-X)',
-        formatRegex: /^(20|23|24|25|26|27|30|33|34)([0-9]{9}|-[0-9]{8}-[0-9]{1})$/,
+        formatRegex: CUIT_OPTIONAL_HYPHEN_REGEX,
       },
       {
         field: 'Activo',
@@ -101,13 +108,13 @@ export class ValidationRulesManager {
         field: 'Email',
         type: 'format',
         message: 'Email con formato inválido',
-        formatRegex: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        formatRegex: EMAIL_REGEX,
       },
       {
         field: 'CUIT',
         type: 'format',
         message: 'CUIT con formato inválido',
-        formatRegex: /^(20|23|24|25|26|27|30|33|34)([0-9]{9}|-[0-9]{8}-[0-9]{1})$/,
+        formatRegex: CUIT_OPTIONAL_HYPHEN_REGEX,
       },
     ]);
   }
@@ -133,7 +140,7 @@ export class ValidationRulesManager {
         field: 'DNI (*)',
         type: 'format',
         message: 'DNI con formato inválido (7-8 dígitos)',
-        formatRegex: /^[0-9]{7,8}$/,
+        formatRegex: DNI_REGEX,
       },
       {
         field: 'DNI (*)',
@@ -173,13 +180,13 @@ export class ValidationRulesManager {
         field: 'CUIL',
         type: 'format',
         message: 'CUIL con formato inválido',
-        formatRegex: /^[0-9]{2}-[0-9]{8}-[0-9]$/,
+        formatRegex: CUIT_WITH_HYPHEN_REGEX,
       },
       {
         field: 'Email',
         type: 'format',
         message: 'Email con formato inválido',
-        formatRegex: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        formatRegex: EMAIL_REGEX,
       },
       {
         field: ValidationRulesManager.LICENCIA_NUMERO_FIELD,

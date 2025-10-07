@@ -3,6 +3,11 @@
  * Provides reusable validation utilities for all Excel templates
  */
 
+export const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+export const CUIT_WITH_HYPHEN_REGEX = /^\d{2}-\d{8}-\d$/;
+export const CUIT_OPTIONAL_HYPHEN_REGEX = /^(?:20|23|24|25|26|27|30|33|34)(?:\d{9}|-\d{8}-\d)$/;
+export const DNI_REGEX = /^\d{7,8}$/;
+
 interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -44,8 +49,8 @@ export function validateEmailFormat(
   const errors: string[] = [];
 
   if (email && email.trim()) {
-    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
-    if (!emailRegex.test(email.trim())) {
+    const normalizedEmail = email.trim();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
       errors.push(`Fila ${rowNum}: ${fieldName} con formato inválido`);
     }
   }
@@ -63,8 +68,8 @@ export function validateDNIFormat(dni: string, rowNum: number): ValidationResult
   const errors: string[] = [];
 
   if (dni) {
-    const dniRegex = /^[0-9]{7,8}$/;
-    if (!dniRegex.test(dni.toString().trim())) {
+    const normalizedDni = dni.toString().trim();
+    if (!DNI_REGEX.test(normalizedDni)) {
       errors.push(`Fila ${rowNum}: DNI con formato inválido (debe ser 7-8 dígitos)`);
     }
   }
@@ -82,8 +87,8 @@ export function validateCUILFormat(cuil: string, rowNum: number): ValidationResu
   const errors: string[] = [];
 
   if (cuil && cuil.trim()) {
-    const cuilRegex = /^[0-9]{2}-[0-9]{8}-[0-9]$/;
-    if (!cuilRegex.test(cuil.trim())) {
+    const normalizedCuil = cuil.trim();
+    if (!CUIT_WITH_HYPHEN_REGEX.test(normalizedCuil)) {
       errors.push(`Fila ${rowNum}: CUIL con formato inválido (debe ser XX-XXXXXXXX-X)`);
     }
   }
@@ -101,8 +106,8 @@ export function validateCUITFormat(cuit: string, rowNum: number): ValidationResu
   const errors: string[] = [];
 
   if (cuit && cuit.trim()) {
-    const cuitRegex = /^[0-9]{2}-[0-9]{8}-[0-9]$/;
-    if (!cuitRegex.test(cuit.trim())) {
+    const normalizedCuit = cuit.trim();
+    if (!CUIT_WITH_HYPHEN_REGEX.test(normalizedCuit)) {
       errors.push(`Fila ${rowNum}: CUIT con formato inválido (debe ser XX-XXXXXXXX-X)`);
     }
   }

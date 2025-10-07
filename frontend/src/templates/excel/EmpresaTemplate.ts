@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { WorkSheet, WorkBook } from 'xlsx';
+import { CUIT_OPTIONAL_HYPHEN_REGEX, EMAIL_REGEX } from '../../utils/excel/validationHelpers';
 
 export interface EmpresaTemplateData {
   nombre: string;
@@ -88,7 +89,11 @@ export class EmpresaTemplate {
    * Convierte valor booleano activa a string para display
    */
   private static getActivaDisplayValue(activa?: boolean): string {
-    return activa !== undefined ? (activa ? 'Sí' : 'No') : 'Sí';
+    if (activa === undefined) {
+      return 'Sí';
+    }
+
+    return activa ? 'Sí' : 'No';
   }
 
   /**
@@ -116,8 +121,11 @@ export class EmpresaTemplate {
    * Valida formato de email
    */
   private static validateEmail(email: string, rowNum: number): string | null {
-    if (email && !/^\w+(.-?\w+)*@\w+(.-?\w+)*(\.\w{2,3})+$/.test(email)) {
-      return `${this.ROW_PREFIX} ${rowNum}: Email con formato inválido`;
+    if (email) {
+      const normalizedEmail = email.trim();
+      if (normalizedEmail && !EMAIL_REGEX.test(normalizedEmail)) {
+        return `${this.ROW_PREFIX} ${rowNum}: Email con formato inválido`;
+      }
     }
     return null;
   }
@@ -126,8 +134,11 @@ export class EmpresaTemplate {
    * Valida formato de CUIT
    */
   private static validateCUIT(cuit: string, rowNum: number): string | null {
-    if (cuit && !/^(20|23|24|25|26|27|30|33|34)([0-9]{9}|-[0-9]{8}-[0-9]{1})$/.test(cuit)) {
-      return `${this.ROW_PREFIX} ${rowNum}: CUIT con formato inválido`;
+    if (cuit) {
+      const normalizedCuit = cuit.trim();
+      if (normalizedCuit && !CUIT_OPTIONAL_HYPHEN_REGEX.test(normalizedCuit)) {
+        return `${this.ROW_PREFIX} ${rowNum}: CUIT con formato inválido`;
+      }
     }
     return null;
   }
