@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, model } from 'mongoose';
+import { Document, Schema, model } from 'mongoose';
 
 // Interfaz que define la estructura del documento Cliente
 export interface ICliente extends Document {
@@ -10,25 +10,28 @@ export interface ICliente extends Document {
 }
 
 // Schema de Mongoose para el Cliente
-const clienteSchema = new Schema({
-  nombre: {
-    type: String,
-    required: true,
-    unique: true, // Para asegurar que no haya duplicados
-    trim: true
+const clienteSchema = new Schema(
+  {
+    nombre: {
+      type: String,
+      required: true,
+      unique: true, // Para asegurar que no haya duplicados
+      trim: true,
+    },
+    cuit: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    activo: {
+      type: Boolean,
+      default: true,
+    },
   },
-  cuit: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  activo: {
-    type: Boolean,
-    default: true
+  {
+    timestamps: true, // Agrega createdAt y updatedAt
   }
-}, {
-  timestamps: true // Agrega createdAt y updatedAt
-});
+);
 
 // Exportar el modelo con tipado
-export default model<ICliente>('Cliente', clienteSchema); 
+export default model<ICliente>('Cliente', clienteSchema);

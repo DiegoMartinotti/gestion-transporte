@@ -49,7 +49,7 @@ const variableDefinitionSchema = new Schema<IVariableDefinition>(
     nombre: {
       type: String,
       required: true,
-      match: /^[A-Za-z][A-Za-z0-9_]*$/,
+      match: /^[A-Za-z]\w*$/,
     },
     descripcion: {
       type: String,
@@ -82,7 +82,7 @@ const tarifaMetodoSchema = new Schema<ITarifaMetodo>(
       required: true,
       unique: true,
       uppercase: true,
-      match: /^[A-Z][A-Z0-9_]*$/,
+      match: /^[A-Z]\w*$/,
     },
     nombre: {
       type: String,
@@ -136,30 +136,20 @@ tarifaMetodoSchema.index({ prioridad: -1, activo: 1 });
 
 // Método para validar una fórmula
 tarifaMetodoSchema.methods.validarFormula = function (formula: string): boolean {
-  try {
-    // Obtener todas las variables disponibles
-    const variablesDisponibles = this.variables.map((v: IVariableDefinition) => v.nombre);
+  // Obtener todas las variables disponibles
+  const variablesDisponibles = this.variables.map((v: IVariableDefinition) => v.nombre);
 
-    // Extraer variables de la fórmula (palabras que empiezan con letra)
-    const variablesEnFormula = formula.match(/\b[A-Za-z][A-Za-z0-9_]*\b/g) || [];
+  // Extraer variables de la fórmula (palabras que empiezan con letra)
+  const variablesEnFormula = formula.match(/\b[A-Za-z]\w*\b/g) || [];
 
-    // Filtrar funciones conocidas
-    const funcionesPermitidas = ['SI', 'MAX', 'MIN', 'REDONDEAR', 'ABS', 'PROMEDIO'];
-    const variablesFiltradas = variablesEnFormula.filter(
-      (v) => !funcionesPermitidas.includes(v.toUpperCase())
-    );
+  // Filtrar funciones conocidas
+  const funcionesPermitidas = ['SI', 'MAX', 'MIN', 'REDONDEAR', 'ABS', 'PROMEDIO'];
+  const variablesFiltradas = variablesEnFormula.filter(
+    (v) => !funcionesPermitidas.includes(v.toUpperCase())
+  );
 
-    // Verificar que todas las variables están definidas
-    for (const variable of variablesFiltradas) {
-      if (!variablesDisponibles.includes(variable)) {
-        throw new Error(`Variable no definida: ${variable}`);
-      }
-    }
-
-    return true;
-  } catch (error) {
-    return false;
-  }
+  // Verificar que todas las variables están definidas
+  return variablesFiltradas.every((variable) => variablesDisponibles.includes(variable));
 };
 
 // Método para obtener variables disponibles
