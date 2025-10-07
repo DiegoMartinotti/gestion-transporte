@@ -15,6 +15,37 @@ export interface BaseEntity {
   [key: string]: unknown;
 }
 
+export type SelectorValue = string | string[] | null;
+
+const groupOptionsByCategory = <T extends BaseEntity>(
+  mapped: SelectOption[],
+  filteredItems: T[],
+  groupBy?: (item: T) => string | undefined
+): SelectOption[] => {
+  const grouped: Record<string, SelectOption[]> = {};
+
+  for (const option of mapped) {
+    const originalItem = filteredItems.find((item) => item._id === option.value);
+    const groupName = originalItem && groupBy ? groupBy(originalItem) : undefined;
+    const finalGroup = groupName || 'Sin Categoría';
+
+    if (!grouped[finalGroup]) {
+      grouped[finalGroup] = [];
+    }
+
+    grouped[finalGroup].push(option);
+  }
+
+  const flattened: SelectOption[] = [];
+  for (const [groupName, groupOptions] of Object.entries(grouped)) {
+    for (const option of groupOptions) {
+      flattened.push({ ...option, group: groupName });
+    }
+  }
+
+  return flattened;
+};
+
 export interface SelectorHookResult<T> {
   data: T[];
   loading: boolean;
@@ -50,7 +81,7 @@ export interface SelectorConfig<T extends BaseEntity> {
   maxDropdownHeight?: number;
 
   // Validaciones
-  validate?: (value: string | string[] | null) => string | null;
+  validate?: (value: SelectorValue) => string | null;
 
   // Callbacks adicionales
   onItemSelect?: (item: T | T[] | null) => void;
@@ -59,8 +90,8 @@ export interface SelectorConfig<T extends BaseEntity> {
 
 // Props base que extienden las props nativas de Mantine
 export interface BaseSelectorProps {
-  value?: string | string[] | null;
-  onChange: (value: string | string[] | null) => void;
+  value?: SelectorValue;
+  onChange: (value: SelectorValue) => void;
   label?: string;
   placeholder?: string;
   required?: boolean;
@@ -110,41 +141,20 @@ export function createEntitySelector<T extends BaseEntity>(config: SelectorConfi
       }, data);
     }, [data, filterProps]);
 
-    // Funciones helper para evitar callbacks anidados
-    const groupOptionsByCategory = (mapped: SelectOption[], filteredData: T[]) => {
-      const grouped = mapped.reduce(
-        (groups, option) => {
-          const originalItem = filteredData.find((item) => item._id === option.value);
-          const group = originalItem && config.groupBy ? config.groupBy(originalItem) : undefined;
-          const groupName = group || 'Sin Categoría';
-
-          if (!groups[groupName]) groups[groupName] = [];
-          groups[groupName].push(option);
-
-          return groups;
-        },
-        {} as Record<string, SelectOption[]>
-      );
-
-      return Object.entries(grouped).flatMap(([groupName, groupOptions]) =>
-        groupOptions.map((option) => ({ ...option, group: groupName }))
-      );
-    };
-
     // Mapear datos a opciones
     const options = useMemo(() => {
       const mapped = filteredData.map(config.mapToOption);
 
       // Agrupar si está configurado
       if (config.groupBy) {
-        return groupOptionsByCategory(mapped, filteredData);
+        return groupOptionsByCategory(mapped, filteredData, config.groupBy);
       }
 
       return mapped;
     }, [filteredData]);
 
     // Manejar cambios
-    const handleChange = (newValue: string | string[] | null) => {
+    const handleChange = (newValue: SelectorValue) => {
       // Validar si está configurado
       if (config.validate) {
         const validationError = config.validate(newValue);

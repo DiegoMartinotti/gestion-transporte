@@ -82,11 +82,11 @@ const passesBasicFilters = (
 ): boolean => {
   const { soloActivos, excludeIds, empresaId } = filters;
 
-  if (soloActivos && !persona.activo) return false;
-  if (excludeIds.includes(persona._id)) return false;
-  if (empresaId && persona.empresa?._id !== empresaId) return false;
+  const passesActivation = !soloActivos || persona.activo;
+  const notExcluded = !excludeIds.includes(persona._id);
+  const matchesCompany = !empresaId || persona.empresa?._id === empresaId;
 
-  return true;
+  return passesActivation && notExcluded && matchesCompany;
 };
 
 /**
@@ -103,13 +103,13 @@ const passesAdvancedFilters = (
 ): boolean => {
   const { tipo, soloChoferes, requireValidLicense, requireSpecificCategory } = filters;
 
-  if (!matchesTipoFilter(persona, tipo)) return false;
-  if (soloChoferes && !isValidChofer(persona)) return false;
-  if (requireValidLicense && !isLicenseValid(persona)) return false;
-  if (requireSpecificCategory && !hasRequiredCategory(persona, requireSpecificCategory))
-    return false;
+  const matchesTipo = matchesTipoFilter(persona, tipo);
+  const validChofer = !soloChoferes || isValidChofer(persona);
+  const validLicense = !requireValidLicense || isLicenseValid(persona);
+  const validCategory =
+    !requireSpecificCategory || hasRequiredCategory(persona, requireSpecificCategory);
 
-  return true;
+  return matchesTipo && validChofer && validLicense && validCategory;
 };
 
 /**
@@ -168,10 +168,11 @@ export const transformPersonalToSelectData = (
   return personalFiltrado.map((persona) => {
     const licencia = persona.documentacion?.licenciaConducir?.numero || persona.licenciaNumero;
     const categoria = persona.documentacion?.licenciaConducir?.categoria;
+    const licenciaLabel = licencia ? ` (Lic: ${licencia})` : '';
 
     return {
       value: persona._id,
-      label: `${persona.nombre} ${persona.apellido}${licencia ? ` (Lic: ${licencia})` : ''}`,
+      label: `${persona.nombre} ${persona.apellido}${licenciaLabel}`,
       // Props adicionales para el componente personalizado
       nombre: persona.nombre,
       apellido: persona.apellido,

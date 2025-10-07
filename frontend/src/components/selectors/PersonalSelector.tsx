@@ -7,6 +7,7 @@ import {
   transformPersonalToSelectData,
   getMockPersonalData,
 } from './helpers/personalSelectorHelpers';
+import { SelectorValue } from './SelectorFactory';
 
 interface Personal {
   _id: string;
@@ -30,31 +31,43 @@ interface Personal {
 }
 
 interface PersonalSelectorProps {
-  value?: string | string[] | null;
-  onChange: (value: string | string[] | null) => void;
-  label?: string;
-  placeholder?: string;
-  required?: boolean;
-  clearable?: boolean;
-  error?: string;
-  multiple?: boolean;
+  readonly value?: SelectorValue;
+  readonly onChange: (value: SelectorValue) => void;
+  readonly label?: string;
+  readonly placeholder?: string;
+  readonly required?: boolean;
+  readonly clearable?: boolean;
+  readonly error?: string;
+  readonly multiple?: boolean;
   // Filtros específicos
-  tipo?: string | string[]; // Filtrar por tipo específico
-  soloChoferes?: boolean; // Filtro específico para choferes (con licencia válida)
-  soloActivos?: boolean; // Filtrar solo personal activo
-  empresaId?: string; // Filtrar por empresa específica
-  excludeIds?: string[];
+  readonly tipo?: string | string[]; // Filtrar por tipo específico
+  readonly soloChoferes?: boolean; // Filtro específico para choferes (con licencia válida)
+  readonly soloActivos?: boolean; // Filtrar solo personal activo
+  readonly empresaId?: string; // Filtrar por empresa específica
+  readonly excludeIds?: string[];
   // Configuración visual
-  disabled?: boolean;
-  withAvatar?: boolean;
-  showLicencia?: boolean;
-  showEmpresa?: boolean;
-  showDni?: boolean;
-  compact?: boolean;
+  readonly disabled?: boolean;
+  readonly withAvatar?: boolean;
+  readonly showLicencia?: boolean;
+  readonly showEmpresa?: boolean;
+  readonly showDni?: boolean;
+  readonly compact?: boolean;
   // Validaciones adicionales
-  requireValidLicense?: boolean; // Requiere licencia válida (no vencida)
-  requireSpecificCategory?: string; // Requiere categoría específica de licencia
+  readonly requireValidLicense?: boolean; // Requiere licencia válida (no vencida)
+  readonly requireSpecificCategory?: string; // Requiere categoría específica de licencia
 }
+
+const normalizeToArray = (input: SelectorValue): string[] => {
+  if (Array.isArray(input)) {
+    return input;
+  }
+
+  if (typeof input === 'string' && input) {
+    return [input];
+  }
+
+  return [];
+};
 
 // Los componentes SelectItem y PersonalMultiSelect se han movido a archivos separados
 
@@ -105,6 +118,8 @@ export function PersonalSelector({
   });
 
   if (multiple) {
+    const normalizedValue = normalizeToArray(value);
+
     return (
       <PersonalMultiSelect
         label={label}
@@ -114,7 +129,7 @@ export function PersonalSelector({
         error={error}
         disabled={disabled || loading}
         data={data}
-        value={Array.isArray(value) ? value : value ? [value] : []}
+        value={normalizedValue}
         onChange={onChange}
       />
     );
