@@ -11,7 +11,7 @@ import {
   Tooltip,
   NumberInput,
   Alert,
-  Box
+  Box,
 } from '@mantine/core';
 import {
   IconCalculator,
@@ -19,11 +19,19 @@ import {
   IconMinus,
   IconTrash,
   IconRefresh,
-  IconInfoCircle
+  IconInfoCircle,
 } from '@tabler/icons-react';
 import { formatCurrencyPrecision } from '../../utils/formatters';
 import { useExtraCalculator } from '../../hooks/useExtraCalculator';
 import { type Extra } from '../../services/extraService';
+
+interface ExtraTableRowProps {
+  readonly item: ExtraCalculatorItem;
+  readonly readonly: boolean;
+  readonly onUpdateCantidad: (extraId: string, cantidad: number) => void;
+  readonly onRemoveItem: (extraId: string) => void;
+  readonly formatCurrency: (value: number) => string;
+}
 
 // Componente para la fila de la tabla de extras
 function ExtraTableRow({
@@ -31,19 +39,13 @@ function ExtraTableRow({
   readonly,
   onUpdateCantidad,
   onRemoveItem,
-  formatCurrency
-}: {
-  item: ExtraCalculatorItem;
-  readonly: boolean;
-  onUpdateCantidad: (extraId: string, cantidad: number) => void;
-  onRemoveItem: (extraId: string) => void;
-  formatCurrency: (value: number) => string;
-}) {
+  formatCurrency,
+}: Readonly<ExtraTableRowProps>) {
   const getVigenciaStatus = (extra: Extra) => {
     const now = new Date();
     const desde = new Date(extra.vigenciaDesde);
     const hasta = new Date(extra.vigenciaHasta);
-    
+
     if (now < desde) return { color: 'blue', text: 'Pendiente' };
     if (now > hasta) return { color: 'red', text: 'Vencido' };
     return { color: 'green', text: 'Vigente' };
@@ -55,23 +57,29 @@ function ExtraTableRow({
     <Table.Tr>
       <Table.Td>
         <Box>
-          <Text size="sm" fw={500}>{item.extra.tipo}</Text>
+          <Text size="sm" fw={500}>
+            {item.extra.tipo}
+          </Text>
           {item.extra.descripcion && (
-            <Text size="xs" c="dimmed" lineClamp={1}>{item.extra.descripcion}</Text>
+            <Text size="xs" c="dimmed" lineClamp={1}>
+              {item.extra.descripcion}
+            </Text>
           )}
         </Box>
       </Table.Td>
-      
+
       <Table.Td>
         <Badge color={vigencia.color} size="xs" variant="outline">
           {vigencia.text}
         </Badge>
       </Table.Td>
-      
+
       <Table.Td>
-        <Text size="sm" fw={500}>{formatCurrency(item.extra.valor)}</Text>
+        <Text size="sm" fw={500}>
+          {formatCurrency(item.extra.valor)}
+        </Text>
       </Table.Td>
-      
+
       <Table.Td>
         {readonly ? (
           <Text fw={500}>{item.cantidad}</Text>
@@ -84,17 +92,19 @@ function ExtraTableRow({
             >
               <IconMinus size={12} />
             </ActionIcon>
-            
+
             <NumberInput
               value={item.cantidad}
-              onChange={(val) => item.extra._id && onUpdateCantidad(item.extra._id, Number(val) || 0)}
+              onChange={(val) =>
+                item.extra._id && onUpdateCantidad(item.extra._id, Number(val) || 0)
+              }
               min={0}
               max={999}
               w={60}
               size="xs"
               styles={{ input: { textAlign: 'center', padding: '0 4px' } }}
             />
-            
+
             <ActionIcon
               size="sm"
               variant="subtle"
@@ -105,11 +115,13 @@ function ExtraTableRow({
           </Group>
         )}
       </Table.Td>
-      
+
       <Table.Td>
-        <Text fw={600} c="blue">{formatCurrency(item.subtotal)}</Text>
+        <Text fw={600} c="blue">
+          {formatCurrency(item.subtotal)}
+        </Text>
       </Table.Td>
-      
+
       {!readonly && (
         <Table.Td>
           <ActionIcon
@@ -125,25 +137,29 @@ function ExtraTableRow({
   );
 }
 
+interface ExtrasTableProps {
+  readonly items: ExtraCalculatorItem[];
+  readonly readonly: boolean;
+  readonly onUpdateCantidad: (extraId: string, cantidad: number) => void;
+  readonly onRemoveItem: (extraId: string) => void;
+  readonly formatCurrency: (value: number) => string;
+}
+
 // Componente para la tabla de desglose
 function ExtrasTable({
   items,
   readonly,
   onUpdateCantidad,
   onRemoveItem,
-  formatCurrency
-}: {
-  items: ExtraCalculatorItem[];
-  readonly: boolean;
-  onUpdateCantidad: (extraId: string, cantidad: number) => void;
-  onRemoveItem: (extraId: string) => void;
-  formatCurrency: (value: number) => string;
-}) {
+  formatCurrency,
+}: Readonly<ExtrasTableProps>) {
   return (
     <>
       <Divider />
       <Stack gap="sm">
-        <Text size="sm" fw={500}>Desglose</Text>
+        <Text size="sm" fw={500}>
+          Desglose
+        </Text>
         <Table>
           <Table.Thead>
             <Table.Tr>
@@ -173,6 +189,17 @@ function ExtrasTable({
   );
 }
 
+interface ExtraCalculatorHeaderProps {
+  readonly title: string;
+  readonly readonly: boolean;
+  readonly loading: boolean;
+  readonly items: ExtraCalculatorItem[];
+  readonly totalGeneral: number;
+  readonly cantidadTotal: number;
+  readonly formatCurrency: (value: number) => string;
+  readonly onRecalcular: () => void;
+}
+
 // Componente para el header y resumen
 function ExtraCalculatorHeader({
   title,
@@ -182,17 +209,8 @@ function ExtraCalculatorHeader({
   totalGeneral,
   cantidadTotal,
   formatCurrency,
-  onRecalcular
-}: {
-  title: string;
-  readonly: boolean;
-  loading: boolean;
-  items: ExtraCalculatorItem[];
-  totalGeneral: number;
-  cantidadTotal: number;
-  formatCurrency: (value: number) => string;
-  onRecalcular: () => void;
-}) {
+  onRecalcular,
+}: Readonly<ExtraCalculatorHeaderProps>) {
   return (
     <>
       <Group justify="space-between">
@@ -200,15 +218,11 @@ function ExtraCalculatorHeader({
           <IconCalculator size={20} />
           <Text fw={600}>{title}</Text>
         </Group>
-        
+
         {!readonly && (
           <Group gap="xs">
             <Tooltip label="Recalcular">
-              <ActionIcon
-                variant="subtle"
-                onClick={onRecalcular}
-                loading={loading}
-              >
+              <ActionIcon variant="subtle" onClick={onRecalcular} loading={loading}>
                 <IconRefresh size={16} />
               </ActionIcon>
             </Tooltip>
@@ -219,17 +233,23 @@ function ExtraCalculatorHeader({
       <Group justify="space-between">
         <Group gap="md">
           <Box>
-            <Text size="xs" c="dimmed">Items</Text>
+            <Text size="xs" c="dimmed">
+              Items
+            </Text>
             <Text fw={600}>{items.length}</Text>
           </Box>
           <Box>
-            <Text size="xs" c="dimmed">Cantidad Total</Text>
+            <Text size="xs" c="dimmed">
+              Cantidad Total
+            </Text>
             <Text fw={600}>{cantidadTotal}</Text>
           </Box>
         </Group>
-        
+
         <Box ta="right">
-          <Text size="xs" c="dimmed">Total Extras</Text>
+          <Text size="xs" c="dimmed">
+            Total Extras
+          </Text>
           <Text size="xl" fw={700} c="blue">
             {formatCurrency(totalGeneral)}
           </Text>
@@ -240,22 +260,26 @@ function ExtraCalculatorHeader({
 }
 
 interface ExtraCalculatorItem {
-  extra: Extra;
-  cantidad: number;
-  subtotal: number;
+  readonly extra: Extra;
+  readonly cantidad: number;
+  readonly subtotal: number;
 }
 
 interface ExtraCalculatorProps {
-  clienteId?: string;
-  extrasSeleccionados?: { extraId: string; cantidad: number }[];
-  onChange?: (total: number, desglose: ExtraCalculatorItem[]) => void;
-  readonly?: boolean;
-  showDesglose?: boolean;
-  title?: string;
+  readonly clienteId?: string;
+  readonly extrasSeleccionados?: { extraId: string; cantidad: number }[];
+  readonly onChange?: (total: number, desglose: ExtraCalculatorItem[]) => void;
+  readonly readonly?: boolean;
+  readonly showDesglose?: boolean;
+  readonly title?: string;
+}
+
+interface EmptyStateProps {
+  readonly clienteId?: string;
 }
 
 // Componente para el estado vacío
-function EmptyState({ clienteId }: { clienteId?: string }) {
+function EmptyState({ clienteId }: Readonly<EmptyStateProps>) {
   if (!clienteId) {
     return (
       <Paper p="md" withBorder>
@@ -277,8 +301,8 @@ export function ExtraCalculator({
   onChange,
   readonly = false,
   showDesglose = true,
-  title = "Calculadora de Extras"
-}: ExtraCalculatorProps) {
+  title = 'Calculadora de Extras',
+}: Readonly<ExtraCalculatorProps>) {
   const {
     items,
     loading,
@@ -287,7 +311,7 @@ export function ExtraCalculator({
     cantidadTotal,
     updateCantidad,
     removeItem,
-    recalcular
+    recalcular,
   } = useExtraCalculator({ extrasSeleccionados, onChange, readonly });
 
   const formatCurrency = (value: number) => formatCurrencyPrecision(value, 2);

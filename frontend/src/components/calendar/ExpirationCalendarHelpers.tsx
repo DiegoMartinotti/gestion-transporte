@@ -83,6 +83,15 @@ export const MESES = [
 export const DATE_FORMAT = 'YYYY-MM-DD';
 
 // Componente para controles y filtros
+interface CalendarControlsProps {
+  readonly filtroTipo: string;
+  readonly setFiltroTipo: (value: string) => void;
+  readonly filtroEntidad: string;
+  readonly setFiltroEntidad: (value: string) => void;
+  readonly tiposUnicos: ReadonlyArray<{ readonly value: string; readonly label: string }>;
+  readonly onRefresh?: () => void;
+}
+
 export function CalendarControls({
   filtroTipo,
   setFiltroTipo,
@@ -90,14 +99,7 @@ export function CalendarControls({
   setFiltroEntidad,
   tiposUnicos,
   onRefresh,
-}: {
-  filtroTipo: string;
-  setFiltroTipo: (value: string) => void;
-  filtroEntidad: string;
-  setFiltroEntidad: (value: string) => void;
-  tiposUnicos: { value: string; label: string }[];
-  onRefresh?: () => void;
-}) {
+}: Readonly<CalendarControlsProps>) {
   return (
     <Paper p="md" withBorder>
       <Group justify="space-between" mb="md">
@@ -135,15 +137,17 @@ export function CalendarControls({
 }
 
 // Componente para estadísticas del mes
+interface MonthStatsProps {
+  readonly fechaActual: Date;
+  readonly cambiarMes: (direccion: 'anterior' | 'siguiente') => void;
+  readonly estadisticasMes: Readonly<{ vencidos: number; porVencer: number; vigentes: number }>;
+}
+
 export function MonthStats({
   fechaActual,
   cambiarMes,
   estadisticasMes,
-}: {
-  fechaActual: Date;
-  cambiarMes: (direccion: 'anterior' | 'siguiente') => void;
-  estadisticasMes: { vencidos: number; porVencer: number; vigentes: number };
-}) {
+}: Readonly<MonthStatsProps>) {
   return (
     <Paper p="md" withBorder>
       <Group justify="space-between" mb="md">
@@ -193,15 +197,17 @@ export function MonthStats({
 }
 
 // Componente para el calendario
+interface CalendarViewProps {
+  readonly fechaActual: Date;
+  readonly setFechaActual: (date: Date) => void;
+  readonly renderDay: (fecha: Date) => React.ReactNode;
+}
+
 export function CalendarView({
   fechaActual,
   setFechaActual,
   renderDay,
-}: {
-  fechaActual: Date;
-  setFechaActual: (date: Date) => void;
-  renderDay: (fecha: Date) => React.ReactNode;
-}) {
+}: Readonly<CalendarViewProps>) {
   return (
     <Paper p="md" withBorder>
       <Calendar
@@ -246,8 +252,12 @@ export function CalendarView({
   );
 }
 
+interface StatusAlertProps {
+  readonly tipoEstado: string;
+}
+
 // Componente helper para el alert de estado
-function StatusAlert({ tipoEstado }: { tipoEstado: string }) {
+function StatusAlert({ tipoEstado }: Readonly<StatusAlertProps>) {
   if (tipoEstado === 'vencido') {
     return (
       <Alert color="red" icon={<IconAlertTriangle size={16} />}>
@@ -292,15 +302,13 @@ function getBadgeText(tipoEstado: string): string {
 }
 
 // Componente para mostrar un documento individual
-function DocumentCard({
-  documento,
-  tipoEstado,
-  onDocumentClick,
-}: {
-  documento: DocumentoVencimiento;
-  tipoEstado: string;
-  onDocumentClick?: (documento: DocumentoVencimiento) => void;
-}) {
+interface DocumentCardProps {
+  readonly documento: DocumentoVencimiento;
+  readonly tipoEstado: string;
+  readonly onDocumentClick?: (documento: DocumentoVencimiento) => void;
+}
+
+function DocumentCard({ documento, tipoEstado, onDocumentClick }: Readonly<DocumentCardProps>) {
   return (
     <Card padding="sm" withBorder>
       <Group justify="space-between">
@@ -351,17 +359,19 @@ function DocumentCard({
 }
 
 // Componente para el modal de documentos
+interface DocumentModalProps {
+  readonly opened: boolean;
+  readonly onClose: () => void;
+  readonly documentoSeleccionado: VencimientoDia | null;
+  readonly onDocumentClick?: (documento: DocumentoVencimiento) => void;
+}
+
 export function DocumentModal({
   opened,
   onClose,
   documentoSeleccionado,
   onDocumentClick,
-}: {
-  opened: boolean;
-  onClose: () => void;
-  documentoSeleccionado: VencimientoDia | null;
-  onDocumentClick?: (documento: DocumentoVencimiento) => void;
-}) {
+}: Readonly<DocumentModalProps>) {
   const modalTitle = documentoSeleccionado ? (
     <Group>
       <IconCalendar size={20} />

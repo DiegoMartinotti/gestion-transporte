@@ -36,24 +36,22 @@ import type { Viaje } from '../../types/viaje';
 import type { Cliente } from '../../types/cliente';
 import { getOrigenText, getDestinoText, normalizeEstadoPartida } from '../../utils/viajeHelpers';
 
+interface HeaderActionsProps {
+  readonly onEdit?: () => void;
+  readonly onDelete?: () => void;
+  readonly actionLoading: boolean;
+}
+
 interface OrdenCompraHeaderProps {
-  orden: OrdenCompra;
-  cliente: Cliente | null;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  actionLoading: boolean;
+  readonly orden: OrdenCompra;
+  readonly cliente: Cliente | null;
+  readonly onEdit?: () => void;
+  readonly onDelete?: () => void;
+  readonly actionLoading: boolean;
 }
 
 // Componente para los botones de acción
-function HeaderActions({
-  onEdit,
-  onDelete,
-  actionLoading,
-}: {
-  onEdit?: () => void;
-  onDelete?: () => void;
-  actionLoading: boolean;
-}) {
+function HeaderActions({ onEdit, onDelete, actionLoading }: Readonly<HeaderActionsProps>) {
   const handleDelete = () => {
     if (onDelete && !actionLoading) {
       onDelete();
@@ -117,7 +115,14 @@ export function OrdenCompraHeader({
   onEdit,
   onDelete,
   actionLoading,
-}: OrdenCompraHeaderProps) {
+}: Readonly<OrdenCompraHeaderProps>) {
+  let estadoColor = 'red';
+  if (orden.estado === 'Pendiente') {
+    estadoColor = 'yellow';
+  } else if (orden.estado === 'Facturada') {
+    estadoColor = 'green';
+  }
+
   return (
     <Card padding="lg" withBorder>
       <Group justify="space-between" mb="md">
@@ -155,17 +160,7 @@ export function OrdenCompraHeader({
             </Group>
             <Text size="lg">{new Date(orden.fecha).toLocaleDateString('es-AR')}</Text>
 
-            <Badge
-              color={
-                orden.estado === 'Pendiente'
-                  ? 'yellow'
-                  : orden.estado === 'Facturada'
-                    ? 'green'
-                    : 'red'
-              }
-              variant="light"
-              size="lg"
-            >
+            <Badge color={estadoColor} variant="light" size="lg">
               {orden.estado}
             </Badge>
           </Stack>
@@ -178,11 +173,11 @@ export function OrdenCompraHeader({
 }
 
 interface OrdenCompraStatsProps {
-  orden: OrdenCompra;
-  viajes: Map<string, Viaje>;
+  readonly orden: OrdenCompra;
+  readonly viajes: Map<string, Viaje>;
 }
 
-export function OrdenCompraStats({ orden, viajes }: OrdenCompraStatsProps) {
+export function OrdenCompraStats({ orden, viajes }: Readonly<OrdenCompraStatsProps>) {
   // Calcular estadísticas
   const totalPartidas = orden.viajes.length;
   const totalImporte = orden.viajes.reduce((sum, item) => sum + (item.importe || 0), 0);
@@ -267,21 +262,23 @@ export function OrdenCompraStats({ orden, viajes }: OrdenCompraStatsProps) {
 }
 
 interface ViajesTableProps {
-  orden: OrdenCompra;
-  viajes: Map<string, Viaje>;
-  onViajeClick?: (viajeId: string) => void;
+  readonly orden: OrdenCompra;
+  readonly viajes: Map<string, Viaje>;
+  readonly onViajeClick?: (viajeId: string) => void;
+}
+
+interface ViajeTableRowProps {
+  readonly item: {
+    readonly viaje: string;
+    readonly importe?: number;
+    readonly observaciones?: string;
+  };
+  readonly viaje: Viaje | undefined;
+  readonly handleViajeClick: (viajeId: string) => void;
 }
 
 // Componente para una fila de la tabla de viajes
-function ViajeTableRow({
-  item,
-  viaje,
-  handleViajeClick,
-}: {
-  item: { viaje: string; importe?: number; observaciones?: string };
-  viaje: Viaje | undefined;
-  handleViajeClick: (viajeId: string) => void;
-}) {
+function ViajeTableRow({ item, viaje, handleViajeClick }: Readonly<ViajeTableRowProps>) {
   return (
     <Table.Tr
       style={{ cursor: viaje ? 'pointer' : 'default' }}
@@ -351,7 +348,7 @@ function ViajeTableRow({
   );
 }
 
-export function ViajesTable({ orden, viajes, onViajeClick }: ViajesTableProps) {
+export function ViajesTable({ orden, viajes, onViajeClick }: Readonly<ViajesTableProps>) {
   const handleViajeClick = (viajeId: string) => {
     if (onViajeClick) {
       onViajeClick(viajeId);
@@ -398,10 +395,10 @@ export function ViajesTable({ orden, viajes, onViajeClick }: ViajesTableProps) {
 }
 
 interface TimelineEventsProps {
-  orden: OrdenCompra;
+  readonly orden: OrdenCompra;
 }
 
-export function TimelineEvents({ orden }: TimelineEventsProps) {
+export function TimelineEvents({ orden }: Readonly<TimelineEventsProps>) {
   const events = [
     {
       title: 'Orden creada',
