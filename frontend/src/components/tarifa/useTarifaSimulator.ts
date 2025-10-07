@@ -5,9 +5,16 @@ import { useDataLoader } from '../../hooks/useDataLoader';
 import { clienteService } from '../../services/clienteService';
 import { tramoService } from '../../services/tramoService';
 import type { IEscenarioSimulacion, IResultadoSimulacion } from '../../types/tarifa';
+import type { Tramo, TramoFilters } from '../../types';
+
+type EditableEscenario = IEscenarioSimulacion & {
+  id?: string;
+  fechaCreacion?: string;
+  activo?: boolean;
+};
 
 export const useTarifaSimulatorState = () => {
-  const [escenarios, setEscenarios] = useState<IEscenarioSimulacion[]>([]);
+  const [escenarios, setEscenarios] = useState<EditableEscenario[]>([]);
   const [resultados, setResultados] = useState<IResultadoSimulacion[]>([]);
   const [simulando, setSimulando] = useState(false);
   const [activeTab, setActiveTab] = useState<string | null>('escenarios');
@@ -30,8 +37,20 @@ export const useTarifaSimulatorData = () => {
     errorMessage: 'Error al cargar clientes',
   });
 
-  const { data: tramos } = useDataLoader({
-    fetchFunction: tramoService.getAll,
+  const { data: tramos } = useDataLoader<Tramo, TramoFilters>({
+    fetchFunction: async (params) => {
+      const data = await tramoService.getAll(params);
+      return {
+        data,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: data.length,
+          itemsPerPage: data.length === 0 ? 1 : data.length,
+        },
+      };
+    },
+    enablePagination: false,
     errorMessage: 'Error al cargar tramos',
   });
 
@@ -70,13 +89,13 @@ export const useTarifaSimulatorForm = () => {
 };
 
 export const useTarifaSimulatorOperations = (
-  escenarios: IEscenarioSimulacion[],
-  setEscenarios: (escenarios: IEscenarioSimulacion[]) => void,
+  escenarios: EditableEscenario[],
+  setEscenarios: (escenarios: EditableEscenario[]) => void,
   setResultados: (resultados: IResultadoSimulacion[]) => void,
   setSimulando: (simulando: boolean) => void
 ) => {
   const agregarEscenario = (escenario: IEscenarioSimulacion) => {
-    const nuevoEscenario: IEscenarioSimulacion = {
+    const nuevoEscenario: EditableEscenario = {
       ...escenario,
       id: Date.now().toString(),
       fechaCreacion: new Date().toISOString(),
@@ -85,18 +104,16 @@ export const useTarifaSimulatorOperations = (
     setEscenarios([...escenarios, nuevoEscenario]);
   };
 
-  const editarEscenario = (escenarioEditado: IEscenarioSimulacion) => {
-    setEscenarios(
-      escenarios.map((e) => (e.id === escenarioEditado.id ? escenarioEditado : e))
-    );
+  const editarEscenario = (escenarioEditado: EditableEscenario) => {
+    setEscenarios(escenarios.map((e) => (e.id === escenarioEditado.id ? escenarioEditado : e)));
   };
 
   const eliminarEscenario = (id: string) => {
     setEscenarios(escenarios.filter((e) => e.id !== id));
   };
 
-  const duplicarEscenario = (escenario: IEscenarioSimulacion) => {
-    const duplicado: IEscenarioSimulacion = {
+  const duplicarEscenario = (escenario: EditableEscenario) => {
+    const duplicado: EditableEscenario = {
       ...escenario,
       id: Date.now().toString(),
       nombre: `${escenario.nombre} (Copia)`,
@@ -106,15 +123,19 @@ export const useTarifaSimulatorOperations = (
   };
 
   const createResultadoFromEscenario = (escenario: IEscenarioSimulacion): IResultadoSimulacion => {
-    const tarifaOriginal = escenario.valoresBase.tarifa || Math.random() * 30000 + 5000;
-    const peajeOriginal = escenario.valoresBase.peaje || Math.random() * 5000 + 1000;
-    const extrasOriginal = escenario.valoresBase.extras || Math.random() * 3000;
+    const tarifaOriginal = escenario.valoresBase.tarifa ?? 20000;
+    const peajeOriginal = escenario.valoresBase.peaje ?? 5000;
+    const extrasOriginal = escenario.valoresBase.extras ?? 2000;
     const totalOriginal = tarifaOriginal + peajeOriginal + extrasOriginal;
 
-    const tarifaFinal = tarifaOriginal * 1.1;
+    const factorPalets = escenario.contexto.palets ? escenario.contexto.palets * 0.01 : 0.05;
+    const tarifaFinal = tarifaOriginal * (1 + factorPalets);
     const peajeFinal = peajeOriginal * 1.05;
-    const extrasFinal = extrasOriginal * 1.15;
-    const totalFinal = totalOriginal * 1.1;
+    const extrasFinal = extrasOriginal * 1.08;
+    const totalFinal = tarifaFinal + peajeFinal + extrasFinal;
+
+    const diferenciaTotal = totalFinal - totalOriginal;
+    const porcentaje = totalOriginal === 0 ? 0 : (diferenciaTotal / totalOriginal) * 100;
 
     return {
       escenario: escenario.nombre,
@@ -122,38 +143,40 @@ export const useTarifaSimulatorOperations = (
         tarifa: tarifaOriginal,
         peaje: peajeOriginal,
         extras: extrasOriginal,
-        total: totalOriginal
+        total: totalOriginal,
       },
       valoresFinales: {
         tarifa: tarifaFinal,
         peaje: peajeFinal,
         extras: extrasFinal,
-        total: totalFinal
+        total: totalFinal,
       },
       reglasAplicadas: [
         {
           codigo: 'REG001',
           nombre: 'Ajuste por distancia',
-          modificacion: 10
-        }
+          modificacion: diferenciaTotal,
+        },
       ],
       diferencia: {
         tarifa: tarifaFinal - tarifaOriginal,
         peaje: peajeFinal - peajeOriginal,
         extras: extrasFinal - extrasOriginal,
-        total: totalFinal - totalOriginal,
-        porcentaje: ((totalFinal - totalOriginal) / totalOriginal) * 100
-      }
+        total: diferenciaTotal,
+        porcentaje,
+      },
     };
   };
 
-  const ejecutarSimulacion = async (escenariosSeleccionados: IEscenarioSimulacion[]) => {
+  const ejecutarSimulacion = async (escenariosSeleccionados: EditableEscenario[]) => {
     setSimulando(true);
     try {
       // Simular delay para mostrar loading
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const resultados: IResultadoSimulacion[] = escenariosSeleccionados.map(createResultadoFromEscenario);
+      const resultados: IResultadoSimulacion[] = escenariosSeleccionados.map(
+        createResultadoFromEscenario
+      );
 
       setResultados(resultados);
       return resultados;

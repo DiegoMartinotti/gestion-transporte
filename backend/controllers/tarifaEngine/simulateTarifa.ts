@@ -1,21 +1,27 @@
-import { Request, Response } from 'express';
-import tarifaEngine, { IContextoCalculo } from '../../services/tarifaEngine';
+import { Response } from 'express';
+import tarifaEngine, { IContextoCalculo, IResultadoCalculo } from '../../services/tarifaEngine';
 import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
 import { body, validationResult } from 'express-validator';
 import { Types } from 'mongoose';
+import type {
+  SimulacionConfiguracion,
+  SimulacionEscenario,
+  SimulacionResultado,
+  SimulacionAnalisisResultado,
+  SimulacionError,
+  SimulacionCalculo,
+  SimulateTarifaRequest,
+} from './simulateTarifa.types';
 
-/**
- * Validators para simulación de tarifa
- */
 export const simulateTarifaValidators = [
   body('escenarios').isArray({ min: 1 }).withMessage('Debe proporcionar al menos un escenario'),
   body('escenarios.*.nombre').notEmpty().withMessage('Cada escenario debe tener un nombre'),
   body('escenarios.*.clienteId')
     .notEmpty()
     .withMessage('El ID del cliente es requerido')
-    .custom((value) => {
-      if (!Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (typeof value !== 'string' || !Types.ObjectId.isValid(value)) {
         throw new Error('ID de cliente no válido');
       }
       return true;
@@ -23,8 +29,8 @@ export const simulateTarifaValidators = [
   body('escenarios.*.origenId')
     .notEmpty()
     .withMessage('El ID del origen es requerido')
-    .custom((value) => {
-      if (!Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (typeof value !== 'string' || !Types.ObjectId.isValid(value)) {
         throw new Error('ID de origen no válido');
       }
       return true;
@@ -32,8 +38,8 @@ export const simulateTarifaValidators = [
   body('escenarios.*.destinoId')
     .notEmpty()
     .withMessage('El ID del destino es requerido')
-    .custom((value) => {
-      if (!Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (typeof value !== 'string' || !Types.ObjectId.isValid(value)) {
         throw new Error('ID de destino no válido');
       }
       return true;
@@ -58,34 +64,34 @@ export const simulateTarifaValidators = [
  * Útil para análisis comparativo y testing
  */
 // eslint-disable-next-line complexity, max-lines-per-function
-export const simulateTarifa = async (req: Request, res: Response): Promise<void> => {
+export const simulateTarifa = async (req: SimulateTarifaRequest, res: Response): Promise<void> => {
   try {
     // Validar entrada
-    const errors = validationResult(req);
+    const errors = validationResult(req as unknown as Record<string, unknown>);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Datos de entrada inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Datos de entrada inválidos', 400, { detalles: errors.array() });
       return;
     }
 
-    const {
-      escenarios,
-      configuracion = {
-        compararMetodos: false,
-        incluirDesglose: false,
-        aplicarReglas: true,
-        usarCache: false, // No usar cache para simulaciones
-      },
-    } = req.body;
+    const { escenarios, configuracion: configuracionEntrada } = req.body;
+
+    const configuracion: SimulacionConfiguracion = {
+      compararMetodos: false,
+      incluirDesglose: false,
+      aplicarReglas: true,
+      usarCache: false, // No usar cache para simulaciones
+      ...(configuracionEntrada ?? {}),
+    };
 
     logger.info('[TarifaEngine] Iniciando simulación de tarifas', {
       cantidadEscenarios: escenarios.length,
       configuracion,
-      usuario: (req as unknown).user?.email,
+      usuario: req.user?.email,
     });
 
     const startTime = Date.now();
-    const resultados = [];
-    const errores = [];
+    const resultados: SimulacionResultado[] = [];
+    const errores: SimulacionError[] = [];
 
     // Procesar cada escenario
     for (let i = 0; i < escenarios.length; i++) {
@@ -94,35 +100,8 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
       try {
         logger.debug(`[TarifaEngine] Procesando escenario ${i + 1}: ${escenario.nombre}`);
 
-        const resultadosEscenario: unknown = {
-          nombre: escenario.nombre,
-          parametros: {
-            clienteId: escenario.clienteId,
-            origenId: escenario.origenId,
-            destinoId: escenario.destinoId,
-            tipoUnidad: escenario.tipoUnidad,
-            fecha: escenario.fecha || new Date(),
-            palets: escenario.palets,
-            peso: escenario.peso,
-            metodoCalculo: escenario.metodoCalculo,
-          },
-          calculos: {},
-        };
-
-        if (configuracion.compararMetodos && !escenario.metodoCalculo) {
-          // Simular con diferentes métodos de cálculo
-          resultadosEscenario.calculos = await simularConMultiplesMetodos(escenario, configuracion);
-        } else {
-          // Simular con método específico o automático
-          resultadosEscenario.calculos = await simularConMetodoUnico(escenario, configuracion);
-        }
-
-        // Agregar análisis si está configurado
-        if (configuracion.incluirAnalisis) {
-          resultadosEscenario.analisis = await generarAnalisisSimulacion(resultadosEscenario);
-        }
-
-        resultados.push(resultadosEscenario);
+        const resultadoEscenario = await calcularEscenario(escenario, configuracion);
+        resultados.push(resultadoEscenario);
       } catch (error: unknown) {
         const errorInfo = {
           escenario: escenario.nombre,
@@ -152,7 +131,7 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
       configuracion,
       metadatos: {
         timestamp: new Date(),
-        usuario: (req as unknown).user?.email || 'desconocido',
+        usuario: req.user?.email || 'desconocido',
       },
     };
 
@@ -170,15 +149,49 @@ export const simulateTarifa = async (req: Request, res: Response): Promise<void>
   }
 };
 
+async function calcularEscenario(
+  escenario: SimulacionEscenario,
+  configuracion: SimulacionConfiguracion
+): Promise<SimulacionResultado> {
+  const resultadosEscenario: SimulacionResultado = {
+    nombre: escenario.nombre,
+    parametros: {
+      clienteId: escenario.clienteId,
+      origenId: escenario.origenId,
+      destinoId: escenario.destinoId,
+      tipoUnidad: escenario.tipoUnidad,
+      fecha: escenario.fecha ? new Date(escenario.fecha) : new Date(),
+      palets: escenario.palets,
+      peso: escenario.peso,
+      metodoCalculo: escenario.metodoCalculo,
+      volumen: escenario.volumen,
+      cantidadBultos: escenario.cantidadBultos,
+    },
+    calculos: {},
+  };
+
+  if (configuracion.compararMetodos && !escenario.metodoCalculo) {
+    resultadosEscenario.calculos = await simularConMultiplesMetodos(escenario, configuracion);
+  } else {
+    resultadosEscenario.calculos = await simularConMetodoUnico(escenario, configuracion);
+  }
+
+  if (configuracion.incluirAnalisis) {
+    resultadosEscenario.analisis = await generarAnalisisSimulacion(resultadosEscenario);
+  }
+
+  return resultadosEscenario;
+}
+
 /**
  * Simula con múltiples métodos de cálculo
  */
 async function simularConMultiplesMetodos(
-  escenario: unknown,
-  configuracion: unknown
-): Promise<Record<string, unknown>> {
+  escenario: SimulacionEscenario,
+  configuracion: SimulacionConfiguracion
+): Promise<Record<string, SimulacionCalculo>> {
   const metodosComparar = ['PALET', 'KILOMETRO', 'FIJO'];
-  const calculos: Record<string, unknown> = {};
+  const calculos: Record<string, SimulacionCalculo> = {};
 
   for (const metodo of metodosComparar) {
     try {
@@ -187,7 +200,7 @@ async function simularConMultiplesMetodos(
 
       calculos[metodo] = {
         ...resultado,
-        metodoUtilizado: metodo,
+        metodoUtilizado: resultado.metodoUtilizado || metodo,
       };
     } catch (error: unknown) {
       calculos[metodo] = {
@@ -204,9 +217,9 @@ async function simularConMultiplesMetodos(
  * Simula con un método único
  */
 async function simularConMetodoUnico(
-  escenario: unknown,
-  configuracion: unknown
-): Promise<Record<string, unknown>> {
+  escenario: SimulacionEscenario,
+  configuracion: SimulacionConfiguracion
+): Promise<Record<string, SimulacionCalculo>> {
   try {
     const contexto = construirContexto(escenario, configuracion);
     const resultado = await tarifaEngine.calcular(contexto);
@@ -214,7 +227,7 @@ async function simularConMetodoUnico(
     return {
       principal: {
         ...resultado,
-        metodoUtilizado: escenario.metodoCalculo || 'automático',
+        metodoUtilizado: resultado.metodoUtilizado || escenario.metodoCalculo || 'automático',
       },
     };
   } catch (error: unknown) {
@@ -230,15 +243,19 @@ async function simularConMetodoUnico(
 /**
  * Genera análisis de la simulación
  */
-async function generarAnalisisSimulacion(resultadosEscenario: unknown): Promise<unknown> {
+async function generarAnalisisSimulacion(
+  resultadosEscenario: SimulacionResultado
+): Promise<SimulacionAnalisisResultado> {
   const calculos = Object.values(resultadosEscenario.calculos);
-  const calculosExitosos = calculos.filter((c: unknown) => !c.error);
+  const calculosExitosos = calculos.filter(
+    (calculo): calculo is IResultadoCalculo => !('error' in calculo)
+  );
 
   if (calculosExitosos.length === 0) {
     return { error: 'No hay cálculos exitosos para analizar' };
   }
 
-  const totales = calculosExitosos.map((c: unknown) => c.total || 0);
+  const totales = calculosExitosos.map((c) => c.total || 0);
 
   return {
     totalMinimo: Math.min(...totales),
@@ -254,8 +271,8 @@ async function generarAnalisisSimulacion(resultadosEscenario: unknown): Promise<
  * Construye el contexto de cálculo para un escenario
  */
 function construirContexto(
-  escenario: unknown,
-  configuracion: unknown,
+  escenario: SimulacionEscenario,
+  configuracion: SimulacionConfiguracion,
   metodoOverride?: string
 ): IContextoCalculo {
   return {
