@@ -1,7 +1,8 @@
 /* eslint-disable max-lines, max-lines-per-function, max-params */
 import { Request, Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
 import mongoose, { Types } from 'mongoose';
-import Viaje from '../../models/Viaje';
+import Viaje, { IViaje } from '../../models/Viaje';
 import Cliente from '../../models/Cliente';
 import Site from '../../models/Site';
 import ImportacionTemporal from '../../models/ImportacionTemporal';
@@ -56,24 +57,34 @@ interface ApiResponse<T = unknown> {
 /**
  * Interface for import result
  */
+interface ImportErrorDetail {
+  indice: number;
+  dt: string;
+  error: string;
+  data: ViajeImportData;
+}
+
 interface ImportResult {
   successCount: number;
   failCount: number;
-  viajesCreados: unknown[];
-  erroresDetallados: unknown[];
+  viajesCreados: IViaje[];
+  erroresDetallados: ImportErrorDetail[];
 }
 
 /**
  * Valida los datos básicos de la petición
  */
-function validateRequestData(body: unknown): { isValid: boolean; error?: string } {
-  if (!body || Object.keys(body as object).length === 0) {
+function validateRequestData(body: Partial<BulkImportRequest> | null | undefined): {
+  isValid: boolean;
+  error?: string;
+} {
+  if (!body || Object.keys(body).length === 0) {
     return { isValid: false, error: 'Cuerpo de solicitud vacío' };
   }
 
-  const { cliente, viajes } = body as BulkImportRequest;
+  const { cliente, viajes } = body;
 
-  if (!Types.ObjectId.isValid(cliente)) {
+  if (!cliente || !Types.ObjectId.isValid(cliente)) {
     return { isValid: false, error: 'ID de Cliente inválido' };
   }
 
@@ -280,7 +291,7 @@ async function processViaje(
   clienteId: string,
   importacionId: string,
   session: mongoose.ClientSession
-): Promise<{ success: boolean; viaje?: unknown; error?: unknown }> {
+): Promise<{ success: true; viaje: IViaje } | { success: false; error: ImportErrorDetail }> {
   try {
     // Validar datos básicos
     const validation = validateViajeData(viajeData);
@@ -301,8 +312,7 @@ async function processViaje(
     });
 
     // Crear el viaje
-    const nuevoViaje = new Viaje(preparedData);
-    await nuevoViaje.save({ session });
+    const nuevoViaje = await new Viaje(preparedData).save({ session });
 
     return { success: true, viaje: nuevoViaje };
   } catch (error: unknown) {
@@ -318,14 +328,16 @@ async function processViaje(
       await updateErrorCategories(errorMsg, viajeData, index, importacionId, session);
     }
 
+    const errorDetail: ImportErrorDetail = {
+      indice: index + 1,
+      dt: viajeData.dt || 'sin DT',
+      error: errorMsg,
+      data: viajeData,
+    };
+
     return {
       success: false,
-      error: {
-        indice: index + 1,
-        dt: viajeData.dt || 'sin DT',
-        error: errorMsg,
-        data: viajeData,
-      },
+      error: errorDetail,
     };
   }
 }
@@ -341,16 +353,16 @@ async function processViajes(
 ): Promise<ImportResult> {
   let successCount = 0;
   let failCount = 0;
-  const viajesCreados: unknown[] = [];
-  const erroresDetallados: unknown[] = [];
+  const viajesCreados: IViaje[] = [];
+  const erroresDetallados: ImportErrorDetail[] = [];
 
   for (let i = 0; i < viajes.length; i++) {
     const result = await processViaje(viajes[i], i, clienteId, importacionId, session);
 
-    if (result.success && result.viaje) {
+    if (result.success) {
       viajesCreados.push(result.viaje);
       successCount++;
-    } else {
+    } else if (result.error) {
       erroresDetallados.push(result.error);
       failCount++;
     }
@@ -378,14 +390,14 @@ async function finalizeImport(
       failCountInitial: totalFailCountFinal,
       message: `Importación completada: ${result.successCount} viajes creados, ${totalFailCountFinal} errores`,
       failedTrips: [
-        ...erroresMapeo.map((error, _index) => ({
+        ...erroresMapeo.map((error) => ({
           originalIndex: error.fila,
-          dt: String(`Viaje ${error.fila}`),
+          dt: `Viaje ${error.fila}`,
           reason: 'MISSING_SITE',
           message: error.error,
           data: {},
         })),
-        ...result.erroresDetallados.map((error: unknown) => ({
+        ...result.erroresDetallados.map((error) => ({
           originalIndex: error.indice,
           dt: String(error.dt),
           reason: 'PROCESSING_ERROR',
@@ -405,7 +417,7 @@ async function finalizeImport(
  *              Etapa 1: Intenta importar todos los viajes, registra éxitos y fallos detallados.
  */
 export const iniciarBulkImportViajes = async (
-  req: Request<object, ApiResponse, BulkImportRequest>,
+  req: Request<ParamsDictionary, ApiResponse, BulkImportRequest>,
   res: Response<ApiResponse>
 ): Promise<void> => {
   const session = await mongoose.startSession();
@@ -475,7 +487,7 @@ export const iniciarBulkImportViajes = async (
         totalViajes: viajes.length + erroresMapeo.length,
         successCount: result.successCount,
         failCount: totalFailCountFinal,
-        viajesCreados: result.viajesCreados.map((v: unknown) => v._id),
+        viajesCreados: result.viajesCreados.map((viaje) => String(viaje._id)),
         erroresDetallados: [...erroresMapeo, ...result.erroresDetallados],
         sitesNoEncontrados,
       },
@@ -501,11 +513,9 @@ export const iniciarBulkImportViajes = async (
     await session.abortTransaction();
     session.endSession();
 
-    ApiResponseClass.error(
-      res,
-      'Error interno durante la importación',
-      500,
-      error instanceof Error ? error.message : String(error)
-    );
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    ApiResponseClass.error(res, 'Error interno durante la importación', 500, {
+      detail: errorMessage,
+    });
   }
 };

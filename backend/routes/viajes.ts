@@ -15,13 +15,16 @@ const upload = multer({
   },
 });
 
+const asRequestHandler = (handler: unknown): express.RequestHandler =>
+  handler as express.RequestHandler;
+
 // --- Rutas CRUD estándar ---
-router.get('/', viajeController.getAllViajes);
-router.get('/template', viajeController.getViajeTemplate);
-router.get('/:id', viajeController.getViajeById);
-router.post('/', viajeController.createViaje);
-router.put('/:id', viajeController.updateViaje);
-router.delete('/:id', viajeController.deleteViaje);
+router.get('/', asRequestHandler(viajeController.getAllViajes));
+router.get('/template', asRequestHandler(viajeController.getViajeTemplate));
+router.get('/:id', asRequestHandler(viajeController.getViajeById));
+router.post('/', asRequestHandler(viajeController.createViaje));
+router.put('/:id', asRequestHandler(viajeController.updateViaje));
+router.delete('/:id', asRequestHandler(viajeController.deleteViaje));
 
 // --- Rutas para Importación Masiva Mejorada ---
 
@@ -29,7 +32,7 @@ router.delete('/:id', viajeController.deleteViaje);
 router.post(
   '/bulk/iniciar',
   // --- Insertar la lógica de validación AQUÍ, en línea ---
-  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  (req, res, next) => {
     logger.debug('Middleware inline para /bulk/iniciar:');
     logger.debug('- Cliente:', req.body?.cliente);
     logger.debug('- Cantidad viajes:', req.body?.viajes?.length || 0);
@@ -53,17 +56,20 @@ router.post(
     next(); // Si la validación pasa, continuar al controlador
   },
   // --- Fin de la lógica inline ---
-  viajeController.iniciarBulkImportViajes // Controlador principal
+  asRequestHandler(viajeController.iniciarBulkImportViajes) // Controlador principal
 );
 
 // Descargar plantillas pre-rellenadas para corrección
-router.get('/bulk/template/:importId', viajeController.descargarPlantillaCorreccion);
+router.get(
+  '/bulk/template/:importId',
+  asRequestHandler(viajeController.descargarPlantillaCorreccion)
+);
 
 // Procesar plantilla de corrección completada
 router.post(
   '/bulk/process-correction/:importId',
   upload.single('correctionFile'),
-  viajeController.procesarPlantillaCorreccion
+  asRequestHandler(viajeController.procesarPlantillaCorreccion)
 );
 
 export default router;

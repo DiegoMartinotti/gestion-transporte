@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import { Types } from 'mongoose';
 import Viaje, { IViaje } from '../../models/Viaje';
 import logger from '../../utils/logger';
@@ -6,7 +8,7 @@ import logger from '../../utils/logger';
 /**
  * Interface for pagination query
  */
-interface PaginationQuery {
+interface PaginationQuery extends ParsedQs {
   page?: string;
   limit?: string;
   cliente?: string;
@@ -27,16 +29,31 @@ interface ApiResponse<T = unknown> {
   };
 }
 
+interface ViajeFilterResult {
+  filter: Record<string, unknown>;
+  logMessage: string;
+}
+
+const buildViajeFilter = (clienteId?: string): ViajeFilterResult => {
+  if (clienteId && Types.ObjectId.isValid(clienteId)) {
+    return {
+      filter: { cliente: clienteId },
+      logMessage: `Filtrando viajes por cliente: ${clienteId}`,
+    };
+  }
+
+  return {
+    filter: {},
+    logMessage:
+      'No se proporcionó un cliente válido para filtrar o no se proporcionó cliente. Devolviendo todos los viajes (paginados).',
+  };
+};
+
 /**
  * Obtiene la lista de viajes con paginación y filtros
  */
 export const getAllViajes = async (
-  req: Request<
-    Record<string, unknown>,
-    ApiResponse<IViaje[]>,
-    Record<string, unknown>,
-    PaginationQuery
-  >,
+  req: Request<ParamsDictionary, ApiResponse<IViaje[]>, Record<string, unknown>, PaginationQuery>,
   res: Response<ApiResponse<IViaje[]>>
 ): Promise<void> => {
   try {
@@ -48,15 +65,8 @@ export const getAllViajes = async (
     const skip = (page - 1) * limit;
 
     // Construir el objeto de filtro
-    const filter: Record<string, unknown> = {};
-    if (req.query.cliente && Types.ObjectId.isValid(req.query.cliente)) {
-      filter.cliente = req.query.cliente;
-      logger.debug(`Filtrando viajes por cliente: ${req.query.cliente}`);
-    } else {
-      logger.debug(
-        'No se proporcionó un cliente válido para filtrar o no se proporcionó cliente. Devolviendo todos los viajes (paginados).'
-      );
-    }
+    const { filter, logMessage } = buildViajeFilter(req.query.cliente);
+    logger.debug(logMessage);
 
     // Contar el total de viajes para la metadata (considerando el filtro)
     const totalViajes = await Viaje.countDocuments(filter);
