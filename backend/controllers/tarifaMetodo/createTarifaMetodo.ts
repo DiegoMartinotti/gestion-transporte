@@ -3,6 +3,41 @@ import TarifaMetodo from '../../models/TarifaMetodo';
 import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
 import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
+import type { ParsedQs } from 'qs';
+import type { ParamsDictionary } from 'express-serve-static-core';
+
+interface CreateTarifaMetodoBody {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  formulaBase: string;
+  variables: unknown;
+  prioridad?: number;
+  activo?: boolean;
+  requiereDistancia?: boolean;
+  requierePalets?: boolean;
+  permiteFormulasPersonalizadas?: boolean;
+  configuracion?: Record<string, unknown>;
+}
+
+type CreateTarifaMetodoRequest = Request<
+  Record<string, string>,
+  Record<string, unknown>,
+  CreateTarifaMetodoBody,
+  ParsedQs,
+  Record<string, unknown>
+>;
+type CreateTarifaMetodoRequestWithUser = CreateTarifaMetodoRequest & {
+  user?: { email?: string };
+};
+type ValidationRequest = Request<
+  ParamsDictionary,
+  Record<string, unknown>,
+  unknown,
+  ParsedQs,
+  Record<string, unknown>
+>;
 
 /**
  * Validators para crear método de tarifa
@@ -53,12 +88,16 @@ export const createTarifaMetodoValidators = [
  * Crea un nuevo método de cálculo de tarifa
  */
 // eslint-disable-next-line complexity, max-lines-per-function
-export const createTarifaMetodo = async (req: Request, res: Response): Promise<void> => {
+export const createTarifaMetodo = async (
+  req: CreateTarifaMetodoRequest,
+  res: Response
+): Promise<void> => {
   try {
     // Validar entrada
-    const errors = validationResult(req);
+    // El validador no expone tipos compatibles con Express Request tipado, se castea.
+    const errors = validationResult(req as unknown as ValidationRequest);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Datos de entrada inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Datos de entrada inválidos', 400, { errors: errors.array() });
       return;
     }
 
@@ -113,23 +152,28 @@ export const createTarifaMetodo = async (req: Request, res: Response): Promise<v
 
     logger.info(`[TarifaMetodo] Método creado: ${nuevoMetodo.codigo}`, {
       metodoId: nuevoMetodo._id,
-      usuario: (req as unknown).user?.email,
+      usuario: (req as CreateTarifaMetodoRequestWithUser).user?.email,
     });
 
     ApiResponse.success(res, nuevoMetodo, 'Método de tarifa creado exitosamente', 201);
   } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al crear método:', error);
 
-    if ((error as unknown).name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: unknown) => ({
+    if (error instanceof mongoose.Error.ValidationError) {
+      const validationErrors = Object.values(error.errors).map((err) => ({
         field: err.path,
         message: err.message,
       }));
-      ApiResponse.error(res, 'Error de validación', 400, validationErrors);
+      ApiResponse.error(res, 'Error de validación', 400, { errors: validationErrors });
       return;
     }
 
-    if ((error as unknown).code === 11000) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: number }).code === 11000
+    ) {
       ApiResponse.error(res, 'El código del método ya existe', 409);
       return;
     }

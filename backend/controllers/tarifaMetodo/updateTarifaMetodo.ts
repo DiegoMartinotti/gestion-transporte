@@ -1,16 +1,148 @@
 import { Request, Response } from 'express';
-import TarifaMetodo from '../../models/TarifaMetodo';
+import TarifaMetodo, { type ITarifaMetodo } from '../../models/TarifaMetodo';
 import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
 import { param, body, validationResult } from 'express-validator';
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
+import type { ParsedQs } from 'qs';
+import type { ParamsDictionary } from 'express-serve-static-core';
+
+interface UpdateTarifaMetodoParams {
+  id: string;
+}
+
+interface UpdateTarifaMetodoBody {
+  codigo?: string;
+  nombre?: string;
+  descripcion?: string;
+  formulaBase?: string;
+  variables?: unknown;
+  prioridad?: number;
+  activo?: boolean;
+  requiereDistancia?: boolean;
+  requierePalets?: boolean;
+  permiteFormulasPersonalizadas?: boolean;
+  configuracion?: Record<string, unknown>;
+}
+
+type UpdateTarifaMetodoRequest = Request<
+  UpdateTarifaMetodoParams,
+  unknown,
+  UpdateTarifaMetodoBody,
+  ParsedQs,
+  Record<string, unknown>
+>;
+type UpdateTarifaMetodoRequestWithUser = UpdateTarifaMetodoRequest & {
+  user?: { email?: string };
+};
+type ValidationRequest = Request<
+  ParamsDictionary,
+  Record<string, unknown>,
+  unknown,
+  ParsedQs,
+  Record<string, unknown>
+>;
+
+interface TarifaMetodoUpdatePayload {
+  codigo?: string;
+  nombre?: string;
+  descripcion?: string;
+  formulaBase?: string;
+  variables?: unknown;
+  prioridad?: number;
+  activo?: boolean;
+  requiereDistancia?: boolean;
+  requierePalets?: boolean;
+  permiteFormulasPersonalizadas?: boolean;
+  configuracion?: Record<string, unknown>;
+}
+
+const ensureCodigoDisponible = async (
+  id: string,
+  codigo: UpdateTarifaMetodoBody['codigo'],
+  codigoActual: string
+): Promise<string | null> => {
+  if (!codigo || codigo.toUpperCase() === codigoActual) {
+    return null;
+  }
+
+  const metodoExistente = await TarifaMetodo.findOne({
+    codigo: codigo.toUpperCase(),
+    _id: { $ne: id },
+  });
+
+  if (metodoExistente) {
+    return `Ya existe otro método con el código ${codigo}`;
+  }
+
+  return null;
+};
+
+const buildTarifaMetodoUpdate = (body: UpdateTarifaMetodoBody): TarifaMetodoUpdatePayload => {
+  const actualizacion: TarifaMetodoUpdatePayload = {};
+  const assignField = <K extends keyof TarifaMetodoUpdatePayload>(
+    field: K,
+    value: TarifaMetodoUpdatePayload[K] | undefined
+  ): void => {
+    if (value !== undefined) {
+      actualizacion[field] = value;
+    }
+  };
+
+  assignField('codigo', body.codigo !== undefined ? body.codigo.toUpperCase() : undefined);
+  assignField('nombre', body.nombre);
+  assignField('descripcion', body.descripcion);
+  assignField('formulaBase', body.formulaBase);
+  assignField('variables', body.variables);
+  assignField('prioridad', body.prioridad);
+  assignField('activo', body.activo);
+  assignField('requiereDistancia', body.requiereDistancia);
+  assignField('requierePalets', body.requierePalets);
+  assignField('permiteFormulasPersonalizadas', body.permiteFormulasPersonalizadas);
+  assignField('configuracion', body.configuracion);
+
+  return actualizacion;
+};
+
+const validateFormulaActualizada = (
+  metodoActual: ITarifaMetodo,
+  actualizacion: TarifaMetodoUpdatePayload
+): string | null => {
+  if (!actualizacion.formulaBase) {
+    return null;
+  }
+
+  const metodoTemporal = new TarifaMetodo({
+    ...metodoActual.toObject(),
+    ...actualizacion,
+  });
+
+  const formulaEsValida = metodoTemporal.validarFormula(actualizacion.formulaBase);
+  if (!formulaEsValida) {
+    return 'La fórmula actualizada no es válida';
+  }
+
+  return null;
+};
+
+const construirRespuesta = (metodoActualizado: ITarifaMetodo) => {
+  const metodoComoObjeto = metodoActualizado.toObject();
+  return {
+    ...metodoComoObjeto,
+    informacionAdicional: {
+      variablesDisponibles: metodoActualizado.obtenerVariablesDisponibles(),
+      formulaValida: metodoActualizado.validarFormula(metodoActualizado.formulaBase),
+    },
+  };
+};
 
 /**
  * Validators para actualizar método de tarifa
  */
 export const updateTarifaMetodoValidators = [
   param('id').custom((value) => {
-    if (!Types.ObjectId.isValid(value)) {
+    const idValue = String(value);
+    if (!Types.ObjectId.isValid(idValue)) {
       throw new Error('ID del método no válido');
     }
     return true;
@@ -73,12 +205,16 @@ export const updateTarifaMetodoValidators = [
  * Actualiza un método de cálculo de tarifa
  */
 // eslint-disable-next-line complexity, max-lines-per-function, sonarjs/cognitive-complexity
-export const updateTarifaMetodo = async (req: Request, res: Response): Promise<void> => {
+export const updateTarifaMetodo = async (
+  req: UpdateTarifaMetodoRequest,
+  res: Response
+): Promise<void> => {
   try {
     // Validar entrada
-    const errors = validationResult(req);
+    // El validador no expone tipos compatibles con Express Request tipado, se castea.
+    const errors = validationResult(req as unknown as ValidationRequest);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Datos de entrada inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Datos de entrada inválidos', 400, { errors: errors.array() });
       return;
     }
 
@@ -91,63 +227,18 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const {
-      codigo,
-      nombre,
-      descripcion,
-      formulaBase,
-      variables,
-      prioridad,
-      activo,
-      requiereDistancia,
-      requierePalets,
-      permiteFormulasPersonalizadas,
-      configuracion,
-    } = req.body;
-
-    // Si se está cambiando el código, verificar que no exista otro con el mismo
-    if (codigo && codigo.toUpperCase() !== metodoActual.codigo) {
-      const metodoExistente = await TarifaMetodo.findOne({
-        codigo: codigo.toUpperCase(),
-        _id: { $ne: id },
-      });
-
-      if (metodoExistente) {
-        ApiResponse.error(res, `Ya existe otro método con el código ${codigo}`, 409);
-        return;
-      }
+    const codigoError = await ensureCodigoDisponible(id, req.body.codigo, metodoActual.codigo);
+    if (codigoError) {
+      ApiResponse.error(res, codigoError, 409);
+      return;
     }
 
-    // Construir objeto de actualización
-    const actualizacion: unknown = {};
+    const actualizacion = buildTarifaMetodoUpdate(req.body);
 
-    if (codigo !== undefined) actualizacion.codigo = codigo.toUpperCase();
-    if (nombre !== undefined) actualizacion.nombre = nombre;
-    if (descripcion !== undefined) actualizacion.descripcion = descripcion;
-    if (formulaBase !== undefined) actualizacion.formulaBase = formulaBase;
-    if (variables !== undefined) actualizacion.variables = variables;
-    if (prioridad !== undefined) actualizacion.prioridad = prioridad;
-    if (activo !== undefined) actualizacion.activo = activo;
-    if (requiereDistancia !== undefined) actualizacion.requiereDistancia = requiereDistancia;
-    if (requierePalets !== undefined) actualizacion.requierePalets = requierePalets;
-    if (permiteFormulasPersonalizadas !== undefined)
-      actualizacion.permiteFormulasPersonalizadas = permiteFormulasPersonalizadas;
-    if (configuracion !== undefined) actualizacion.configuracion = configuracion;
-
-    // Si se actualiza la fórmula, validarla
-    const formulaParaValidar = formulaBase || metodoActual.formulaBase;
-    if (formulaBase) {
-      // Crear un método temporal para validación
-      const metodoTemporal = new TarifaMetodo({
-        ...metodoActual.toObject(),
-        ...actualizacion,
-      });
-
-      const formulaEsValida = metodoTemporal.validarFormula(formulaParaValidar);
-      if (!formulaEsValida) {
-        ApiResponse.error(res, 'La fórmula actualizada no es válida', 400);
-        return;
-      }
+    const formulaError = validateFormulaActualizada(metodoActual, actualizacion);
+    if (formulaError) {
+      ApiResponse.error(res, formulaError, 400);
+      return;
     }
 
     // Actualizar el método
@@ -165,32 +256,31 @@ export const updateTarifaMetodo = async (req: Request, res: Response): Promise<v
     logger.info(`[TarifaMetodo] Método actualizado: ${metodoActualizado.codigo}`, {
       metodoId: metodoActualizado._id,
       cambios: Object.keys(actualizacion),
-      usuario: (req as unknown).user?.email,
+      usuario: (req as UpdateTarifaMetodoRequestWithUser).user?.email,
     });
 
     // Información adicional para la respuesta
-    const respuesta = {
-      ...metodoActualizado.toObject(),
-      informacionAdicional: {
-        variablesDisponibles: metodoActualizado.obtenerVariablesDisponibles(),
-        formulaValida: metodoActualizado.validarFormula(metodoActualizado.formulaBase),
-      },
-    };
+    const respuesta = construirRespuesta(metodoActualizado);
 
     ApiResponse.success(res, respuesta, 'Método de tarifa actualizado exitosamente');
   } catch (error: unknown) {
     logger.error('[TarifaMetodo] Error al actualizar método:', error);
 
-    if ((error as unknown).name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: unknown) => ({
+    if (error instanceof mongoose.Error.ValidationError) {
+      const validationErrors = Object.values(error.errors).map((err) => ({
         field: err.path,
         message: err.message,
       }));
-      ApiResponse.error(res, 'Error de validación', 400, validationErrors);
+      ApiResponse.error(res, 'Error de validación', 400, { errors: validationErrors });
       return;
     }
 
-    if ((error as unknown).code === 11000) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: number }).code === 11000
+    ) {
       ApiResponse.error(res, 'El código del método ya existe', 409);
       return;
     }
