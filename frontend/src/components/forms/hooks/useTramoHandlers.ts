@@ -1,7 +1,11 @@
 import { useState, useCallback } from 'react';
 import { notifications } from '@mantine/notifications';
 import { Site, TarifaHistorica } from '../../../types';
-import { calculateDistance, validateTarifaConflicts } from '../helpers/tramoHelpers';
+import {
+  calculateDistance,
+  validateTarifaConflicts,
+  TarifaConflict,
+} from '../helpers/tramoHelpers';
 
 interface TramoFormValues {
   cliente: string;
@@ -20,25 +24,33 @@ export const useTramoHandlers = (
   onSubmit: (values: TramoFormValues) => void
 ) => {
   const [calculatingDistance, setCalculatingDistance] = useState(false);
-  const [conflicts, setConflicts] = useState<unknown[]>([]);
+  const [conflicts, setConflicts] = useState<TarifaConflict[]>([]);
   const [validatingConflicts, setValidatingConflicts] = useState(false);
 
   const handleValidateTarifaConflicts = useCallback(async () => {
-    await validateTarifaConflicts({
-      formValues: form.values,
-      setConflicts,
-      setValidatingConflicts,
-    });
-  }, [form.values]);
+    try {
+      await validateTarifaConflicts({
+        formValues: form.values,
+        setConflicts,
+        setValidatingConflicts,
+      });
+    } catch (error) {
+      console.error('No se pudieron validar las tarifas del tramo:', error);
+    }
+  }, [form.values, setConflicts, setValidatingConflicts]);
 
   const handleCalculateDistance = async () => {
-    await calculateDistance({
-      origen: form.values.origen,
-      destino: form.values.destino,
-      sitesFiltered,
-      setCalculatingDistance,
-      onSuccess: (distance: number) => form.setFieldValue('distancia', distance),
-    });
+    try {
+      await calculateDistance({
+        origen: form.values.origen,
+        destino: form.values.destino,
+        sitesFiltered,
+        setCalculatingDistance,
+        onSuccess: (distance: number) => form.setFieldValue('distancia', distance),
+      });
+    } catch (error) {
+      console.error('No se pudo calcular la distancia del tramo:', error);
+    }
   };
 
   const handleSubmit = (values: TramoFormValues) => {

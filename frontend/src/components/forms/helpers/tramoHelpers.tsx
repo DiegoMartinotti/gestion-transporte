@@ -1,7 +1,15 @@
 import { notifications } from '@mantine/notifications';
 import { tramoService } from '../../../services/tramoService';
 import { calculateHaversineDistance } from '../validation/tramoValidation';
-import type { Site } from '../../../types';
+import type { Site, TarifaHistorica } from '../../../types';
+
+export interface TarifaConflict {
+  tipo: string;
+  metodoCalculo: string;
+  fechaInicio: string;
+  fechaFin: string;
+  message: string;
+}
 
 interface CalculateDistanceParams {
   origen: string;
@@ -60,11 +68,13 @@ export async function calculateDistance({
       color: 'green',
     });
   } catch (error) {
+    console.error('Error calculating distance:', error);
     notifications.show({
       title: 'Error',
       message: 'Error al calcular distancia',
       color: 'red',
     });
+    throw error;
   } finally {
     setCalculatingDistance(false);
   }
@@ -75,9 +85,9 @@ interface TarifaConflictsParams {
     cliente: string;
     origen: string;
     destino: string;
-    tarifasHistoricas: unknown[];
+    tarifasHistoricas: TarifaHistorica[];
   };
-  setConflicts: (conflicts: unknown[]) => void;
+  setConflicts: (conflicts: TarifaConflict[]) => void;
   setValidatingConflicts: (value: boolean) => void;
 }
 
@@ -94,12 +104,18 @@ export async function validateTarifaConflicts({
       origen: formValues.origen,
       destino: formValues.destino,
       cliente: formValues.cliente,
-      tarifasHistoricas: formValues.tarifasHistoricas as TarifaHistorica[],
+      tarifasHistoricas: formValues.tarifasHistoricas,
     });
 
     setConflicts(result.conflicts || []);
   } catch (error) {
     console.error('Error validating conflicts:', error);
+    notifications.show({
+      title: 'Error',
+      message: 'No pudimos validar las tarifas. Intentalo nuevamente.',
+      color: 'red',
+    });
+    throw error;
   } finally {
     setValidatingConflicts(false);
   }
