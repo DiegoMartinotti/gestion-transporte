@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import Tramo from '../../models/Tramo';
 import logger from '../../utils/logger';
 
@@ -11,15 +11,18 @@ interface AuthenticatedUser {
   roles?: string[];
 }
 
+interface TestImportacionBody {
+  origen?: string;
+  destino?: string;
+  cliente?: string;
+}
+
 /**
  * Interface for authenticated request
  */
-interface AuthenticatedRequest {
+type AuthenticatedRequest = Request<Record<string, string>, ApiResponse, TestImportacionBody> & {
   user?: AuthenticatedUser;
-  body: unknown;
-  params: unknown;
-  query: unknown;
-}
+};
 
 /**
  * Interface for API responses

@@ -4,6 +4,7 @@
  */
 
 import { Request, Response } from 'express';
+import type { TramoData } from '../../services/tramo/tramoProcessingHelpers';
 import * as tramoService from '../../services/tramo/tramoService';
 import logger from '../../utils/logger';
 
@@ -22,7 +23,7 @@ interface ApiResponse<T = unknown> {
  */
 interface BulkImportRequest {
   cliente: string;
-  tramos: unknown[];
+  tramos: TramoData[];
   reutilizarDistancias?: boolean;
   actualizarExistentes?: boolean;
 }

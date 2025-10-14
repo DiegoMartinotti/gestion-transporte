@@ -23,6 +23,15 @@ export interface TramoResult {
   metadata: TramoMetadata;
 }
 
+type TramoConTarifas = {
+  origen: { Site?: string };
+  destino: { Site?: string };
+  tipo?: string;
+  tarifasHistoricas: unknown[];
+  vigenciaDesde?: Date;
+  vigenciaHasta?: Date;
+};
+
 /**
  * Type guard para verificar si un objeto tiene las propiedades básicas de tramo
  */
@@ -51,6 +60,18 @@ function isValidTarifa(tarifa: unknown): tarifa is {
 } {
   return (
     typeof tarifa === 'object' && tarifa !== null && 'tipo' in tarifa && 'metodoCalculo' in tarifa
+  );
+}
+
+function hasTarifasHistoricas(tramo: unknown): tramo is TramoConTarifas {
+  if (!isValidTramo(tramo)) {
+    return false;
+  }
+  return (
+    Boolean(tramo.origen) &&
+    Boolean(tramo.destino) &&
+    Array.isArray(tramo.tarifasHistoricas) &&
+    tramo.tarifasHistoricas.length > 0
   );
 }
 
@@ -218,7 +239,7 @@ export function getTramosHistoricos(tramos: unknown[], desde: string, hasta: str
     }
 
     // Caso 1: Tramo con tarifas históricas
-    if (tramo.tarifasHistoricas?.length) {
+    if (hasTarifasHistoricas(tramo)) {
       return processHistoricalTarifas(tramo, mapaTramos, desdeDate, hastaDate);
     }
 
@@ -249,7 +270,7 @@ export function getTramosHistoricos(tramos: unknown[], desde: string, hasta: str
  * Procesa tarifas históricas para rango de fechas
  */
 function processHistoricalTarifas(
-  tramo: { origen: unknown; destino: unknown; tarifasHistoricas: unknown[] },
+  tramo: TramoConTarifas,
   mapaTramos: Map<string, unknown>,
   desdeDate: Date,
   hastaDate: Date
