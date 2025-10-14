@@ -209,6 +209,7 @@ export const useViajeHandlers = (params: ViajeHandlersParams) => {
         `Monto total: $${result.montoTotal.toLocaleString()}`
       );
     } catch (error) {
+      console.error('Error al calcular la tarifa del viaje:', error);
       showNotification('error', 'Error en cálculo', 'No se pudo calcular la tarifa');
     } finally {
       setCalculating(false);
@@ -235,6 +236,7 @@ export const useViajeHandlers = (params: ViajeHandlersParams) => {
       await submitViaje(viaje, values, updateViaje, createViaje);
       onSave(values);
     } catch (error) {
+      console.error('Error al guardar el viaje desde useViajeHandlers:', error);
       showNotification('error', 'Error', 'No se pudo guardar el viaje');
     }
   };

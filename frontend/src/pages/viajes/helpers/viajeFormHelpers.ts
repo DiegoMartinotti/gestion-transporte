@@ -282,6 +282,7 @@ export const createCalculateHandler = (config: CalculateHandlerConfig) => async 
     updateFormWithCalculation(result, setFieldValue);
     showCalculationSuccess(result.montoTotal);
   } catch (error) {
+    console.error('Error al simular el cálculo de tarifa del viaje:', error);
     showCalculationError();
   } finally {
     setCalculating(false);
@@ -301,6 +302,7 @@ export const createSubmitHandler =
       showSaveSuccess(isUpdate);
       onSave(values);
     } catch (error) {
+      console.error('Error al guardar el viaje desde el formulario:', error);
       showSaveError();
     }
   };

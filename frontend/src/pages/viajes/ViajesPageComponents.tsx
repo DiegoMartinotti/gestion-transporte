@@ -9,7 +9,9 @@ import { PersonalSelector } from '../../components/selectors/PersonalSelector';
 import { calculateViajesStats } from './viajesHelpers';
 
 // Componente separado para renderizar las estadísticas
-export function ViajesStatsGrid({ stats }: { stats: ReturnType<typeof calculateViajesStats> }) {
+export function ViajesStatsGrid({
+  stats,
+}: Readonly<{ stats: ReturnType<typeof calculateViajesStats> }>) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -84,7 +86,7 @@ function PrimaryFilters({
   estadoOptions,
   hasActiveFilters,
   handleClearFilters,
-}: {
+}: Readonly<{
   search: string;
   setSearch: (value: string) => void;
   clienteFilter: string | null;
@@ -94,7 +96,7 @@ function PrimaryFilters({
   estadoOptions: { value: string; label: string }[];
   hasActiveFilters: boolean;
   handleClearFilters: () => void;
-}) {
+}>) {
   return (
     <Grid>
       <Grid.Col span={4}>
@@ -146,14 +148,14 @@ function SecondaryFilters({
   setVehiculoFilter,
   choferFilter,
   setChoferFilter,
-}: {
+}: Readonly<{
   dateRange: [Date | null, Date | null];
   setDateRange: (value: [Date | null, Date | null]) => void;
   vehiculoFilter: string | null;
   setVehiculoFilter: (value: string | null) => void;
   choferFilter: string | null;
   setChoferFilter: (value: string | null) => void;
-}) {
+}>) {
   return (
     <Grid>
       <Grid.Col span={4}>
@@ -203,7 +205,7 @@ export function ViajesFilters({
   setChoferFilter,
   hasActiveFilters,
   handleClearFilters,
-}: {
+}: Readonly<{
   search: string;
   setSearch: (value: string) => void;
   clienteFilter: string | null;
@@ -219,7 +221,7 @@ export function ViajesFilters({
   setChoferFilter: (value: string | null) => void;
   hasActiveFilters: boolean;
   handleClearFilters: () => void;
-}) {
+}>) {
   return (
     <>
       <PrimaryFilters
