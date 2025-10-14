@@ -22,7 +22,8 @@ export function ConfigurationSummaryCard({
   readonly,
   onEdit,
   getUtilizationColor,
-}: ConfigurationSummaryCardProps) {
+}: Readonly<ConfigurationSummaryCardProps>) {
+  const hasCargaTotal = Boolean(viajeData?.cargaTotal);
   return (
     <Card withBorder>
       <Group justify="space-between" mb="md">
@@ -89,7 +90,7 @@ export function ConfigurationSummaryCard({
       </Grid>
 
       {/* Barra de utilización */}
-      {viajeData?.cargaTotal && (
+      {hasCargaTotal && (
         <Box mt="md">
           <Group justify="space-between" mb="xs">
             <Text size="sm" fw={500}>

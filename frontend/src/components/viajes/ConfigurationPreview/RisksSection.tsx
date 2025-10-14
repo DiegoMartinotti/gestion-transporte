@@ -6,9 +6,11 @@ import {
   IconInfoCircle,
 } from '@tabler/icons-react';
 
+type RiskLevel = 'warning' | 'error' | 'info';
+
 interface RisksSectionProps {
   riesgos: Array<{
-    tipo: 'warning' | 'error' | 'info';
+    tipo: RiskLevel;
     mensaje: string;
     vehiculoId?: string;
   }>;
@@ -16,8 +18,8 @@ interface RisksSectionProps {
   onToggle: () => void;
 }
 
-export function RisksSection({ riesgos, expanded, onToggle }: RisksSectionProps) {
-  const getRiskColor = (tipo: 'warning' | 'error' | 'info') => {
+export function RisksSection({ riesgos, expanded, onToggle }: Readonly<RisksSectionProps>) {
+  const getRiskColor = (tipo: RiskLevel) => {
     switch (tipo) {
       case 'error':
         return 'red';
@@ -30,7 +32,7 @@ export function RisksSection({ riesgos, expanded, onToggle }: RisksSectionProps)
     }
   };
 
-  const getRiskIcon = (tipo: 'warning' | 'error' | 'info') => {
+  const getRiskIcon = (tipo: RiskLevel) => {
     switch (tipo) {
       case 'error':
         return IconAlertTriangle;

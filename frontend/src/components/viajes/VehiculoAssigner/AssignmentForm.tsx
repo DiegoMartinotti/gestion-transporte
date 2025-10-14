@@ -24,7 +24,7 @@ export function AssignmentForm({
   readonly,
   loading,
   onUpdate,
-}: AssignmentFormProps) {
+}: Readonly<AssignmentFormProps>) {
   return (
     <>
       <Group grow>
