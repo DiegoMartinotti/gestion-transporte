@@ -20,9 +20,9 @@ import type { UseFormReturnType } from '@mantine/form';
 import type { CreateSiteData } from '../../../services/siteService';
 
 interface InformacionBasicaSectionProps {
-  form: UseFormReturnType<CreateSiteData>;
-  clientes: Cliente[];
-  loadingClientes: boolean;
+  readonly form: UseFormReturnType<CreateSiteData>;
+  readonly clientes: Cliente[];
+  readonly loadingClientes: boolean;
 }
 
 export function InformacionBasicaSection({
@@ -84,10 +84,10 @@ export function InformacionBasicaSection({
 }
 
 interface UbicacionSectionProps {
-  form: UseFormReturnType<CreateSiteData>;
-  geocoding: boolean;
-  onGeocode: () => void;
-  validCoordinates: boolean;
+  readonly form: UseFormReturnType<CreateSiteData>;
+  readonly geocoding: boolean;
+  readonly onGeocode: () => void;
+  readonly validCoordinates: boolean;
 }
 
 export function UbicacionSection({
@@ -171,8 +171,8 @@ export function UbicacionSection({
 }
 
 interface CoordenadasSectionProps {
-  form: UseFormReturnType<CreateSiteData>;
-  validCoordinates: boolean;
+  readonly form: UseFormReturnType<CreateSiteData>;
+  readonly validCoordinates: boolean;
 }
 
 function CoordenadasSection({ form, validCoordinates }: CoordenadasSectionProps) {

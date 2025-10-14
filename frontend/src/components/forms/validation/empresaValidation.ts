@@ -1,3 +1,7 @@
+const CUIT_FORMAT_PATTERN = /^\d{2}-\d{8}-\d$/;
+const CUIT_COMPACT_PATTERN = /^\d{11}$/;
+const HTTP_PROTOCOL_PATTERN = /^https?:\/\//;
+
 export const validateNombre = (value: string): string | null => {
   if (!value.trim()) return 'El nombre es obligatorio';
   if (value.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres';
@@ -11,7 +15,13 @@ export const validateTipo = (value: string): string | null => {
 };
 
 export const validateMail = (value: string): string | null => {
-  if (value && !/^\S+@\S+\.\S+$/.test(value)) {
+  if (!value) {
+    return null;
+  }
+  const trimmed = value.trim();
+  const atIndex = trimmed.indexOf('@');
+  const lastDotIndex = trimmed.lastIndexOf('.');
+  if (atIndex <= 0 || lastDotIndex <= atIndex + 1 || lastDotIndex === trimmed.length - 1) {
     return 'Formato de email inválido';
   }
   return null;
@@ -39,14 +49,14 @@ export const validateContactoPrincipal = (value: string): string | null => {
 };
 
 export const validateCuit = (value: string): string | null => {
-  if (value && !/^\d{2}-\d{8}-\d{1}$/.test(value) && !/^\d{11}$/.test(value)) {
+  if (value && !CUIT_FORMAT_PATTERN.test(value) && !CUIT_COMPACT_PATTERN.test(value)) {
     return 'CUIT debe tener formato XX-XXXXXXXX-X o 11 dígitos';
   }
   return null;
 };
 
 export const validateSitioWeb = (value: string): string | null => {
-  if (value && !/^https?:\/\//.test(value)) {
+  if (value && !HTTP_PROTOCOL_PATTERN.test(value)) {
     return 'El sitio web debe comenzar con http:// o https://';
   }
   return null;

@@ -245,9 +245,7 @@ export const createFormValidationRules = () => ({
   apellido: (value: string) => (!value ? 'El apellido es obligatorio' : null),
   dni: (value: string) => (!value ? 'El DNI es obligatorio' : null),
   cuil: (value: string) =>
-    value && !/^[0-9]{2}-[0-9]{8}-[0-9]$/.test(value)
-      ? 'CUIL debe tener formato XX-XXXXXXXX-X'
-      : null,
+    value && !/^\d{2}-\d{8}-\d$/.test(value) ? 'CUIL debe tener formato XX-XXXXXXXX-X' : null,
   tipo: (value: string) => (!value ? 'El tipo de personal es obligatorio' : null),
   empresa: (value: string) => (!value ? 'La empresa es obligatoria' : null),
 });
