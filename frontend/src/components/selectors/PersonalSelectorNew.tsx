@@ -90,10 +90,8 @@ const personalFilters: FilterConfig<Personal> = {
 };
 
 // Validación personalizada
-const validatePersonal = (value: string | string[] | null) => {
-  if (!value) return null;
-
-  // Validaciones adicionales pueden ir aquí
+const validatePersonal = (_value: string | string[] | null) => {
+  // Placeholder para futuras validaciones específicas del dominio
   return null;
 };
 

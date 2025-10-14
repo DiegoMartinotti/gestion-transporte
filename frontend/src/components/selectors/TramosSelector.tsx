@@ -4,7 +4,7 @@ import { IconRoute, IconMapPin } from '@tabler/icons-react';
 
 // Componente para mostrar información del tramo seleccionado
 interface TramoInfoCardProps {
-  tramo: Tramo;
+  readonly tramo: Tramo;
 }
 
 function TramoInfoCard({ tramo }: TramoInfoCardProps) {
@@ -51,10 +51,10 @@ function TramoInfoCard({ tramo }: TramoInfoCardProps) {
 
 // Componente para alertas informativas
 interface AlertasInfoProps {
-  selectedOrigen: string;
-  selectedDestino: string;
-  origenes: TramoSite[];
-  destinosDisponibles: TramoSite[];
+  readonly selectedOrigen: string;
+  readonly selectedDestino: string;
+  readonly origenes: TramoSite[];
+  readonly destinosDisponibles: TramoSite[];
 }
 
 function AlertasInfo({
@@ -90,12 +90,12 @@ function AlertasInfo({
 
 // Componente para los selectores de origen y destino
 interface SelectoresRutaProps {
-  selectedOrigen: string;
-  selectedDestino: string;
-  origenes: TramoSite[];
-  destinosDisponibles: TramoSite[];
-  onOrigenChange: (origenId: string | null) => void;
-  onDestinoChange: (destinoId: string | null) => void;
+  readonly selectedOrigen: string;
+  readonly selectedDestino: string;
+  readonly origenes: TramoSite[];
+  readonly destinosDisponibles: TramoSite[];
+  readonly onOrigenChange: (origenId: string | null) => void;
+  readonly onDestinoChange: (destinoId: string | null) => void;
 }
 
 function SelectoresRuta({
@@ -139,8 +139,8 @@ import { tramoService } from '../../services/tramoService';
 import { Tramo, TramoSite } from '../../types';
 
 interface TramosSelectorProps {
-  onTramoSelect: (tramo: Tramo | null) => void;
-  selectedTramo?: Tramo | null;
+  readonly onTramoSelect: (tramo: Tramo | null) => void;
+  readonly selectedTramo?: Tramo | null;
 }
 
 export const TramosSelector: React.FC<TramosSelectorProps> = ({ onTramoSelect, selectedTramo }) => {

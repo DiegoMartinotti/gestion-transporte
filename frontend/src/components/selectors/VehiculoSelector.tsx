@@ -11,16 +11,16 @@ interface Vehiculo {
 }
 
 interface VehiculoSelectorProps {
-  value?: string | string[] | null;
-  onChange: (value: string | string[] | null) => void;
-  label?: string;
-  placeholder?: string;
-  required?: boolean;
-  clearable?: boolean;
-  error?: string;
-  multiple?: boolean;
-  disabled?: boolean;
-  excludeIds?: string[];
+  readonly value?: string | string[] | null;
+  readonly onChange: (value: string | string[] | null) => void;
+  readonly label?: string;
+  readonly placeholder?: string;
+  readonly required?: boolean;
+  readonly clearable?: boolean;
+  readonly error?: string;
+  readonly multiple?: boolean;
+  readonly disabled?: boolean;
+  readonly excludeIds?: readonly string[];
 }
 
 export function VehiculoSelector({
@@ -77,9 +77,18 @@ export function VehiculoSelector({
   // Memoize value normalization for multiple select
   const normalizedValue = useMemo(() => {
     if (multiple) {
-      return Array.isArray(value) ? value : value ? [value] : [];
+      if (Array.isArray(value)) {
+        return value;
+      }
+      if (typeof value === 'string' && value) {
+        return [value];
+      }
+      return [];
     }
-    return Array.isArray(value) ? value[0] : value;
+    if (Array.isArray(value)) {
+      return value[0] ?? null;
+    }
+    return value ?? null;
   }, [value, multiple]);
 
   if (multiple) {
