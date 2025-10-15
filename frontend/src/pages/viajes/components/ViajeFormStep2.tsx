@@ -4,6 +4,7 @@ import { UseFormReturnType } from '@mantine/form';
 import { VehiculoSelector } from '../../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../../components/selectors/PersonalSelector';
 import { ViajeFormData } from '../../../types/viaje';
+import type { SelectorValue } from '../../../components/selectors/SelectorFactory';
 
 interface ViajeFormStep2Props {
   form: UseFormReturnType<ViajeFormData>;
@@ -17,6 +18,13 @@ interface ChoferesSectionProps {
   form: UseFormReturnType<ViajeFormData>;
 }
 
+const toSingleValue = (value: SelectorValue): string => {
+  if (Array.isArray(value)) {
+    return value[0] ?? '';
+  }
+  return value ?? '';
+};
+
 const VehiculosSection = ({ form }: VehiculosSectionProps) => {
   const addVehiculo = () => {
     const currentVehiculos = form.values.vehiculos || [];
@@ -25,7 +33,10 @@ const VehiculosSection = ({ form }: VehiculosSectionProps) => {
 
   const removeVehiculo = (index: number) => {
     const currentVehiculos = form.values.vehiculos || [];
-    form.setFieldValue('vehiculos', currentVehiculos.filter((_, i) => i !== index));
+    form.setFieldValue(
+      'vehiculos',
+      currentVehiculos.filter((_, i) => i !== index)
+    );
   };
 
   return (
@@ -45,19 +56,15 @@ const VehiculosSection = ({ form }: VehiculosSectionProps) => {
       <Stack>
         {(form.values.vehiculos || []).map((vehiculo, index) => (
           <Group key={index}>
-            <VehiculoSelector
-              value={vehiculo}
-              onChange={(value) => form.setFieldValue(`vehiculos.${index}`, value || '')}
-              style={{ flex: 1 }}
-              placeholder="Seleccionar vehículo"
-            />
+            <div style={{ flex: 1 }}>
+              <VehiculoSelector
+                value={vehiculo}
+                onChange={(value) => form.setFieldValue(`vehiculos.${index}`, toSingleValue(value))}
+                placeholder="Seleccionar vehículo"
+              />
+            </div>
             {form.values.vehiculos.length > 1 && (
-              <Button
-                size="xs"
-                variant="light"
-                color="red"
-                onClick={() => removeVehiculo(index)}
-              >
+              <Button size="xs" variant="light" color="red" onClick={() => removeVehiculo(index)}>
                 <IconTrash size="0.8rem" />
               </Button>
             )}
@@ -82,7 +89,10 @@ const ChoferesSection = ({ form }: ChoferesSectionProps) => {
 
   const removeChofer = (index: number) => {
     const currentChoferes = form.values.choferes || [];
-    form.setFieldValue('choferes', currentChoferes.filter((_, i) => i !== index));
+    form.setFieldValue(
+      'choferes',
+      currentChoferes.filter((_, i) => i !== index)
+    );
   };
 
   return (
@@ -102,19 +112,15 @@ const ChoferesSection = ({ form }: ChoferesSectionProps) => {
       <Stack>
         {(form.values.choferes || []).map((chofer, index) => (
           <Group key={index}>
-            <PersonalSelector
-              value={chofer}
-              onChange={(value) => form.setFieldValue(`choferes.${index}`, value || '')}
-              style={{ flex: 1 }}
-              placeholder="Seleccionar chofer"
-            />
+            <div style={{ flex: 1 }}>
+              <PersonalSelector
+                value={chofer}
+                onChange={(value) => form.setFieldValue(`choferes.${index}`, toSingleValue(value))}
+                placeholder="Seleccionar chofer"
+              />
+            </div>
             {form.values.choferes.length > 1 && (
-              <Button
-                size="xs"
-                variant="light"
-                color="red"
-                onClick={() => removeChofer(index)}
-              >
+              <Button size="xs" variant="light" color="red" onClick={() => removeChofer(index)}>
                 <IconTrash size="0.8rem" />
               </Button>
             )}

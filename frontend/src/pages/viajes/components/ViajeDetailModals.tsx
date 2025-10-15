@@ -5,12 +5,62 @@ import { TarifaCalculator } from '../../../components/calculation/TarifaCalculat
 import { Viaje } from '../../../types/viaje';
 
 interface ViajeDetailModalsProps {
-  viaje: Viaje;
-  showCalculationDetails: boolean;
-  showDocuments: boolean;
-  onCloseCalculationDetails: () => void;
-  onCloseDocuments: () => void;
+  readonly viaje: Viaje;
+  readonly showCalculationDetails: boolean;
+  readonly showDocuments: boolean;
+  readonly onCloseCalculationDetails: () => void;
+  readonly onCloseDocuments: () => void;
 }
+
+interface TarifaCalculatorModalProps {
+  readonly opened: boolean;
+  readonly onClose: () => void;
+  readonly cliente: {
+    readonly nombre?: string;
+  } | null;
+  readonly tramo: {
+    readonly denominacion?: string;
+  } | null;
+  readonly viaje: Viaje;
+}
+
+const TarifaCalculatorModal = ({
+  opened,
+  onClose,
+  cliente,
+  tramo,
+  viaje,
+}: TarifaCalculatorModalProps) => (
+  <Modal opened={opened} onClose={onClose} title="Detalles del Cálculo de Tarifa" size="xl">
+    <TarifaCalculator
+      cliente={cliente}
+      tramo={tramo}
+      datos={{
+        peso: viaje.carga?.peso || 0,
+        volumen: viaje.carga?.volumen || 0,
+        distancia: viaje.distanciaKm || 0,
+        vehiculos: viaje.vehiculos?.length || 0,
+      }}
+      resultado={{
+        montoBase: viaje.montoBase || 0,
+        montoExtras: viaje.montoExtras || 0,
+        montoTotal: viaje.montoTotal || 0,
+      }}
+    />
+  </Modal>
+);
+
+interface DocumentosModalProps {
+  readonly opened: boolean;
+  readonly onClose: () => void;
+  readonly documentos: Viaje['documentos'];
+}
+
+const DocumentosModal = ({ opened, onClose, documentos }: DocumentosModalProps) => (
+  <Modal opened={opened} onClose={onClose} title="Documentos del Viaje" size="lg">
+    {documentos && <DocumentViewer documentos={documentos} />}
+  </Modal>
+);
 
 export function ViajeDetailModals({
   viaje,
@@ -19,39 +69,30 @@ export function ViajeDetailModals({
   onCloseCalculationDetails,
   onCloseDocuments,
 }: ViajeDetailModalsProps) {
+  const clienteInfo =
+    typeof viaje.cliente === 'object' && viaje.cliente !== null
+      ? { nombre: viaje.cliente.nombre }
+      : null;
+
+  const tramoInfo =
+    typeof viaje.tramo === 'object' && viaje.tramo !== null
+      ? { denominacion: viaje.tramo.denominacion }
+      : null;
+
   return (
     <>
-      <Modal
+      <TarifaCalculatorModal
         opened={showCalculationDetails}
         onClose={onCloseCalculationDetails}
-        title="Detalles del Cálculo de Tarifa"
-        size="xl"
-      >
-        <TarifaCalculator
-          cliente={viaje.cliente}
-          tramo={viaje.tramo}
-          datos={{
-            peso: viaje.carga?.peso || 0,
-            volumen: viaje.carga?.volumen || 0,
-            distancia: viaje.distanciaKm || 0,
-            vehiculos: viaje.vehiculos?.length || 0,
-          }}
-          resultado={{
-            montoBase: viaje.montoBase || 0,
-            montoExtras: viaje.montoExtras || 0,
-            montoTotal: viaje.montoTotal || 0,
-          }}
-        />
-      </Modal>
-
-      <Modal
+        cliente={clienteInfo}
+        tramo={tramoInfo}
+        viaje={viaje}
+      />
+      <DocumentosModal
         opened={showDocuments}
         onClose={onCloseDocuments}
-        title="Documentos del Viaje"
-        size="lg"
-      >
-        {viaje.documentos && <DocumentViewer documentos={viaje.documentos} />}
-      </Modal>
+        documentos={viaje.documentos}
+      />
     </>
   );
 }

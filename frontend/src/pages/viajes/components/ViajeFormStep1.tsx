@@ -1,11 +1,28 @@
+import type { ComponentProps } from 'react';
 import { Grid, Stack, Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { UseFormReturnType } from '@mantine/form';
 import { ClienteSelector } from '../../../components/selectors/ClienteSelector';
 import { TramoSelector } from '../../../components/selectors/TramoSelector';
 import { ViajeFormData } from '../../../types/viaje';
-import { Cliente } from '../../../types/cliente';
-import { Tramo } from '../../../types/tramo';
+import type { Cliente } from '../../../types/cliente';
+import type { Tramo } from '../../../types';
+
+type ClienteSelectorWithDataProps = ComponentProps<typeof ClienteSelector> & {
+  readonly data?: Cliente[];
+};
+
+type TramoSelectorWithDataProps = ComponentProps<typeof TramoSelector> & {
+  readonly data?: Tramo[];
+};
+
+const ClienteSelectorWithData = ClienteSelector as (
+  props: ClienteSelectorWithDataProps
+) => ReturnType<typeof ClienteSelector>;
+
+const TramoSelectorWithData = TramoSelector as (
+  props: TramoSelectorWithDataProps
+) => ReturnType<typeof TramoSelector>;
 
 interface ViajeFormStep1Props {
   form: UseFormReturnType<ViajeFormData>;
@@ -22,6 +39,22 @@ export const ViajeFormStep1 = ({ form, clientes, tramos }: ViajeFormStep1Props) 
     { value: 'facturado', label: 'Facturado' },
   ];
 
+  const resolveErrorMessage = (error: unknown): string | undefined =>
+    typeof error === 'string' ? error : undefined;
+
+  const normalizeSelectValue = (value: string | null) => value ?? '';
+
+  let fechaValue: string | null = null;
+  const rawFecha = form.values.fecha;
+  if (rawFecha instanceof Date) {
+    fechaValue = rawFecha.toISOString().split('T')[0];
+  } else if (rawFecha) {
+    const parsedFecha = new Date(rawFecha);
+    fechaValue = Number.isNaN(parsedFecha.getTime())
+      ? null
+      : parsedFecha.toISOString().split('T')[0];
+  }
+
   return (
     <Stack>
       <Grid>
@@ -29,9 +62,13 @@ export const ViajeFormStep1 = ({ form, clientes, tramos }: ViajeFormStep1Props) 
           <DateInput
             label="Fecha del Viaje"
             placeholder="Seleccionar fecha"
-            value={form.values.fecha ? new Date(form.values.fecha) : null}
-            onChange={(date) => form.setFieldValue('fecha', date?.toISOString().split('T')[0] || '')}
-            error={form.errors.fecha}
+            value={fechaValue}
+            onChange={(value: string | null) => {
+              if (value) {
+                form.setFieldValue('fecha', new Date(value));
+              }
+            }}
+            error={resolveErrorMessage(form.errors.fecha)}
             required
           />
         </Grid.Col>
@@ -49,20 +86,19 @@ export const ViajeFormStep1 = ({ form, clientes, tramos }: ViajeFormStep1Props) 
 
       <Grid>
         <Grid.Col span={6}>
-          <ClienteSelector
-            value={form.values.cliente}
-            onChange={(value) => form.setFieldValue('cliente', value)}
-            error={form.errors.cliente}
+          <ClienteSelectorWithData
+            value={form.values.cliente || null}
+            onChange={(value) => form.setFieldValue('cliente', normalizeSelectValue(value))}
+            error={resolveErrorMessage(form.errors.cliente)}
             required
             data={clientes}
           />
         </Grid.Col>
         <Grid.Col span={6}>
-          <TramoSelector
-            value={form.values.tramo}
-            onChange={(value) => form.setFieldValue('tramo', value)}
-            error={form.errors.tramo}
-            clienteId={form.values.cliente}
+          <TramoSelectorWithData
+            value={form.values.tramo || null}
+            onChange={(value) => form.setFieldValue('tramo', normalizeSelectValue(value))}
+            error={resolveErrorMessage(form.errors.tramo)}
             required
             data={tramos}
           />
