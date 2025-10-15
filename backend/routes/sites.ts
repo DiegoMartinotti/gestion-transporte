@@ -15,6 +15,28 @@ import {
 import { authenticateToken } from '../middleware/authMiddleware';
 import { validateSite } from '../middleware/validationMiddleware';
 
+const toHandler = (handler: unknown): express.RequestHandler => {
+  return (req, res, next) => {
+    try {
+      const request = req as unknown as express.Request;
+      const response = res as unknown as express.Response;
+      const result = (
+        handler as (
+          req: express.Request,
+          res: express.Response,
+          next?: express.NextFunction
+        ) => unknown
+      )(request, response, next);
+      Promise.resolve(result).catch(next);
+    } catch (error) {
+      next(error as Error);
+    }
+  };
+};
+
+const requireAuth = authenticateToken as unknown as express.RequestHandler;
+const validateSiteMiddleware = validateSite as unknown as express.RequestHandler;
+
 /**
  * @swagger
  * /api/site:
@@ -48,7 +70,7 @@ import { validateSite } from '../middleware/validationMiddleware';
  *       500:
  *         description: Error del servidor
  */
-router.get('/', authenticateToken, siteController.getAllSites);
+router.get('/', requireAuth, toHandler(siteController.getAllSites));
 
 /**
  * @swagger
@@ -63,7 +85,7 @@ router.get('/', authenticateToken, siteController.getAllSites);
  *       500:
  *         description: Error del servidor
  */
-router.get('/template', getSiteTemplate);
+router.get('/template', toHandler(getSiteTemplate));
 
 /**
  * @swagger
@@ -78,7 +100,7 @@ router.get('/template', getSiteTemplate);
  *       500:
  *         description: Error del servidor
  */
-router.get('/export', authenticateToken, exportSites);
+router.get('/export', requireAuth, toHandler(exportSites));
 
 /**
  * @swagger
@@ -102,7 +124,7 @@ router.get('/export', authenticateToken, exportSites);
  *       500:
  *         description: Error del servidor
  */
-router.get('/:id', authenticateToken, siteController.getSiteById);
+router.get('/:id', requireAuth, toHandler(siteController.getSiteById));
 
 /**
  * @swagger
@@ -126,7 +148,7 @@ router.get('/:id', authenticateToken, siteController.getSiteById);
  *       500:
  *         description: Error del servidor
  */
-router.get('/cliente/:clienteId', authenticateToken, siteController.getSitesByCliente);
+router.get('/cliente/:clienteId', requireAuth, toHandler(siteController.getSitesByCliente));
 
 /**
  * @swagger
@@ -162,7 +184,7 @@ router.get('/cliente/:clienteId', authenticateToken, siteController.getSitesByCl
  *       500:
  *         description: Error del servidor
  */
-router.get('/nearby', authenticateToken, searchNearby);
+router.get('/nearby', requireAuth, toHandler(searchNearby));
 
 /**
  * @swagger
@@ -202,7 +224,7 @@ router.get('/nearby', authenticateToken, searchNearby);
  *       500:
  *         description: Error del servidor
  */
-router.post('/', authenticateToken, validateSite, siteController.createSite);
+router.post('/', requireAuth, validateSiteMiddleware, toHandler(siteController.createSite));
 
 /**
  * @swagger
@@ -244,7 +266,7 @@ router.post('/', authenticateToken, validateSite, siteController.createSite);
  *       500:
  *         description: Error del servidor
  */
-router.post('/bulk', authenticateToken, bulkCreateSites);
+router.post('/bulk', requireAuth, toHandler(bulkCreateSites));
 
 /**
  * @swagger
@@ -288,7 +310,7 @@ router.post('/bulk', authenticateToken, bulkCreateSites);
  *       500:
  *         description: Error del servidor
  */
-router.put('/:id', authenticateToken, validateSite, siteController.updateSite);
+router.put('/:id', requireAuth, validateSiteMiddleware, toHandler(siteController.updateSite));
 
 /**
  * @swagger
@@ -314,7 +336,7 @@ router.put('/:id', authenticateToken, validateSite, siteController.updateSite);
  *       500:
  *         description: Error del servidor
  */
-router.delete('/:id', authenticateToken, siteController.deleteSite);
+router.delete('/:id', requireAuth, toHandler(siteController.deleteSite));
 
 /**
  * @swagger
@@ -342,7 +364,7 @@ router.delete('/:id', authenticateToken, siteController.deleteSite);
  *       500:
  *         description: Error del servidor
  */
-router.post('/geocode', authenticateToken, siteController.geocodeDireccion);
+router.post('/geocode', requireAuth, toHandler(siteController.geocodeDireccion));
 
 /**
  * @swagger
@@ -366,7 +388,7 @@ router.post('/geocode', authenticateToken, siteController.geocodeDireccion);
  *       500:
  *         description: Error del servidor
  */
-router.delete('/bulk/cliente/:cliente', authenticateToken, siteController.bulkDeleteSites);
+router.delete('/bulk/cliente/:cliente', requireAuth, toHandler(siteController.bulkDeleteSites));
 
 /**
  * @swagger
@@ -403,8 +425,8 @@ router.delete('/bulk/cliente/:cliente', authenticateToken, siteController.bulkDe
  */
 router.post(
   '/reprocess-addresses/:cliente',
-  authenticateToken,
-  siteController.reprocessAddressesByCliente
+  requireAuth,
+  toHandler(siteController.reprocessAddressesByCliente)
 );
 
 export default router;
