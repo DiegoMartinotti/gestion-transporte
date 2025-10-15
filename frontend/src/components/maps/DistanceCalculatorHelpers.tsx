@@ -7,6 +7,7 @@ import {
   ManualCoordinatesInput,
   DistanceResults,
   CostCalculator,
+  type CostCalculation,
 } from './DistanceCalculatorComponents';
 import {
   CostParams,
@@ -23,6 +24,7 @@ import {
 
 // Re-export for compatibility
 export type { CostParams, RequestConfig, DistanceCalculatorState, DistanceCalculatorUIProps };
+export type { DistanceResult, CostCalculation } from './DistanceCalculatorComponents';
 export {
   getCoordinatesFromLocation,
   validateCoordinates,
