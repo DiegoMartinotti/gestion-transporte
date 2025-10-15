@@ -57,6 +57,13 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
   const isArrayValue = (value: unknown): string[] => (Array.isArray(value) ? value : []);
   const getNumberValue = (value: unknown) => (typeof value === 'number' ? value : 0);
 
+  const tramoSummary = selectedTramo
+    ? {
+        denominacion:
+          `${selectedTramo.origen?.nombre ?? ''} → ${selectedTramo.destino?.nombre ?? ''}`.trim(),
+      }
+    : null;
+
   return (
     <Stack>
       <Group justify="apart">
@@ -105,7 +112,7 @@ export function ViajeForm({ viaje, onSave, onCancel }: ViajeFormProps) {
           <Stack>
             <TarifaCalculator
               cliente={selectedCliente}
-              tramo={selectedTramo}
+              tramo={tramoSummary}
               datos={{
                 peso: form.values.carga.peso,
                 volumen: form.values.carga.volumen,

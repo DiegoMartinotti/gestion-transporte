@@ -17,6 +17,56 @@ import ConfirmModal from '../../../components/base/ConfirmModal';
 import { viajeExcelService } from '../../../services/BaseExcelService';
 import { ViajeService } from '../../../services/viajeService';
 import { Viaje } from '../../../types/viaje';
+import type {
+  ImportOptions,
+  ImportResult as ExcelImportModalResult,
+  ValidationFileResult,
+  PreviewResult,
+} from '../../../components/modals/types/ExcelImportModalTypes';
+
+type ExcelOperations = {
+  handleExport: (filters?: Record<string, unknown>) => Promise<void>;
+  isExporting: boolean;
+  handleImportComplete: (result: { success: boolean; imported?: number; message?: string }) => void;
+};
+
+const buildImportMessage = (result: ExcelImportModalResult): string | undefined => {
+  if (result.summary?.errorRows && result.summary.errorRows > 0) {
+    return `${result.summary.errorRows} registros con errores`;
+  }
+  if (result.summary?.insertedRows) {
+    return `Se importaron ${result.summary.insertedRows} registros`;
+  }
+  return result.errors?.[0]?.message;
+};
+
+const toExcelOperationsResult = (result: ExcelImportModalResult) => ({
+  success: result.success,
+  imported: result.summary?.insertedRows,
+  message: buildImportMessage(result),
+});
+
+const downloadViajesTemplate = async () => {
+  const blob = await viajeExcelService.getTemplate();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'plantilla_viajes.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+const buildSingleDeleteMessage = (viaje: Viaje | null) => {
+  const reference = viaje?.dt ? `DT ${viaje.dt}` : 'seleccionado';
+  return `¿Estás seguro de que deseas eliminar el viaje ${reference}? Esta acción no se puede deshacer.`;
+};
+
+const buildBulkDeleteMessage = (count: number) => {
+  const suffix = count === 1 ? '' : 's';
+  return `¿Estás seguro de que deseas eliminar ${count} viaje${suffix} seleccionado${suffix}? Esta acción no se puede deshacer.`;
+};
 
 // Componente para renderizar los botones de acción
 export const ActionButtons = ({
@@ -31,10 +81,7 @@ export const ActionButtons = ({
   setBulkDeleteModalOpened: (value: boolean) => void;
   handleBulkExport: (ids: string[]) => void;
   setImportModalOpened: (value: boolean) => void;
-  excelOperations: {
-    handleExport: (filters: Record<string, unknown>) => void;
-    isExporting: boolean;
-  };
+  excelOperations: Pick<ExcelOperations, 'handleExport' | 'isExporting'>;
   navigate: (path: string) => void;
 }) => (
   <Group gap="sm">
@@ -145,7 +192,7 @@ export const DataTableSection = ({
   selectedViajeIds: string[];
   handleSelectionChange: (ids: string[]) => void;
 }) => (
-  <LoadingOverlay loading={loading}>
+  <LoadingOverlay visible={loading}>
     {useVirtualScrolling && filteredViajes.length > 100 ? (
       <VirtualizedDataTable
         columns={columns}
@@ -198,13 +245,8 @@ export const ModalsSection = ({
 }: {
   importModalOpened: boolean;
   setImportModalOpened: (value: boolean) => void;
-  handleImportComplete: (
-    result: { success: boolean; message: string },
-    fetchFn: () => Promise<void>
-  ) => void;
-  excelOperations: {
-    handleImportComplete: (result: { success: boolean; message: string }) => void;
-  };
+  handleImportComplete: (result: ExcelImportModalResult, fetchFn: () => Promise<void>) => void;
+  excelOperations: ExcelOperations;
   fetchViajes: () => Promise<void>;
   deleteModalOpened: boolean;
   setDeleteModalOpened: (value: boolean) => void;
@@ -225,22 +267,21 @@ export const ModalsSection = ({
       entityType="viajes"
       onImportComplete={(result) => {
         handleImportComplete(result, fetchViajes);
-        excelOperations.handleImportComplete(result);
+        excelOperations.handleImportComplete(toExcelOperationsResult(result));
       }}
-      processExcelFile={ViajeService.processExcelFile.bind(ViajeService)}
-      validateExcelFile={ViajeService.validateExcelFile.bind(ViajeService)}
-      previewExcelFile={ViajeService.previewExcelFile.bind(ViajeService)}
-      getTemplate={async () => {
-        const blob = await viajeExcelService.getTemplate();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'plantilla_viajes.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      processExcelFile={async (file, _options: ImportOptions) => {
+        const response = await ViajeService.processExcelFile(file);
+        return response as unknown as ExcelImportModalResult;
       }}
+      validateExcelFile={async (file) => {
+        const response = await ViajeService.validateExcelFile(file);
+        return response as unknown as ValidationFileResult;
+      }}
+      previewExcelFile={async (file, sampleSize) => {
+        const response = await ViajeService.previewExcelFile(file, sampleSize);
+        return response as unknown as PreviewResult;
+      }}
+      getTemplate={downloadViajesTemplate}
     />
 
     <ConfirmModal
@@ -250,7 +291,7 @@ export const ModalsSection = ({
       }}
       onConfirm={() => handleDelete(() => Promise.resolve())}
       title="Eliminar Viaje"
-      message={`¿Estás seguro de que deseas eliminar el viaje ${viajeToDelete?.dt ? `DT ${viajeToDelete.dt}` : 'seleccionado'}? Esta acción no se puede deshacer.`}
+      message={buildSingleDeleteMessage(viajeToDelete)}
       type="delete"
       loading={deleteLoading}
     />
@@ -262,7 +303,7 @@ export const ModalsSection = ({
       }}
       onConfirm={handleBulkDeleteWithReset}
       title="Eliminar Viajes Seleccionados"
-      message={`¿Estás seguro de que deseas eliminar ${selectedViajeIds.length} viaje${selectedViajeIds.length !== 1 ? 's' : ''} seleccionado${selectedViajeIds.length !== 1 ? 's' : ''}? Esta acción no se puede deshacer.`}
+      message={buildBulkDeleteMessage(selectedViajeIds.length)}
       type="delete"
       loading={bulkDeleteLoading}
     />
