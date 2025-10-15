@@ -5,7 +5,11 @@
 
 import { Request, Response } from 'express';
 import Tramo from '../../models/Tramo';
-import { generarTramoId, fechasSuperpuestas } from '../../utils/tramoValidator';
+import {
+  generarTramoId,
+  fechasSuperpuestas,
+  Tramo as TramoShape,
+} from '../../utils/tramoValidator';
 import logger from '../../utils/logger';
 
 /**
@@ -24,9 +28,31 @@ interface ApiResponse<T = unknown> {
 interface DuplicateVerificationResult {
   tramosVerificados: number;
   tramosExistentes: number;
-  posiblesDuplicados: unknown[];
+  posiblesDuplicados: Array<{
+    tipo: 'superposición';
+    nuevo: {
+      origen?: string | object;
+      destino?: string | object;
+      tipo?: string;
+      id: string;
+    };
+    existente: {
+      _id?: string;
+      origen?: string | object;
+      destino?: string | object;
+      tipo?: string;
+      vigenciaDesde?: string | Date;
+      vigenciaHasta?: string | Date;
+    };
+  }>;
   mapaIds: Record<string, number>;
 }
+
+type TramoPayload = TramoShape & {
+  _id?: string;
+  origenNombre?: string;
+  destinoNombre?: string;
+};
 
 /**
  * Verifica duplicados potenciales en una lista de tramos
@@ -46,7 +72,7 @@ async function verificarPosiblesDuplicados(
   req: Request<
     object,
     ApiResponse<{ resultado: DuplicateVerificationResult }>,
-    { tramos: unknown[]; cliente: string }
+    { tramos: TramoPayload[]; cliente: string }
   >,
   res: Response<ApiResponse<{ resultado: DuplicateVerificationResult }>>
 ): Promise<void> {
@@ -61,9 +87,10 @@ async function verificarPosiblesDuplicados(
       return;
     }
 
-    const tramosExistentes = await Tramo.find({ cliente }).lean();
+    const tramosExistentes: TramoPayload[] =
+      (await Tramo.find({ cliente }).lean<TramoPayload[]>().exec()) ?? [];
 
-    const mapaExistentes: Record<string, unknown[]> = {};
+    const mapaExistentes: Record<string, TramoPayload[]> = {};
     tramosExistentes.forEach((tramo) => {
       const id = generarTramoId(tramo);
       if (!mapaExistentes[id]) {
@@ -90,13 +117,17 @@ async function verificarPosiblesDuplicados(
       const tramosConMismoId = mapaExistentes[id] || [];
 
       for (const existente of tramosConMismoId) {
+        const nuevoDesde = tramoData.vigenciaDesde;
+        const nuevoHasta = tramoData.vigenciaHasta;
+        const existenteDesde = existente.vigenciaDesde;
+        const existenteHasta = existente.vigenciaHasta;
+
         if (
-          fechasSuperpuestas(
-            tramoData.vigenciaDesde,
-            tramoData.vigenciaHasta,
-            existente.vigenciaDesde,
-            existente.vigenciaHasta
-          )
+          nuevoDesde !== undefined &&
+          nuevoHasta !== undefined &&
+          existenteDesde !== undefined &&
+          existenteHasta !== undefined &&
+          fechasSuperpuestas(nuevoDesde, nuevoHasta, existenteDesde, existenteHasta)
         ) {
           resultado.posiblesDuplicados.push({
             tipo: 'superposición',

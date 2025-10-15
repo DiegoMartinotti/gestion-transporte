@@ -1,19 +1,144 @@
 /* eslint-disable max-lines */
 import express from 'express';
-const router = express.Router();
-import Tramo from '../models/Tramo';
+import type { FilterQuery } from 'mongoose';
+import Tramo, { ITramo } from '../models/Tramo';
 import * as tramoController from '../controllers/tramo/index';
 import { authenticateToken } from '../middleware/authMiddleware';
 import logger from '../utils/logger';
-import { generarTramoId } from '../utils/tramoValidator';
+import { generarTramoId, Tramo as TramoShape } from '../utils/tramoValidator';
+
+const router = express.Router();
 
 // Constantes para evitar duplicación de strings
 const CONTENT_TYPE_HEADER = 'content-type';
 const CONTENT_LENGTH_HEADER = 'content-length';
 const SITE_POPULATE_FIELDS = 'Site location';
 
+type PopulatedSiteRef =
+  | string
+  | { _id?: string | { toString(): string }; Site?: string; nombre?: string };
+
+interface DiagnosticoTramo {
+  _id: string;
+  origen: PopulatedSiteRef;
+  destino: PopulatedSiteRef;
+  tipo?: string;
+  metodoCalculo?: string;
+  vigenciaDesde?: Date;
+  vigenciaHasta?: Date;
+  valor?: number;
+}
+
+interface DiagnosticoConflicto {
+  ruta: string;
+  origen?: string;
+  destino?: string;
+  tipos: string[];
+  tramos: Array<{
+    _id: string;
+    tipo?: string;
+    vigenciaDesde?: Date;
+    vigenciaHasta?: Date;
+    valor?: number;
+  }>;
+}
+
+interface AnalisisDiagnostico {
+  totalTramos: number;
+  porTipo: {
+    TRMC: number;
+    TRMI: number;
+    otros: number;
+    nulos: number;
+  };
+  tramosSinTipoNormalizado: Array<{
+    _id: string;
+    origen?: string;
+    destino?: string;
+    tipo?: string;
+  }>;
+  posiblesConflictos: DiagnosticoConflicto[];
+}
+
+const getSiteLabel = (site: PopulatedSiteRef): string | undefined => {
+  if (!site) {
+    return undefined;
+  }
+  if (typeof site === 'string') {
+    return site;
+  }
+  if (typeof site === 'object') {
+    if (site.nombre) {
+      return String(site.nombre);
+    }
+    if (site.Site) {
+      return String(site.Site);
+    }
+    if (site._id) {
+      return typeof site._id === 'string' ? site._id : site._id.toString();
+    }
+  }
+  return undefined;
+};
+
+const getRefId = (ref: PopulatedSiteRef): string => {
+  if (!ref) {
+    return 'desconocido';
+  }
+  if (typeof ref === 'string') {
+    return ref;
+  }
+  if (typeof ref === 'object' && ref._id) {
+    return typeof ref._id === 'string' ? ref._id : ref._id.toString();
+  }
+  return 'desconocido';
+};
+
+const buildDiagnosticoPorTipo = (tramos: ITramo[]) => {
+  const detallesPorTipo: Record<string, Array<Record<string, unknown>>> = {};
+
+  tramos.forEach((tramo) => {
+    const tarifaVigente = tramo.getTarifaVigente();
+    const tipo = tarifaVigente?.tipo || 'Sin tipo';
+
+    if (!detallesPorTipo[tipo]) {
+      detallesPorTipo[tipo] = [];
+    }
+
+    const shape: TramoShape = {
+      origen: String(tramo.origen),
+      destino: String(tramo.destino),
+      tipo: tarifaVigente?.tipo,
+      metodoCalculo: tarifaVigente?.metodoCalculo,
+    };
+
+    detallesPorTipo[tipo].push({
+      _id: String(tramo._id),
+      tipo: tarifaVigente?.tipo,
+      vigenciaDesde: tarifaVigente?.vigenciaDesde,
+      vigenciaHasta: tarifaVigente?.vigenciaHasta,
+      metodoCalculo: tarifaVigente?.metodoCalculo,
+      generatedId: generarTramoId(shape),
+    });
+  });
+
+  const tiposEncontrados = Object.keys(detallesPorTipo).length;
+  const diagnosis =
+    tramos.length > 0 && tiposEncontrados > 1
+      ? 'OK: El sistema permite tramos con diferentes tipos'
+      : 'Problema: No hay tramos con diferentes tipos para este origen-destino';
+
+  return {
+    mensaje: `Análisis completado: ${tramos.length} tramos para el mismo origen-destino`,
+    totalTramos: tramos.length,
+    tiposEncontrados,
+    detallesPorTipo,
+    diagnosis,
+  };
+};
+
 // Middleware para debugging de solicitudes grandes
-router.use('/bulk', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.use('/bulk', (req, res, next) => {
   logger.debug('Recibiendo solicitud bulk import:');
   logger.debug('- Headers:', req.headers);
   logger.debug('- Cliente:', req.body?.cliente);
@@ -33,13 +158,14 @@ router.use('/bulk', (req: express.Request, res: express.Response, next: express.
         tramosEmpty: !req.body?.tramos,
       },
     });
+    return;
   }
 
   next();
 });
 
 // Middleware para verificar el tipo de tramo
-router.use(async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.use(async (req, res, next) => {
   if (['POST', 'PUT'].includes(req.method) && req.body.tipo) {
     // Normalizar el tipo a mayúsculas
     req.body.tipo = req.body.tipo.toUpperCase();
@@ -50,6 +176,7 @@ router.use(async (req: express.Request, res: express.Response, next: express.Nex
         success: false,
         message: 'El tipo de tramo debe ser TRMC o TRMI',
       });
+      return;
     }
   }
   next();
@@ -57,7 +184,7 @@ router.use(async (req: express.Request, res: express.Response, next: express.Nex
 
 // IMPORTANTE: Primero las rutas específicas
 // Obtener tramos vigentes a una fecha determinada
-router.get('/vigentes/:fecha', async (req: express.Request, res: express.Response) => {
+router.get('/vigentes/:fecha', async (req, res) => {
   try {
     const fecha = new Date(req.params.fecha);
 
@@ -80,7 +207,7 @@ router.get('/vigentes/:fecha', async (req: express.Request, res: express.Respons
 });
 
 // Mejorar la ruta para obtener tramos por cliente
-router.get('/cliente/:cliente', async (req: express.Request, res: express.Response) => {
+router.get('/cliente/:cliente', async (req, res) => {
   try {
     logger.info('Buscando tramos para cliente:', req.params.cliente);
 
@@ -106,7 +233,7 @@ router.get('/cliente/:cliente', async (req: express.Request, res: express.Respon
 });
 
 // Obtener un tramo específico
-router.get('/:id', async (req: express.Request, res: express.Response) => {
+router.get('/:id', async (req, res) => {
   try {
     const tramo = await Tramo.findById(req.params.id).populate('origen').populate('destino');
     if (!tramo) {
@@ -305,7 +432,7 @@ router.post('/bulk', async (req: express.Request, res: express.Response) => {
 
 // Nueva ruta para diagnóstico de duplicados
 // eslint-disable-next-line max-lines-per-function
-router.post('/diagnostico-tipos', async (req: express.Request, res: express.Response) => {
+router.post('/diagnostico-tipos', async (req, res) => {
   try {
     const { cliente, origen, destino, metodoCalculo } = req.body;
 
@@ -317,7 +444,7 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
     }
 
     // Construir la consulta base
-    const baseQuery: unknown = { cliente };
+    const baseQuery: FilterQuery<ITramo> = { cliente };
 
     // Añadir filtros opcionales
     if (origen) baseQuery.origen = origen;
@@ -325,42 +452,41 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
     if (metodoCalculo) baseQuery.metodoCalculo = metodoCalculo;
 
     // Buscar todos los tramos que coincidan con los criterios
-    const tramos = await Tramo.find(baseQuery)
-      .populate('origen', 'Site')
-      .populate('destino', 'Site')
-      .lean();
+    const tramos =
+      (await Tramo.find(baseQuery)
+        .populate('origen', 'Site')
+        .populate('destino', 'Site')
+        .lean<DiagnosticoTramo[]>()
+        .exec()) ?? [];
 
     logger.info(`Encontrados ${tramos.length} tramos para diagnóstico con filtros:`, baseQuery);
 
     // Analizar los tramos por tipo
-    const analisis = {
+    const analisis: AnalisisDiagnostico = {
       totalTramos: tramos.length,
       porTipo: {
-        TRMC: tramos.filter((t) => (t as unknown).tipo === 'TRMC').length,
-        TRMI: tramos.filter((t) => (t as unknown).tipo === 'TRMI').length,
-        otros: tramos.filter((t) => !['TRMC', 'TRMI'].includes((t as unknown).tipo)).length,
-        nulos: tramos.filter((t) => !(t as unknown).tipo).length,
+        TRMC: tramos.filter((t) => t.tipo === 'TRMC').length,
+        TRMI: tramos.filter((t) => t.tipo === 'TRMI').length,
+        otros: tramos.filter((t) => t.tipo && !['TRMC', 'TRMI'].includes(t.tipo)).length,
+        nulos: tramos.filter((t) => !t.tipo).length,
       },
       tramosSinTipoNormalizado: tramos
-        .filter(
-          (t) =>
-            (t as unknown).tipo && (t as unknown).tipo !== 'TRMC' && (t as unknown).tipo !== 'TRMI'
-        )
+        .filter((t) => t.tipo && t.tipo !== 'TRMC' && t.tipo !== 'TRMI')
         .map((t) => ({
           _id: t._id,
-          origen: (t.origen as unknown)?.Site,
-          destino: (t.destino as unknown)?.Site,
-          tipo: (t as unknown).tipo,
+          origen: getSiteLabel(t.origen),
+          destino: getSiteLabel(t.destino),
+          tipo: t.tipo,
         })),
-      posiblesConflictos: [] as unknown[],
+      posiblesConflictos: [],
     };
 
     // Encontrar pares de tramos que podrían estar en conflicto
     // (mismo origen-destino pero diferentes tipos)
-    const rutasUnicas: Record<string, unknown[]> = {};
+    const rutasUnicas: Record<string, DiagnosticoTramo[]> = {};
 
     tramos.forEach((tramo) => {
-      const rutaKey = `${(tramo.origen as unknown)._id}-${(tramo.destino as unknown)._id}-${(tramo as unknown).metodoCalculo}`;
+      const rutaKey = `${getRefId(tramo.origen)}-${getRefId(tramo.destino)}-${tramo.metodoCalculo ?? 'SIN_METODO'}`;
       if (!rutasUnicas[rutaKey]) {
         rutasUnicas[rutaKey] = [];
       }
@@ -368,20 +494,20 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
     });
 
     // Identificar rutas con múltiples tipos
-    for (const ruta in rutasUnicas) {
+    for (const ruta of Object.keys(rutasUnicas)) {
       const tramosRuta = rutasUnicas[ruta];
       if (tramosRuta.length > 1) {
         // Verificar si hay diferentes tipos en esta ruta
-        const tiposEnRuta = new Set(tramosRuta.map((t) => (t as unknown).tipo));
+        const tiposEnRuta = new Set(tramosRuta.map((t) => t.tipo ?? 'SIN_TIPO'));
         if (tiposEnRuta.size > 1) {
           analisis.posiblesConflictos.push({
             ruta: ruta,
-            origen: (tramosRuta[0].origen as unknown)?.Site,
-            destino: (tramosRuta[0].destino as unknown)?.Site,
+            origen: getSiteLabel(tramosRuta[0].origen),
+            destino: getSiteLabel(tramosRuta[0].destino),
             tipos: Array.from(tiposEnRuta),
             tramos: tramosRuta.map((t) => ({
               _id: t._id,
-              tipo: (t as unknown).tipo,
+              tipo: t.tipo,
               vigenciaDesde: t.vigenciaDesde,
               vigenciaHasta: t.vigenciaHasta,
               valor: t.valor,
@@ -407,7 +533,7 @@ router.post('/diagnostico-tipos', async (req: express.Request, res: express.Resp
 
 // Nuevo endpoint para corregir tipos de tramos
 // eslint-disable-next-line max-lines-per-function
-router.post('/corregir-tipos', async (req: express.Request, res: express.Response) => {
+router.post('/corregir-tipos', async (req, res) => {
   try {
     const { tramoIds, nuevoTipo } = req.body;
 
@@ -425,18 +551,22 @@ router.post('/corregir-tipos', async (req: express.Request, res: express.Respons
       });
     }
 
-    const resultados = {
+    const resultados: {
+      procesados: number;
+      actualizados: number;
+      errores: Array<{ id: string; error: string }>;
+    } = {
       procesados: tramoIds.length,
       actualizados: 0,
-      errores: [] as unknown[],
+      errores: [],
     };
 
     for (const id of tramoIds) {
       try {
         const tramo = await Tramo.findById(id);
         if (tramo) {
-          const tipoAnterior = (tramo as unknown).tipo;
-          (tramo as unknown).tipo = nuevoTipo;
+          const tipoAnterior = tramo.get('tipo') as string | undefined;
+          tramo.set('tipo', nuevoTipo);
           await tramo.save();
           resultados.actualizados++;
           logger.info(`Tramo ${id} actualizado de ${tipoAnterior} a ${nuevoTipo}`);
@@ -612,68 +742,33 @@ router.post('/calcular-tarifa', authenticateToken, tramoController.calcularTarif
 router.get('/distancias', tramoController.getDistanciasCalculadas);
 
 // Función de diagnóstico específica para problemas de tipos (migrada desde tramoRoutes.ts)
-router.post(
-  '/diagnose-tipos',
-  async (req: express.Request, res: express.Response): Promise<void> => {
-    try {
-      // Requerir origen, destino, cliente como parámetros
-      const { origen, destino, cliente } = req.body;
+router.post('/diagnose-tipos', async (req, res): Promise<void> => {
+  try {
+    const { origen, destino, cliente } = req.body;
 
-      if (!origen || !destino || !cliente) {
-        res.status(400).json({
-          success: false,
-          message: 'Se requieren origen, destino y cliente',
-        });
-        return;
-      }
-
-      // Buscar todos los tramos con ese origen y destino
-      const tramos = await Tramo.find({
-        origen,
-        destino,
-        cliente,
-      });
-
-      // Agrupar por tipo para análisis
-      const porTipo: { [key: string]: unknown[] } = {};
-      tramos.forEach((t) => {
-        // Obtener la tarifa vigente para acceder a las propiedades
-        const tarifaVigente = t.getTarifaVigente();
-        const tipo = tarifaVigente?.tipo || 'Sin tipo';
-
-        if (!porTipo[tipo]) {
-          porTipo[tipo] = [];
-        }
-        porTipo[tipo].push({
-          _id: t._id,
-          tipo: tarifaVigente?.tipo,
-          vigenciaDesde: tarifaVigente?.vigenciaDesde,
-          vigenciaHasta: tarifaVigente?.vigenciaHasta,
-          metodoCalculo: tarifaVigente?.metodoCalculo,
-          generatedId: generarTramoId(t),
-        });
-      });
-
-      res.json({
-        success: true,
-        mensaje: `Análisis completado: ${tramos.length} tramos para el mismo origen-destino`,
-        totalTramos: tramos.length,
-        tiposEncontrados: Object.keys(porTipo).length,
-        detallesPorTipo: porTipo,
-        diagnosis:
-          tramos.length > 0 && Object.keys(porTipo).length > 1
-            ? 'OK: El sistema permite tramos con diferentes tipos'
-            : 'Problema: No hay tramos con diferentes tipos para este origen-destino',
-      });
-    } catch (error: unknown) {
-      logger.error('Error en diagnóstico:', error);
-      res.status(500).json({
+    if (!origen || !destino || !cliente) {
+      res.status(400).json({
         success: false,
-        message: 'Error en diagnóstico',
-        error: error instanceof Error ? error.message : String(error),
+        message: 'Se requieren origen, destino y cliente',
       });
+      return;
     }
+
+    const tramos = await Tramo.find({ origen, destino, cliente }).exec();
+    const diagnostico = buildDiagnosticoPorTipo(tramos);
+
+    res.json({
+      success: true,
+      ...diagnostico,
+    });
+  } catch (error: unknown) {
+    logger.error('Error en diagnóstico:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error en diagnóstico',
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
-);
+});
 
 export default router;
