@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from 'react';
 import { UseFormReturnType } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { ViajeFormData } from '../../../types/viaje';
@@ -6,9 +7,9 @@ import { simulateCalculation } from '../helpers/viajeFormUtils';
 interface UseViajeFormHandlersProps {
   form: UseFormReturnType<ViajeFormData>;
   stepperStep: number;
-  setStepperStep: (step: number) => void;
-  setCalculationModalOpened: (opened: boolean) => void;
-  setIsCalculating: (calculating: boolean) => void;
+  setStepperStep: Dispatch<SetStateAction<number>>;
+  setCalculationModalOpened: Dispatch<SetStateAction<boolean>>;
+  setIsCalculating: Dispatch<SetStateAction<boolean>>;
 }
 
 export const useViajeFormHandlers = ({
@@ -33,6 +34,7 @@ export const useViajeFormHandlers = ({
       form.setFieldValue('total', calculation.montoTotal);
       showNotification('success', 'Cálculo realizado', 'La tarifa se calculó correctamente');
     } catch (error) {
+      console.error('Error al calcular la tarifa', error);
       showNotification('error', 'Error', 'No se pudo calcular la tarifa');
     } finally {
       setIsCalculating(false);

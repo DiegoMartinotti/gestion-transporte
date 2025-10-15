@@ -1,6 +1,7 @@
 import { ViajeFormData } from '../../../types/viaje';
 
 export interface ValidationErrors {
+  [key: string]: string | undefined;
   fecha?: string;
   cliente?: string;
   tramo?: string;

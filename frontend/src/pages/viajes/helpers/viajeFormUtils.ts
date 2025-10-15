@@ -28,9 +28,34 @@ export const simulateCalculation = (formValues: ViajeFormData) => {
 
 // Helper function for initial chofer mapping
 const getInitialChoferes = (viaje?: Viaje): string[] => {
-  return viaje?.choferes?.map((c) => 
-    typeof c.personal === 'object' ? c.personal._id : c.personal
-  ) || [];
+  if (!viaje?.choferes) {
+    return [];
+  }
+
+  return viaje.choferes
+    .map((chofer) => {
+      const withPersonal = chofer as {
+        personal?: string | { _id?: string };
+      };
+
+      if (withPersonal.personal) {
+        return typeof withPersonal.personal === 'string'
+          ? withPersonal.personal
+          : withPersonal.personal?._id;
+      }
+
+      return chofer._id;
+    })
+    .filter((id): id is string => Boolean(id));
+};
+
+// Helper function for initial ayudantes mapping
+const getInitialAyudantes = (viaje?: Viaje): string[] => {
+  if (!viaje?.ayudantes) {
+    return [];
+  }
+
+  return viaje.ayudantes.map((ayudante) => ayudante._id).filter((id): id is string => Boolean(id));
 };
 
 // Helper function for initial carga mapping
@@ -38,19 +63,58 @@ const getInitialCarga = (viaje?: Viaje) => ({
   peso: viaje?.carga?.peso || 0,
   volumen: viaje?.carga?.volumen || 0,
   descripcion: viaje?.carga?.descripcion || '',
+  peligrosa: viaje?.carga?.peligrosa ?? false,
+  refrigerada: viaje?.carga?.refrigerada ?? false,
 });
+
+const resolveReferenceId = (value?: string | { _id: string; [key: string]: unknown }): string => {
+  if (!value) {
+    return '';
+  }
+
+  return typeof value === 'string' ? value : value._id || '';
+};
+
+const resolveNumeroViaje = (numero?: string): number => {
+  if (!numero) {
+    return 0;
+  }
+
+  const parsed = Number(numero);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const resolveDistancia = (viaje?: Viaje): number => {
+  if (!viaje) {
+    return 0;
+  }
+
+  return viaje.distanciaKm ?? viaje.tramo?.distanciaKm ?? 0;
+};
+
+const resolveTiempoEstimado = (viaje?: Viaje): number => {
+  if (!viaje) {
+    return 0;
+  }
+
+  return viaje.tiempoEstimadoHoras ?? viaje.tramo?.tiempoEstimadoHoras ?? 0;
+};
 
 // Helper function for basic viaje data
 const getBasicViajeData = (viaje?: Viaje) => ({
-  fecha: viaje?.fecha || new Date().toISOString().split('T')[0],
-  cliente: viaje?.cliente || '',
-  tramo: viaje?.tramo || '',
-  distanciaKm: viaje?.distanciaKm || 0,
-  tiempoEstimado: viaje?.tiempoEstimado || 0,
-  estado: viaje?.estado || 'pendiente',
+  fecha: viaje?.fecha ? new Date(viaje.fecha) : new Date(),
+  cliente: resolveReferenceId(viaje?.cliente),
+  tramo: resolveReferenceId(viaje?.tramo),
+  numeroViaje: resolveNumeroViaje(viaje?.numeroViaje),
+  distanciaKm: resolveDistancia(viaje),
+  tiempoEstimadoHoras: resolveTiempoEstimado(viaje),
+  estado: viaje?.estado || 'Pendiente',
   observaciones: viaje?.observaciones || '',
   extras: viaje?.extras || [],
-  total: viaje?.total || 0,
+  ordenCompra: viaje?.ordenCompra || '',
+  montoBase: viaje?.montoBase ?? 0,
+  montoExtras: viaje?.montoExtras ?? 0,
+  montoTotal: viaje?.montoTotal ?? viaje?.total ?? 0,
 });
 
 // Helper function to get default form values
@@ -59,6 +123,7 @@ export const getDefaultFormValues = (viaje?: Viaje): ViajeFormData => {
     ...getBasicViajeData(viaje),
     vehiculos: getInitialVehiculos(viaje),
     choferes: getInitialChoferes(viaje),
+    ayudantes: getInitialAyudantes(viaje),
     carga: getInitialCarga(viaje),
   };
 };
