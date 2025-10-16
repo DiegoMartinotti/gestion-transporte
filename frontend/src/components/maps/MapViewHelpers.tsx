@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { MapMarker } from './MapView';
 
 export interface GoogleMap {
   setCenter: (position: { lat: number; lng: number }) => void;
@@ -29,14 +30,9 @@ export interface GoogleLatLngBounds {
   extend: (position: { lat: number; lng: number }) => void;
 }
 
-export interface MapMarkerData {
-  position: { lat: number; lng: number };
-  title?: string;
-  content?: string;
-  icon?: string;
-  clickable?: boolean;
-  onClick?: (marker: MapMarkerData) => void;
-}
+export type MapMarkerData = MapMarker & {
+  onDragEnd?: (marker: MapMarkerData, position: { lat: number; lng: number }) => void;
+};
 
 // Función helper para cargar Google Maps
 export const loadGoogleMaps = (onLoad: () => void, onError: (message: string) => void) => {
@@ -127,7 +123,7 @@ export const useCurrentLocation = (map: GoogleMap | null) => {
           title: 'Tu ubicación actual',
           icon: createCurrentLocationIcon(),
           clickable: false,
-        });
+        }) as unknown as GoogleMarker;
 
         setCurrentLocationMarker(marker);
         setGettingLocation(false);
@@ -161,7 +157,8 @@ const createMapMarkers = (
   map: GoogleMap,
   markers: MapMarkerData[],
   infoWindow: GoogleInfoWindow,
-  onMarkerClick?: (marker: MapMarkerData) => void
+  onMarkerClick?: (marker: MapMarkerData) => void,
+  onMarkerDragEnd?: (markerId: string, position: { lat: number; lng: number }) => void
 ): GoogleMarker[] => {
   const newMarkers: GoogleMarker[] = [];
 
@@ -175,7 +172,8 @@ const createMapMarkers = (
           ? { url: markerData.icon, scaledSize: new window.google.maps.Size(24, 24) }
           : undefined,
         clickable: markerData.clickable !== false,
-      });
+        draggable: markerData.draggable === true,
+      }) as unknown as GoogleMarker;
 
       if (markerData.content || markerData.onClick) {
         marker.addListener('click', () => {
@@ -190,6 +188,22 @@ const createMapMarkers = (
 
           if (onMarkerClick) {
             onMarkerClick(markerData);
+          }
+        });
+      }
+
+      if (markerData.draggable && onMarkerDragEnd) {
+        marker.addListener('dragend', () => {
+          const position = marker.getPosition();
+          if (!position) return;
+          const coords = { lat: position.lat(), lng: position.lng() };
+
+          if (markerData.onDragEnd) {
+            markerData.onDragEnd(markerData, coords);
+          }
+
+          if (markerData.id) {
+            onMarkerDragEnd(markerData.id, coords);
           }
         });
       }
@@ -214,6 +228,7 @@ export const useMapLogic = ({
   showControls,
   onMapClick,
   onMarkerClick,
+  onMarkerDragEnd,
 }: {
   mapLoaded: boolean;
   disabled: boolean;
@@ -224,6 +239,7 @@ export const useMapLogic = ({
   showControls: boolean;
   onMapClick?: (position: { lat: number; lng: number }) => void;
   onMarkerClick?: (marker: MapMarkerData) => void;
+  onMarkerDragEnd?: (markerId: string, position: { lat: number; lng: number }) => void;
 }) => {
   const [map, setMap] = useState<GoogleMap | null>(null);
   const [mapMarkers, setMapMarkers] = useState<GoogleMarker[]>([]);
@@ -252,9 +268,9 @@ export const useMapLogic = ({
           rotateControl: false,
           fullscreenControl: false,
           gestureHandling: disabled ? 'none' : 'auto',
-        });
+        }) as unknown as GoogleMap;
 
-        const newInfoWindow = new window.google.maps.InfoWindow();
+        const newInfoWindow = new window.google.maps.InfoWindow() as unknown as GoogleInfoWindow;
 
         if (onMapClick) {
           newMap.addListener('click', (event: GoogleMapEvent) => {
@@ -281,9 +297,9 @@ export const useMapLogic = ({
     // Limpiar marcadores existentes
     mapMarkers.forEach((marker) => marker.setMap(null));
 
-    const newMarkers = createMapMarkers(map, markers, infoWindow, onMarkerClick);
+    const newMarkers = createMapMarkers(map, markers, infoWindow, onMarkerClick, onMarkerDragEnd);
     setMapMarkers(newMarkers);
-  }, [map, markers, infoWindow, onMarkerClick, mapMarkers]);
+  }, [map, markers, infoWindow, onMarkerClick, onMarkerDragEnd]);
 
   // Centrar mapa cuando cambia el centro
   useEffect(() => {

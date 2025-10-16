@@ -17,6 +17,8 @@ export interface MapMarker {
   content?: string;
   clickable?: boolean;
   onClick?: (marker: MapMarker) => void;
+  draggable?: boolean;
+  onDragEnd?: (marker: MapMarker, position: { lat: number; lng: number }) => void;
 }
 
 interface MapViewProps {
@@ -201,6 +203,7 @@ export default function MapView({
   error,
   className,
   style,
+  onMarkerDragEnd,
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const { mapLoaded, mapError } = useGoogleMapsLoader();
@@ -215,6 +218,7 @@ export default function MapView({
       showControls,
       onMapClick,
       onMarkerClick,
+      onMarkerDragEnd,
     });
 
   useEffect(() => {

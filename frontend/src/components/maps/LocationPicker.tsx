@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
 import {
   Stack,
   Group,
@@ -9,14 +9,14 @@ import {
   ActionIcon,
   Tooltip,
   Alert,
-  NumberInput
+  NumberInput,
 } from '@mantine/core';
 import {
   IconSearch,
   IconCurrentLocation,
   IconCheck,
   IconX,
-  IconCrosshair
+  IconCrosshair,
 } from '@tabler/icons-react';
 import MapView, { type MapMarker } from './MapView';
 import {
@@ -25,7 +25,7 @@ import {
   handleMapClick,
   applyManualCoordinates,
   clearLocation,
-  DEFAULT_CENTER
+  DEFAULT_CENTER,
 } from './LocationPickerHelpers';
 
 // Componente para mostrar la información de ubicación seleccionada
@@ -35,7 +35,7 @@ interface LocationBadgeProps {
 
 const LocationBadge: React.FC<LocationBadgeProps> = ({ selectedLocation }) => {
   if (!selectedLocation) return null;
-  
+
   return (
     <Badge color="green" variant="light" size="sm">
       Ubicación seleccionada
@@ -52,7 +52,7 @@ interface SearchControlsProps {
   searchLoading: boolean;
   searchPlaceholder: string;
   disabled: boolean;
-  onSearchChange: (value: string) => void;
+  onSearchChange: Dispatch<SetStateAction<string>>;
   onSearch: () => void;
   onCurrentLocation: () => void;
   onClear: () => void;
@@ -69,7 +69,7 @@ const SearchControls: React.FC<SearchControlsProps> = ({
   onSearchChange,
   onSearch,
   onCurrentLocation,
-  onClear
+  onClear,
 }) => {
   if (!(showSearch || showCurrentLocation || selectedLocation)) return null;
 
@@ -101,11 +101,7 @@ const SearchControls: React.FC<SearchControlsProps> = ({
 
       {showCurrentLocation && (
         <Tooltip label="Usar mi ubicación">
-          <ActionIcon
-            onClick={onCurrentLocation}
-            disabled={disabled}
-            variant="light"
-          >
+          <ActionIcon onClick={onCurrentLocation} disabled={disabled} variant="light">
             <IconCurrentLocation size={16} />
           </ActionIcon>
         </Tooltip>
@@ -113,12 +109,7 @@ const SearchControls: React.FC<SearchControlsProps> = ({
 
       {selectedLocation && (
         <Tooltip label="Borrar ubicación">
-          <ActionIcon
-            onClick={onClear}
-            disabled={disabled}
-            color="red"
-            variant="light"
-          >
+          <ActionIcon onClick={onClear} disabled={disabled} color="red" variant="light">
             <IconX size={16} />
           </ActionIcon>
         </Tooltip>
@@ -135,9 +126,9 @@ interface CoordinatesDisplayProps {
   manualLat: number;
   manualLng: number;
   disabled: boolean;
-  onManualModeToggle: (enabled: boolean) => void;
-  onManualLatChange: (value: number) => void;
-  onManualLngChange: (value: number) => void;
+  onManualModeToggle: Dispatch<SetStateAction<boolean>>;
+  onManualLatChange: Dispatch<SetStateAction<number>>;
+  onManualLngChange: Dispatch<SetStateAction<number>>;
   onManualApply: () => void;
 }
 
@@ -151,7 +142,7 @@ const CoordinatesDisplay: React.FC<CoordinatesDisplayProps> = ({
   onManualModeToggle,
   onManualLatChange,
   onManualLngChange,
-  onManualApply
+  onManualApply,
 }) => {
   if (!showCoordinates) return null;
 
@@ -162,8 +153,7 @@ const CoordinatesDisplay: React.FC<CoordinatesDisplayProps> = ({
           <Text size="sm" c="dimmed">
             {selectedLocation
               ? `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}`
-              : 'Sin ubicación seleccionada'
-            }
+              : 'Sin ubicación seleccionada'}
           </Text>
           <ActionIcon
             size="sm"
@@ -196,19 +186,10 @@ const CoordinatesDisplay: React.FC<CoordinatesDisplayProps> = ({
             size="xs"
             disabled={disabled}
           />
-          <ActionIcon
-            size="sm"
-            color="green"
-            onClick={onManualApply}
-            disabled={disabled}
-          >
+          <ActionIcon size="sm" color="green" onClick={onManualApply} disabled={disabled}>
             <IconCheck size={14} />
           </ActionIcon>
-          <ActionIcon
-            size="sm"
-            onClick={() => onManualModeToggle(false)}
-            disabled={disabled}
-          >
+          <ActionIcon size="sm" onClick={() => onManualModeToggle(false)} disabled={disabled}>
             <IconX size={14} />
           </ActionIcon>
         </Group>
@@ -234,28 +215,34 @@ interface LocationPickerProps {
   error?: string;
 }
 
-
 // Hook personalizado para manejar la lógica del LocationPicker
 const useLocationPicker = (props: LocationPickerProps) => {
   const { value, onChange, onAddressChange } = props;
-  
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(value || null);
+
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(
+    value || null
+  );
   const [searchAddress, setSearchAddress] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(() => value || DEFAULT_CENTER);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>(
+    () => value || DEFAULT_CENTER
+  );
   const [manualLat, setManualLat] = useState<number>(value?.lat || 0);
   const [manualLng, setManualLng] = useState<number>(value?.lng || 0);
   const [manualMode, setManualMode] = useState(false);
 
-  const updateLocation = useCallback((position: { lat: number; lng: number } | null) => {
-    setSelectedLocation(position);
-    if (position) {
-      setMapCenter(position);
-      setManualLat(position.lat);
-      setManualLng(position.lng);
-    }
-    onChange(position);
-  }, [onChange]);
+  const updateLocation = useCallback(
+    (position: { lat: number; lng: number } | null) => {
+      setSelectedLocation(position);
+      if (position) {
+        setMapCenter(position);
+        setManualLat(position.lat);
+        setManualLng(position.lng);
+      }
+      onChange(position);
+    },
+    [onChange]
+  );
 
   const handleSearch = useCallback(async () => {
     if (!searchAddress.trim() || searchLoading) return;
@@ -269,10 +256,13 @@ const useLocationPicker = (props: LocationPickerProps) => {
     getCurrentUserLocation(updateLocation);
   }, [updateLocation]);
 
-  const handleMapClickAction = useCallback((position: { lat: number; lng: number }) => {
-    const result = handleMapClick(position, props.disabled, onChange);
-    if (result) updateLocation(result);
-  }, [props.disabled, onChange, updateLocation]);
+  const handleMapClickAction = useCallback(
+    (position: { lat: number; lng: number }) => {
+      const result = handleMapClick(position, Boolean(props.disabled), onChange);
+      if (result) updateLocation(result);
+    },
+    [props.disabled, onChange, updateLocation]
+  );
 
   const handleManualApply = useCallback(() => {
     const result = applyManualCoordinates(manualLat, manualLng, onChange);
@@ -313,14 +303,14 @@ const useLocationPicker = (props: LocationPickerProps) => {
     handleCurrentLocation,
     handleMapClickAction,
     handleManualApply,
-    handleClear
+    handleClear,
   };
 };
 
-export default function LocationPicker(props: LocationPickerProps) {
+export default function LocationPicker(props: Readonly<LocationPickerProps>) {
   const {
-    label = "Seleccionar ubicación",
-    placeholder = "Haga clic en el mapa para seleccionar ubicación",
+    label = 'Seleccionar ubicación',
+    placeholder = 'Haga clic en el mapa para seleccionar ubicación',
     required = false,
     disabled = false,
     height = 300,
@@ -328,8 +318,8 @@ export default function LocationPicker(props: LocationPickerProps) {
     showCoordinates = true,
     showCurrentLocation = true,
     initialZoom = 10,
-    searchPlaceholder = "Buscar dirección...",
-    error
+    searchPlaceholder = 'Buscar dirección...',
+    error,
   } = props;
 
   const {
@@ -348,11 +338,18 @@ export default function LocationPicker(props: LocationPickerProps) {
     handleCurrentLocation,
     handleMapClickAction,
     handleManualApply,
-    handleClear
+    handleClear,
   } = useLocationPicker(props);
 
-  const markers: MapMarker[] = selectedLocation 
-    ? [{ id: 'selected', position: selectedLocation, title: 'Ubicación seleccionada', draggable: !disabled }] 
+  const markers: MapMarker[] = selectedLocation
+    ? [
+        {
+          id: 'selected',
+          position: selectedLocation,
+          title: 'Ubicación seleccionada',
+          draggable: !disabled,
+        },
+      ]
     : [];
 
   return (
@@ -391,7 +388,7 @@ export default function LocationPicker(props: LocationPickerProps) {
         onManualApply={handleManualApply}
       />
 
-      {error && <Alert color="red" size="sm">{error}</Alert>}
+      {error ? <Alert color="red">{error}</Alert> : null}
 
       <Paper withBorder>
         <MapView
@@ -410,7 +407,9 @@ export default function LocationPicker(props: LocationPickerProps) {
       </Paper>
 
       {!selectedLocation && !disabled && (
-        <Text size="xs" c="dimmed" ta="center">{placeholder}</Text>
+        <Text size="xs" c="dimmed" ta="center">
+          {placeholder}
+        </Text>
       )}
     </Stack>
   );
