@@ -3,7 +3,7 @@
  * @description Helpers para procesamiento de datos de tramos
  */
 
-import mongoose, { AnyBulkWriteOperation } from 'mongoose';
+import { AnyBulkWriteOperation, Types } from 'mongoose';
 import Site from '../../models/Site';
 import { ITramo } from '../../models/Tramo';
 import { fechasSuperpuestas } from '../../utils/tramoValidator';
@@ -15,10 +15,11 @@ import logger from '../../utils/logger';
  */
 interface SiteData {
   _id: unknown;
-  Site: string;
+  nombre?: string;
+  Site?: string;
   codigo?: string;
   location?: {
-    coordinates?: number[];
+    coordinates?: [number, number];
   };
 }
 
@@ -92,12 +93,19 @@ export async function buildSiteMaps(): Promise<SiteMap> {
   const sitesMapByCode = new Map<string, SiteData>();
 
   allSites.forEach((site) => {
-    // Mapa por ID
-    sitesMap.set(String(site._id), site as SiteData);
+    const siteRecord = site as Record<string, unknown>;
+    const siteData: SiteData = {
+      _id: site._id,
+      nombre: typeof siteRecord.nombre === 'string' ? siteRecord.nombre : undefined,
+      Site: typeof siteRecord.Site === 'string' ? siteRecord.Site : undefined,
+      codigo: typeof siteRecord.codigo === 'string' ? siteRecord.codigo : undefined,
+      location: siteRecord.location as SiteData['location'],
+    };
 
-    // Mapa por código (si existe)
-    if (site.codigo) {
-      sitesMapByCode.set(site.codigo.toLowerCase(), site as SiteData);
+    sitesMap.set(String(site._id), siteData);
+
+    if (siteData.codigo) {
+      sitesMapByCode.set(siteData.codigo.toLowerCase(), siteData);
     }
   });
 
@@ -239,10 +247,9 @@ export async function calculateDistanceIfNeeded(
     destinoSite?.location?.coordinates?.length === 2
   ) {
     try {
-      const distanciaKm = await calcularDistanciaRuta(
-        origenSite.location.coordinates,
-        destinoSite.location.coordinates
-      );
+      const origenCoordinates = origenSite.location.coordinates as [number, number];
+      const destinoCoordinates = destinoSite.location.coordinates as [number, number];
+      const distanciaKm = await calcularDistanciaRuta(origenCoordinates, destinoCoordinates);
       logger.debug(`Distancia calculada para tramo #${indiceTramo}: ${distanciaKm} km`);
       return distanciaKm;
     } catch (routeError) {
@@ -271,10 +278,10 @@ export function createInsertOperation(config: InsertOperationConfig): ProcessRes
   const { tramoData, clienteId, distancia, nuevaTarifa, origenIdStr, destinoIdStr } = config;
 
   const nuevoTramo = {
-    _id: new mongoose.Types.ObjectId(),
-    origen: tramoData.origen,
-    destino: tramoData.destino,
-    cliente: clienteId,
+    _id: new Types.ObjectId(),
+    origen: new Types.ObjectId(tramoData.origen),
+    destino: new Types.ObjectId(tramoData.destino),
+    cliente: new Types.ObjectId(clienteId),
     distancia,
     tarifasHistoricas: [nuevaTarifa],
   };

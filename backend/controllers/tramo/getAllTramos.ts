@@ -39,23 +39,38 @@ interface ApiResponse<T = unknown> {
   };
 }
 
+type NamedEntityReference = {
+  nombre?: unknown;
+  Site?: unknown;
+};
+
+type EntityReference = NamedEntityReference | string | null | undefined;
+
 type SortableTramo = {
   [key: string]: unknown;
-  cliente?: unknown;
-  origen?: unknown;
-  destino?: unknown;
+  cliente?: EntityReference;
+  origen?: EntityReference;
+  destino?: EntityReference;
   tipo?: string | null;
 };
 
-const getNombre = (entity: SortableTramo['cliente']): string => {
+const getNombre = (entity: EntityReference): string => {
   if (typeof entity === 'string') {
     return entity;
   }
   if (entity && typeof entity === 'object') {
-    if ('nombre' in entity) {
-      const nombre = (entity as { nombre?: unknown }).nombre;
-      return typeof nombre === 'string' ? nombre : '';
+    const record = entity as Record<string, unknown>;
+    const nombre = record.nombre;
+    if (typeof nombre === 'string' && nombre.trim().length > 0) {
+      return nombre;
     }
+    const siteIdentifier = record.Site;
+    if (typeof siteIdentifier === 'string' && siteIdentifier.trim().length > 0) {
+      return siteIdentifier;
+    }
+  }
+  if (entity) {
+    return String(entity);
   }
   return '';
 };
