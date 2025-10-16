@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import Tramo from '../../models/Tramo';
+import Tramo, { ITramo, ITarifaHistorica } from '../../models/Tramo';
 import Cliente from '../../models/Cliente';
 import logger from '../../utils/logger';
 import * as tarifaService from '../../services/tarifaService';
@@ -146,12 +146,12 @@ const calcularTarifa = async (
       return;
     }
 
-    let tarifaSeleccionada;
+    let tarifaSeleccionada: ITarifaHistorica | undefined;
 
     if (tarifaHistoricaId && tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
       logger.debug(`Buscando tarifa histórica específica por ID: ${tarifaHistoricaId}`);
       tarifaSeleccionada = tramo.tarifasHistoricas.find(
-        (t) => t._id?.toString() === tarifaHistoricaId.toString()
+        (t: ITarifaHistorica) => t._id?.toString() === tarifaHistoricaId.toString()
       );
 
       if (tarifaSeleccionada) {
@@ -177,12 +177,15 @@ const calcularTarifa = async (
         );
 
         if (tramo.tarifasHistoricas && tramo.tarifasHistoricas.length > 0) {
-          const tarifasDelTipo = tramo.tarifasHistoricas.filter((t) => t.tipo === tipoTramo);
+          const tarifasDelTipo = tramo.tarifasHistoricas.filter(
+            (t: ITarifaHistorica) => t.tipo === tipoTramo
+          );
 
           if (tarifasDelTipo.length > 0) {
             // Ordenar por fecha de vigencia hasta (más reciente primero)
             tarifasDelTipo.sort(
-              (a, b) => new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime()
+              (a: ITarifaHistorica, b: ITarifaHistorica) =>
+                new Date(b.vigenciaHasta).getTime() - new Date(a.vigenciaHasta).getTime()
             );
             tarifaSeleccionada = tarifasDelTipo[0];
 
@@ -211,7 +214,7 @@ const calcularTarifa = async (
         );
 
         const tarifaEspecifica = tramo.tarifasHistoricas.find(
-          (t) =>
+          (t: ITarifaHistorica) =>
             t.tipo === tipoTramo &&
             t.metodoCalculo === metodoCalculo &&
             new Date(t.vigenciaDesde) <= fechaConsulta &&
@@ -220,7 +223,7 @@ const calcularTarifa = async (
 
         if (!tarifaEspecifica && permitirTramoNoVigente) {
           const tarifaNoVigente = tramo.tarifasHistoricas.find(
-            (t) => t.tipo === tipoTramo && t.metodoCalculo === metodoCalculo
+            (t: ITarifaHistorica) => t.tipo === tipoTramo && t.metodoCalculo === metodoCalculo
           );
 
           if (tarifaNoVigente) {

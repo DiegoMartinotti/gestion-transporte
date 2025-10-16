@@ -5,7 +5,6 @@
 
 import { AnyBulkWriteOperation, Types } from 'mongoose';
 import Site from '../../models/Site';
-import { ITramo } from '../../models/Tramo';
 import { fechasSuperpuestas } from '../../utils/tramoValidator';
 import { calcularDistanciaRuta } from '../routingService';
 import logger from '../../utils/logger';
@@ -71,9 +70,20 @@ export interface ProcessOptions {
 /**
  * Interfaz para resultado de procesamiento
  */
+type TramoBulkDocument = {
+  _id?: Types.ObjectId;
+  origen?: Types.ObjectId;
+  destino?: Types.ObjectId;
+  cliente?: Types.ObjectId;
+  distancia?: number;
+  tarifasHistoricas?: TarifaHistorica[];
+};
+
+type TramoBulkOperation = AnyBulkWriteOperation<TramoBulkDocument>;
+
 export interface ProcessResult {
   status: 'insert' | 'update' | 'error';
-  operation?: AnyBulkWriteOperation<ITramo>;
+  operation?: TramoBulkOperation;
   error?: string;
   tramoInfo?: {
     origenNombre: string;

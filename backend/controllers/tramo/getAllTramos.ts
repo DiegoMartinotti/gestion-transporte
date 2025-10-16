@@ -4,6 +4,7 @@
  */
 
 import { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import Tramo, { ITramo } from '../../models/Tramo';
 import logger from '../../utils/logger';
 
@@ -44,7 +45,7 @@ type NamedEntityReference = {
   Site?: unknown;
 };
 
-type EntityReference = NamedEntityReference | string | null | undefined;
+type EntityReference = NamedEntityReference | string | Types.ObjectId | null | undefined;
 
 type SortableTramo = {
   [key: string]: unknown;
