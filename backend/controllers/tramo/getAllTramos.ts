@@ -39,6 +39,27 @@ interface ApiResponse<T = unknown> {
   };
 }
 
+type SortableTramo = {
+  [key: string]: unknown;
+  cliente?: unknown;
+  origen?: unknown;
+  destino?: unknown;
+  tipo?: string | null;
+};
+
+const getNombre = (entity: SortableTramo['cliente']): string => {
+  if (typeof entity === 'string') {
+    return entity;
+  }
+  if (entity && typeof entity === 'object') {
+    if ('nombre' in entity) {
+      const nombre = (entity as { nombre?: unknown }).nombre;
+      return typeof nombre === 'string' ? nombre : '';
+    }
+  }
+  return '';
+};
+
 /**
  * Obtiene todos los tramos con paginación y expansión por tipos de tarifa
  *
@@ -75,8 +96,7 @@ async function getAllTramos(
     logger.debug(`Encontrados ${tramosBase.length} tramos base en BD`);
 
     // Expandir cada tramo por sus tipos de tarifa
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tramosExpandidos: unknown[] = [];
+    const tramosExpandidos: SortableTramo[] = [];
 
     // eslint-disable-next-line max-lines-per-function
     tramosBase.forEach(
@@ -144,32 +164,32 @@ async function getAllTramos(
     );
 
     // Ordenar con función simplificada
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, complexity
-    const sortTramos = (a: unknown, b: unknown): number => {
-      const clienteCompare = (a.cliente?.nombre || '').localeCompare(b.cliente?.nombre || '');
+    // eslint-disable-next-line complexity
+    const sortTramos = (a: SortableTramo, b: SortableTramo): number => {
+      const clienteCompare = getNombre(a.cliente).localeCompare(getNombre(b.cliente));
       if (clienteCompare !== 0) return clienteCompare;
 
-      const origenCompare = (a.origen?.nombre || '').localeCompare(b.origen?.nombre || '');
+      const origenCompare = getNombre(a.origen).localeCompare(getNombre(b.origen));
       if (origenCompare !== 0) return origenCompare;
 
-      const destinoCompare = (a.destino?.nombre || '').localeCompare(b.destino?.nombre || '');
+      const destinoCompare = getNombre(a.destino).localeCompare(getNombre(b.destino));
       if (destinoCompare !== 0) return destinoCompare;
 
-      return (a.tipo || '').localeCompare(b.tipo || '');
+      return (a.tipo ?? '').localeCompare(b.tipo ?? '');
     };
 
     tramosExpandidos.sort(sortTramos);
 
     // Aplicar paginación manual
     const totalTramos = tramosExpandidos.length;
-    const tramos = tramosExpandidos.slice(skip, skip + limit);
+    const paginatedTramos = tramosExpandidos.slice(skip, skip + limit);
 
     logger.debug(`Encontrados ${totalTramos} tramos únicos por tipo (incluye TRMC/TRMI separados)`);
-    logger.debug(`Enviando ${tramos.length} tramos (página ${page})`);
+    logger.debug(`Enviando ${paginatedTramos.length} tramos (página ${page})`);
 
     res.json({
       success: true,
-      data: tramos as ITramo[],
+      data: paginatedTramos as unknown as ITramo[],
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalTramos / limit),

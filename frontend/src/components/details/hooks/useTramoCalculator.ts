@@ -26,6 +26,7 @@ export const useTramoCalculator = () => {
         color: 'green',
       });
     } catch (error) {
+      console.error('Error al calcular costo del tramo', error);
       notifications.show({
         title: 'Error',
         message: 'Error al calcular costo',
@@ -45,6 +46,7 @@ export const useTramoCalculator = () => {
         color: 'green',
       });
     } catch (error) {
+      console.error('Error al recalcular la distancia del tramo', error);
       notifications.show({
         title: 'Error',
         message: 'Error al recalcular distancia',

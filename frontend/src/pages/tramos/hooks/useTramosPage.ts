@@ -111,6 +111,7 @@ const useTramosActions = (
       loadData();
       formModal.close();
     } catch (error) {
+      console.error('Error al guardar tramo', error);
       notifications.show({
         title: 'Error',
         message: 'Error al guardar tramo',
@@ -132,6 +133,7 @@ const useTramosActions = (
       loadData();
       deleteModal.close();
     } catch (error) {
+      console.error('Error al eliminar tramo', error);
       notifications.show({
         title: 'Error',
         message: 'Error al eliminar tramo',
