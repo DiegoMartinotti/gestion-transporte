@@ -2,6 +2,23 @@ import { Site } from '../../../types';
 import { DistanceResult, CostCalculation } from '../DistanceCalculatorComponents';
 import { CostParams, RequestConfig } from '../types/DistanceCalculatorTypes';
 
+type GoogleMapsApi = {
+  LatLng: new (lat: number, lng: number) => unknown;
+  TravelMode?: Record<string, string>;
+  UnitSystem?: {
+    METRIC?: unknown;
+  };
+};
+
+const getGoogleMaps = (): GoogleMapsApi | null => {
+  const maps = window.google?.maps as unknown;
+  if (!maps) {
+    return null;
+  }
+
+  return maps as GoogleMapsApi;
+};
+
 export const getCoordinatesFromLocation = (
   location: { lat: number; lng: number } | Site | undefined
 ) => {
@@ -39,27 +56,21 @@ export const calculateTravelCosts = (
   };
 };
 
-declare global {
-  interface Window {
-    google: {
-      maps: {
-        LatLng: new (lat: number, lng: number) => unknown;
-        TravelMode: Record<string, unknown>;
-        UnitSystem: {
-          METRIC: unknown;
-        };
-      };
-    };
+export const createDistanceMatrixRequest = (config: RequestConfig) => {
+  const maps = getGoogleMaps();
+  if (!maps || !maps.LatLng) {
+    throw new Error('Google Maps no está disponible');
   }
-}
 
-export const createDistanceMatrixRequest = (config: RequestConfig) => ({
-  origins: [new window.google.maps.LatLng(config.originCoords.lat, config.originCoords.lng)],
-  destinations: [
-    new window.google.maps.LatLng(config.destinationCoords.lat, config.destinationCoords.lng),
-  ],
-  travelMode: window.google.maps.TravelMode[config.travelMode],
-  unitSystem: window.google.maps.UnitSystem.METRIC,
-  avoidHighways: config.avoidHighways,
-  avoidTolls: config.avoidTolls,
-});
+  const travelModeMap = maps.TravelMode ?? {};
+  const travelModeKey = config.travelMode.toUpperCase();
+
+  return {
+    origins: [new maps.LatLng(config.originCoords.lat, config.originCoords.lng)],
+    destinations: [new maps.LatLng(config.destinationCoords.lat, config.destinationCoords.lng)],
+    travelMode: travelModeMap[travelModeKey] ?? travelModeKey,
+    unitSystem: maps.UnitSystem?.METRIC ?? 'METRIC',
+    avoidHighways: config.avoidHighways,
+    avoidTolls: config.avoidTolls,
+  };
+};

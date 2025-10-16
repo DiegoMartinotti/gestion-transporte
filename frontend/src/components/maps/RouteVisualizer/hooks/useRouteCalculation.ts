@@ -1,11 +1,38 @@
-import { useState, useCallback } from 'react';
-import { Site } from '../../../types';
+import { useState, useCallback, Dispatch, SetStateAction } from 'react';
+import { Site } from '../../../../types';
 import {
   RouteWaypoint,
   RouteResult,
   GoogleDirectionsService,
   GoogleDirectionsRenderer,
 } from '../types';
+
+type LatLngConstructor = new (
+  lat: number,
+  lng: number
+) => {
+  lat: () => number;
+  lng: () => number;
+};
+
+type GoogleMapsApi = {
+  LatLng: LatLngConstructor;
+  TravelMode?: Record<string, string>;
+};
+
+const getGoogleMapsApi = (): GoogleMapsApi | null => {
+  const maps = window.google?.maps as unknown;
+  if (!maps) {
+    return null;
+  }
+
+  const { LatLng } = maps as Partial<GoogleMapsApi>;
+  if (!LatLng) {
+    return null;
+  }
+
+  return maps as GoogleMapsApi;
+};
 
 // Helper para obtener mensaje de error según status
 const getErrorMessage = (status: string): string => {
@@ -30,10 +57,12 @@ interface UseRouteCalculationProps {
   directionsRenderer: GoogleDirectionsRenderer | null;
 }
 
+type LocationInput = { lat: number; lng: number } | Site | undefined;
+
 // Interface para configuración de cálculo de ruta
 interface RouteCalculationConfig {
-  origin: { lat: number; lng: number } | Site | undefined;
-  destination: { lat: number; lng: number } | Site | undefined;
+  origin: LocationInput;
+  destination: LocationInput;
   waypoints: RouteWaypoint[];
   options: {
     travelMode: string;
@@ -44,6 +73,58 @@ interface RouteCalculationConfig {
   };
 }
 
+const resolveCoordinates = (location: LocationInput) => {
+  if (!location) {
+    return null;
+  }
+
+  if ('coordenadas' in location) {
+    return location.coordenadas;
+  }
+
+  return location;
+};
+
+type RouteHandlerContext = {
+  directionsRenderer: GoogleDirectionsRenderer | null;
+  setRoute: Dispatch<SetStateAction<RouteResult | null>>;
+  setAlternativeRoutes: Dispatch<SetStateAction<RouteResult[]>>;
+  setError: Dispatch<SetStateAction<string>>;
+  setLoading: Dispatch<SetStateAction<boolean>>;
+};
+
+const useRouteResultHandler = ({
+  directionsRenderer,
+  setRoute,
+  setAlternativeRoutes,
+  setError,
+  setLoading,
+}: RouteHandlerContext) =>
+  useCallback(
+    (result: RouteResult | null, status: string, showAlternatives = false) => {
+      setLoading(false);
+
+      if (status === 'OK' && result) {
+        directionsRenderer?.setDirections(result);
+        if (showAlternatives && Array.isArray(result)) {
+          const [mainRoute, ...alternatives] = result as unknown as RouteResult[];
+          setRoute(mainRoute);
+          setAlternativeRoutes(alternatives || []);
+        } else {
+          setRoute(result);
+          setAlternativeRoutes([]);
+        }
+        setError('');
+        return;
+      }
+
+      setRoute(null);
+      setAlternativeRoutes([]);
+      setError(getErrorMessage(status));
+    },
+    [directionsRenderer, setAlternativeRoutes, setError, setLoading, setRoute]
+  );
+
 export const useRouteCalculation = ({
   directionsService,
   directionsRenderer,
@@ -53,59 +134,13 @@ export const useRouteCalculation = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  // Obtener coordenadas
-  const getCoordinates = useCallback(
-    (location: { lat: number; lng: number } | Site | undefined) => {
-      if (!location) return null;
-
-      if ('coordenadas' in location) {
-        return location.coordenadas;
-      }
-
-      return location;
-    },
-    []
-  );
-
-  // Helper para procesar resultado exitoso
-  const processSuccessfulResult = useCallback(
-    (result: RouteResult, showAlternatives: boolean) => {
-      setRoute(result);
-      directionsRenderer?.setDirections(result);
-
-      // Manejar rutas alternativas si están habilitadas
-      if (showAlternatives && Array.isArray(result)) {
-        const [mainRoute, ...alternatives] = result as unknown as RouteResult[];
-        setRoute(mainRoute);
-        setAlternativeRoutes(alternatives || []);
-      }
-
-      setError('');
-    },
-    [directionsRenderer]
-  );
-
-  // Helper para procesar resultado de error
-  const processErrorResult = useCallback((status: string) => {
-    const errorMessage = getErrorMessage(status);
-    setError(errorMessage);
-    setRoute(null);
-    setAlternativeRoutes([]);
-  }, []);
-
-  // Handler principal para el resultado de la ruta
-  const handleRouteResult = useCallback(
-    (result: RouteResult | null, status: string, showAlternatives?: boolean) => {
-      setLoading(false);
-
-      if (status === 'OK' && result) {
-        processSuccessfulResult(result, showAlternatives || false);
-      } else {
-        processErrorResult(status);
-      }
-    },
-    [processSuccessfulResult, processErrorResult]
-  );
+  const handleRouteResult = useRouteResultHandler({
+    directionsRenderer,
+    setRoute,
+    setAlternativeRoutes,
+    setError,
+    setLoading,
+  });
 
   // Calcular ruta
   const calculateRoute = useCallback(
@@ -113,8 +148,8 @@ export const useRouteCalculation = ({
       const { origin, destination, waypoints, options } = config;
       const { travelMode, optimizeWaypoints, avoidHighways, avoidTolls, showAlternatives } =
         options;
-      const originCoords = getCoordinates(origin);
-      const destinationCoords = getCoordinates(destination);
+      const originCoords = resolveCoordinates(origin);
+      const destinationCoords = resolveCoordinates(destination);
 
       if (!originCoords || !destinationCoords || !directionsService) {
         setError('Debe seleccionar origen y destino');
@@ -125,16 +160,23 @@ export const useRouteCalculation = ({
       setError('');
 
       try {
+        const maps = getGoogleMapsApi();
+        if (!maps) {
+          setError('Google Maps no está disponible');
+          setLoading(false);
+          return;
+        }
+
+        const travelModeKey = travelMode.toUpperCase();
         const request = {
-          origin: new window.google.maps.LatLng(originCoords.lat, originCoords.lng),
-          destination: new window.google.maps.LatLng(destinationCoords.lat, destinationCoords.lng),
+          origin: new maps.LatLng(originCoords.lat, originCoords.lng),
+          destination: new maps.LatLng(destinationCoords.lat, destinationCoords.lng),
           waypoints: waypoints.map((wp) => ({
-            location: new window.google.maps.LatLng(wp.location.lat, wp.location.lng),
+            location: new maps.LatLng(wp.location.lat, wp.location.lng),
             stopover: wp.stopover !== false,
           })),
           optimizeWaypoints,
-          travelMode:
-            window.google.maps.TravelMode[travelMode as keyof typeof window.google.maps.TravelMode],
+          travelMode: maps.TravelMode?.[travelModeKey] ?? travelModeKey,
           avoidHighways,
           avoidTolls,
           provideRouteAlternatives: showAlternatives,
@@ -149,7 +191,7 @@ export const useRouteCalculation = ({
         console.error('Error calculating route:', err);
       }
     },
-    [directionsService, getCoordinates, handleRouteResult]
+    [directionsService, handleRouteResult]
   );
 
   return {

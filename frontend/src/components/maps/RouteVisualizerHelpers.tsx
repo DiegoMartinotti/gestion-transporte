@@ -43,16 +43,81 @@ export const loadGoogleMapsScript = (): Promise<void> => {
   });
 };
 
+type GoogleDirectionsWaypoint = {
+  location: string;
+  stopover?: boolean;
+};
+
+type GoogleDirectionsRequest = {
+  origin: string;
+  destination: string;
+  waypoints: GoogleDirectionsWaypoint[];
+  travelMode: string;
+  optimizeWaypoints: boolean;
+  avoidHighways: boolean;
+  avoidTolls: boolean;
+};
+
+type GoogleDirectionsStep = {
+  instructions?: string;
+  distance?: { text?: string };
+  duration?: { text?: string };
+};
+
+type GoogleDirectionsLeg = {
+  distance?: { text?: string };
+  duration?: { text?: string };
+  steps?: GoogleDirectionsStep[];
+};
+
+type GoogleDirectionsRoute = {
+  legs: GoogleDirectionsLeg[];
+};
+
+type GoogleDirectionsResult = {
+  routes: GoogleDirectionsRoute[];
+};
+
+type GoogleDirectionsService = {
+  route: (
+    request: GoogleDirectionsRequest,
+    callback: (result: GoogleDirectionsResult, status: string) => void
+  ) => void;
+};
+
+type GoogleDirectionsRenderer = {
+  setDirections: (result: GoogleDirectionsResult | null) => void;
+};
+
+type GoogleMapsApi = {
+  TravelMode?: Record<string, string>;
+  DirectionsService?: new () => GoogleDirectionsService;
+  DirectionsRenderer?: new (config?: unknown) => GoogleDirectionsRenderer;
+};
+
+const getGoogleMaps = (): GoogleMapsApi | null => {
+  const maps = window.google?.maps as unknown;
+  if (!maps) {
+    return null;
+  }
+
+  return maps as GoogleMapsApi;
+};
+
 export const createRouteRequest = (
   origin: string,
   destination: string,
   waypoints: RouteWaypoint[]
-): google.maps.DirectionsRequest => {
+): GoogleDirectionsRequest => {
+  const maps = getGoogleMaps();
+  const travelModes = maps?.TravelMode ?? {};
+  const travelMode = travelModes.DRIVING ?? 'DRIVING';
+
   return {
     origin,
     destination,
     waypoints,
-    travelMode: google.maps.TravelMode.DRIVING,
+    travelMode,
     optimizeWaypoints: true,
     avoidHighways: false,
     avoidTolls: false,
@@ -60,7 +125,7 @@ export const createRouteRequest = (
 };
 
 export const handleRouteCalculationSuccess = (
-  response: google.maps.DirectionsResult
+  response: GoogleDirectionsResult
 ): RouteResult | null => {
   if (response.routes.length === 0) return null;
 
@@ -73,21 +138,22 @@ export const handleRouteCalculationSuccess = (
     distance: leg.distance?.text || 'N/A',
     duration: leg.duration?.text || 'N/A',
     steps:
-      leg.steps?.map((step, _index) => ({
-        instruction: step.instructions,
-        distance: step.distance?.text || 'N/A',
-        duration: step.duration?.text || 'N/A',
+      leg.steps?.map((step) => ({
+        instruction: step.instructions ?? 'N/A',
+        distance: step.distance?.text ?? 'N/A',
+        duration: step.duration?.text ?? 'N/A',
       })) || [],
   };
 };
 
 export const initializeMapServices = () => {
-  if (!window.google || !window.google.maps) {
+  const maps = getGoogleMaps();
+  if (!maps || !maps.DirectionsService || !maps.DirectionsRenderer) {
     throw new Error('Google Maps not loaded');
   }
 
   return {
-    directionsService: new google.maps.DirectionsService(),
-    directionsRenderer: new google.maps.DirectionsRenderer(),
+    directionsService: new maps.DirectionsService(),
+    directionsRenderer: new maps.DirectionsRenderer(),
   };
 };
