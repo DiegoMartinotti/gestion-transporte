@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import {
   createTarifaMetodo,
   createTarifaMetodoValidators,
@@ -74,7 +74,12 @@ const router = express.Router();
  *         description: No autorizado
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.get('/', authenticateToken, getAllTarifaMetodosValidators, getAllTarifaMetodos as unknown);
+router.get(
+  '/',
+  authenticateToken,
+  getAllTarifaMetodosValidators,
+  getAllTarifaMetodos as RequestHandler
+);
 
 /**
  * @swagger
@@ -91,7 +96,7 @@ router.get('/', authenticateToken, getAllTarifaMetodosValidators, getAllTarifaMe
  *         description: No autorizado
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.get('/activos', authenticateToken, getMetodosActivos as unknown);
+router.get('/activos', authenticateToken, getMetodosActivos as RequestHandler);
 
 /**
  * @swagger
@@ -119,7 +124,12 @@ router.get('/activos', authenticateToken, getMetodosActivos as unknown);
  *         description: No autorizado
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.get('/:id', authenticateToken, getTarifaMetodoByIdValidators, getTarifaMetodoById as unknown);
+router.get(
+  '/:id',
+  authenticateToken,
+  getTarifaMetodoByIdValidators,
+  getTarifaMetodoById as RequestHandler
+);
 
 /**
  * @swagger
@@ -195,7 +205,12 @@ router.get('/:id', authenticateToken, getTarifaMetodoByIdValidators, getTarifaMe
  *         description: No autorizado
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.post('/', authenticateToken, createTarifaMetodoValidators, createTarifaMetodo as unknown);
+router.post(
+  '/',
+  authenticateToken,
+  createTarifaMetodoValidators,
+  createTarifaMetodo as RequestHandler
+);
 
 /**
  * @swagger
@@ -255,7 +270,12 @@ router.post('/', authenticateToken, createTarifaMetodoValidators, createTarifaMe
  *         description: No autorizado
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.put('/:id', authenticateToken, updateTarifaMetodoValidators, updateTarifaMetodo as unknown);
+router.put(
+  '/:id',
+  authenticateToken,
+  updateTarifaMetodoValidators,
+  updateTarifaMetodo as RequestHandler
+);
 
 /**
  * @swagger
@@ -285,6 +305,11 @@ router.put('/:id', authenticateToken, updateTarifaMetodoValidators, updateTarifa
  *         description: No autorizado
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.delete('/:id', authenticateToken, deleteTarifaMetodoValidators, deleteTarifaMetodo as unknown);
+router.delete(
+  '/:id',
+  authenticateToken,
+  deleteTarifaMetodoValidators,
+  deleteTarifaMetodo as RequestHandler
+);
 
 export default router;

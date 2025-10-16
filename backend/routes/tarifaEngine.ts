@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import {
   calculateTarifa,
   calculateTarifaValidators,
@@ -175,7 +175,12 @@ const router = express.Router();
  *         description: Error interno del servidor
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.post('/calculate', authenticateToken, calculateTarifaValidators, calculateTarifa as unknown);
+router.post(
+  '/calculate',
+  authenticateToken,
+  calculateTarifaValidators,
+  calculateTarifa as RequestHandler
+);
 
 /**
  * @swagger
@@ -311,7 +316,12 @@ router.post('/calculate', authenticateToken, calculateTarifaValidators, calculat
  *         description: Error interno del servidor
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.post('/simulate', authenticateToken, simulateTarifaValidators, simulateTarifa as unknown);
+router.post(
+  '/simulate',
+  authenticateToken,
+  simulateTarifaValidators,
+  simulateTarifa as RequestHandler
+);
 
 /**
  * @swagger
@@ -425,7 +435,7 @@ router.post('/simulate', authenticateToken, simulateTarifaValidators, simulateTa
  *         description: Error interno del servidor
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.get('/audit', authenticateToken, getAuditoriaValidators, getAuditoria as unknown);
+router.get('/audit', authenticateToken, getAuditoriaValidators, getAuditoria as RequestHandler);
 
 /**
  * @swagger
@@ -471,6 +481,6 @@ router.get('/audit', authenticateToken, getAuditoriaValidators, getAuditoria as 
  *         description: Error interno del servidor
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-router.post('/clear-cache', authenticateToken, clearCache as unknown);
+router.post('/clear-cache', authenticateToken, clearCache as RequestHandler);
 
 export default router;

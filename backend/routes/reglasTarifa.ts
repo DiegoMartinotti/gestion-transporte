@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import {
   createReglaTarifa,
   createReglaTarifaValidators,
@@ -83,7 +83,12 @@ const router = express.Router();
  *       401:
  *         description: No autorizado
  */
-router.get('/', authenticateToken, getAllReglasTarifaValidators, getAllReglasTarifa as unknown);
+router.get(
+  '/',
+  authenticateToken,
+  getAllReglasTarifaValidators,
+  getAllReglasTarifa as RequestHandler
+);
 
 /**
  * @swagger
@@ -110,7 +115,12 @@ router.get('/', authenticateToken, getAllReglasTarifaValidators, getAllReglasTar
  *       401:
  *         description: No autorizado
  */
-router.get('/:id', authenticateToken, getReglaTarifaByIdValidators, getReglaTarifaById as unknown);
+router.get(
+  '/:id',
+  authenticateToken,
+  getReglaTarifaByIdValidators,
+  getReglaTarifaById as RequestHandler
+);
 
 /**
  * @swagger
@@ -238,7 +248,12 @@ router.get('/:id', authenticateToken, getReglaTarifaByIdValidators, getReglaTari
  *       401:
  *         description: No autorizado
  */
-router.post('/', authenticateToken, createReglaTarifaValidators, createReglaTarifa as unknown);
+router.post(
+  '/',
+  authenticateToken,
+  createReglaTarifaValidators,
+  createReglaTarifa as RequestHandler
+);
 
 /**
  * @swagger
@@ -312,7 +327,12 @@ router.post('/', authenticateToken, createReglaTarifaValidators, createReglaTari
  *       401:
  *         description: No autorizado
  */
-router.put('/:id', authenticateToken, updateReglaTarifaValidators, updateReglaTarifa as unknown);
+router.put(
+  '/:id',
+  authenticateToken,
+  updateReglaTarifaValidators,
+  updateReglaTarifa as RequestHandler
+);
 
 /**
  * @swagger
@@ -350,6 +370,11 @@ router.put('/:id', authenticateToken, updateReglaTarifaValidators, updateReglaTa
  *       401:
  *         description: No autorizado
  */
-router.delete('/:id', authenticateToken, deleteReglaTarifaValidators, deleteReglaTarifa as unknown);
+router.delete(
+  '/:id',
+  authenticateToken,
+  deleteReglaTarifaValidators,
+  deleteReglaTarifa as RequestHandler
+);
 
 export default router;
