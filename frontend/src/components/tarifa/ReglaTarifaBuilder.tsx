@@ -104,21 +104,21 @@ const ReglaTarifaBuilder: React.FC<ReglaTarifaBuilderProps> = ({ onRuleChange })
       </Paper>
 
       <ReglaTarifaFormModal
-        opened={formModal.opened}
+        opened={formModal.isOpen}
         onClose={formModal.close}
-        editingRule={formModal.data}
+        editingRule={formModal.selectedItem}
         form={form}
         clientes={clientes}
         onSubmit={handleSubmit}
       />
 
       <DeleteConfirmModal
-        opened={deleteModal.opened}
+        opened={deleteModal.isOpen}
         onClose={deleteModal.close}
-        regla={deleteModal.data}
+        regla={deleteModal.selectedItem}
         onConfirm={() => {
-          if (deleteModal.data) {
-            handleDelete(deleteModal.data._id);
+          if (deleteModal.selectedItem) {
+            handleDelete(deleteModal.selectedItem._id);
             deleteModal.close();
           }
         }}

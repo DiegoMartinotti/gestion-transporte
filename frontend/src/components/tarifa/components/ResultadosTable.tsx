@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Card,
-  Table,
-  ActionIcon,
-  Badge,
-  Text,
-  Alert,
-} from '@mantine/core';
+import { Card, Table, ActionIcon, Badge, Text, Alert } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import type { IResultadoSimulacion } from '../../../types/tarifa';
 
@@ -15,10 +8,39 @@ interface ResultadosTableProps {
   onViewDetails: (resultado: IResultadoSimulacion) => void;
 }
 
-const ResultadosTable: React.FC<ResultadosTableProps> = ({
-  resultados,
-  onViewDetails,
-}) => {
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
+
+const formatDifference = (value: number) => {
+  if (value === 0) {
+    return formatCurrency(0);
+  }
+  const absolute = Math.abs(value);
+  const sign = value > 0 ? '+' : '-';
+  return `${sign}${formatCurrency(absolute)}`;
+};
+
+const getEstado = (difference: number) => {
+  if (difference === 0) {
+    return { label: 'Sin cambios', color: 'gray' as const };
+  }
+  if (difference > 0) {
+    return { label: 'Incremento', color: 'red' as const };
+  }
+  return { label: 'Reducción', color: 'green' as const };
+};
+
+const getDifferenceColor = (difference: number) => {
+  if (difference > 0) {
+    return 'red';
+  }
+  if (difference < 0) {
+    return 'green';
+  }
+  return undefined;
+};
+
+const ResultadosTable: React.FC<ResultadosTableProps> = ({ resultados, onViewDetails }) => {
   if (resultados.length === 0) {
     return (
       <Alert variant="light" color="yellow" icon={<IconInfoCircle size={16} />}>
@@ -40,44 +62,57 @@ const ResultadosTable: React.FC<ResultadosTableProps> = ({
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {resultados.map((resultado, index) => (
-            <Table.Tr key={index}>
-              <Table.Td>
-                <Text fw={500}>{resultado.escenarioNombre}</Text>
-                <Text size="xs" c="dimmed">
-                  {new Date(resultado.fechaEjecucion).toLocaleDateString()}
-                </Text>
-              </Table.Td>
-              <Table.Td style={{ textAlign: 'right' }}>
-                <Text fw={500}>${resultado.totalCalculado.toLocaleString()}</Text>
-              </Table.Td>
-              <Table.Td style={{ textAlign: 'right' }}>
-                <Text
-                  c={resultado.diferencia > 0 ? 'red' : resultado.diferencia < 0 ? 'green' : undefined}
-                  fw={500}
-                >
-                  {resultado.diferencia > 0 ? '+' : ''}${resultado.diferencia.toLocaleString()}
-                </Text>
-              </Table.Td>
-              <Table.Td style={{ textAlign: 'center' }}>
-                <Badge
-                  color={resultado.estado === 'exitoso' ? 'green' : 'red'}
-                  variant="light"
-                >
-                  {resultado.estado}
-                </Badge>
-              </Table.Td>
-              <Table.Td style={{ textAlign: 'center' }}>
-                <ActionIcon
-                  variant="light"
-                  onClick={() => onViewDetails(resultado)}
-                  title="Ver detalles"
-                >
-                  <IconInfoCircle size={16} />
-                </ActionIcon>
-              </Table.Td>
-            </Table.Tr>
-          ))}
+          {resultados.map((resultado, index) => {
+            const rowKey = `${resultado.escenario}-${index}`;
+            const totalCalculado = resultado.valoresFinales.total;
+            const diferenciaTotal = resultado.diferencia.total;
+            const differenceLabel = formatDifference(diferenciaTotal);
+            const differenceColor = getDifferenceColor(diferenciaTotal);
+            const porcentaje = resultado.diferencia.porcentaje;
+            const { label: estadoLabel, color: estadoColor } = getEstado(diferenciaTotal);
+
+            return (
+              <Table.Tr key={rowKey}>
+                {/*
+                 * indice + escenario se usa para mantener la fila estable incluso si llegan
+                 * resultados con el mismo escenario en diferentes consultas
+                 */}
+                <Table.Td>
+                  <Text fw={500}>{resultado.escenario}</Text>
+                  <Text size="xs" c="dimmed">
+                    Total base: {formatCurrency(resultado.valoresOriginales.total)}
+                  </Text>
+                </Table.Td>
+                <Table.Td style={{ textAlign: 'right' }}>
+                  <Text fw={500}>{formatCurrency(totalCalculado)}</Text>
+                </Table.Td>
+                <Table.Td style={{ textAlign: 'right' }}>
+                  <Text c={differenceColor} fw={500}>
+                    {differenceLabel}
+                    {porcentaje !== undefined && (
+                      <Text component="span" size="xs" c="dimmed" fw={400} ml="xs">
+                        ({porcentaje}%)
+                      </Text>
+                    )}
+                  </Text>
+                </Table.Td>
+                <Table.Td style={{ textAlign: 'center' }}>
+                  <Badge color={estadoColor} variant="light">
+                    {estadoLabel}
+                  </Badge>
+                </Table.Td>
+                <Table.Td style={{ textAlign: 'center' }}>
+                  <ActionIcon
+                    variant="light"
+                    onClick={() => onViewDetails(resultado)}
+                    title="Ver detalles"
+                  >
+                    <IconInfoCircle size={16} />
+                  </ActionIcon>
+                </Table.Td>
+              </Table.Tr>
+            );
+          })}
         </Table.Tbody>
       </Table>
     </Card>

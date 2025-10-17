@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
-import { useModal, ModalReturn } from './useModal';
+import { useModal, type ModalReturn } from './useModal';
 import { useDataLoader } from './useDataLoader';
 
 interface MetodoTarifa {
@@ -28,12 +28,46 @@ interface VariableFormData {
   valorDefault: number;
 }
 
+const buildPagination = (totalItems: number) => ({
+  currentPage: 1,
+  totalPages: 1,
+  totalItems,
+  itemsPerPage: Math.max(totalItems, 1),
+});
+
+let mockData: MetodoTarifa[] = [];
+let idCounter = 0;
+
+const generateId = () => `metodo-${Date.now()}-${idCounter++}`;
+
 const mockService = {
-  getAll: async () => [] as MetodoTarifa[],
-  create: async (data: Partial<MetodoTarifa>) => ({ id: '1', ...data }) as MetodoTarifa,
-  update: async (id: string, data: Partial<MetodoTarifa>) => ({ id, ...data }) as MetodoTarifa,
+  getAll: async () => ({
+    data: [...mockData],
+    pagination: buildPagination(mockData.length),
+  }),
+  create: async (data: Partial<MetodoTarifa>) => {
+    const newMetodo: MetodoTarifa = {
+      id: generateId(),
+      nombre: data.nombre ?? 'Método sin nombre',
+      descripcion: data.descripcion ?? '',
+      formula: data.formula ?? '',
+      variables: data.variables ?? [],
+      activo: data.activo ?? true,
+    };
+    mockData = [...mockData, newMetodo];
+    return newMetodo;
+  },
+  update: async (id: string, data: Partial<MetodoTarifa>) => {
+    const index = mockData.findIndex((metodo) => metodo.id === id);
+    if (index === -1) {
+      throw new Error('Método de tarifa no encontrado');
+    }
+    const updated = { ...mockData[index], ...data };
+    mockData = [...mockData.slice(0, index), updated, ...mockData.slice(index + 1)];
+    return updated;
+  },
   delete: async (id: string) => {
-    console.log('Deleted:', id);
+    mockData = mockData.filter((metodo) => metodo.id !== id);
   },
   testFormula: async (formula: string, valores: Record<string, number>) => {
     console.log('Testing formula:', formula, 'with values:', valores);
@@ -43,8 +77,8 @@ const mockService = {
 
 const useTarifaOperations = (
   refresh: () => void,
-  editModal: ModalReturn,
-  deleteModal: ModalReturn
+  editModal: ModalReturn<MetodoTarifa>,
+  deleteModal: ModalReturn<MetodoTarifa>
 ) => {
   const handleCreate = async (data: Partial<MetodoTarifa>) => {
     try {
@@ -56,6 +90,7 @@ const useTarifaOperations = (
       });
       refresh();
     } catch (error) {
+      console.error('Error al crear el método de tarifa', error);
       notifications.show({
         title: 'Error',
         message: 'Error al crear el método de tarifa',
@@ -75,6 +110,7 @@ const useTarifaOperations = (
       refresh();
       editModal.close();
     } catch (error) {
+      console.error('Error al actualizar el método de tarifa', error);
       notifications.show({
         title: 'Error',
         message: 'Error al actualizar el método de tarifa',
@@ -94,6 +130,7 @@ const useTarifaOperations = (
       refresh();
       deleteModal.close();
     } catch (error) {
+      console.error('Error al eliminar el método de tarifa', error);
       notifications.show({
         title: 'Error',
         message: 'Error al eliminar el método de tarifa',
@@ -112,6 +149,7 @@ const useTarifaOperations = (
       });
       return resultado;
     } catch (error) {
+      console.error('Error al probar la fórmula de tarifa', error);
       notifications.show({
         title: 'Error',
         message: 'Error al probar la fórmula',
@@ -176,8 +214,8 @@ export const useTarifaManager = () => {
     valorDefault: 0,
   });
 
-  const editModal = useModal();
-  const deleteModal = useModal();
+  const editModal = useModal<MetodoTarifa>();
+  const deleteModal = useModal<MetodoTarifa>();
 
   const {
     data: metodos = [],
