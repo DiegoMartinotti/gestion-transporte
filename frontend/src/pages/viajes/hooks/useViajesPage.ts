@@ -14,6 +14,8 @@ import {
 
 const DEFAULT_PAGE_SIZE = 10;
 
+type ExcelOperationsHandler = Pick<ReturnType<typeof useExcelOperations>, 'handleImportComplete'>;
+
 // Interfaces para tipado fuerte
 interface ImportResult {
   summary?: {
@@ -22,6 +24,28 @@ interface ImportResult {
   };
   hasMissingData?: boolean;
 }
+
+const getImportSummary = (result: ImportResult) => ({
+  insertedRows: result.summary?.insertedRows ?? 0,
+  errorRows: result.summary?.errorRows ?? 0,
+});
+
+const resolveImportMessage = (
+  insertedRows: number,
+  errorRows: number,
+  hasMissingData?: boolean
+) => {
+  if (errorRows > 0) {
+    return `Se detectaron ${errorRows} filas con errores`;
+  }
+  if (hasMissingData) {
+    return 'Faltan datos para completar la importación';
+  }
+  if (insertedRows === 0) {
+    return 'No se importaron viajes desde el archivo seleccionado';
+  }
+  return undefined;
+};
 
 // Hook para manejo de datos
 const useViajesDataLoaders = () => {
@@ -170,25 +194,28 @@ const useViajesActions = (
   fetchViajes: () => Promise<void>,
   deleteViaje: (id: string) => Promise<void>,
   modals: ReturnType<typeof useViajesModals>,
-  excelOperations: { handleImportComplete: (result: ImportResult) => void }
+  excelOperations: ExcelOperationsHandler
 ) => {
   const [selectedViajeIds, setSelectedViajeIds] = useState<string[]>([]);
 
   const handleImportComplete = async (result: ImportResult) => {
-    console.log('handleImportComplete called with result:', result);
+    const { insertedRows, errorRows } = getImportSummary(result);
 
-    if (result.summary?.insertedRows && result.summary.insertedRows > 0) {
-      console.log('Refrescando lista de viajes después de importación exitosa');
+    if (insertedRows > 0) {
       await fetchViajes();
     }
 
-    if (!result.hasMissingData || result.summary?.errorRows === 0) {
-      console.log('Cerrando modal porque no hay datos faltantes');
+    if (!result.hasMissingData || errorRows === 0) {
       modals.setImportModalOpened(false);
-    } else {
-      console.log('Manteniendo modal abierto para mostrar opción de descarga');
     }
-    excelOperations.handleImportComplete(result);
+    const success = insertedRows > 0 && errorRows === 0;
+    const message = resolveImportMessage(insertedRows, errorRows, result.hasMissingData);
+
+    excelOperations.handleImportComplete({
+      success,
+      imported: insertedRows,
+      message,
+    });
   };
 
   const handleDeleteClick = (viaje: Viaje) => {
@@ -277,7 +304,11 @@ const useViajesPage = () => {
     entityName: 'viajes',
     exportFunction: (filters) => viajeExcelService.exportToExcel(filters),
     templateFunction: () => viajeExcelService.getTemplate(),
-    reloadFunction: fetchViajes,
+    reloadFunction: () => {
+      fetchViajes().catch((error) => {
+        console.error('Error al recargar viajes', error);
+      });
+    },
   });
 
   const actions = useViajesActions(fetchViajes, deleteViaje, modals, excelOperations);
@@ -307,7 +338,6 @@ const useViajesPage = () => {
     // Datos
     viajes: filters.filteredViajes,
     paginatedViajes,
-    viajesStats: filters.viajesStats,
     loading,
     error,
 
@@ -320,8 +350,6 @@ const useViajesPage = () => {
     pageSize,
     setPageSize,
     useVirtualScrolling,
-    selectedViajeIds: actions.selectedViajeIds,
-
     // Estados de modales (destructuring para mantener compatibilidad)
     ...modals,
 

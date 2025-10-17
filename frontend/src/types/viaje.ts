@@ -128,6 +128,8 @@ export interface ViajeFormData {
     refrigerada: boolean;
   };
   distanciaKm: number;
+  /** Alias legacy support for tiempo estimado en horas */
+  tiempoEstimado?: number;
   tiempoEstimadoHoras: number;
   ordenCompra: string;
   observaciones: string;
@@ -140,5 +142,7 @@ export interface ViajeFormData {
   estado: string;
   montoBase: number;
   montoExtras: number;
+  /** Alias legacy support for total del viaje */
+  total?: number;
   montoTotal: number;
 }
