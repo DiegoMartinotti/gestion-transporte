@@ -5,7 +5,140 @@
 
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
-import { ValidationError } from '../utils/errors';
+
+const VALIDATION_ERROR_MESSAGE = 'Error de validación';
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/;
+
+type ValidationMessage = string | null;
+
+const filterMessages = (messages: ValidationMessage[]): string[] =>
+  messages.filter((message): message is string => Boolean(message));
+
+const respondWithErrors = (res: Response, errors: string[]): void => {
+  res.status(400).json({
+    success: false,
+    message: VALIDATION_ERROR_MESSAGE,
+    errors,
+  });
+};
+
+const hasAnyValue = (value: unknown): boolean =>
+  value !== undefined && value !== null && value !== '';
+
+const getCoordinateErrors = (coordenadas?: {
+  lat?: string | number;
+  lng?: string | number;
+}): string[] => {
+  if (!coordenadas) {
+    return [];
+  }
+
+  const { lat, lng } = coordenadas;
+
+  if (lat === undefined || lng === undefined) {
+    return ['Las coordenadas deben incluir lat y lng'];
+  }
+
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+
+  const messages: ValidationMessage[] = [
+    !Number.isFinite(latNum) || latNum < -90 || latNum > 90
+      ? 'La latitud debe ser un número entre -90 y 90'
+      : null,
+    !Number.isFinite(lngNum) || lngNum < -180 || lngNum > 180
+      ? 'La longitud debe ser un número entre -180 y 180'
+      : null,
+  ];
+
+  return filterMessages(messages);
+};
+
+const collectSiteErrors = (req: SiteRequest): string[] => {
+  const { nombre, cliente, direccion, coordenadas, localidad, provincia } = req.body;
+  const isPost = req.method === 'POST';
+  const isPut = req.method === 'PUT';
+  const hasUpdatableField = [nombre, direccion, coordenadas, localidad, provincia].some(
+    hasAnyValue
+  );
+
+  const messages: ValidationMessage[] = [
+    isPost && !hasAnyValue(nombre) ? 'El nombre del sitio es requerido' : null,
+    isPost && !hasAnyValue(cliente) ? 'El cliente asociado es requerido' : null,
+    isPut && !hasUpdatableField ? 'Debe proporcionar al menos un campo para actualizar' : null,
+  ];
+
+  return [...filterMessages(messages), ...getCoordinateErrors(coordenadas)];
+};
+
+const parseDate = (value?: string | Date): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const getTramoBaseErrors = ({
+  origen,
+  destino,
+  cliente,
+  tarifa,
+}: TramoRequest['body']): string[] => {
+  const tarifaNum = tarifa !== undefined ? Number(tarifa) : undefined;
+
+  const messages: ValidationMessage[] = [
+    !hasAnyValue(origen) ? 'El origen es requerido' : null,
+    !hasAnyValue(destino) ? 'El destino es requerido' : null,
+    !hasAnyValue(cliente) ? 'El cliente es requerido' : null,
+    tarifa !== undefined && (tarifaNum === undefined || Number.isNaN(tarifaNum) || tarifaNum < 0)
+      ? 'La tarifa debe ser un número positivo'
+      : null,
+  ];
+
+  return filterMessages(messages);
+};
+
+const getTramoDateErrors = (
+  vigenciaDesde?: string | Date,
+  vigenciaHasta?: string | Date
+): string[] => {
+  const desde = parseDate(vigenciaDesde);
+  const hasta = parseDate(vigenciaHasta);
+
+  const messages: ValidationMessage[] = [
+    vigenciaDesde && desde === null ? 'La fecha de vigencia desde no es válida' : null,
+    vigenciaHasta && hasta === null ? 'La fecha de vigencia hasta no es válida' : null,
+    desde !== null && hasta !== null && hasta < desde
+      ? 'La fecha de vigencia hasta debe ser posterior a la fecha desde'
+      : null,
+  ];
+
+  return filterMessages(messages);
+};
+
+const collectTramoErrors = (req: TramoRequest): string[] => [
+  ...getTramoBaseErrors(req.body),
+  ...getTramoDateErrors(req.body.vigenciaDesde, req.body.vigenciaHasta),
+];
+
+const collectAuthErrors = (req: AuthRequest): string[] => {
+  const email = req.body.email?.trim();
+  const { password } = req.body;
+
+  const messages: ValidationMessage[] = [
+    !hasAnyValue(email) ? 'El email es requerido' : null,
+    email && !EMAIL_REGEX.test(email) ? 'El formato del email no es válido' : null,
+    !hasAnyValue(password) ? 'La contraseña es requerida' : null,
+    typeof password === 'string' && password.length > 0 && password.length < 6
+      ? 'La contraseña debe tener al menos 6 caracteres'
+      : null,
+  ];
+
+  return filterMessages(messages);
+};
 
 interface SiteRequest extends Request {
   body: {
@@ -18,7 +151,7 @@ interface SiteRequest extends Request {
     };
     localidad?: string;
     provincia?: string;
-  }
+  };
 }
 
 interface TramoRequest extends Request {
@@ -29,14 +162,14 @@ interface TramoRequest extends Request {
     tarifa?: string | number;
     vigenciaDesde?: string | Date;
     vigenciaHasta?: string | Date;
-  }
+  };
 }
 
 interface AuthRequest extends Request {
   body: {
     email?: string;
     password?: string;
-  }
+  };
 }
 
 /**
@@ -46,56 +179,14 @@ interface AuthRequest extends Request {
  * @param {Function} next - Función next de Express
  */
 const validateSite = (req: SiteRequest, res: Response, next: NextFunction): void => {
-  const { nombre, cliente } = req.body;
-  
-  const errors: string[] = [];
-  
-  // Validaciones para creación (POST)
-  if (req.method === 'POST') {
-    if (!nombre) errors.push('El nombre del sitio es requerido');
-    if (!cliente) errors.push('El cliente asociado es requerido');
-  }
-  
-  // Validaciones para actualización (PUT)
-  if (req.method === 'PUT') {
-    // Verificar que venga al menos un campo para actualizar
-    if (!nombre && !req.body.direccion && !req.body.coordenadas && 
-        !req.body.localidad && !req.body.provincia) {
-      errors.push('Debe proporcionar al menos un campo para actualizar');
-    }
-  }
-  
-  // Validar formato de coordenadas si vienen
-  if (req.body.coordenadas) {
-    const { lat, lng } = req.body.coordenadas;
-    
-    if (lat === undefined || lng === undefined) {
-      errors.push('Las coordenadas deben incluir lat y lng');
-    } else {
-      const latNum = parseFloat(lat as string);
-      const lngNum = parseFloat(lng as string);
-      
-      if (isNaN(latNum) || latNum < -90 || latNum > 90) {
-        errors.push('La latitud debe ser un número entre -90 y 90');
-      }
-      
-      if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
-        errors.push('La longitud debe ser un número entre -180 y 180');
-      }
-    }
-  }
-  
-  // Si hay errores, devolver respuesta de error
+  const errors = collectSiteErrors(req);
+
   if (errors.length > 0) {
     logger.warn('Validación fallida:', errors);
-    res.status(400).json({
-      success: false,
-      message: 'Error de validación',
-      errors
-    });
+    respondWithErrors(res, errors);
     return;
   }
-  
+
   next();
 };
 
@@ -106,57 +197,14 @@ const validateSite = (req: SiteRequest, res: Response, next: NextFunction): void
  * @param {Function} next - Función next de Express
  */
 const validateTramo = (req: TramoRequest, res: Response, next: NextFunction): void => {
-  const { origen, destino, cliente, tarifa } = req.body;
-  
-  const errors: string[] = [];
-  
-  // Validaciones básicas
-  if (!origen) errors.push('El origen es requerido');
-  if (!destino) errors.push('El destino es requerido');
-  if (!cliente) errors.push('El cliente es requerido');
-  
-  // Validar tarifa
-  if (tarifa !== undefined) {
-    const tarifaNum = parseFloat(tarifa as string);
-    if (isNaN(tarifaNum) || tarifaNum < 0) {
-      errors.push('La tarifa debe ser un número positivo');
-    }
-  }
-  
-  // Validar fechas de vigencia si vienen
-  if (req.body.vigenciaDesde) {
-    const fechaDesde = new Date(req.body.vigenciaDesde);
-    if (isNaN(fechaDesde.getTime())) {
-      errors.push('La fecha de vigencia desde no es válida');
-    }
-  }
-  
-  if (req.body.vigenciaHasta) {
-    const fechaHasta = new Date(req.body.vigenciaHasta);
-    if (isNaN(fechaHasta.getTime())) {
-      errors.push('La fecha de vigencia hasta no es válida');
-    }
-    
-    // Validar que la fecha hasta sea posterior a la fecha desde
-    if (req.body.vigenciaDesde) {
-      const fechaDesde = new Date(req.body.vigenciaDesde);
-      if (fechaHasta < fechaDesde) {
-        errors.push('La fecha de vigencia hasta debe ser posterior a la fecha desde');
-      }
-    }
-  }
-  
-  // Si hay errores, devolver respuesta de error
+  const errors = collectTramoErrors(req);
+
   if (errors.length > 0) {
     logger.warn('Validación de tramo fallida:', errors);
-    res.status(400).json({
-      success: false,
-      message: 'Error de validación',
-      errors
-    });
+    respondWithErrors(res, errors);
     return;
   }
-  
+
   next();
 };
 
@@ -167,35 +215,14 @@ const validateTramo = (req: TramoRequest, res: Response, next: NextFunction): vo
  * @param {Function} next - Función next de Express
  */
 const validateAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const { email, password } = req.body;
-  
-  const errors: string[] = [];
-  
-  if (!email) errors.push('El email es requerido');
-  if (email && !/\S+@\S+\.\S+/.test(email)) {
-    errors.push('El formato del email no es válido');
-  }
-  
-  if (!password) errors.push('La contraseña es requerida');
-  if (password && password.length < 6) {
-    errors.push('La contraseña debe tener al menos 6 caracteres');
-  }
-  
-  // Si hay errores, devolver respuesta de error
+  const errors = collectAuthErrors(req);
+
   if (errors.length > 0) {
-    res.status(400).json({
-      success: false,
-      message: 'Error de validación',
-      errors
-    });
+    respondWithErrors(res, errors);
     return;
   }
-  
+
   next();
 };
 
-export {
-  validateSite,
-  validateTramo,
-  validateAuth
-}; 
+export { validateSite, validateTramo, validateAuth };
