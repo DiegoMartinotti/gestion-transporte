@@ -8,6 +8,8 @@ import { VehiculoSelector } from '../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../components/selectors/PersonalSelector';
 import { calculateViajesStats } from './viajesHelpers';
 
+type MantineDateRangeValue = [string | null, string | null];
+
 // Componente separado para renderizar las estadísticas
 export function ViajesStatsGrid({
   stats,
@@ -156,12 +158,18 @@ function SecondaryFilters({
   choferFilter: string | null;
   setChoferFilter: (value: string | null) => void;
 }>) {
+  // Cast necesario porque el wrapper tipado expone strings, aunque Mantine entrega fechas reales.
+  const dateRangeValue = dateRange as unknown as MantineDateRangeValue;
+  const handleDateRangeChange = (value: MantineDateRangeValue) => {
+    setDateRange(value as unknown as [Date | null, Date | null]);
+  };
+
   return (
     <Grid>
       <Grid.Col span={4}>
         <DateRangePicker
-          value={dateRange}
-          onChange={setDateRange}
+          value={dateRangeValue}
+          onChange={handleDateRangeChange}
           placeholder="Filtrar por rango de fechas"
           clearable
         />

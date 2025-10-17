@@ -8,6 +8,8 @@ import { VehiculoSelector } from '../../components/selectors/VehiculoSelector';
 import { PersonalSelector } from '../../components/selectors/PersonalSelector';
 import { estadoOptions } from './helpers/viajesPageHelpers';
 
+type MantineDateRangeValue = [string | null, string | null];
+
 interface ViajesFiltersProps {
   search: string;
   clienteFilter: string | null;
@@ -41,6 +43,12 @@ const ViajesFilters: React.FC<ViajesFiltersProps> = ({
   onChoferFilterChange,
   onClearFilters,
 }) => {
+  // Mantine expone el rango como fechas, pero el wrapper tipado exige strings; hacemos cast controlado.
+  const dateRangeValue = dateRange as unknown as MantineDateRangeValue;
+  const handleDateRangeChange = (value: MantineDateRangeValue) => {
+    onDateRangeChange(value as unknown as [Date | null, Date | null]);
+  };
+
   return (
     <>
       <Grid>
@@ -86,8 +94,8 @@ const ViajesFilters: React.FC<ViajesFiltersProps> = ({
       <Grid>
         <Grid.Col span={4}>
           <DateRangePicker
-            value={dateRange}
-            onChange={onDateRangeChange}
+            value={dateRangeValue}
+            onChange={handleDateRangeChange}
             placeholder="Filtrar por rango de fechas"
             clearable
           />

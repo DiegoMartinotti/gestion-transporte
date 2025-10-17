@@ -4,7 +4,7 @@ import { ViajeCardCompact } from './ViajeCard/ViajeCardCompact';
 import { ViajeCardContent } from './ViajeCard/ViajeCardContent';
 import { ViajeDeleteModal } from './ViajeCard/ViajeDeleteModal';
 
-interface ViajeCardProps {
+type ViajeCardProps = Readonly<{
   viaje: Viaje;
   onView?: (viaje: Viaje) => void;
   onEdit?: (viaje: Viaje) => void;
@@ -12,7 +12,7 @@ interface ViajeCardProps {
   onClick?: (viaje: Viaje) => void;
   compact?: boolean;
   showActions?: boolean;
-}
+}>;
 
 export function ViajeCard({
   viaje,
