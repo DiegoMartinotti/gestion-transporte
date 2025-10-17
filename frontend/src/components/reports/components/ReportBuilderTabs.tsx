@@ -3,6 +3,7 @@ import { Tabs } from '@mantine/core';
 import { IconSettings, IconTable, IconFilter, IconChartBar } from '@tabler/icons-react';
 import { UseFormReturnType } from '@mantine/form';
 import { ReportFormData } from '../hooks/useReportBuilderLogic';
+import { DataSource, ReportField, ReportFilter } from '../../../types/reports';
 import BasicConfigTab from './BasicConfigTab';
 import FieldsFiltersTab from './FieldsFiltersTab';
 import GroupingTab from './GroupingTab';
@@ -12,13 +13,13 @@ interface ReportBuilderTabsProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   form: UseFormReturnType<ReportFormData>;
-  dataSources: Array<{ value: string; label: string }>;
-  selectedDataSource: string | null;
-  availableFields: Array<{ value: string; label: string; type?: string }>;
+  dataSources: DataSource[];
+  selectedDataSource: DataSource | null;
+  availableFields: ReportField[];
   filterHandlers: {
     add: () => void;
     remove: (index: number) => void;
-    update: (index: number, field: string, value: string) => void;
+    update: (index: number, updates: Partial<ReportFilter>) => void;
   };
   groupByHandlers: {
     add: () => void;

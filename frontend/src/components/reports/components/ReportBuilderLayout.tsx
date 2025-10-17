@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Text, Modal, Paper } from '@mantine/core';
 import { UseFormReturnType } from '@mantine/form';
 import { ReportFormData } from '../hooks/useReportBuilderLogic';
+import { DataSource, ReportField, ReportFilter } from '../../../types/reports';
 import { ReportBuilderHeader } from './ReportBuilderHeader';
 import { ReportBuilderTabs } from './ReportBuilderTabs';
 
@@ -13,13 +14,13 @@ interface ReportBuilderLayoutProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   form: UseFormReturnType<ReportFormData>;
-  dataSources: Array<{ value: string; label: string }>;
-  selectedDataSource: string | null;
-  availableFields: Array<{ value: string; label: string; type?: string }>;
+  dataSources: DataSource[];
+  selectedDataSource: DataSource | null;
+  availableFields: ReportField[];
   filterHandlers: {
     add: () => void;
     remove: (index: number) => void;
-    update: (index: number, field: string, value: string) => void;
+    update: (index: number, updates: Partial<ReportFilter>) => void;
   };
   groupByHandlers: {
     add: () => void;
