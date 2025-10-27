@@ -1,3 +1,5 @@
+/* eslint-disable max-params */
+/* eslint-disable max-lines */
 import mongoose, { Document, Schema, Model, Types } from 'mongoose';
 
 // Definición de la interfaz para el historial de cambios
@@ -150,7 +152,10 @@ const formulasPersonalizadasClienteSchema = new Schema(
       default: true,
       index: true,
     },
-    historialCambios: [historialCambioSchema],
+    historialCambios: {
+      type: [historialCambioSchema],
+      default: [],
+    },
     estadisticas: {
       vecesUtilizada: {
         type: Number,
@@ -213,24 +218,28 @@ formulasPersonalizadasClienteSchema.methods.validarFormula = async function (): 
     };
 
     // Intentar evaluar la fórmula
-    const resultado = evaluarFormula(this.formula, variablesPrueba);
+    const formula = this.formula as string;
+    const resultado = evaluarFormula(formula, variablesPrueba);
 
     // Actualizar estado de validación
-    this.validacionFormula = {
+    const validacionFormula = {
       esValida: !isNaN(resultado) && isFinite(resultado),
       mensaje:
         !isNaN(resultado) && isFinite(resultado) ? 'Fórmula válida' : 'Error en la evaluación',
       ultimaValidacion: new Date(),
     };
+    this.validacionFormula = validacionFormula;
 
     await this.save();
-    return this.validacionFormula.esValida;
+    return validacionFormula.esValida;
   } catch (error: unknown) {
-    this.validacionFormula = {
+    const validacionFormula = {
       esValida: false,
-      mensaje: (error instanceof Error ? error.message : String(error)) || 'Error al validar la fórmula',
+      mensaje:
+        (error instanceof Error ? error.message : String(error)) || 'Error al validar la fórmula',
       ultimaValidacion: new Date(),
     };
+    this.validacionFormula = validacionFormula;
 
     await this.save();
     return false;
@@ -241,9 +250,14 @@ formulasPersonalizadasClienteSchema.methods.validarFormula = async function (): 
 formulasPersonalizadasClienteSchema.methods.registrarUso = async function (
   monto: number
 ): Promise<void> {
-  this.estadisticas.vecesUtilizada++;
-  this.estadisticas.ultimoUso = new Date();
-  this.estadisticas.montoTotalCalculado += monto;
+  const estadisticas = this.estadisticas as {
+    vecesUtilizada: number;
+    ultimoUso?: Date;
+    montoTotalCalculado: number;
+  };
+  estadisticas.vecesUtilizada++;
+  estadisticas.ultimoUso = new Date();
+  estadisticas.montoTotalCalculado += monto;
   await this.save();
 };
 
@@ -289,6 +303,7 @@ formulasPersonalizadasClienteSchema.pre('save', async function (next) {
 
 // Método estático para buscar fórmula aplicable
 formulasPersonalizadasClienteSchema.statics.findFormulaAplicable = async function (
+  this: IFormulasPersonalizadasClienteModel,
   clienteId: string,
   tipoUnidad: string,
   metodoCalculo: string,

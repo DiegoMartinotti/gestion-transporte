@@ -152,13 +152,19 @@ const reglaTarifaSchema = new Schema<IReglaTarifa>(
       ref: 'Cliente',
     },
     metodoCalculo: String,
-    condiciones: [condicionSchema],
+    condiciones: {
+      type: [condicionSchema],
+      default: [],
+    },
     operadorLogico: {
       type: String,
       enum: ['AND', 'OR'],
       default: 'AND',
     },
-    modificadores: [modificadorSchema],
+    modificadores: {
+      type: [modificadorSchema],
+      default: [],
+    },
     prioridad: {
       type: Number,
       default: 100,
@@ -224,12 +230,13 @@ reglaTarifaSchema.index({ codigo: 1, activa: 1 });
 
 // Método para evaluar condiciones
 reglaTarifaSchema.methods.evaluarCondiciones = function (contexto: unknown): boolean {
-  if (!this.condiciones || this.condiciones.length === 0) {
+  const condiciones = this.condiciones as ICondicion[];
+  if (!condiciones || condiciones.length === 0) {
     return true; // Sin condiciones, siempre aplica
   }
 
   // eslint-disable-next-line complexity
-  const resultados = this.condiciones.map((condicion: ICondicion) => {
+  const resultados = condiciones.map((condicion: ICondicion) => {
     const valorContexto = obtenerValorDeContexto(contexto, condicion.campo);
 
     switch (condicion.operador) {
@@ -316,8 +323,9 @@ reglaTarifaSchema.methods.aplicarModificadores = function (
   valores: Record<string, unknown>
 ): Record<string, unknown> {
   const resultado: Record<string, unknown> = { ...valores };
+  const modificadores = this.modificadores as IModificador[];
 
-  this.modificadores.forEach((modificador: IModificador) =>
+  modificadores.forEach((modificador: IModificador) =>
     aplicarModificadorIndividual(resultado, modificador)
   );
 
@@ -331,34 +339,43 @@ reglaTarifaSchema.methods.aplicarModificadores = function (
 // Método para verificar vigencia
 // eslint-disable-next-line complexity
 reglaTarifaSchema.methods.esVigente = function (fecha: Date = new Date()): boolean {
-  if (this.fechaInicioVigencia > fecha) {
+  const fechaInicioVigencia = this.fechaInicioVigencia as Date;
+  if (fechaInicioVigencia > fecha) {
     return false;
   }
 
-  if (this.fechaFinVigencia && this.fechaFinVigencia < fecha) {
+  const fechaFinVigencia = this.fechaFinVigencia as Date | undefined;
+  if (fechaFinVigencia && fechaFinVigencia < fecha) {
     return false;
   }
 
   // Verificar día de la semana
-  if (this.diasSemana && this.diasSemana.length > 0) {
+  const diasSemana = this.diasSemana as number[] | undefined;
+  if (diasSemana && diasSemana.length > 0) {
     const diaSemana = fecha.getDay();
-    if (!this.diasSemana.includes(diaSemana)) {
+    if (!diasSemana.includes(diaSemana)) {
       return false;
     }
   }
 
   // Verificar horario
-  if (this.horariosAplicacion) {
+  const horariosAplicacion = this.horariosAplicacion as
+    | { horaInicio: string; horaFin: string }
+    | undefined;
+  if (horariosAplicacion) {
     const hora = fecha.toTimeString().slice(0, 5);
-    if (hora < this.horariosAplicacion.horaInicio || hora > this.horariosAplicacion.horaFin) {
+    if (hora < horariosAplicacion.horaInicio || hora > horariosAplicacion.horaFin) {
       return false;
     }
   }
 
   // Verificar temporadas
-  if (this.temporadas && this.temporadas.length > 0) {
+  const temporadas = this.temporadas as
+    | { nombre: string; fechaInicio: string; fechaFin: string }[]
+    | undefined;
+  if (temporadas && temporadas.length > 0) {
     const mesdia = `${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
-    const enTemporada = this.temporadas.some(
+    const enTemporada = temporadas.some(
       (t: { fechaInicio: string; fechaFin: string }) =>
         mesdia >= t.fechaInicio && mesdia <= t.fechaFin
     );
@@ -372,6 +389,7 @@ reglaTarifaSchema.methods.esVigente = function (fecha: Date = new Date()): boole
 
 // Método estático para encontrar reglas aplicables
 reglaTarifaSchema.statics.findReglasAplicables = async function (
+  this: IReglaTarifaModel,
   contexto: Record<string, unknown>,
   fecha: Date = new Date()
 ): Promise<IReglaTarifa[]> {
@@ -398,11 +416,11 @@ reglaTarifaSchema.statics.findReglasAplicables = async function (
 
 // Método estático para aplicar reglas
 reglaTarifaSchema.statics.aplicarReglas = async function (
+  this: IReglaTarifaModel,
   contexto: Record<string, unknown>,
   valores: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
-  const modelo = this as IReglaTarifaModel;
-  const reglas = await modelo.findReglasAplicables(contexto);
+  const reglas = await this.findReglasAplicables(contexto);
   let resultado: Record<string, unknown> = { ...valores };
 
   for (const regla of reglas) {
@@ -440,7 +458,7 @@ function obtenerValorDeContexto(contexto: unknown, campo: string): unknown {
       return undefined;
     }
 
-    if (valor && typeof valor === 'object' && Object.hasOwn(valor, parte)) {
+    if (valor && typeof valor === 'object' && Object.prototype.hasOwnProperty.call(valor, parte)) {
       valor = (valor as Record<string, unknown>)[parte];
     } else {
       return undefined;
