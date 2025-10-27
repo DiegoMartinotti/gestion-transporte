@@ -16,12 +16,12 @@ import {
   TimelineEvents,
 } from './OrdenCompraDetailHelpers';
 
-interface OrdenCompraDetailProps {
+type OrdenCompraDetailProps = Readonly<{
   ordenId: string;
   onEdit?: () => void;
   onDelete?: () => void;
   _onClose?: () => void; // Prefijo para evitar warning de unused
-}
+}>;
 
 // Hook personalizado para manejar la carga de datos
 function useOrdenCompraData(ordenId: string) {
@@ -55,6 +55,7 @@ function useOrdenCompraData(ordenId: string) {
         setViajes(viajesMap);
       }
     } catch (error) {
+      console.error('Error al cargar los detalles de la orden de compra:', error);
       notifications.show({
         title: 'Error',
         message: 'No se pudo cargar los detalles de la orden de compra',
@@ -91,6 +92,7 @@ function useOrdenCompraActions(orden: OrdenCompra | null, onDelete?: () => void)
           });
           onDelete();
         } catch (error) {
+          console.error('Error al eliminar la orden de compra:', error);
           notifications.show({
             title: 'Error',
             message: 'No se pudo eliminar la orden de compra',

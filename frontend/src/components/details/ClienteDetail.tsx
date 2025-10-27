@@ -6,7 +6,7 @@ import { ClienteDetailHeader } from './ClienteDetailHeader';
 import { ClienteDetailContact } from './ClienteDetailContact';
 import { ClienteDetailStats } from './ClienteDetailStats';
 
-interface ClienteDetailProps {
+type ClienteDetailProps = Readonly<{
   cliente: Cliente;
   onEdit?: (cliente: Cliente) => void;
   onDelete?: (cliente: Cliente) => void;
@@ -15,7 +15,7 @@ interface ClienteDetailProps {
   onViewSites?: (cliente: Cliente) => void;
   onViewTramos?: (cliente: Cliente) => void;
   loading?: boolean;
-}
+}>;
 
 export function ClienteDetail({
   cliente,
@@ -31,9 +31,8 @@ export function ClienteDetail({
   const [tramosCount, setTramosCount] = useState(0);
   const [loadingStats, setLoadingStats] = useState(false);
 
-  // TODO: Implementar carga de estadísticas cuando estén disponibles los servicios
   useEffect(() => {
-    // Simulación de carga de estadísticas
+    // Carga simulada de estadísticas - se reemplazará cuando estén disponibles los servicios
     setLoadingStats(true);
     setTimeout(() => {
       setSitesCount(0);

@@ -6,7 +6,7 @@ import { EmpresaDetailHeader } from './EmpresaDetailHeader';
 import { EmpresaDetailInfo } from './EmpresaDetailInfo';
 import { EmpresaDetailStats } from './EmpresaDetailStats';
 
-interface EmpresaDetailProps {
+type EmpresaDetailProps = Readonly<{
   empresa: Empresa;
   onEdit?: (empresa: Empresa) => void;
   onDelete?: (empresa: Empresa) => void;
@@ -15,7 +15,7 @@ interface EmpresaDetailProps {
   onViewVehiculos?: (empresa: Empresa) => void;
   onViewPersonal?: (empresa: Empresa) => void;
   loading?: boolean;
-}
+}>;
 
 export function EmpresaDetail({
   empresa,
@@ -31,9 +31,8 @@ export function EmpresaDetail({
   const [personalCount, setPersonalCount] = useState(0);
   const [loadingStats, setLoadingStats] = useState(false);
 
-  // TODO: Implementar carga de estadísticas cuando estén disponibles los servicios
   useEffect(() => {
-    // Simulación de carga de estadísticas
+    // Carga simulada de estadísticas - se reemplazará cuando estén disponibles los servicios
     setLoadingStats(true);
     setTimeout(() => {
       setVehiculosCount(empresa.flota?.length || 0);
