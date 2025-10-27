@@ -18,8 +18,8 @@ const getErrorMessage = (error: unknown): string => {
 export const validateFormulaValidators = [
   param('id')
     .optional()
-    .custom((value) => {
-      if (value && !Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (value && typeof value === 'string' && !Types.ObjectId.isValid(value)) {
         throw new Error('ID de fórmula no válido');
       }
       return true;
@@ -334,7 +334,7 @@ function prepararContextoPrueba(
   variables: Record<string, unknown>,
   contextoTesting: Record<string, unknown>
 ): Record<string, unknown> {
-  const contexto = {
+  const contexto: Record<string, unknown> = {
     Valor: 100,
     Peaje: 10,
     Cantidad: 5,

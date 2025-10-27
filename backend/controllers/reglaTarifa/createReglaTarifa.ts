@@ -22,11 +22,11 @@ export const createReglaTarifaValidators = [
   body('descripcion').notEmpty().withMessage('La descripción es requerida').trim(),
   body('cliente')
     .optional()
-    .custom(async (value) => {
-      if (value && !Types.ObjectId.isValid(value)) {
+    .custom(async (value: unknown) => {
+      if (value && typeof value === 'string' && !Types.ObjectId.isValid(value)) {
         throw new Error('ID de cliente no válido');
       }
-      if (value) {
+      if (value && typeof value === 'string') {
         const cliente = await Cliente.findById(value);
         if (!cliente) {
           throw new Error('Cliente no encontrado');
@@ -36,8 +36,8 @@ export const createReglaTarifaValidators = [
     }),
   body('metodoCalculo')
     .optional()
-    .custom(async (value) => {
-      if (value) {
+    .custom(async (value: unknown) => {
+      if (value && typeof value === 'string') {
         const metodo = await TarifaMetodo.findByCodigoActivo(value);
         if (!metodo) {
           throw new Error('Método de cálculo no encontrado o inactivo');
@@ -85,9 +85,9 @@ export const createReglaTarifaValidators = [
     .optional()
     .isISO8601()
     .withMessage('La fecha de fin de vigencia debe ser válida')
-    .custom((fechaFin, { req }) => {
+    .custom((fechaFin: unknown, { req }) => {
       const body = req.body as { fechaInicioVigencia?: string };
-      if (fechaFin && body.fechaInicioVigencia) {
+      if (fechaFin && typeof fechaFin === 'string' && body.fechaInicioVigencia) {
         const inicio = new Date(body.fechaInicioVigencia);
         const fin = new Date(fechaFin);
         if (fin <= inicio) {
