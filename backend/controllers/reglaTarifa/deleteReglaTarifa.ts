@@ -38,7 +38,7 @@ interface InfoEliminacion {
   };
 }
 
-interface AdvertenciaEliminacion {
+interface AdvertenciaEliminacion extends Record<string, unknown> {
   mensaje: string;
   estadisticas: {
     vecesAplicada: number;
@@ -50,6 +50,7 @@ interface AdvertenciaEliminacion {
 }
 
 interface RequestWithUser extends Request {
+  [key: string]: unknown;
   user?: {
     email: string;
   };
@@ -59,8 +60,8 @@ interface RequestWithUser extends Request {
  * Validators para eliminar regla de tarifa
  */
 export const deleteReglaTarifaValidators = [
-  param('id').custom((value) => {
-    if (!Types.ObjectId.isValid(value)) {
+  param('id').custom((value: unknown) => {
+    if (typeof value === 'string' && !Types.ObjectId.isValid(value)) {
       throw new Error('ID de la regla no válido');
     }
     return true;
@@ -215,7 +216,10 @@ export const deleteReglaTarifa = async (req: RequestWithUser, res: Response): Pr
     // Validar parámetros
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Parámetros inválidos', 400, { errors: errors.array() });
+      ApiResponse.error(res, 'Parámetros inválidos', 400, { errors: errors.array() } as Record<
+        string,
+        unknown
+      >);
       return;
     }
 

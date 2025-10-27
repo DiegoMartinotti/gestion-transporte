@@ -25,8 +25,8 @@ export const getAuditoriaValidators = [
   query('hasta').optional().isISO8601().withMessage('La fecha hasta debe ser válida'),
   query('clienteId')
     .optional()
-    .custom((value) => {
-      if (value && !Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (value && typeof value === 'string' && !Types.ObjectId.isValid(value)) {
         throw new Error('ID de cliente no válido');
       }
       return true;
@@ -47,14 +47,26 @@ export const getAuditoriaValidators = [
 ];
 
 /**
+ * Interface para Request con usuario autenticado
+ */
+interface RequestWithUser extends Request {
+  [key: string]: unknown;
+  user?: {
+    email: string;
+  };
+}
+
+/**
  * Obtiene auditoría de cálculos del motor de tarifas
  */
-export const getAuditoria = async (req: Request, res: Response): Promise<void> => {
+export const getAuditoria = async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     // Validar parámetros de consulta
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Parámetros de consulta inválidos', 400, {
+        errors: errors.array(),
+      } as Record<string, unknown>);
       return;
     }
 
@@ -62,7 +74,7 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
 
     logger.info('[TarifaEngine] Consultando auditoría', {
       filtros: { desde, hasta, clienteId, conErrores },
-      usuario: (req as unknown).user?.email,
+      usuario: req.user?.email,
     });
 
     // Construir filtros
@@ -97,7 +109,7 @@ export const getAuditoria = async (req: Request, res: Response): Promise<void> =
     logger.debug(`[TarifaEngine] Auditoría consultada: ${resultadosProcesados.length} registros`, {
       total: auditorias.length,
       conErrores: estadisticas.errores,
-      usuario: (req as unknown).user?.email,
+      usuario: req.user?.email,
     });
 
     ApiResponse.success(res, respuesta, 'Auditoría obtenida exitosamente');
@@ -180,7 +192,7 @@ function construirRespuesta(params: {
   estadisticas: Record<string, unknown>;
   estadisticasCache: unknown;
   auditorias: IAuditoriaCalculo[];
-  req: Request;
+  req: RequestWithUser;
 }): Record<string, unknown> {
   const {
     filtros,
@@ -204,7 +216,7 @@ function construirRespuesta(params: {
         incluirContexto: incluirContexto === 'true',
         agruparPor: agruparPor || null,
       },
-      usuario: (req as unknown).user?.email || 'desconocido',
+      usuario: req.user?.email || 'desconocido',
     },
     auditorias: resultadosProcesados,
     agrupacion: datosAgrupados,

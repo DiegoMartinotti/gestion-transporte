@@ -1,6 +1,7 @@
 /* eslint-disable max-params */
 /* eslint-disable max-lines */
 import mongoose, { Document, Schema, Model, Types } from 'mongoose';
+import { FormulaValueType } from '../utils/formulaParser/types';
 
 // Definición de la interfaz para el historial de cambios
 export interface IHistorialCambio {
@@ -207,14 +208,14 @@ formulasPersonalizadasClienteSchema.methods.validarFormula = async function (): 
     const { evaluarFormula } = await import('../utils/formulaParser');
 
     // Variables de prueba para validación
-    const variablesPrueba = {
+    const variablesPrueba: Record<string, FormulaValueType> = {
       Valor: 100,
       Peaje: 10,
       Palets: 5,
       Cantidad: 5,
       Distancia: 50,
       Peso: 1000,
-      TipoUnidad: this.tipoUnidad,
+      TipoUnidad: this.tipoUnidad as string,
     };
 
     // Intentar evaluar la fórmula
@@ -228,7 +229,10 @@ formulasPersonalizadasClienteSchema.methods.validarFormula = async function (): 
         !isNaN(resultado) && isFinite(resultado) ? 'Fórmula válida' : 'Error en la evaluación',
       ultimaValidacion: new Date(),
     };
-    this.validacionFormula = validacionFormula;
+
+    // Asignar validación como objeto usando set
+    this.set('validacionFormula', validacionFormula);
+    this.markModified('validacionFormula');
 
     await this.save();
     return validacionFormula.esValida;
@@ -239,7 +243,10 @@ formulasPersonalizadasClienteSchema.methods.validarFormula = async function (): 
         (error instanceof Error ? error.message : String(error)) || 'Error al validar la fórmula',
       ultimaValidacion: new Date(),
     };
-    this.validacionFormula = validacionFormula;
+
+    // Asignar validación como objeto usando set
+    this.set('validacionFormula', validacionFormula);
+    this.markModified('validacionFormula');
 
     await this.save();
     return false;
@@ -250,14 +257,19 @@ formulasPersonalizadasClienteSchema.methods.validarFormula = async function (): 
 formulasPersonalizadasClienteSchema.methods.registrarUso = async function (
   monto: number
 ): Promise<void> {
-  const estadisticas = this.estadisticas as {
+  const estadisticas = this.get('estadisticas') as {
     vecesUtilizada: number;
     ultimoUso?: Date;
     montoTotalCalculado: number;
   };
-  estadisticas.vecesUtilizada++;
+
+  estadisticas.vecesUtilizada = (estadisticas.vecesUtilizada || 0) + 1;
   estadisticas.ultimoUso = new Date();
-  estadisticas.montoTotalCalculado += monto;
+  estadisticas.montoTotalCalculado = (estadisticas.montoTotalCalculado || 0) + monto;
+
+  this.set('estadisticas', estadisticas);
+  this.markModified('estadisticas');
+
   await this.save();
 };
 
@@ -303,7 +315,6 @@ formulasPersonalizadasClienteSchema.pre('save', async function (next) {
 
 // Método estático para buscar fórmula aplicable
 formulasPersonalizadasClienteSchema.statics.findFormulaAplicable = async function (
-  this: IFormulasPersonalizadasClienteModel,
   clienteId: string,
   tipoUnidad: string,
   metodoCalculo: string,
