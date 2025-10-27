@@ -9,6 +9,7 @@ interface RequestWithUser extends Request {
   user?: {
     email: string;
   };
+  [key: string]: unknown;
 }
 
 interface CalculoRequestBody {
@@ -16,16 +17,16 @@ interface CalculoRequestBody {
   origenId: string;
   destinoId: string;
   fecha?: string;
-  tipoTramo?: string;
+  tipoTramo?: 'TRMC' | 'TRMI';
   tipoUnidad: string;
   metodoCalculo?: string;
   palets?: number;
   peso?: number;
   volumen?: number;
   cantidadBultos?: number;
-  urgencia?: string;
-  vehiculos?: unknown[];
-  extras?: unknown;
+  urgencia?: 'Normal' | 'Urgente' | 'Critico';
+  vehiculos?: Array<{ tipo: string; cantidad: number }>;
+  extras?: Array<{ id: string; cantidad: number }>;
   aplicarReglas?: boolean;
   usarCache?: boolean;
   incluirDesgloseCalculo?: boolean;
@@ -147,16 +148,16 @@ const construirContextoCalculo = (body: CalculoRequestBody): IContextoCalculo =>
     origenId: new Types.ObjectId(origenId),
     destinoId: new Types.ObjectId(destinoId),
     fecha: fecha ? new Date(fecha) : new Date(),
-    tipoTramo: tipoTramo || 'TRMC',
+    tipoTramo: (tipoTramo || 'TRMC') as 'TRMC' | 'TRMI',
     tipoUnidad,
     metodoCalculo,
     palets,
     peso,
     volumen,
     cantidadBultos,
-    vehiculos,
-    urgencia,
-    extras,
+    vehiculos: vehiculos as Array<{ tipo: string; cantidad: number }> | undefined,
+    urgencia: urgencia as 'Normal' | 'Urgente' | 'Critico' | undefined,
+    extras: extras as Array<{ id: string; cantidad: number }> | undefined,
     aplicarReglas: aplicarReglas !== false, // Por defecto true
     usarCache: usarCache !== false, // Por defecto true
     incluirDesgloseCalculo: incluirDesgloseCalculo || false,
@@ -206,10 +207,13 @@ const determinarTipoError = (error: ErrorCalculoTarifa) => {
 
   if ((error instanceof Error ? error.message : String(error)).includes('no encontrado')) {
     statusCode = 404;
-    mensaje = (error instanceof Error ? error.message : String(error));
-  } else if ((error instanceof Error ? error.message : String(error)).includes('inválido') || (error instanceof Error ? error.message : String(error)).includes('requerido')) {
+    mensaje = error instanceof Error ? error.message : String(error);
+  } else if (
+    (error instanceof Error ? error.message : String(error)).includes('inválido') ||
+    (error instanceof Error ? error.message : String(error)).includes('requerido')
+  ) {
     statusCode = 400;
-    mensaje = (error instanceof Error ? error.message : String(error));
+    mensaje = error instanceof Error ? error.message : String(error);
   }
 
   return { statusCode, mensaje };

@@ -35,13 +35,16 @@ type UpdateTarifaMetodoRequest = Request<
 type UpdateTarifaMetodoRequestWithUser = UpdateTarifaMetodoRequest & {
   user?: { email?: string };
 };
-type ValidationRequest = Request<
-  ParamsDictionary,
-  Record<string, unknown>,
-  unknown,
-  ParsedQs,
-  Record<string, unknown>
->;
+interface ValidationRequest
+  extends Request<
+    ParamsDictionary,
+    Record<string, unknown>,
+    unknown,
+    ParsedQs,
+    Record<string, unknown>
+  > {
+  [key: string]: unknown;
+}
 
 interface TarifaMetodoUpdatePayload {
   codigo?: string;
@@ -55,6 +58,7 @@ interface TarifaMetodoUpdatePayload {
   requierePalets?: boolean;
   permiteFormulasPersonalizadas?: boolean;
   configuracion?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 const ensureCodigoDisponible = async (
@@ -242,16 +246,19 @@ export const updateTarifaMetodo = async (
     }
 
     // Actualizar el método
-    const metodoActualizado = await TarifaMetodo.findByIdAndUpdate(
+    const resultado = await TarifaMetodo.findByIdAndUpdate(
       id,
       { $set: actualizacion },
       { new: true, runValidators: true }
     );
 
-    if (!metodoActualizado) {
+    if (!resultado) {
       ApiResponse.error(res, 'Error al actualizar el método de tarifa', 500);
       return;
     }
+
+    // Convertir ModifyResult a documento completo
+    const metodoActualizado = resultado as unknown as ITarifaMetodo;
 
     logger.info(`[TarifaMetodo] Método actualizado: ${metodoActualizado.codigo}`, {
       metodoId: metodoActualizado._id,

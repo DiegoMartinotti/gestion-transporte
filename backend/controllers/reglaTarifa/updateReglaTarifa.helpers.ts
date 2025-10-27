@@ -41,13 +41,10 @@ export type UpdateReglaTarifaRequest = Request<
 export type UpdateReglaTarifaRequestWithUser = UpdateReglaTarifaRequest & {
   user?: { email?: string };
 };
-export type ValidationRequest = Request<
-  ParamsDictionary,
-  unknown,
-  unknown,
-  ParsedQs,
-  Record<string, unknown>
->;
+export interface ValidationRequest
+  extends Request<ParamsDictionary, unknown, unknown, ParsedQs, Record<string, unknown>> {
+  [key: string]: unknown;
+}
 
 export type HorariosAplicacion = UpdateReglaTarifaBody['horariosAplicacion'];
 
@@ -69,6 +66,7 @@ export interface ReglaTarifaUpdatePayload {
   diasSemana?: number[];
   horariosAplicacion?: HorariosAplicacion;
   temporadas?: unknown;
+  [key: string]: unknown;
 }
 
 const HORA_REGEX = /^([0-1]?\d|2[0-3]):[0-5]\d$/;

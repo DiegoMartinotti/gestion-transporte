@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import ReglaTarifa from '../../models/ReglaTarifa';
+import ReglaTarifa, { type IReglaTarifa } from '../../models/ReglaTarifa';
 import Cliente from '../../models/Cliente';
 import TarifaMetodo from '../../models/TarifaMetodo';
 import ApiResponse from '../../utils/ApiResponse';
@@ -175,16 +175,19 @@ export const updateReglaTarifa = async (
     }
 
     // Actualizar la regla
-    const reglaActualizada = await ReglaTarifa.findByIdAndUpdate(
+    const resultado = await ReglaTarifa.findByIdAndUpdate(
       id,
       { $set: actualizacion },
       { new: true, runValidators: true }
     ).populate('cliente', 'nombre razonSocial');
 
-    if (!reglaActualizada) {
+    if (!resultado) {
       ApiResponse.error(res, 'Error al actualizar la regla de tarifa', 500);
       return;
     }
+
+    // Convertir ModifyResult a documento completo
+    const reglaActualizada = resultado as unknown as IReglaTarifa;
 
     // Log de la actualización
     logger.info(`[ReglaTarifa] Regla actualizada: ${reglaActualizada.codigo}`, {
