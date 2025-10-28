@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { RequestHandler } from 'express';
 const router = express.Router();
 import {
   getAllEmpresas,
@@ -12,13 +12,13 @@ import {
 } from '../controllers/empresa';
 
 // Rutas básicas CRUD
-router.get('/', getAllEmpresas);
-router.get('/activas', getEmpresasActivas);
-router.get('/template', getEmpresaTemplate);
-router.get('/tipo/:tipo', getEmpresasByTipo);
-router.get('/:id', getEmpresaById);
-router.post('/', createEmpresa);
-router.put('/:id', updateEmpresa);
-router.delete('/:id', deleteEmpresa);
+router.get('/', getAllEmpresas as unknown as RequestHandler);
+router.get('/activas', getEmpresasActivas as unknown as RequestHandler);
+router.get('/template', getEmpresaTemplate as unknown as RequestHandler);
+router.get('/tipo/:tipo', getEmpresasByTipo as unknown as RequestHandler);
+router.get('/:id', getEmpresaById as unknown as RequestHandler);
+router.post('/', createEmpresa as unknown as RequestHandler);
+router.put('/:id', updateEmpresa as unknown as RequestHandler);
+router.delete('/:id', deleteEmpresa as unknown as RequestHandler);
 
 export default router;
