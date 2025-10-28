@@ -40,7 +40,7 @@ export interface CreateTramosBulkResult {
 /**
  * Interfaz para sitio procesado
  */
-interface ProcessedSite {
+export interface ProcessedSite {
   _id: unknown;
   Cliente?: unknown;
   nombre?: string;

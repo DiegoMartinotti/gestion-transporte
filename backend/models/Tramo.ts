@@ -197,14 +197,10 @@ async function calcularYActualizarDistancia(
 // Middleware para calcular distancia automáticamente
 tramoSchema.pre('save', async function (next) {
   try {
-    const origen = this.origen as Types.ObjectId;
-    const destino = this.destino as Types.ObjectId;
-    const distancia = this.distancia as number;
-
-    if (origen && destino && (!distancia || distancia === 0)) {
-      await calcularYActualizarDistancia(this, origen, destino);
-    } else if (distancia > 0) {
-      logger.debug(`[DISTANCIA] ℹ️ Usando distancia pre-calculada: ${distancia} km`);
+    if (this.origen && this.destino && (!this.distancia || this.distancia === 0)) {
+      await calcularYActualizarDistancia(this, this.origen, this.destino);
+    } else if (this.distancia > 0) {
+      logger.debug(`[DISTANCIA] ℹ️ Usando distancia pre-calculada: ${this.distancia} km`);
     }
     next();
   } catch (error) {
@@ -301,9 +297,13 @@ tramoSchema.virtual('descripcion').get(async function (this: ITramo): Promise<st
   try {
     // Poblar relaciones para obtener nombres
     await this.populate('origen destino cliente');
-    const nombreOrigen = (this.origen as unknown)?.nombre || 'ID Origen Desc.';
-    const nombreDestino = (this.destino as unknown)?.nombre || 'ID Destino Desc.';
-    const nombreCliente = (this.cliente as unknown)?.nombre || 'ID Cliente Desc.';
+    const origenPopulated = this.origen as unknown as { nombre?: string };
+    const destinoPopulated = this.destino as unknown as { nombre?: string };
+    const clientePopulated = this.cliente as unknown as { nombre?: string };
+
+    const nombreOrigen = origenPopulated?.nombre || 'ID Origen Desc.';
+    const nombreDestino = destinoPopulated?.nombre || 'ID Destino Desc.';
+    const nombreCliente = clientePopulated?.nombre || 'ID Cliente Desc.';
 
     const tarifaActual = this.getTarifaVigente();
     const tipoStr = tarifaActual ? tarifaActual.tipo : 'Sin tipo';
@@ -317,9 +317,12 @@ tramoSchema.virtual('descripcion').get(async function (this: ITramo): Promise<st
 });
 
 // Validaciones adicionales
-tramoSchema.path('destino').validate(function (this: ITramo, value: Types.ObjectId) {
-  return String(value) !== String(this.origen);
-}, 'El origen y el destino no pueden ser el mismo Site');
+tramoSchema.path('destino').validate({
+  validator: function (this: ITramo, value: Types.ObjectId) {
+    return String(value) !== String(this.origen);
+  },
+  message: 'El origen y el destino no pueden ser el mismo Site',
+});
 
 // Virtual para obtener la tarifa vigente actual
 tramoSchema.virtual('tarifaVigente').get(function (this: ITramo) {
