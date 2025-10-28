@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import TarifaMetodo from '../../models/TarifaMetodo';
 import FormulasPersonalizadasCliente from '../../models/FormulasPersonalizadasCliente';
 import ReglaTarifa from '../../models/ReglaTarifa';
@@ -11,8 +11,8 @@ import { Types } from 'mongoose';
  * Validators para eliminar método de tarifa
  */
 export const deleteTarifaMetodoValidators = [
-  param('id').custom((value) => {
-    if (!Types.ObjectId.isValid(value)) {
+  param('id').custom((value: unknown) => {
+    if (typeof value !== 'string' || !Types.ObjectId.isValid(value)) {
       throw new Error('ID del método no válido');
     }
     return true;
@@ -28,16 +28,23 @@ interface IDependencias {
   total: number;
 }
 
+interface RequestWithUser extends Request {
+  user?: {
+    email?: string;
+  };
+  [key: string]: unknown;
+}
+
 /**
  * Elimina un método de cálculo de tarifa
  * Verifica dependencias antes de eliminar
  */
-export const deleteTarifaMetodo = async (req: Request, res: Response): Promise<void> => {
+export const deleteTarifaMetodo = async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
     // Validar parámetros
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      ApiResponse.error(res, 'Parámetros inválidos', 400, errors.array());
+      ApiResponse.error(res, 'Parámetros inválidos', 400, { errores: errors.array() });
       return;
     }
 
@@ -64,7 +71,7 @@ export const deleteTarifaMetodo = async (req: Request, res: Response): Promise<v
     logger.info(`[TarifaMetodo] Método eliminado: ${metodo.codigo}`, {
       metodoId: metodo._id,
       nombre: metodo.nombre,
-      usuario: (req as unknown).user?.email,
+      usuario: req.user?.email,
     });
 
     ApiResponse.success(

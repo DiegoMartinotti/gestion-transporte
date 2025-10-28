@@ -47,7 +47,7 @@ function agruparPorCliente(
         auditoria.tiempoEjecucionMs) /
       (acc[cliente].cantidad as number);
 
-    if (auditoria.errores?.length > 0) {
+    if (auditoria.errores?.length && auditoria.errores.length > 0) {
       acc[cliente].errores = (acc[cliente].errores as number) + 1;
     }
 
@@ -80,7 +80,7 @@ function agruparPorMetodo(
         auditoria.tiempoEjecucionMs) /
       (acc[metodo].cantidad as number);
 
-    if (auditoria.errores?.length > 0) {
+    if (auditoria.errores?.length && auditoria.errores.length > 0) {
       acc[metodo].errores = (acc[metodo].errores as number) + 1;
     }
 
@@ -111,7 +111,7 @@ function agruparPorFecha(auditorias: IAuditoriaCalculo[]): Record<string, Record
     acc[fecha].tiempoTotal = (acc[fecha].tiempoTotal as number) + auditoria.tiempoEjecucionMs;
     acc[fecha].montoTotal = (acc[fecha].montoTotal as number) + (auditoria.resultado.total || 0);
 
-    if (auditoria.errores?.length > 0) {
+    if (auditoria.errores?.length && auditoria.errores.length > 0) {
       acc[fecha].errores = (acc[fecha].errores as number) + 1;
     }
 
@@ -136,7 +136,7 @@ function agruparPorHora(auditorias: IAuditoriaCalculo[]): Record<string, Record<
         auditoria.tiempoEjecucionMs) /
       (acc[hora].cantidad as number);
 
-    if (auditoria.errores?.length > 0) {
+    if (auditoria.errores?.length && auditoria.errores.length > 0) {
       acc[hora].errores = (acc[hora].errores as number) + 1;
     }
 

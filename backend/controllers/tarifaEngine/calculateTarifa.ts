@@ -50,8 +50,8 @@ export const calculateTarifaValidators = [
   body('clienteId')
     .notEmpty()
     .withMessage('El ID del cliente es requerido')
-    .custom((value) => {
-      if (!Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (typeof value !== 'string' || !Types.ObjectId.isValid(value)) {
         throw new Error('ID de cliente no válido');
       }
       return true;
@@ -59,8 +59,8 @@ export const calculateTarifaValidators = [
   body('origenId')
     .notEmpty()
     .withMessage('El ID del origen es requerido')
-    .custom((value) => {
-      if (!Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (typeof value !== 'string' || !Types.ObjectId.isValid(value)) {
         throw new Error('ID de origen no válido');
       }
       return true;
@@ -68,8 +68,8 @@ export const calculateTarifaValidators = [
   body('destinoId')
     .notEmpty()
     .withMessage('El ID del destino es requerido')
-    .custom((value) => {
-      if (!Types.ObjectId.isValid(value)) {
+    .custom((value: unknown) => {
+      if (typeof value !== 'string' || !Types.ObjectId.isValid(value)) {
         throw new Error('ID de destino no válido');
       }
       return true;
