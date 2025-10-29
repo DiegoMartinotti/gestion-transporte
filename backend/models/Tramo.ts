@@ -203,7 +203,7 @@ tramoSchema.pre('save', async function (next) {
       logger.debug(`[DISTANCIA] ℹ️ Usando distancia pre-calculada: ${this.distancia} km`);
     }
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('[DISTANCIA] ❌ Error en middleware de cálculo de distancia:', error);
     next();
   }
@@ -286,7 +286,7 @@ tramoSchema.pre('save', async function (next) {
 
     logger.debug('[VALIDACIÓN] ✅ Validación exitosa, no hay conflictos');
     next();
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('[VALIDACIÓN] ❌ Error en validación de tramo:', error);
     next(error as Error);
   }
@@ -310,7 +310,7 @@ tramoSchema.virtual('descripcion').get(async function (this: ITramo): Promise<st
     const metodoCalculo = tarifaActual ? tarifaActual.metodoCalculo : 'Sin tarifa';
 
     return `${nombreOrigen} → ${nombreDestino} (${nombreCliente} - ${tipoStr}/${metodoCalculo})`;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error generando descripción del tramo:', error);
     return 'Error al generar descripción';
   }
