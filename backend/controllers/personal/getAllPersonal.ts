@@ -19,7 +19,10 @@ interface AuthenticatedUser {
  */
 interface AuthenticatedRequest {
   user?: AuthenticatedUser;
-  query: unknown;
+  query: {
+    empresaId?: string;
+    [key: string]: unknown;
+  };
 }
 
 /**

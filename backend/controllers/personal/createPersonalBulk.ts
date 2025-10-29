@@ -79,9 +79,9 @@ function resolveEmpresaId(
 ): Types.ObjectId | null {
   const empresaKey = typeof empresa === 'string' ? empresa.toLowerCase() : empresa;
   if (Types.ObjectId.isValid(empresa as string)) {
-    return empresaMap.get(empresa.toString());
+    return empresaMap.get(empresa.toString()) ?? null;
   } else if (typeof empresaKey === 'string') {
-    return empresaMap.get(empresaKey);
+    return empresaMap.get(empresaKey) ?? null;
   }
   return null;
 }
@@ -164,7 +164,7 @@ export const createPersonalBulk = async (
     };
   }
 
-  const empresaMap = await resolveEmpresas(personalData, session);
+  const empresaMap = await resolveEmpresas(personalData, session as ClientSession | null);
   const { personalToInsert, personalToActivate } = processPersonalData(
     personalData,
     empresaMap,
@@ -172,11 +172,20 @@ export const createPersonalBulk = async (
   );
 
   if (personalToActivate.length > 0) {
-    actualizados = await performActivations(personalToActivate, session, errores);
+    actualizados = await performActivations(
+      personalToActivate,
+      session as ClientSession | null,
+      errores
+    );
   }
 
   if (personalToInsert.length > 0) {
-    insertados = await performInsertions(personalToInsert, personalData, session, errores);
+    insertados = await performInsertions(
+      personalToInsert,
+      personalData,
+      session as ClientSession | null,
+      errores
+    );
   }
 
   return {
@@ -191,20 +200,24 @@ export const createPersonalBulk = async (
  * Realiza operaciones de activación de personal
  */
 async function performActivations(
-  personalToActivate: Array<{ filter: unknown; update: unknown }>,
+  personalToActivate: Array<{ filter: Record<string, unknown>; update: Record<string, unknown> }>,
   session: ClientSession | null,
   errores: BulkCreateResult['errores']
 ): Promise<number> {
   try {
     const activationOps = personalToActivate.map((op) => ({ updateOne: op }));
-    const activationResult = await Personal.bulkWrite(activationOps, { session, ordered: false });
+    const activationResult = await Personal.bulkWrite(activationOps, {
+      session: session ?? undefined,
+      ordered: false,
+    });
     const actualizados = activationResult.modifiedCount || 0;
     logger.info(
       `[createPersonalBulk] Intentos de activación: ${personalToActivate.length}, Activados/Actualizados: ${actualizados}`
     );
 
     if (activationResult.hasWriteErrors && activationResult.hasWriteErrors()) {
-      (activationResult as unknown).getWriteErrors().forEach((err: unknown) => {
+      const writeErrors = (activationResult as { getWriteErrors(): unknown[] }).getWriteErrors();
+      writeErrors.forEach((err: unknown) => {
         const mongoError = err as {
           op?: { filter?: { dni?: string } };
           errmsg?: string;
@@ -238,7 +251,10 @@ async function performInsertions(
   errores: BulkCreateResult['errores']
 ): Promise<number> {
   try {
-    const insertResult = await Personal.insertMany(personalToInsert, { session, ordered: false });
+    const insertResult = await Personal.insertMany(personalToInsert, {
+      session: session ?? undefined,
+      ordered: false,
+    });
     const insertados = insertResult.length;
     logger.info(`[createPersonalBulk] Insertados ${insertados} nuevos registros de personal.`);
     return insertados;
@@ -251,14 +267,15 @@ async function performInsertions(
     };
     if (bulkError.name === 'MongoBulkWriteError' && bulkError.writeErrors) {
       bulkError.writeErrors.forEach((err: { index: number; code?: number; errmsg?: string }) => {
+        const insertedItem = personalToInsert[err.index] as Record<string, unknown>;
         const originalIndex = personalData.findIndex(
-          (p) => p.dni === personalToInsert[err.index]?.dni && !p.activar
+          (p) => p.dni === insertedItem?.dni && !p.activar
         );
         errores.push({
           index: originalIndex !== -1 ? originalIndex : 'N/A',
-          message: `Error al insertar DNI ${personalToInsert[err.index]?.dni}: ${err.errmsg || 'Error desconocido'}`,
+          message: `Error al insertar DNI ${insertedItem?.dni as string}: ${err.errmsg || 'Error desconocido'}`,
           code: err.code,
-          data: personalToInsert[err.index],
+          data: insertedItem,
         });
       });
       return bulkError.result?.nInserted || personalToInsert.length - bulkError.writeErrors.length;
