@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import TarifaMetodo from '../../models/TarifaMetodo';
 import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
+import { hasUserProperty } from '../../utils/typeGuards';
 
 /**
  * Obtiene todos los métodos de cálculo de tarifa activos
@@ -46,7 +47,7 @@ export const getMetodosActivos = async (req: Request, res: Response): Promise<vo
     };
 
     logger.debug(`[TarifaMetodo] Métodos activos consultados: ${metodosActivos.length} métodos`, {
-      usuario: (req as unknown).user?.email,
+      usuario: hasUserProperty(req) ? req.user.email : undefined,
     });
 
     ApiResponse.success(res, respuesta, 'Métodos activos obtenidos exitosamente');

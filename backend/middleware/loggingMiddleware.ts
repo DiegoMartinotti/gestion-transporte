@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../utils/logger';
+import { hasUserProperty, isError, hasProperty } from '../utils/typeGuards';
 
 /**
  * Middleware de logging unificado para todas las rutas
@@ -29,7 +30,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
     method: req.method,
     path: req.originalUrl,
     ip: req.ip || 'unknown',
-    userId: (req as unknown).user?.id,
+    userId: hasUserProperty(req) ? req.user.id : undefined,
     params: req.params,
     query: req.query,
   };
@@ -51,7 +52,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
       method: req.method,
       path: req.originalUrl,
       ip: req.ip || 'unknown',
-      userId: (req as unknown).user?.id,
+      userId: hasUserProperty(req) ? req.user.id : undefined,
       statusCode: res.statusCode,
       responseTime,
     };
@@ -114,9 +115,9 @@ export class ControllerLogger {
       operation,
       timestamp: new Date().toISOString(),
       error: {
-        message: (error instanceof Error ? error.message : String(error)) || 'Error desconocido',
-        stack: error.stack,
-        code: (error as unknown).code,
+        message: isError(error) ? error.message : String(error),
+        stack: isError(error) ? error.stack : undefined,
+        code: hasProperty(error, 'code') ? error.code : undefined,
       },
       context,
     });
@@ -161,26 +162,31 @@ export class ControllerLogger {
  * Middleware de manejo de errores con logging unificado
  */
 export function errorLogger(err: unknown, req: Request, res: Response, _next: NextFunction) {
+  const errorMessage = isError(err) ? err.message : 'Error desconocido';
+  const errorStack = isError(err) ? err.stack : undefined;
+  const errorCode = hasProperty(err, 'code') && typeof err.code === 'number' ? err.code : 500;
+  const errorType = isError(err) ? err.name : 'Error';
+
   const errorContext = {
     method: req.method,
     path: req.originalUrl,
     ip: req.ip || 'unknown',
-    userId: (req as unknown).user?.id,
+    userId: hasUserProperty(req) ? req.user.id : undefined,
     error: {
-      message: err.message,
-      stack: err.stack,
-      code: err.code || 500,
-      type: err.name,
+      message: errorMessage,
+      stack: errorStack,
+      code: errorCode,
+      type: errorType,
     },
   };
 
   logger.error(`[HTTP] Error no manejado`, errorContext);
 
-  // Responder con error genérico
-  res.status(err.code || 500).json({
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.status(errorCode).json({
     success: false,
-    message: process.env.NODE_ENV === 'production' ? 'Error interno del servidor' : err.message,
-    error: process.env.NODE_ENV !== 'production' ? err : undefined,
+    message: isProduction ? 'Error interno del servidor' : errorMessage,
+    error: isProduction ? undefined : err,
   });
 }
 

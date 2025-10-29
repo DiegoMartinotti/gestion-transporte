@@ -4,6 +4,7 @@ import ApiResponse from '../../utils/ApiResponse';
 import logger from '../../utils/logger';
 import { param, validationResult } from 'express-validator';
 import { Types } from 'mongoose';
+import { hasUserProperty } from '../../utils/typeGuards';
 
 /**
  * Validators para obtener regla por ID
@@ -47,7 +48,7 @@ export const getReglaTarifaById = async (req: Request, res: Response): Promise<v
 
     logger.debug(`[ReglaTarifa] Regla consultada: ${regla.codigo}`, {
       reglaId: regla._id,
-      usuario: (req as unknown).user?.email,
+      usuario: hasUserProperty(req) ? req.user.email : undefined,
     });
 
     ApiResponse.success(res, respuesta, 'Regla de tarifa obtenida exitosamente');

@@ -2,6 +2,7 @@ import express from 'express';
 import Site from '../../models/Site';
 import logger from '../../utils/logger';
 import { tryCatch } from '../../utils/errorHandler';
+import { isDuplicateError, isError, getErrorMessage } from '../../utils/typeGuards';
 
 interface SiteData {
   site: string;
@@ -34,6 +35,7 @@ interface BulkResults {
  * @param {Array} req.body.sites - Array of sites to create
  * @returns {object} Results of operation
  */
+// eslint-disable-next-line max-lines-per-function
 const bulkCreateSites = tryCatch(async (req: express.Request, res: express.Response) => {
   const { sites }: BulkCreateBody = req.body;
   logger.debug('Recibidos sites para importación:', sites.length);
@@ -70,12 +72,12 @@ const bulkCreateSites = tryCatch(async (req: express.Request, res: express.Respo
       resultados.exitosos++;
     } catch (error: unknown) {
       let errorMessage: string;
-      if ((error as unknown).code === 11000) {
+      if (isDuplicateError(error)) {
         errorMessage = 'Site duplicado para este cliente';
-      } else if (error instanceof Error) {
+      } else if (isError(error)) {
         errorMessage = error.message;
       } else {
-        errorMessage = String(error);
+        errorMessage = getErrorMessage(error);
       }
 
       resultados.errores.push({

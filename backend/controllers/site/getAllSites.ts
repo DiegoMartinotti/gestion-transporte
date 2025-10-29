@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import Site from '../../models/Site';
+import { FilterQuery } from 'mongoose';
+import Site, { ISite } from '../../models/Site';
 import { tryCatch } from '../../utils/errorHandler';
 import logger from '../../utils/logger';
+import { PopulatedCliente } from '../../types/mongoose';
 
 /**
  * Interface for query parameters
@@ -16,16 +18,16 @@ interface GetSitesQuery {
 interface FormattedSite {
   _id: unknown;
   nombre: string;
-  cliente: unknown;
+  cliente: PopulatedCliente;
   codigo?: string;
   direccion?: string;
   localidad?: string;
   provincia?: string;
-  location?: {
+  location: {
     type: 'Point';
     coordinates: [number, number];
   };
-  coordenadas?: {
+  coordenadas: {
     lng: number;
     lat: number;
   } | null;
@@ -56,16 +58,19 @@ const getAllSites = tryCatch(
   ): Promise<void> => {
     const { cliente } = req.query;
 
-    const query: unknown = {};
+    const query: FilterQuery<ISite> = {};
 
     if (cliente) {
       // Buscar por ID del cliente, no por nombre
-      query.cliente = cliente;
+      query.cliente = cliente as string;
     }
 
-    const sites = await Site.find(query).populate('cliente', 'nombre').lean().exec();
+    const sites = await Site.find(query)
+      .populate<{ cliente: PopulatedCliente }>('cliente', 'nombre')
+      .lean()
+      .exec();
 
-    const sitesFormateados: FormattedSite[] = sites.map((site: unknown) => {
+    const sitesFormateados: FormattedSite[] = sites.map((site) => {
       // Convertir coordenadas de GeoJSON a formato lat/lng
       const coordenadas =
         site.location && Array.isArray(site.location.coordinates)
@@ -78,7 +83,7 @@ const getAllSites = tryCatch(
       return {
         ...site,
         coordenadas,
-      };
+      } as FormattedSite;
     });
 
     logger.debug('Sites procesados:', sitesFormateados.length);

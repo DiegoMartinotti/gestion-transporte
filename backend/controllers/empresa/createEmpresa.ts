@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import Empresa, { IEmpresa } from '../../models/Empresa';
 import logger from '../../utils/logger';
+import { isDuplicateError, hasProperty } from '../../utils/typeGuards';
 
 /**
  * Interface for API responses
@@ -17,29 +18,14 @@ interface ApiResponse<T = unknown> {
 /**
  * Verifica si es un error de validación de MongoDB
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isValidationError = (
   error: unknown
-): error is { name: string; errors: Record<string, unknown> } => {
-  return !!(
-    error &&
-    typeof error === 'object' &&
-    'name' in error &&
-    (error as unknown as { name: string }).name === 'ValidationError' &&
-    'errors' in error
-  );
-};
-
-/**
- * Verifica si es un error de duplicado de MongoDB
- */
-const isDuplicateError = (error: unknown): error is { code: number } => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return !!(
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    (error as unknown).code === 11000
+): error is { name: string; errors: Record<string, { message: string }> } => {
+  return (
+    hasProperty(error, 'name') &&
+    error.name === 'ValidationError' &&
+    hasProperty(error, 'errors') &&
+    typeof error.errors === 'object'
   );
 };
 
@@ -58,9 +44,7 @@ export const createEmpresa = async (
     logger.error('Error al crear empresa:', error);
 
     if (isValidationError(error)) {
-      const errores = Object.values(error.errors).map(
-        (err) => (err as { message: string }).message
-      );
+      const errores = Object.values(error.errors).map((err) => err.message);
       res.status(400).json({ message: 'Error de validación', errores });
       return;
     }
