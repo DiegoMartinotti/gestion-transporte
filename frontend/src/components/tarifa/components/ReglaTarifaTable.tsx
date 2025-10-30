@@ -1,14 +1,14 @@
 import React from 'react';
 import { Stack, Alert, Text, Box } from '@mantine/core';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import DataTable, { DataTableColumn } from '../../base/DataTable';
 import { IReglaTarifa } from '../../../types/tarifa';
-import { FiltersChangeEvent, DragEndResult } from '../types/ReglaTarifaBuilderTypes';
+import { FiltersChangeEvent } from '../types/ReglaTarifaBuilderTypes';
 
 interface ReglaTarifaTableProps {
   reglas: IReglaTarifa[];
   columns: DataTableColumn<IReglaTarifa>[];
-  onDragEnd: (result: DragEndResult) => void;
+  onDragEnd: (result: DropResult) => void;
   onFiltersChange: (filters: FiltersChangeEvent) => void;
 }
 

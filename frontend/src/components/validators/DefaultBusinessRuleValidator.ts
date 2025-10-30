@@ -1,4 +1,5 @@
 import { BusinessRuleBaseValidator, BusinessRuleValidationRule } from './BaseValidator';
+import { isString, isNumber } from '../../utils/types/TypeGuards';
 
 // Interface legacy para compatibilidad con el código existente
 interface BusinessRule {
@@ -168,18 +169,21 @@ export const defaultBusinessRules: BusinessRule[] = [
           };
         }
 
-        const vencimiento = new Date(licencia.vencimiento);
-        const hoy = new Date();
+        const vencimientoValue = licencia.vencimiento;
+        if (isString(vencimientoValue) || isNumber(vencimientoValue)) {
+          const vencimiento = new Date(vencimientoValue);
+          const hoy = new Date();
 
-        if (vencimiento < hoy) {
-          return {
-            passed: false,
-            message: 'Licencia de conducir vencida',
-            details: {
-              personal: `${personal.nombre} ${personal.apellido}`,
-              vencimiento: licencia.vencimiento,
-            },
-          };
+          if (vencimiento < hoy) {
+            return {
+              passed: false,
+              message: 'Licencia de conducir vencida',
+              details: {
+                personal: `${personal.nombre} ${personal.apellido}`,
+                vencimiento: licencia.vencimiento,
+              },
+            };
+          }
         }
       }
 
@@ -206,21 +210,37 @@ export const defaultBusinessRules: BusinessRule[] = [
           const tarifa1 = tarifas[i];
           const tarifa2 = tarifas[j];
 
-          const inicio1 = new Date(tarifa1.fechaDesde);
-          const fin1 = tarifa1.fechaHasta ? new Date(tarifa1.fechaHasta) : new Date('2099-12-31');
-          const inicio2 = new Date(tarifa2.fechaDesde);
-          const fin2 = tarifa2.fechaHasta ? new Date(tarifa2.fechaHasta) : new Date('2099-12-31');
+          const fechaDesde1 = tarifa1.fechaDesde;
+          const fechaDesde2 = tarifa2.fechaDesde;
+          const fechaHasta1 = tarifa1.fechaHasta;
+          const fechaHasta2 = tarifa2.fechaHasta;
 
-          // Verificar superposición
-          if (inicio1 <= fin2 && inicio2 <= fin1) {
-            return {
-              passed: false,
-              message: 'Superposición de fechas en tarifas',
-              details: {
-                tarifa1: `${tarifa1.fechaDesde} - ${tarifa1.fechaHasta || 'indefinido'}`,
-                tarifa2: `${tarifa2.fechaDesde} - ${tarifa2.fechaHasta || 'indefinido'}`,
-              },
-            };
+          if (
+            (isString(fechaDesde1) || isNumber(fechaDesde1)) &&
+            (isString(fechaDesde2) || isNumber(fechaDesde2))
+          ) {
+            const inicio1 = new Date(fechaDesde1);
+            const fin1 =
+              fechaHasta1 && (isString(fechaHasta1) || isNumber(fechaHasta1))
+                ? new Date(fechaHasta1)
+                : new Date('2099-12-31');
+            const inicio2 = new Date(fechaDesde2);
+            const fin2 =
+              fechaHasta2 && (isString(fechaHasta2) || isNumber(fechaHasta2))
+                ? new Date(fechaHasta2)
+                : new Date('2099-12-31');
+
+            // Verificar superposición
+            if (inicio1 <= fin2 && inicio2 <= fin1) {
+              return {
+                passed: false,
+                message: 'Superposición de fechas en tarifas',
+                details: {
+                  tarifa1: `${tarifa1.fechaDesde} - ${tarifa1.fechaHasta || 'indefinido'}`,
+                  tarifa2: `${tarifa2.fechaDesde} - ${tarifa2.fechaHasta || 'indefinido'}`,
+                },
+              };
+            }
           }
         }
       }
@@ -237,17 +257,20 @@ export const defaultBusinessRules: BusinessRule[] = [
     severity: 'warning',
     enabled: true,
     validationFn: (viaje) => {
-      const fechaViaje = new Date(viaje.fecha);
-      const hoy = new Date();
-      const unAñoEnFuturo = new Date();
-      unAñoEnFuturo.setFullYear(hoy.getFullYear() + 1);
+      const fechaValue = viaje.fecha;
+      if (isString(fechaValue) || isNumber(fechaValue)) {
+        const fechaViaje = new Date(fechaValue);
+        const hoy = new Date();
+        const unAñoEnFuturo = new Date();
+        unAñoEnFuturo.setFullYear(hoy.getFullYear() + 1);
 
-      if (fechaViaje > unAñoEnFuturo) {
-        return {
-          passed: false,
-          message: 'Fecha de viaje muy alejada en el futuro',
-          details: { fecha: viaje.fecha },
-        };
+        if (fechaViaje > unAñoEnFuturo) {
+          return {
+            passed: false,
+            message: 'Fecha de viaje muy alejada en el futuro',
+            details: { fecha: viaje.fecha },
+          };
+        }
       }
 
       return { passed: true };
