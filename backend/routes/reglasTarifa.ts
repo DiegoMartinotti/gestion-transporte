@@ -1,4 +1,4 @@
-import express, { type RequestHandler } from 'express';
+import express, { RequestHandler } from 'express';
 import {
   createReglaTarifa,
   createReglaTarifaValidators,
@@ -85,9 +85,9 @@ const router = express.Router();
  */
 router.get(
   '/',
-  authenticateToken,
-  getAllReglasTarifaValidators,
-  getAllReglasTarifa as RequestHandler
+  authenticateToken as unknown as RequestHandler,
+  getAllReglasTarifaValidators as unknown as RequestHandler,
+  getAllReglasTarifa as unknown as RequestHandler
 );
 
 /**
@@ -117,9 +117,9 @@ router.get(
  */
 router.get(
   '/:id',
-  authenticateToken,
-  getReglaTarifaByIdValidators,
-  getReglaTarifaById as RequestHandler
+  authenticateToken as unknown as RequestHandler,
+  getReglaTarifaByIdValidators as unknown as RequestHandler,
+  getReglaTarifaById as unknown as RequestHandler
 );
 
 /**
@@ -250,9 +250,9 @@ router.get(
  */
 router.post(
   '/',
-  authenticateToken,
-  createReglaTarifaValidators,
-  createReglaTarifa as RequestHandler
+  authenticateToken as unknown as RequestHandler,
+  createReglaTarifaValidators as unknown as RequestHandler,
+  createReglaTarifa as unknown as RequestHandler
 );
 
 /**
@@ -329,9 +329,9 @@ router.post(
  */
 router.put(
   '/:id',
-  authenticateToken,
-  updateReglaTarifaValidators,
-  updateReglaTarifa as RequestHandler
+  authenticateToken as unknown as RequestHandler,
+  updateReglaTarifaValidators as unknown as RequestHandler,
+  updateReglaTarifa as unknown as RequestHandler
 );
 
 /**
@@ -372,9 +372,9 @@ router.put(
  */
 router.delete(
   '/:id',
-  authenticateToken,
-  deleteReglaTarifaValidators,
-  deleteReglaTarifa as RequestHandler
+  authenticateToken as unknown as RequestHandler,
+  deleteReglaTarifaValidators as unknown as RequestHandler,
+  deleteReglaTarifa as unknown as RequestHandler
 );
 
 export default router;

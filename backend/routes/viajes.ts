@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { RequestHandler } from 'express';
 const router = express.Router();
 import * as viajeController from '../controllers/viaje'; // Importar controlador modular
 import logger from '../utils/logger';
@@ -15,16 +15,13 @@ const upload = multer({
   },
 });
 
-const asRequestHandler = (handler: unknown): express.RequestHandler =>
-  handler as express.RequestHandler;
-
 // --- Rutas CRUD estándar ---
-router.get('/', asRequestHandler(viajeController.getAllViajes));
-router.get('/template', asRequestHandler(viajeController.getViajeTemplate));
-router.get('/:id', asRequestHandler(viajeController.getViajeById));
-router.post('/', asRequestHandler(viajeController.createViaje));
-router.put('/:id', asRequestHandler(viajeController.updateViaje));
-router.delete('/:id', asRequestHandler(viajeController.deleteViaje));
+router.get('/', viajeController.getAllViajes as unknown as RequestHandler);
+router.get('/template', viajeController.getViajeTemplate as unknown as RequestHandler);
+router.get('/:id', viajeController.getViajeById as unknown as RequestHandler);
+router.post('/', viajeController.createViaje as unknown as RequestHandler);
+router.put('/:id', viajeController.updateViaje as unknown as RequestHandler);
+router.delete('/:id', viajeController.deleteViaje as unknown as RequestHandler);
 
 // --- Rutas para Importación Masiva Mejorada ---
 
@@ -56,20 +53,20 @@ router.post(
     next(); // Si la validación pasa, continuar al controlador
   },
   // --- Fin de la lógica inline ---
-  asRequestHandler(viajeController.iniciarBulkImportViajes) // Controlador principal
+  viajeController.iniciarBulkImportViajes as unknown as RequestHandler // Controlador principal
 );
 
 // Descargar plantillas pre-rellenadas para corrección
 router.get(
   '/bulk/template/:importId',
-  asRequestHandler(viajeController.descargarPlantillaCorreccion)
+  viajeController.descargarPlantillaCorreccion as unknown as RequestHandler
 );
 
 // Procesar plantilla de corrección completada
 router.post(
   '/bulk/process-correction/:importId',
   upload.single('correctionFile'),
-  asRequestHandler(viajeController.procesarPlantillaCorreccion)
+  viajeController.procesarPlantillaCorreccion as unknown as RequestHandler
 );
 
 export default router;
