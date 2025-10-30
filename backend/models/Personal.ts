@@ -93,9 +93,7 @@ const personalSchema = new Schema(
       unique: true,
       trim: true,
       validate: {
-        validator: function (v: string) {
-          return /^\d{7,8}$/.test(v);
-        },
+        validator: (v: string) => /^\d{7,8}$/.test(v),
         message: 'Formato de DNI inválido',
       },
     },
@@ -103,9 +101,7 @@ const personalSchema = new Schema(
       type: String,
       trim: true,
       validate: {
-        validator: function (v: string) {
-          return !v || /^\d{2}-\d{8}-\d$/.test(v);
-        },
+        validator: (v: string) => !v || /^\d{2}-\d{8}-\d$/.test(v),
         message: 'Formato de CUIL inválido',
       },
     },
@@ -133,9 +129,7 @@ const personalSchema = new Schema(
         trim: true,
         lowercase: true,
         validate: {
-          validator: function (v: string) {
-            return !v || /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/u.test(v);
-          },
+          validator: (v: string) => !v || /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/u.test(v),
           message: 'Email inválido',
         },
       },
