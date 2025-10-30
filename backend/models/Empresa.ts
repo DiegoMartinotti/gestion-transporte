@@ -51,9 +51,7 @@ const empresaSchema = new Schema(
       trim: true,
       lowercase: true,
       validate: {
-        validator: function (v: string) {
-          return !v || /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/u.test(v);
-        },
+        validator: (v: string) => !v || /^[\w.-]+@[\w.-]+\.[A-Za-z]{2,}$/u.test(v),
         message: 'Por favor ingrese un email válido',
       },
     },
@@ -61,9 +59,7 @@ const empresaSchema = new Schema(
       type: String,
       trim: true,
       validate: {
-        validator: function (v: string) {
-          return !v || /^(20|23|24|25|26|27|30|33|34)(\d{9}|-\d{8}-\d)$/u.test(v);
-        },
+        validator: (v: string) => !v || /^(20|23|24|25|26|27|30|33|34)(\d{9}|-\d{8}-\d)$/u.test(v),
         message: 'Por favor ingrese un CUIT válido',
       },
     },
