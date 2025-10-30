@@ -15,6 +15,7 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { IconSearch, IconFilter, IconX, IconDownload } from '@tabler/icons-react';
 import { ImportStats } from './ImportHistoryTypes';
+import { dateToString, stringToDate } from '../../utils/types/DateTransformer';
 
 // Componente de estadísticas de importación
 export const ImportHistoryStats: React.FC<{ stats: ImportStats }> = ({ stats }) => (
@@ -157,47 +158,57 @@ const FilterControls: React.FC<{
   setFilterStatus,
   dateRange,
   setDateRange,
-}) => (
-  <Stack gap="sm">
-    <Group grow>
-      <TextInput
-        placeholder="Buscar por archivo o usuario..."
-        leftSection={<IconSearch size={16} />}
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.currentTarget.value)}
-      />
-    </Group>
-    <Group grow>
-      <Select
-        data={ENTITY_OPTIONS}
-        value={filterEntity}
-        onChange={(value: string | null) => setFilterEntity(value || 'all')}
-        leftSection={<IconFilter size={16} />}
-        placeholder="Filtrar por entidad"
-      />
-      <Select
-        data={STATUS_OPTIONS}
-        value={filterStatus}
-        onChange={(value: string | null) => setFilterStatus(value || 'all')}
-        placeholder="Filtrar por estado"
-      />
-    </Group>
-    <Group grow>
-      <DatePickerInput
-        placeholder="Fecha desde"
-        value={dateRange[0]}
-        onChange={(value: Date | null) => setDateRange([value, dateRange[1]])}
-        clearable
-      />
-      <DatePickerInput
-        placeholder="Fecha hasta"
-        value={dateRange[1]}
-        onChange={(value: Date | null) => setDateRange([dateRange[0], value])}
-        clearable
-      />
-    </Group>
-  </Stack>
-);
+}) => {
+  const handleDateFromChange = (value: string | null) => {
+    setDateRange([stringToDate(value), dateRange[1]]);
+  };
+
+  const handleDateToChange = (value: string | null) => {
+    setDateRange([dateRange[0], stringToDate(value)]);
+  };
+
+  return (
+    <Stack gap="sm">
+      <Group grow>
+        <TextInput
+          placeholder="Buscar por archivo o usuario..."
+          leftSection={<IconSearch size={16} />}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.currentTarget.value)}
+        />
+      </Group>
+      <Group grow>
+        <Select
+          data={ENTITY_OPTIONS}
+          value={filterEntity}
+          onChange={(value: string | null) => setFilterEntity(value || 'all')}
+          leftSection={<IconFilter size={16} />}
+          placeholder="Filtrar por entidad"
+        />
+        <Select
+          data={STATUS_OPTIONS}
+          value={filterStatus}
+          onChange={(value: string | null) => setFilterStatus(value || 'all')}
+          placeholder="Filtrar por estado"
+        />
+      </Group>
+      <Group grow>
+        <DatePickerInput
+          placeholder="Fecha desde"
+          value={dateToString(dateRange[0])}
+          onChange={handleDateFromChange}
+          clearable
+        />
+        <DatePickerInput
+          placeholder="Fecha hasta"
+          value={dateToString(dateRange[1])}
+          onChange={handleDateToChange}
+          clearable
+        />
+      </Group>
+    </Stack>
+  );
+};
 
 // Componente para badges de filtros activos
 const ActiveFiltersBadges: React.FC<{
