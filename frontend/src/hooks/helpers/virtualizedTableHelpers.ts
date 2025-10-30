@@ -46,7 +46,18 @@ const compareValues = (aValue: unknown, bValue: unknown): number => {
     return aValue.getTime() - bValue.getTime();
   }
 
-  return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+  // Comparación segura para valores unknown
+  if (typeof aValue === 'number' && typeof bValue === 'number') {
+    return aValue - bValue;
+  }
+
+  // Conversión segura a string para comparación genérica
+  const aStr = String(aValue);
+  const bStr = String(bValue);
+
+  if (aStr > bStr) return 1;
+  if (aStr < bStr) return -1;
+  return 0;
 };
 
 interface ProcessTableDataOptions {

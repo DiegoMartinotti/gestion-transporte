@@ -1,5 +1,6 @@
 import { notifications } from '@mantine/notifications';
 import { ViajeService } from '../../services/viajeService';
+import { getErrorMessage, isAxiosError } from '../../utils/errors/ErrorGuards';
 
 export interface ImportNotificationOptions {
   insertedRows: number;
@@ -58,11 +59,13 @@ export const downloadMissingDataTemplates = async (
       color: 'green',
     });
   } catch (err: unknown) {
-    console.error('Error descargando plantillas:', err);
-    console.error('Error response:', err.response);
+    console.error('Error descargando plantillas:', getErrorMessage(err));
+    if (isAxiosError(err)) {
+      console.error('Error response:', err.response);
+    }
     notifications.show({
       title: 'Error',
-      message: `No se pudieron descargar las plantillas de corrección: ${err.message}`,
+      message: `No se pudieron descargar las plantillas de corrección: ${getErrorMessage(err)}`,
       color: 'red',
     });
   } finally {
@@ -70,38 +73,55 @@ export const downloadMissingDataTemplates = async (
   }
 };
 
+interface ImportSummary {
+  insertedRows?: number;
+  errorRows?: number;
+  [key: string]: unknown;
+}
+
+interface ImportResultData {
+  summary?: ImportSummary;
+  [key: string]: unknown;
+}
+
+interface ReintentoResultData {
+  successCount?: number;
+  failCount?: number;
+  [key: string]: unknown;
+}
+
 export const processImportResult = (
-  importResult: Record<string, unknown>,
-  reintentoResult: Record<string, unknown>
+  importResult: ImportResultData,
+  reintentoResult: ReintentoResultData
 ) => {
   return {
     ...importResult,
     summary: {
-      ...importResult.summary,
+      ...(importResult.summary || {}),
       insertedRows: (importResult.summary?.insertedRows || 0) + (reintentoResult.successCount || 0),
       errorRows: Math.max(
         0,
         (importResult.summary?.errorRows || 0) - (reintentoResult.successCount || 0)
       ),
     },
-    hasMissingData: reintentoResult.failCount > 0,
+    hasMissingData: (reintentoResult.failCount || 0) > 0,
   };
 };
 
-export const showTemplateDownloadNotification = (success: boolean) => {
-  if (success) {
-    notifications.show({
-      title: 'Plantilla descargada',
-      message: 'La plantilla Excel ha sido descargada',
-      color: 'green',
-    });
-  } else {
-    notifications.show({
-      title: 'Error',
-      message: 'No se pudo descargar la plantilla',
-      color: 'red',
-    });
-  }
+export const showTemplateDownloadSuccess = () => {
+  notifications.show({
+    title: 'Plantilla descargada',
+    message: 'La plantilla Excel ha sido descargada',
+    color: 'green',
+  });
+};
+
+export const showTemplateDownloadError = () => {
+  notifications.show({
+    title: 'Error',
+    message: 'No se pudo descargar la plantilla',
+    color: 'red',
+  });
 };
 
 export const showCorrectionSuccessNotification = (reintentoResult: Record<string, unknown>) => {

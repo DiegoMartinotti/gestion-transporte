@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService, User, LoginCredentials, RegisterData } from '../services/authService';
 import { notifications } from '@mantine/notifications';
+import { getErrorMessage } from '../utils/errors/ErrorGuards';
 
 interface AuthContextType {
   user: User | null;
@@ -42,7 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(currentUser);
         }
       } catch (error) {
-        console.warn('Auth initialization failed:', error);
+        console.warn('Auth initialization failed:', getErrorMessage(error));
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -66,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: unknown) {
       notifications.show({
         title: 'Error de autenticación',
-        message: error.message || 'Credenciales inválidas',
+        message: getErrorMessage(error) || 'Credenciales inválidas',
         color: 'red',
       });
       throw error;
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: unknown) {
       notifications.show({
         title: 'Error de registro',
-        message: error.message || 'Error al crear la cuenta',
+        message: getErrorMessage(error) || 'Error al crear la cuenta',
         color: 'red',
       });
       throw error;
@@ -109,7 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         color: 'blue',
       });
     } catch (error) {
-      console.warn('Logout error:', error);
+      console.warn('Logout error:', getErrorMessage(error));
       setUser(null);
     } finally {
       setIsLoading(false);
